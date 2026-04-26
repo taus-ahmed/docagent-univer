@@ -1,0 +1,344 @@
+/**
+ * DocAgent v2 — API Client
+ */
+
+import axios, { AxiosInstance, AxiosError } from "axios";
+import Cookies from "js-cookie";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+export interface User {
+  id: number;
+  username: string;
+  display_name: string;
+  email: string | null;
+  role: "admin" | "client";
+  client_id: string | null;
+  is_active: boolean;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+}
+
+export interface TemplateColumn {
+  name: string;
+  type: "Text" | "Number" | "Date" | "Currency";
+  order: number;
+}
+
+export interface ColumnTemplate {
+  id: number;
+  name: string;
+  document_type: string;
+  description: string | null;
+  columns: TemplateColumn[];
+  is_default: boolean;
+  is_shared: boolean;
+  created_at: string;
+}
+
+export interface JobStatus {
+  id: number;
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+  total_docs: number;
+  successful: number;
+  failed: number;
+  needs_review: number;
+  client_id: string;
+  input_source: string;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  total_time_sec: number;
+  output_file: string | null;
+  error_message: string | null;
+}
+
+export interface DocumentResult {
+  id: number;
+  job_id: number;
+  filename: string;
+  document_type: string | null;
+  overall_confidence: "high" | "medium" | "low" | null;
+  extracted_data: Record<string, any> | null;
+  validation_errors: string;
+  validation_warnings: string;
+  needs_review: boolean;
+  reviewed: boolean;
+  reviewed_by: string | null;
+  model_used: string | null;
+  tokens_used: number;
+  latency_ms: number;
+  created_at: string;
+}
+
+export interface SchemaInfo {
+  id: number;
+  client_id: string;
+  client_name: string;
+  document_types: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DriveAuthStatus {
+  is_configured: boolean;
+  is_authenticated: boolean;
+}
+
+export interface DriveFolderContents {
+  folders: { id: string; name: string; path?: string }[];
+  files: {
+    id: string; name: string; mime_type: string;
+    size: number; modified_time: string | null; is_supported: boolean;
+  }[];
+  total_files: number;
+  supported_files: number;
+}
+
+export interface WatchFolder {
+  id: number;
+  folder_id: string;
+  folder_name: string;
+  client_id: string;
+  is_active: boolean;
+  last_checked: string | null;
+  last_file_count: number;
+  auto_upload_results: boolean;
+  poll_interval_minutes: number;
+  created_at: string;
+}
+
+export interface SystemStats {
+  total_jobs: number;
+  total_documents: number;
+  total_users: number;
+  documents_reviewed: number;
+  documents_pending_review: number;
+  high_confidence_docs: number;
+  jobs_last_7_days: number;
+}
+
+// ── Axios Instance ─────────────────────────────────────────────────────────────
+
+function createApiClient(): AxiosInstance {
+  const client = axios.create({
+    baseURL: BASE_URL,
+    timeout: 120_000,
+    headers: { "Content-Type": "application/json" },
+  });
+
+  client.interceptors.request.use((config) => {
+    const token = Cookies.get("da_token");
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  });
+
+  client.interceptors.response.use(
+    (res) => res,
+    (error: AxiosError<{ detail: string }>) => {
+      if (error.response?.status === 401) {
+        Cookies.remove("da_token");
+        if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  return client;
+}
+
+export const api = createApiClient();
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export const authApi = {
+  login: async (username: string, password: string): Promise<TokenResponse> => {
+    const { data } = await api.post<TokenResponse>("/api/auth/login", { username, password });
+    Cookies.set("da_token", data.access_token, {
+      expires: data.expires_in / 86400,
+      sameSite: "strict",
+    });
+    return data;
+  },
+  logout: () => Cookies.remove("da_token"),
+  me: async (): Promise<User> => (await api.get<User>("/api/auth/me")).data,
+  isAuthenticated: () => !!Cookies.get("da_token"),
+  getToken: () => Cookies.get("da_token") ?? null,
+};
+
+// ── Extract ───────────────────────────────────────────────────────────────────
+
+export const extractApi = {
+  upload: async (
+    files: File[],
+    clientId: string,
+    templateId?: number | null,
+    onProgress?: (pct: number) => void
+  ): Promise<{ job_id: number; total_files: number }> => {
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f));
+    form.append("client_id", clientId);
+    if (templateId) form.append("template_id", String(templateId));
+    const { data } = await api.post("/api/extract/upload", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
+      },
+    });
+    return data;
+  },
+
+  listJobs: async (params?: { status?: string; limit?: number }) => {
+    const { data } = await api.get<JobStatus[]>("/api/jobs", { params });
+    return data;
+  },
+
+  getJob: async (jobId: number): Promise<JobStatus> =>
+    (await api.get<JobStatus>(`/api/jobs/${jobId}`)).data,
+
+  getResults: async (jobId: number): Promise<DocumentResult[]> =>
+    (await api.get<DocumentResult[]>(`/api/jobs/${jobId}/results`)).data,
+
+  updateDocument: async (jobId: number, docId: number, extractedData: object) =>
+    (await api.put(`/api/jobs/${jobId}/docs/${docId}`, { extracted_data: extractedData })).data,
+
+  approveDocument: async (jobId: number, docId: number) =>
+    (await api.post(`/api/jobs/${jobId}/docs/${docId}/approve`)).data,
+
+  cancelJob: async (jobId: number) =>
+    (await api.delete(`/api/jobs/${jobId}`)).data,
+};
+
+// ── Export ────────────────────────────────────────────────────────────────────
+
+export const exportApi = {
+  combined: async (payload: {
+    job_id: number;
+    template_id?: number;
+    include_line_items?: boolean;
+  }): Promise<Blob> =>
+    (await api.post("/api/export/combined", payload, { responseType: "blob" })).data,
+
+  perFile: async (payload: { job_id: number; template_id?: number }): Promise<Blob> =>
+    (await api.post("/api/export/perfile", payload, { responseType: "blob" })).data,
+
+  downloadBlob: (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+};
+
+// ── Templates ─────────────────────────────────────────────────────────────────
+
+export const templatesApi = {
+  list: async (documentType?: string): Promise<ColumnTemplate[]> => {
+    const { data } = await api.get<ColumnTemplate[]>("/api/templates", {
+      params: documentType ? { document_type: documentType } : undefined,
+    });
+    return data;
+  },
+
+  get: async (id: number): Promise<ColumnTemplate> =>
+    (await api.get<ColumnTemplate>(`/api/templates/${id}`)).data,
+
+  create: async (payload: {
+    name: string;
+    document_type: string;
+    columns: TemplateColumn[];
+    is_shared?: boolean;
+  }): Promise<ColumnTemplate> =>
+    (await api.post<ColumnTemplate>("/api/templates", payload)).data,
+
+  update: async (id: number, payload: {
+    name?: string;
+    document_type?: string;
+    columns?: TemplateColumn[];
+  }): Promise<ColumnTemplate> =>
+    (await api.put<ColumnTemplate>(`/api/templates/${id}`, payload)).data,
+
+  delete: async (id: number) =>
+    (await api.delete(`/api/templates/${id}`)).data,
+};
+
+// ── Schemas ───────────────────────────────────────────────────────────────────
+
+export const schemasApi = {
+  list: async (): Promise<SchemaInfo[]> =>
+    (await api.get<SchemaInfo[]>("/api/schemas")).data,
+
+  upload: async (file: File): Promise<SchemaInfo> => {
+    const form = new FormData();
+    form.append("file", file);
+    return (await api.post<SchemaInfo>("/api/schemas", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })).data;
+  },
+};
+
+// ── Drive ─────────────────────────────────────────────────────────────────────
+
+export const driveApi = {
+  authStatus: async (): Promise<DriveAuthStatus> =>
+    (await api.get<DriveAuthStatus>("/api/drive/auth/status")).data,
+
+  authenticate: async () => (await api.post("/api/drive/auth")).data,
+
+  listFolder: async (folderId = "root"): Promise<DriveFolderContents> =>
+    (await api.get<DriveFolderContents>(`/api/drive/folders/${folderId}`)).data,
+
+  extractFolder: async (folderId: string, clientId: string, templateId?: number) =>
+    (await api.post("/api/drive/extract", null, {
+      params: { folder_id: folderId, client_id: clientId, template_id: templateId },
+    })).data,
+
+  listWatchFolders: async (): Promise<WatchFolder[]> =>
+    (await api.get<WatchFolder[]>("/api/watch")).data,
+
+  addWatchFolder: async (payload: {
+    folder_id: string;
+    folder_name: string;
+    client_id: string;
+    auto_upload_results?: boolean;
+  }): Promise<WatchFolder> =>
+    (await api.post<WatchFolder>("/api/watch", payload)).data,
+
+  removeWatchFolder: async (id: number) =>
+    (await api.delete(`/api/watch/${id}`)).data,
+
+  triggerCheck: async () => (await api.post("/api/watch/check")).data,
+};
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export const adminApi = {
+  listUsers: async (): Promise<User[]> =>
+    (await api.get<User[]>("/api/admin/users")).data,
+
+  createUser: async (payload: {
+    username: string; display_name: string; password: string;
+    role?: string; client_id?: string; email?: string;
+  }): Promise<User> =>
+    (await api.post<User>("/api/admin/users", payload)).data,
+
+  updateUser: async (id: number, payload: object): Promise<User> =>
+    (await api.put<User>(`/api/admin/users/${id}`, payload)).data,
+
+  deactivateUser: async (id: number) =>
+    (await api.delete(`/api/admin/users/${id}`)).data,
+
+  stats: async (): Promise<SystemStats> =>
+    (await api.get<SystemStats>("/api/admin/stats")).data,
+};
