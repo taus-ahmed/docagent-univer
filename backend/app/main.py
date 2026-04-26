@@ -1,5 +1,5 @@
 """
-DocAgent v2 — FastAPI Application Entry Point
+DocAgent v2 â€” FastAPI Application Entry Point
 """
 
 import logging
@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger("docagent")
 
 
-# ─── Lifespan ─────────────────────────────────────────────────────────────────
+# â”€â”€â”€ Lifespan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -67,7 +67,7 @@ def _seed_admin():
             ))
             db.commit()
             logger.info("Default admin user created (username: admin, password: admin123)")
-            logger.warning("⚠ CHANGE THE DEFAULT ADMIN PASSWORD BEFORE PRODUCTION DEPLOY!")
+            logger.warning("âš  CHANGE THE DEFAULT ADMIN PASSWORD BEFORE PRODUCTION DEPLOY!")
     finally:
         db.close()
 
@@ -112,7 +112,7 @@ def _seed_demo_schema():
         db.close()
 
 
-# ─── App Factory ──────────────────────────────────────────────────────────────
+# â”€â”€â”€ App Factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -124,16 +124,16 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── CORS ──────────────────────────────────────────────────────────────────
+    # â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
-        allow_credentials=True,
+        allow_origins=["*"],
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # ── Global Exception Handler ───────────────────────────────────────────────
+    # â”€â”€ Global Exception Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
@@ -142,7 +142,7 @@ def create_app() -> FastAPI:
             content={"detail": "Internal server error"},
         )
 
-    # ── Routes ────────────────────────────────────────────────────────────────
+    # â”€â”€ Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     from app.api.routes.auth import router as auth_router
     from app.api.routes.extract import router as extract_router
     from app.api.routes.export import router as export_router
@@ -159,7 +159,7 @@ def create_app() -> FastAPI:
     app.include_router(drive_router)
     app.include_router(admin_router)
 
-    # ── Health Check ──────────────────────────────────────────────────────────
+    # â”€â”€ Health Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @app.get("/health")
     def health():
         return {"status": "ok", "version": settings.APP_VERSION, "env": settings.ENVIRONMENT}
