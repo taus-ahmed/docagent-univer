@@ -1,5 +1,4 @@
 "use client";
-
 import { create } from "zustand";
 import { authApi, type User } from "./api";
 
@@ -10,14 +9,12 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
-  setUser: (user: User | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   isLoading: false,
-  // Check token cookie synchronously on init — avoids flicker
-  isAuthenticated: typeof window !== "undefined" ? authApi.isAuthenticated() : false,
+  isAuthenticated: false,
 
   login: async (username, password) => {
     set({ isLoading: true });
@@ -48,6 +45,4 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ user: null, isAuthenticated: false });
     }
   },
-
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
 }));
