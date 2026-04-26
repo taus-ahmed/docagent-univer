@@ -1,49 +1,23 @@
-# ── Web Framework ──────────────────────────────────────────────────────────────
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-python-multipart==0.0.9
-
-# ── Auth ───────────────────────────────────────────────────────────────────────
+﻿fastapi==0.111.0
+uvicorn[standard]==0.30.1
+sqlalchemy==2.0.31
+psycopg2-binary==2.9.9
+pydantic==2.7.4
+pydantic-settings==2.3.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-bcrypt==4.0.1
-
-# ── Database ───────────────────────────────────────────────────────────────────
-sqlalchemy==2.0.35
-alembic==1.13.2
-psycopg2-binary==2.9.9        # PostgreSQL driver
-aiosqlite==0.20.0              # SQLite async (dev fallback)
-
-# ── PDF Processing ─────────────────────────────────────────────────────────────
-pdfplumber==0.11.4
-pdf2image==1.17.0
-Pillow==10.4.0
-pypdf==4.3.1
-
-# ── LLM APIs ───────────────────────────────────────────────────────────────────
-groq==0.11.0
-google-generativeai==0.8.3
-
-# ── Excel ──────────────────────────────────────────────────────────────────────
-openpyxl==3.1.5
-
-# ── Google Drive ───────────────────────────────────────────────────────────────
-google-api-python-client==2.149.0
-google-auth-httplib2==0.2.0
+python-multipart==0.0.9
+httpx==0.27.0
+groq==0.9.0
+google-generativeai==0.7.2
+google-auth==2.32.0
 google-auth-oauthlib==1.2.1
-
-# ── File Storage (S3/R2) ───────────────────────────────────────────────────────
-boto3==1.35.0
-python-magic==0.4.27
-
-# ── Task Queue (Phase 4) ───────────────────────────────────────────────────────
-celery==5.4.0
-redis==5.1.0
-
-# ── Utilities ──────────────────────────────────────────────────────────────────
-pyyaml==6.0.2
+google-api-python-client==2.136.0
+openpyxl==3.1.5
+pyyaml==6.0.1
 python-dotenv==1.0.1
-rich==13.8.1
-httpx==0.27.2
-pydantic==2.8.2
-pydantic-settings==2.4.0
+boto3==1.34.144
+aiofiles==23.2.1
+Pillow==10.4.0
+pdf2image==1.17.0
+pytesseract==0.3.10
