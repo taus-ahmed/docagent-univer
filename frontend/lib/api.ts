@@ -1,13 +1,34 @@
-/**
- * DocAgent v2 — API Client
- */
-
 import axios, { AxiosInstance, AxiosError } from "axios";
-import Cookies from "js-cookie";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Token storage (localStorage for cross-origin production support) ──────────
+const TOKEN_KEY = "da_token";
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+function setToken(token: string, expiresIn: number): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(TOKEN_KEY + "_exp", String(Date.now() + expiresIn * 1000));
+}
+function removeToken(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY + "_exp");
+}
+function isTokenValid(): boolean {
+  if (typeof window === "undefined") return false;
+  const token = getToken();
+  if (!token) return false;
+  const exp = localStorage.getItem(TOKEN_KEY + "_exp");
+  if (!exp) return true;
+  return Date.now() < parseInt(exp);
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface User {
   id: number;
@@ -30,6 +51,7 @@ export interface TemplateColumn {
   name: string;
   type: "Text" | "Number" | "Date" | "Currency";
   order: number;
+  extraction_type?: "header" | "lineitem";
 }
 
 export interface ColumnTemplate {
@@ -94,10 +116,7 @@ export interface DriveAuthStatus {
 
 export interface DriveFolderContents {
   folders: { id: string; name: string; path?: string }[];
-  files: {
-    id: string; name: string; mime_type: string;
-    size: number; modified_time: string | null; is_supported: boolean;
-  }[];
+  files: { id: string; name: string; mime_type: string; size: number; modified_time: string | null; is_supported: boolean }[];
   total_files: number;
   supported_files: number;
 }
@@ -132,10 +151,11 @@ function createApiClient(): AxiosInstance {
     baseURL: BASE_URL,
     timeout: 120_000,
     headers: { "Content-Type": "application/json" },
+    withCredentials: false,
   });
 
   client.interceptors.request.use((config) => {
-    const token = Cookies.get("da_token");
+    const token = getToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
@@ -144,7 +164,7 @@ function createApiClient(): AxiosInstance {
     (res) => res,
     (error: AxiosError<{ detail: string }>) => {
       if (error.response?.status === 401) {
-        Cookies.remove("da_token");
+        removeToken();
         if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
           window.location.href = "/login";
         }
@@ -163,80 +183,48 @@ export const api = createApiClient();
 export const authApi = {
   login: async (username: string, password: string): Promise<TokenResponse> => {
     const { data } = await api.post<TokenResponse>("/api/auth/login", { username, password });
-    Cookies.set("da_token", data.access_token, {
-      expires: data.expires_in / 86400,
-      sameSite: "strict",
-    });
+    setToken(data.access_token, data.expires_in);
     return data;
   },
-  logout: () => Cookies.remove("da_token"),
+  logout: () => removeToken(),
   me: async (): Promise<User> => (await api.get<User>("/api/auth/me")).data,
-  isAuthenticated: () => !!Cookies.get("da_token"),
-  getToken: () => Cookies.get("da_token") ?? null,
+  isAuthenticated: () => isTokenValid(),
+  getToken: () => getToken(),
 };
 
 // ── Extract ───────────────────────────────────────────────────────────────────
 
 export const extractApi = {
-  upload: async (
-    files: File[],
-    clientId: string,
-    templateId?: number | null,
-    onProgress?: (pct: number) => void
-  ): Promise<{ job_id: number; total_files: number }> => {
+  upload: async (files: File[], clientId: string, templateId?: number | null, onProgress?: (pct: number) => void): Promise<{ job_id: number; total_files: number }> => {
     const form = new FormData();
     files.forEach((f) => form.append("files", f));
     form.append("client_id", clientId);
     if (templateId) form.append("template_id", String(templateId));
     const { data } = await api.post("/api/extract/upload", form, {
       headers: { "Content-Type": "multipart/form-data" },
-      onUploadProgress: (e) => {
-        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
-      },
+      onUploadProgress: (e) => { if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100)); },
     });
     return data;
   },
-
-  listJobs: async (params?: { status?: string; limit?: number }) => {
-    const { data } = await api.get<JobStatus[]>("/api/jobs", { params });
-    return data;
-  },
-
-  getJob: async (jobId: number): Promise<JobStatus> =>
-    (await api.get<JobStatus>(`/api/jobs/${jobId}`)).data,
-
-  getResults: async (jobId: number): Promise<DocumentResult[]> =>
-    (await api.get<DocumentResult[]>(`/api/jobs/${jobId}/results`)).data,
-
-  updateDocument: async (jobId: number, docId: number, extractedData: object) =>
-    (await api.put(`/api/jobs/${jobId}/docs/${docId}`, { extracted_data: extractedData })).data,
-
-  approveDocument: async (jobId: number, docId: number) =>
-    (await api.post(`/api/jobs/${jobId}/docs/${docId}/approve`)).data,
-
-  cancelJob: async (jobId: number) =>
-    (await api.delete(`/api/jobs/${jobId}`)).data,
+  listJobs: async (params?: { status?: string; limit?: number }) => (await api.get<JobStatus[]>("/api/jobs", { params })).data,
+  getJob: async (jobId: number): Promise<JobStatus> => (await api.get<JobStatus>(`/api/jobs/${jobId}`)).data,
+  getResults: async (jobId: number): Promise<DocumentResult[]> => (await api.get<DocumentResult[]>(`/api/jobs/${jobId}/results`)).data,
+  updateDocument: async (jobId: number, docId: number, extractedData: object) => (await api.put(`/api/jobs/${jobId}/docs/${docId}`, { extracted_data: extractedData })).data,
+  approveDocument: async (jobId: number, docId: number) => (await api.post(`/api/jobs/${jobId}/docs/${docId}/approve`)).data,
+  cancelJob: async (jobId: number) => (await api.delete(`/api/jobs/${jobId}`)).data,
 };
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
 export const exportApi = {
-  combined: async (payload: {
-    job_id: number;
-    template_id?: number;
-    include_line_items?: boolean;
-  }): Promise<Blob> =>
+  combined: async (payload: { job_id: number; template_id?: number; include_line_items?: boolean }): Promise<Blob> =>
     (await api.post("/api/export/combined", payload, { responseType: "blob" })).data,
-
   perFile: async (payload: { job_id: number; template_id?: number }): Promise<Blob> =>
     (await api.post("/api/export/perfile", payload, { responseType: "blob" })).data,
-
   downloadBlob: (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
+    a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
   },
 };
@@ -244,101 +232,38 @@ export const exportApi = {
 // ── Templates ─────────────────────────────────────────────────────────────────
 
 export const templatesApi = {
-  list: async (documentType?: string): Promise<ColumnTemplate[]> => {
-    const { data } = await api.get<ColumnTemplate[]>("/api/templates", {
-      params: documentType ? { document_type: documentType } : undefined,
-    });
-    return data;
-  },
-
-  get: async (id: number): Promise<ColumnTemplate> =>
-    (await api.get<ColumnTemplate>(`/api/templates/${id}`)).data,
-
-  create: async (payload: {
-    name: string;
-    document_type: string;
-    columns: TemplateColumn[];
-    is_shared?: boolean;
-  }): Promise<ColumnTemplate> =>
-    (await api.post<ColumnTemplate>("/api/templates", payload)).data,
-
-  update: async (id: number, payload: {
-    name?: string;
-    document_type?: string;
-    columns?: TemplateColumn[];
-  }): Promise<ColumnTemplate> =>
-    (await api.put<ColumnTemplate>(`/api/templates/${id}`, payload)).data,
-
-  delete: async (id: number) =>
-    (await api.delete(`/api/templates/${id}`)).data,
+  list: async (documentType?: string): Promise<ColumnTemplate[]> => (await api.get<ColumnTemplate[]>("/api/templates", { params: documentType ? { document_type: documentType } : undefined })).data,
+  get: async (id: number): Promise<ColumnTemplate> => (await api.get<ColumnTemplate>(`/api/templates/${id}`)).data,
+  create: async (payload: { name: string; document_type: string; columns: TemplateColumn[]; is_shared?: boolean }): Promise<ColumnTemplate> => (await api.post<ColumnTemplate>("/api/templates", payload)).data,
+  update: async (id: number, payload: { name?: string; document_type?: string; columns?: TemplateColumn[] }): Promise<ColumnTemplate> => (await api.put<ColumnTemplate>(`/api/templates/${id}`, payload)).data,
+  delete: async (id: number) => (await api.delete(`/api/templates/${id}`)).data,
 };
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 export const schemasApi = {
-  list: async (): Promise<SchemaInfo[]> =>
-    (await api.get<SchemaInfo[]>("/api/schemas")).data,
-
-  upload: async (file: File): Promise<SchemaInfo> => {
-    const form = new FormData();
-    form.append("file", file);
-    return (await api.post<SchemaInfo>("/api/schemas", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    })).data;
-  },
+  list: async (): Promise<SchemaInfo[]> => (await api.get<SchemaInfo[]>("/api/schemas")).data,
 };
 
 // ── Drive ─────────────────────────────────────────────────────────────────────
 
 export const driveApi = {
-  authStatus: async (): Promise<DriveAuthStatus> =>
-    (await api.get<DriveAuthStatus>("/api/drive/auth/status")).data,
-
+  authStatus: async (): Promise<DriveAuthStatus> => (await api.get<DriveAuthStatus>("/api/drive/auth/status")).data,
   authenticate: async () => (await api.post("/api/drive/auth")).data,
-
-  listFolder: async (folderId = "root"): Promise<DriveFolderContents> =>
-    (await api.get<DriveFolderContents>(`/api/drive/folders/${folderId}`)).data,
-
-  extractFolder: async (folderId: string, clientId: string, templateId?: number) =>
-    (await api.post("/api/drive/extract", null, {
-      params: { folder_id: folderId, client_id: clientId, template_id: templateId },
-    })).data,
-
-  listWatchFolders: async (): Promise<WatchFolder[]> =>
-    (await api.get<WatchFolder[]>("/api/watch")).data,
-
-  addWatchFolder: async (payload: {
-    folder_id: string;
-    folder_name: string;
-    client_id: string;
-    auto_upload_results?: boolean;
-  }): Promise<WatchFolder> =>
-    (await api.post<WatchFolder>("/api/watch", payload)).data,
-
-  removeWatchFolder: async (id: number) =>
-    (await api.delete(`/api/watch/${id}`)).data,
-
+  listFolder: async (folderId = "root"): Promise<DriveFolderContents> => (await api.get<DriveFolderContents>(`/api/drive/folders/${folderId}`)).data,
+  extractFolder: async (folderId: string, clientId: string, templateId?: number) => (await api.post("/api/drive/extract", null, { params: { folder_id: folderId, client_id: clientId, template_id: templateId } })).data,
+  listWatchFolders: async (): Promise<WatchFolder[]> => (await api.get<WatchFolder[]>("/api/watch")).data,
+  addWatchFolder: async (payload: { folder_id: string; folder_name: string; client_id: string; auto_upload_results?: boolean }): Promise<WatchFolder> => (await api.post<WatchFolder>("/api/watch", payload)).data,
+  removeWatchFolder: async (id: number) => (await api.delete(`/api/watch/${id}`)).data,
   triggerCheck: async () => (await api.post("/api/watch/check")).data,
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 export const adminApi = {
-  listUsers: async (): Promise<User[]> =>
-    (await api.get<User[]>("/api/admin/users")).data,
-
-  createUser: async (payload: {
-    username: string; display_name: string; password: string;
-    role?: string; client_id?: string; email?: string;
-  }): Promise<User> =>
-    (await api.post<User>("/api/admin/users", payload)).data,
-
-  updateUser: async (id: number, payload: object): Promise<User> =>
-    (await api.put<User>(`/api/admin/users/${id}`, payload)).data,
-
-  deactivateUser: async (id: number) =>
-    (await api.delete(`/api/admin/users/${id}`)).data,
-
-  stats: async (): Promise<SystemStats> =>
-    (await api.get<SystemStats>("/api/admin/stats")).data,
+  listUsers: async (): Promise<User[]> => (await api.get<User[]>("/api/admin/users")).data,
+  createUser: async (payload: { username: string; display_name: string; password: string; role?: string; client_id?: string; email?: string }): Promise<User> => (await api.post<User>("/api/admin/users", payload)).data,
+  updateUser: async (id: number, payload: object): Promise<User> => (await api.put<User>(`/api/admin/users/${id}`, payload)).data,
+  deactivateUser: async (id: number) => (await api.delete(`/api/admin/users/${id}`)).data,
+  stats: async (): Promise<SystemStats> => (await api.get<SystemStats>("/api/admin/stats")).data,
 };
