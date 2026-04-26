@@ -1,0 +1,266 @@
+# Client: Demo Accounting Firm
+# This is a sample schema â€” customize per client
+
+client_name: "Demo Accounting Firm"
+client_id: "demo_001"
+
+document_types:
+  invoice:
+    description: "Vendor invoices, supplier bills"
+    fields:
+      - name: vendor_name
+        type: string
+        required: true
+        description: "Company or person issuing the invoice"
+      - name: vendor_address
+        type: string
+        required: false
+        description: "Full address of the vendor"
+      - name: invoice_number
+        type: string
+        required: true
+        description: "Unique invoice identifier"
+      - name: invoice_date
+        type: date
+        required: true
+        description: "Date the invoice was issued"
+      - name: due_date
+        type: date
+        required: false
+        description: "Payment due date"
+      - name: purchase_order_number
+        type: string
+        required: false
+        description: "PO number if referenced"
+      - name: subtotal
+        type: number
+        required: false
+        description: "Amount before tax"
+      - name: tax_amount
+        type: number
+        required: false
+        description: "Tax amount"
+      - name: tax_rate
+        type: string
+        required: false
+        description: "Tax rate percentage"
+      - name: total_amount
+        type: number
+        required: true
+        description: "Final total amount due"
+      - name: payment_terms
+        type: string
+        required: false
+        description: "Payment terms (Net 30, etc.)"
+    line_items:
+      - name: description
+        type: string
+        description: "Item or service description"
+      - name: quantity
+        type: number
+        description: "Quantity"
+      - name: unit_price
+        type: number
+        description: "Price per unit"
+      - name: amount
+        type: number
+        description: "Line total"
+
+  receipt:
+    description: "Store receipts, purchase receipts"
+    fields:
+      - name: merchant_name
+        type: string
+        required: true
+        description: "Store or merchant name"
+      - name: merchant_address
+        type: string
+        required: false
+        description: "Store address"
+      - name: date
+        type: date
+        required: true
+        description: "Transaction date"
+      - name: time
+        type: string
+        required: false
+        description: "Transaction time"
+      - name: subtotal
+        type: number
+        required: false
+        description: "Subtotal before tax"
+      - name: tax
+        type: number
+        required: false
+        description: "Tax amount"
+      - name: total
+        type: number
+        required: true
+        description: "Total amount paid"
+      - name: payment_method
+        type: string
+        required: false
+        description: "Cash, credit card, etc."
+      - name: card_last_four
+        type: string
+        required: false
+        description: "Last 4 digits of card if visible"
+    line_items:
+      - name: item_name
+        type: string
+        description: "Item purchased"
+      - name: quantity
+        type: number
+        description: "Quantity"
+      - name: price
+        type: number
+        description: "Price"
+
+  purchase_order:
+    description: "Purchase orders from buyers"
+    fields:
+      - name: po_number
+        type: string
+        required: true
+        description: "Purchase order number"
+      - name: buyer_name
+        type: string
+        required: true
+        description: "Company placing the order"
+      - name: vendor_name
+        type: string
+        required: true
+        description: "Company fulfilling the order"
+      - name: order_date
+        type: date
+        required: true
+        description: "Date of the purchase order"
+      - name: delivery_date
+        type: date
+        required: false
+        description: "Expected delivery date"
+      - name: shipping_address
+        type: string
+        required: false
+        description: "Delivery address"
+      - name: total_amount
+        type: number
+        required: true
+        description: "Total order value"
+    line_items:
+      - name: item_description
+        type: string
+        description: "Item description"
+      - name: quantity
+        type: number
+        description: "Quantity ordered"
+      - name: unit_price
+        type: number
+        description: "Price per unit"
+      - name: amount
+        type: number
+        description: "Line total"
+
+  bank_statement:
+    description: "Bank account statements"
+    fields:
+      - name: bank_name
+        type: string
+        required: true
+        description: "Name of the bank"
+      - name: account_number
+        type: string
+        required: false
+        description: "Account number (may be partially masked)"
+      - name: statement_period_start
+        type: date
+        required: true
+        description: "Statement start date"
+      - name: statement_period_end
+        type: date
+        required: true
+        description: "Statement end date"
+      - name: opening_balance
+        type: number
+        required: true
+        description: "Balance at start of period"
+      - name: closing_balance
+        type: number
+        required: true
+        description: "Balance at end of period"
+      - name: total_deposits
+        type: number
+        required: false
+        description: "Total deposits during period"
+      - name: total_withdrawals
+        type: number
+        required: false
+        description: "Total withdrawals during period"
+    line_items:
+      - name: date
+        type: date
+        description: "Transaction date"
+      - name: description
+        type: string
+        description: "Transaction description"
+      - name: debit
+        type: number
+        description: "Debit amount"
+      - name: credit
+        type: number
+        description: "Credit amount"
+      - name: balance
+        type: number
+        description: "Running balance"
+
+  contract:
+    description: "Business contracts, agreements"
+    fields:
+      - name: contract_title
+        type: string
+        required: true
+        description: "Title or name of the contract"
+      - name: party_1
+        type: string
+        required: true
+        description: "First party name"
+      - name: party_2
+        type: string
+        required: true
+        description: "Second party name"
+      - name: effective_date
+        type: date
+        required: true
+        description: "Contract start/effective date"
+      - name: expiration_date
+        type: date
+        required: false
+        description: "Contract end date"
+      - name: contract_value
+        type: number
+        required: false
+        description: "Total contract value if stated"
+      - name: key_terms
+        type: string
+        required: false
+        description: "Summary of key terms"
+
+  other:
+    description: "Any document not matching above types"
+    fields:
+      - name: document_title
+        type: string
+        required: false
+        description: "Title or heading of the document"
+      - name: date
+        type: date
+        required: false
+        description: "Any date found"
+      - name: primary_entity
+        type: string
+        required: false
+        description: "Main company/person referenced"
+      - name: summary
+        type: string
+        required: false
+        description: "Brief summary of document contents"
