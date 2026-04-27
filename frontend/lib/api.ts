@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE_URL = "";  // Always relative - proxy handles backend URL
 
-// ── Token storage (localStorage for cross-origin production support) ──────────
+// â”€â”€ Token storage (localStorage for cross-origin production support) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TOKEN_KEY = "da_token";
 
 function getToken(): string | null {
@@ -28,7 +28,7 @@ function isTokenValid(): boolean {
   return Date.now() < parseInt(exp);
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface User {
   id: number;
@@ -144,7 +144,7 @@ export interface SystemStats {
   jobs_last_7_days: number;
 }
 
-// ── Axios Instance ─────────────────────────────────────────────────────────────
+// â”€â”€ Axios Instance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function createApiClient(): AxiosInstance {
   const client = axios.create({
@@ -178,7 +178,7 @@ function createApiClient(): AxiosInstance {
 
 export const api = createApiClient();
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const authApi = {
   login: async (username: string, password: string): Promise<TokenResponse> => {
@@ -192,7 +192,7 @@ export const authApi = {
   getToken: () => getToken(),
 };
 
-// ── Extract ───────────────────────────────────────────────────────────────────
+// â”€â”€ Extract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const extractApi = {
   upload: async (files: File[], clientId: string, templateId?: number | null, onProgress?: (pct: number) => void): Promise<{ job_id: number; total_files: number }> => {
@@ -214,7 +214,7 @@ export const extractApi = {
   cancelJob: async (jobId: number) => (await api.delete(`/api/jobs/${jobId}`)).data,
 };
 
-// ── Export ────────────────────────────────────────────────────────────────────
+// â”€â”€ Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const exportApi = {
   combined: async (payload: { job_id: number; template_id?: number; include_line_items?: boolean }): Promise<Blob> =>
@@ -229,7 +229,7 @@ export const exportApi = {
   },
 };
 
-// ── Templates ─────────────────────────────────────────────────────────────────
+// â”€â”€ Templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const templatesApi = {
   list: async (documentType?: string): Promise<ColumnTemplate[]> => (await api.get<ColumnTemplate[]>("/api/templates", { params: documentType ? { document_type: documentType } : undefined })).data,
@@ -239,13 +239,13 @@ export const templatesApi = {
   delete: async (id: number) => (await api.delete(`/api/templates/${id}`)).data,
 };
 
-// ── Schemas ───────────────────────────────────────────────────────────────────
+// â”€â”€ Schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const schemasApi = {
   list: async (): Promise<SchemaInfo[]> => (await api.get<SchemaInfo[]>("/api/schemas")).data,
 };
 
-// ── Drive ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Drive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const driveApi = {
   authStatus: async (): Promise<DriveAuthStatus> => (await api.get<DriveAuthStatus>("/api/drive/auth/status")).data,
@@ -258,7 +258,7 @@ export const driveApi = {
   triggerCheck: async () => (await api.post("/api/watch/check")).data,
 };
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const adminApi = {
   listUsers: async (): Promise<User[]> => (await api.get<User[]>("/api/admin/users")).data,
