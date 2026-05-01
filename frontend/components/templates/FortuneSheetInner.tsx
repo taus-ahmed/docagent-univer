@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { Workbook } from "@fortune-sheet/react";
 import "@fortune-sheet/react/dist/index.css";
 import type { TemplateColumn } from "@/lib/api";
 
 interface Props {
   initialColumns?: TemplateColumn[];
-  onColumnsChange?: (cols: TemplateColumn[]) => void;
-  height?: number;
+  onSheetsChange?: (data: any[]) => void;
+  height?: number | string;
 }
 
-export default function FortuneSheetInner({ initialColumns = [], onColumnsChange, height = 520 }: Props) {
-  const onChangeRef = useRef(onColumnsChange);
-  onChangeRef.current = onColumnsChange;
+export default function FortuneSheetInner({ initialColumns = [], onSheetsChange, height = 480 }: Props) {
+  const onChangeRef = useRef(onSheetsChange);
+  onChangeRef.current = onSheetsChange;
 
-  const [sheets, setSheets] = useState(() => {
+  const [sheets] = useState(() => {
     const celldata = initialColumns.map((col, c) => ({
       r: 0, c,
       v: { v: col.name, m: col.name, ct: { fa: "@", t: "s" }, bl: 1 }
@@ -28,22 +28,9 @@ export default function FortuneSheetInner({ initialColumns = [], onColumnsChange
     }];
   });
 
-  function handleChange(data: any[]) {
-    if (!data?.length) return;
-    setSheets(data);
-    const row0 = (data[0].celldata ?? [])
-      .filter((c: any) => c.r === 0)
-      .sort((a: any, b: any) => a.c - b.c);
-    const cols: TemplateColumn[] = row0
-      .map((cell: any) => String(cell.v?.v ?? cell.v?.m ?? "").trim())
-      .filter(Boolean)
-      .map((name: string, i: number) => ({ name, type: "Text" as const, order: i }));
-    onChangeRef.current?.(cols);
-  }
-
-  const workbookProps: any = {
+  const props: any = {
     data: sheets,
-    onChange: handleChange,
+    onChange: (data: any[]) => { onChangeRef.current?.(data); },
     showToolbar: true,
     showFormulaBar: true,
     allowEdit: true,
@@ -53,7 +40,7 @@ export default function FortuneSheetInner({ initialColumns = [], onColumnsChange
 
   return (
     <div style={{ height, border: "1px solid #e3e6ec", borderRadius: 10, overflow: "hidden" }}>
-      <Workbook {...workbookProps} />
+      <Workbook {...props} />
     </div>
   );
 }
