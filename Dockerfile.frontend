@@ -10,6 +10,9 @@ COPY frontend/ .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# Verify opentype.js is installed
+RUN ls node_modules/opentype.js/dist/ || echo "opentype.js not found"
+
 RUN npm run build
 
 EXPOSE 3000
