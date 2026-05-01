@@ -2,15 +2,6 @@
 const nextConfig = {
   reactStrictMode: false,
   transpilePackages: ["@fortune-sheet/react", "@fortune-sheet/core"],
-  async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
-      },
-    ];
-  },
   webpack(config) {
     config.resolve.fallback = {
       ...config.resolve.fallback,
