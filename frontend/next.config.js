@@ -31,7 +31,7 @@ const nextConfig = {
     config.plugins.push(
       new webpack.NormalModuleReplacementPlugin(
         /opentype\.js\/dist\/opentype\.module\.js/,
-        "opentype.js"
+        require.resolve("opentype.js/dist/opentype.mjs")
       )
     );
     return config;
