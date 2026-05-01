@@ -26,6 +26,11 @@ const nextConfig = {
       ...config.resolve.fallback,
       canvas: false, fs: false, path: false,
     };
+    // Alias opentype.js module path that Univer expects
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "opentype.js/dist/opentype.module.js": require.resolve("opentype.js"),
+    };
     return config;
   },
 };
