@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 
 const UniverSheet = dynamic(
-  () => import("./UniverSheetInner"),
+  () => import("./FortuneSheetInner"),
   {
     ssr: false,
     loading: () => (
