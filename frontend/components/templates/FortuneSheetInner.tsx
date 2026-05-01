@@ -41,18 +41,19 @@ export default function FortuneSheetInner({ initialColumns = [], onColumnsChange
     onChangeRef.current?.(cols);
   }
 
+  const workbookProps: any = {
+    data: sheets,
+    onChange: handleChange,
+    showToolbar: true,
+    showFormulaBar: true,
+    allowEdit: true,
+    lang: "en",
+    style: { width: "100%", height: "100%" },
+  };
+
   return (
     <div style={{ height, border: "1px solid #e3e6ec", borderRadius: 10, overflow: "hidden" }}>
-      <Workbook
-        data={sheets}
-        onChange={handleChange}
-        showToolbar={true}
-        showFormulaBar={true}
-        showStatisticBar={false}
-        allowEdit={true}
-        lang="en"
-        style={{ width: "100%", height: "100%" }}
-      />
+      <Workbook {...workbookProps} />
     </div>
   );
 }
