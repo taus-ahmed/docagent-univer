@@ -1,4 +1,6 @@
 /** @type {import("next").NextConfig} */
+const path = require("path");
+
 const nextConfig = {
   reactStrictMode: false,
   transpilePackages: [
@@ -26,12 +28,12 @@ const nextConfig = {
       ...config.resolve.fallback,
       canvas: false, fs: false, path: false,
     };
-    // Alias opentype.js module path that Univer expects
     config.resolve.alias = {
       ...config.resolve.alias,
-      "opentype.js/dist/opentype.module.js": require.resolve("opentype.js"),
+      "opentype.js/dist/opentype.module.js": path.resolve(__dirname, "node_modules/opentype.js/dist/opentype.module.js"),
     };
     return config;
   },
 };
+
 module.exports = nextConfig;
