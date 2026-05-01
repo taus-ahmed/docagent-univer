@@ -10,82 +10,84 @@ interface Props {
 }
 
 export default function FortuneSheetEditor({ initialColumns = [], onColumnsChange, height = 520 }: Props) {
-  const [WorkbookComp, setWorkbookComp] = useState<React.ComponentType<any> | null>(null);
-  const [sheets, setSheets] = useState<any[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  function buildSheets(cols: TemplateColumn[]): any[] {
-    const celldata: any[] = [];
-    if (cols.length > 0) {
-      cols.forEach((col, c) => {
-        celldata.push({ r: 0, c, v: { v: col.name, m: col.name, ct: { fa: "@", t: "s" }, bl: 1 } });
-      });
-    }
-    return [{
-      name: "Sheet1",
-      id: "sheet1",
-      status: 1,
-      order: 0,
-      hide: 0,
-      row: 50,
-      column: 26,
-      defaultRowHeight: 25,
-      defaultColWidth: 120,
-      celldata,
-      config: {},
-      scrollLeft: 0,
-      scrollTop: 0,
-    }];
-  }
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const workbookRef = useRef<any>(null);
 
   useEffect(() => {
-    import("@fortune-sheet/react")
-      .then(mod => {
-        setWorkbookComp(() => mod.Workbook);
-        setSheets(buildSheets(initialColumns));
-      })
-      .catch(err => setLoadError(err?.message ?? "Failed to load"));
+    if (!containerRef.current) return;
+    let cancelled = false;
+
+    import("@fortune-sheet/react").then(mod => {
+      if (cancelled || !containerRef.current) return;
+      const { Workbook } = mod;
+      const React = require("react");
+      const ReactDOM = require("react-dom/client");
+
+      const celldata: any[] = initialColumns.map((col, c) => ({
+        r: 0, c, v: { v: col.name, m: col.name, ct: { fa: "@", t: "s" }, bl: 1 }
+      }));
+
+      const sheets = [{
+        name: "Sheet1", id: "sheet1", status: 1, order: 0,
+        row: 50, column: 26,
+        defaultRowHeight: 25, defaultColWidth: 120,
+        celldata, config: {},
+      }];
+
+      function handleChange(data: any[]) {
+        if (!data?.length) return;
+        const row0 = (data[0].celldata ?? [])
+          .filter((c: any) => c.r === 0)
+          .sort((a: any, b: any) => a.c - b.c);
+        const cols: TemplateColumn[] = [];
+        for (const cell of row0) {
+          const val = String(cell.v?.v ?? cell.v?.m ?? "").trim();
+          if (val) cols.push({ name: val, type: "Text", order: cell.c });
+        }
+        onColumnsChange?.(cols);
+      }
+
+      const root = ReactDOM.createRoot(containerRef.current);
+      workbookRef.current = root;
+      root.render(
+        React.createElement(Workbook, {
+          data: sheets,
+          onChange: handleChange,
+          showToolbar: true,
+          showFormulaBar: true,
+          showStatisticBar: false,
+          allowEdit: true,
+          lang: "en",
+          style: { width: "100%", height: "100%" },
+        })
+      );
+      if (!cancelled) setLoaded(true);
+    }).catch(err => {
+      if (!cancelled) setError(err?.message ?? "Failed to load");
+    });
+
+    return () => {
+      cancelled = true;
+      try { workbookRef.current?.unmount(); } catch {}
+    };
   }, []);
 
-  function handleChange(data: any[]) {
-    if (!data?.length) return;
-    setSheets(data);
-    const sheet = data[0];
-    const row0 = (sheet.celldata ?? [])
-      .filter((c: any) => c.r === 0)
-      .sort((a: any, b: any) => a.c - b.c);
-    const cols: TemplateColumn[] = [];
-    for (const cell of row0) {
-      const val = String(cell.v?.v ?? cell.v?.m ?? "").trim();
-      if (val) cols.push({ name: val, type: "Text", order: cell.c });
-    }
-    onColumnsChange?.(cols);
-  }
-
-  if (loadError) return (
-    <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10 }}>
-      <p style={{ color:"var(--red)", fontSize:13 }}>Failed to load spreadsheet: {loadError}</p>
-    </div>
-  );
-
-  if (!WorkbookComp) return (
-    <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10 }}>
-      <p style={{ fontSize:13, color:"var(--text3)" }}>Loading spreadsheet…</p>
+  if (error) return (
+    <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10 }}>
+      <p style={{ color:"#dc2626", fontSize:13 }}>Spreadsheet failed to load: {error}</p>
     </div>
   );
 
   return (
-    <div style={{ height, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
-      <WorkbookComp
-        data={sheets}
-        onChange={handleChange}
-        showToolbar={true}
-        showFormulaBar={true}
-        showStatisticBar={true}
-        allowEdit={true}
-        lang="en"
-        style={{ width:"100%", height:"100%" }}
-      />
+    <div style={{ position:"relative", height, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
+      {!loaded && (
+        <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--surface2)", zIndex:1 }}>
+          <p style={{ fontSize:13, color:"var(--text3)" }}>Loading spreadsheet…</p>
+        </div>
+      )}
+      <div ref={containerRef} style={{ width:"100%", height:"100%" }} />
     </div>
   );
 }
