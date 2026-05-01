@@ -13,7 +13,7 @@ const FortuneSheetEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div style={{ height: 480, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f9fb", border: "1px solid #e3e6ec", borderRadius: 10 }}>
+      <div style={{ height: "calc(100vh - 200px)", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f9fb", border: "1px solid #e3e6ec", borderRadius: 10 }}>
         <p style={{ fontSize: 13, color: "#9ca3af" }}>Loading spreadsheet…</p>
       </div>
     )
@@ -21,7 +21,6 @@ const FortuneSheetEditor = dynamic(
 );
 
 const DOC_TYPES = ["invoice","receipt","purchase_order","bank_statement","contract","other"];
-
 interface Props { templateId?: number }
 
 export default function TemplateEditor({ templateId }: Props) {
@@ -52,29 +51,41 @@ export default function TemplateEditor({ templateId }: Props) {
   function extractColumnsFromSheets(data: any[]): TemplateColumn[] {
     if (!data?.length) return [];
     const sheet = data[0];
-    const celldata: any[] = sheet.celldata ?? sheet.data ?? [];
-    
-    // Get all cells in row 0
+    const celldata: any[] = sheet.celldata ?? [];
     const row0 = celldata
       .filter((c: any) => c.r === 0)
       .sort((a: any, b: any) => a.c - b.c);
+    return row0
+      .map((cell: any) => String(cell.v?.v ?? cell.v?.m ?? cell.v ?? "").trim())
+      .filter(v => v && v !== "undefined")
+      .map((name, i) => ({ name, type: "Text" as const, order: i }));
+  }
 
-    const cols: TemplateColumn[] = [];
-    for (const cell of row0) {
-      const val = String(cell.v?.v ?? cell.v?.m ?? cell.v ?? "").trim();
-      if (val && val !== "undefined") {
-        cols.push({ name: val, type: "Text", order: cell.c });
-      }
-    }
-    return cols;
+  function extractColumnsFromDOM(): TemplateColumn[] {
+    // Fallback: read row 1 cells directly from the Fortune Sheet DOM
+    try {
+      const cells = document.querySelectorAll(".luckysheet-cell-main tr:first-child td .luckysheet-cell-content");
+      if (!cells.length) return [];
+      const cols: TemplateColumn[] = [];
+      cells.forEach((cell, i) => {
+        const val = (cell.textContent || "").trim();
+        if (val) cols.push({ name: val, type: "Text", order: i });
+      });
+      return cols;
+    } catch { return []; }
   }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error("Enter a template name");
       
-      const cols = extractColumnsFromSheets(sheetsDataRef.current);
-      if (!cols.length) throw new Error("Type at least one column name in row 1 of the sheet");
+      let cols = extractColumnsFromSheets(sheetsDataRef.current);
+      
+      // Fallback to DOM reading if onChange hasn't fired yet
+      if (!cols.length) cols = extractColumnsFromDOM();
+      
+      // Last resort: ask user to click a cell first
+      if (!cols.length) throw new Error("Click any cell in the sheet first, then save");
 
       const payload = {
         name: name.trim(),
@@ -97,16 +108,14 @@ export default function TemplateEditor({ templateId }: Props) {
 
   return (
     <AppLayout>
-      <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 48px)", overflow:"hidden" }}>
+      <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 60px)", overflow:"hidden", marginLeft:"-28px", marginRight:"-28px", marginTop:"-24px", padding:"16px 28px 0" }}>
         {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, gap:12, flexWrap:"wrap", flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:12, flexShrink:0, flexWrap:"wrap" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:12, color:"var(--text3)", cursor:"pointer" }} onClick={() => router.push("/templates")}>
-              Templates
-            </span>
+            <span style={{ fontSize:12, color:"var(--text3)", cursor:"pointer" }} onClick={() => router.push("/templates")}>Templates</span>
             <span style={{ color:"var(--border2)" }}>›</span>
             <input
-              style={{ fontSize:16, fontWeight:600, color:"var(--text1)", background:"transparent", border:"none", borderBottom:"1.5px solid transparent", outline:"none", padding:"2px 4px", letterSpacing:"-0.02em", transition:"border-color 0.15s", minWidth:200 }}
+              style={{ fontSize:15, fontWeight:600, color:"var(--text1)", background:"transparent", border:"none", borderBottom:"1.5px solid transparent", outline:"none", padding:"2px 4px", letterSpacing:"-0.02em", minWidth:180 }}
               onFocus={e => e.currentTarget.style.borderBottomColor="var(--accent)"}
               onBlur={e => e.currentTarget.style.borderBottomColor="transparent"}
               value={name}
@@ -129,13 +138,13 @@ export default function TemplateEditor({ templateId }: Props) {
           </div>
         </div>
 
-        {/* Instructions */}
-        <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8, padding:"8px 14px", marginBottom:10, fontSize:12, color:"#92400e", flexShrink:0 }}>
-          💡 Type column headers in <b>Row 1</b> (e.g. Invoice Number, Vendor Name, Total, SKU, Price). Rows 2+ are for sample data. Click <b>Save template</b> when done.
+        {/* Tip */}
+        <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:7, padding:"7px 12px", marginBottom:8, fontSize:12, color:"#92400e", flexShrink:0 }}>
+          💡 Type column headers in <b>Row 1</b> · Click another cell after typing · Then click <b>Save template</b>
         </div>
 
-        {/* Sheet - takes remaining height, no overflow */}
-        <div style={{ flex:1, minHeight:0, overflow:"hidden" }}>
+        {/* Sheet */}
+        <div style={{ flex:1, minHeight:0, overflow:"hidden", borderRadius:10, border:"1px solid #e3e6ec" }}>
           <FortuneSheetEditor
             initialColumns={initialColsRef.current}
             onSheetsChange={(data: any[]) => { sheetsDataRef.current = data; }}
