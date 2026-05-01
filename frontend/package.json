@@ -20,6 +20,8 @@
     "@radix-ui/react-tooltip": "^1.1.0",
     "@tanstack/react-query": "^5.51.0",
     "@types/js-cookie": "^3.0.6",
+    "@univerjs/preset-sheets-core": "^0.21.1",
+    "@univerjs/presets": "^0.21.1",
     "ag-grid-community": "^32.0.0",
     "ag-grid-react": "^32.0.0",
     "axios": "^1.7.0",
@@ -31,6 +33,7 @@
     "react-dom": "^18.3.0",
     "react-dropzone": "^14.2.0",
     "react-hot-toast": "^2.4.0",
+    "rxjs": "^7.8.2",
     "tailwind-merge": "^2.4.0",
     "typescript": "^5.5.0",
     "zustand": "^4.5.0"
