@@ -1,5 +1,5 @@
 /** @type {import("next").NextConfig} */
-const path = require("path");
+const webpack = require("webpack");
 
 const nextConfig = {
   reactStrictMode: false,
@@ -28,10 +28,12 @@ const nextConfig = {
       ...config.resolve.fallback,
       canvas: false, fs: false, path: false,
     };
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "opentype.js/dist/opentype.module.js": path.resolve(__dirname, "node_modules/opentype.js/dist/opentype.module.js"),
-    };
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /opentype\.js\/dist\/opentype\.module\.js/,
+        "opentype.js"
+      )
+    );
     return config;
   },
 };
