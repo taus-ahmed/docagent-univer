@@ -14,7 +14,7 @@ const FortuneSheetEditor = dynamic(
     ssr: false,
     loading: () => (
       <div style={{ height: "calc(100vh - 200px)", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f9fb", border: "1px solid #e3e6ec", borderRadius: 10 }}>
-        <p style={{ fontSize: 13, color: "#9ca3af" }}>Loading spreadsheet…</p>
+        <p style={{ fontSize: 13, color: "#9ca3af" }}>Loading spreadsheetâ€¦</p>
       </div>
     )
   }
@@ -50,15 +50,24 @@ export default function TemplateEditor({ templateId }: Props) {
 
   function extractColumnsFromSheets(data: any[]): TemplateColumn[] {
     if (!data?.length) return [];
-    const sheet = data[0];
-    const celldata: any[] = sheet.celldata ?? [];
-    const row0 = celldata
-      .filter((c: any) => c.r === 0)
-      .sort((a: any, b: any) => a.c - b.c);
-    return row0
-      .map((cell: any) => String(cell.v?.v ?? cell.v?.m ?? cell.v ?? "").trim())
-      .filter(v => v && v !== "undefined")
-      .map((name, i) => ({ name, type: "Text" as const, order: i }));
+    const snapshot = data[0];
+    
+    // Univer snapshot format
+    const sheets = snapshot?.sheets ?? {};
+    const sheetKeys = Object.keys(sheets);
+    if (!sheetKeys.length) return [];
+    
+    const sheet = sheets[sheetKeys[0]];
+    const cellData = sheet?.cellData ?? {};
+    const row0 = cellData[0] ?? {};
+    
+    const cols: TemplateColumn[] = [];
+    Object.entries(row0).forEach(([colIdx, cell]: [string, any]) => {
+      const val = String(cell?.v ?? "").trim();
+      if (val) cols.push({ name: val, type: "Text", order: parseInt(colIdx) });
+    });
+    
+    return cols.sort((a, b) => a.order - b.order);
   }
 
   function extractColumnsFromDOM(): TemplateColumn[] {
@@ -113,14 +122,14 @@ export default function TemplateEditor({ templateId }: Props) {
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:12, flexShrink:0, flexWrap:"wrap" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ fontSize:12, color:"var(--text3)", cursor:"pointer" }} onClick={() => router.push("/templates")}>Templates</span>
-            <span style={{ color:"var(--border2)" }}>›</span>
+            <span style={{ color:"var(--border2)" }}>â€º</span>
             <input
               style={{ fontSize:15, fontWeight:600, color:"var(--text1)", background:"transparent", border:"none", borderBottom:"1.5px solid transparent", outline:"none", padding:"2px 4px", letterSpacing:"-0.02em", minWidth:180 }}
               onFocus={e => e.currentTarget.style.borderBottomColor="var(--accent)"}
               onBlur={e => e.currentTarget.style.borderBottomColor="transparent"}
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Template name…"
+              placeholder="Template nameâ€¦"
               autoFocus={!templateId}
             />
           </div>
@@ -133,14 +142,14 @@ export default function TemplateEditor({ templateId }: Props) {
             </div>
             <button className="btn btn-ghost btn-sm" onClick={() => router.push("/templates")}>Cancel</button>
             <button className="btn btn-primary btn-sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "Saving…" : "💾 Save template"}
+              {saveMutation.isPending ? "Savingâ€¦" : "ðŸ’¾ Save template"}
             </button>
           </div>
         </div>
 
         {/* Tip */}
         <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:7, padding:"7px 12px", marginBottom:8, fontSize:12, color:"#92400e", flexShrink:0 }}>
-          💡 Type column headers in <b>Row 1</b> · Click another cell after typing · Then click <b>Save template</b>
+          ðŸ’¡ Type column headers in <b>Row 1</b> Â· Click another cell after typing Â· Then click <b>Save template</b>
         </div>
 
         {/* Sheet */}
