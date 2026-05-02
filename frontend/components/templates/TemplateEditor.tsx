@@ -7,6 +7,7 @@ import { templatesApi, type TemplateColumn, type ColumnTemplate } from "@/lib/ap
 import { useAuthStore } from "@/lib/auth-store";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import type { SheetSaveData } from "@/components/templates/DocAgentSpreadsheet";
 
 const DOC_TYPES = [
   { value: "invoice",        label: "Invoice" },
@@ -28,8 +29,7 @@ export default function TemplateEditor({ templateId }: Props) {
   const [customDocType, setCustomDocType] = useState("");
   const [mounted, setMounted] = useState(false);
   const [SheetComp, setSheetComp] = useState<React.ComponentType<any> | null>(null);
-  const sheetDataRef = useRef<any>(null);
-  const existingColsRef = useRef<TemplateColumn[]>([]);
+  const sheetDataRef = useRef<SheetSaveData | null>(null);
   const nameRef = useRef("");
 
   useEffect(() => { nameRef.current = name; }, [name]);
@@ -53,11 +53,21 @@ export default function TemplateEditor({ templateId }: Props) {
     if (!existing) return;
     setName(existing.name);
     nameRef.current = existing.name;
-    existingColsRef.current = existing.columns;
     const isStandard = DOC_TYPES.some(t => t.value === existing.document_type && t.value !== "other");
     if (isStandard) { setDocType(existing.document_type); }
     else { setDocType("other"); setCustomDocType(existing.document_type); }
   }, [existing]);
+
+  // Parse existing template's saved layout
+  const existingLayout = (() => {
+    if (!existing?.columns) return null;
+    try {
+      // Description holds the full grid JSON
+      const desc = (existing as any).description;
+      if (desc) return JSON.parse(desc) as SheetSaveData;
+    } catch {}
+    return null;
+  })();
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -68,46 +78,63 @@ export default function TemplateEditor({ templateId }: Props) {
         ? (customDocType.trim() || "other")
         : docType;
 
-      // Get full sheet data if available
       const sheetData = sheetDataRef.current;
+      if (!sheetData) throw new Error("Spreadsheet not loaded yet — please wait");
 
-      let savePayload: any;
+      // Check if there are any cells with content
+      const hasCells = Object.values(sheetData.cells ?? {}).some(c => c?.value?.trim());
+      if (!hasCells) throw new Error("Add some content to the spreadsheet before saving");
 
-      if (sheetData && (sheetData.extractTargets?.length > 0 || sheetData.cells)) {
-        // New layout mode — save full grid
-        const payload = {
-          ...sheetData,
-          docType: finalDocType,
-        };
+      // Build columns list from extract targets OR all cells with values in row 0
+      let cols: TemplateColumn[] = [];
 
-        // Also derive flat columns list for backward compatibility
-        const cols: TemplateColumn[] = sheetData.extractTargets?.map((t: any, i: number) => ({
-          name: t.label || `Field_${i}`,
+      if (sheetData.extractTargets?.length > 0) {
+        // Use explicitly marked extract targets
+        cols = sheetData.extractTargets.map((t, i) => ({
+          name: t.label,
           type: "Text" as const,
           order: i,
-          extraction_type: sheetData.repeatRows?.includes(t.r) ? "lineitem" : "header",
-        })) ?? [];
-
-        savePayload = {
-          name: n,
-          document_type: finalDocType,
-          columns: cols.length > 0 ? cols : existingColsRef.current,
-          description: JSON.stringify(payload), // store full layout in description
-        };
-      } else if (existingColsRef.current.length > 0) {
-        // Fallback to existing columns
-        savePayload = {
-          name: n,
-          document_type: finalDocType,
-          columns: existingColsRef.current,
-        };
+          extraction_type: t.isRepeat ? "lineitem" : "header",
+        }));
       } else {
-        throw new Error("Mark at least one cell as 'Extract here' before saving");
+        // Auto-detect: use all cells that have values as columns
+        // This handles the case where user forgets to mark Extract here
+        const cellEntries = Object.entries(sheetData.cells ?? {});
+        const allNamedCells = cellEntries
+          .filter(([, cell]) => cell?.value?.trim())
+          .map(([key, cell]) => {
+            const [r, c] = key.split(",").map(Number);
+            return { r, c, value: cell.value.trim() };
+          })
+          .sort((a, b) => a.r - b.r || a.c - b.c);
+
+        cols = allNamedCells.map((cell, i) => ({
+          name: cell.value,
+          type: "Text" as const,
+          order: i,
+          extraction_type: "header" as const,
+        }));
       }
 
+      if (!cols.length) throw new Error("Add column names or mark cells for extraction");
+
+      // Save full grid layout in description field for perfect restore
+      const fullLayout = {
+        ...sheetData,
+        docType: finalDocType,
+        savedAt: new Date().toISOString(),
+      };
+
+      const payload = {
+        name: n,
+        document_type: finalDocType,
+        columns: cols,
+        description: JSON.stringify(fullLayout),
+      };
+
       return templateId
-        ? templatesApi.update(templateId, savePayload)
-        : templatesApi.create(savePayload);
+        ? templatesApi.update(templateId, payload as any)
+        : templatesApi.create(payload as any);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["templates"] });
@@ -123,6 +150,7 @@ export default function TemplateEditor({ templateId }: Props) {
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:"#f3f4f6", fontFamily:"'Segoe UI',system-ui,sans-serif" }}>
+      {/* SIDEBAR */}
       <aside style={{ width:220, background:"#1e2130", display:"flex", flexDirection:"column", flexShrink:0 }}>
         <div style={{ padding:"16px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ width:32, height:32, background:"#4f46e5", borderRadius:8, display:"grid", placeItems:"center", fontSize:15, fontWeight:700, color:"#fff", flexShrink:0 }}>D</div>
@@ -154,7 +182,9 @@ export default function TemplateEditor({ templateId }: Props) {
         </div>
       </aside>
 
+      {/* MAIN */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minWidth:0 }}>
+        {/* TOP BAR */}
         <div style={{ flexShrink:0, background:"#fff", borderBottom:"1px solid #e5e7eb", height:56, display:"flex", alignItems:"center", padding:"0 20px", gap:10, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
           <span onClick={() => router.push("/templates")} style={{ fontSize:13, color:"#9ca3af", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0 }}>Templates</span>
           <span style={{ color:"#d1d5db", flexShrink:0 }}>›</span>
@@ -183,23 +213,31 @@ export default function TemplateEditor({ templateId }: Props) {
           </div>
         </div>
 
+        {/* HINT */}
         <div style={{ flexShrink:0, background:"#fffbeb", borderBottom:"1px solid #fde68a", padding:"7px 20px", fontSize:12, color:"#92400e", display:"flex", alignItems:"center", gap:6 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Design your template freely. Select cells and click <strong style={{ margin:"0 3px", color:"#15803d" }}>Extract here</strong> for single values, or <strong style={{ margin:"0 3px", color:"#1d4ed8" }}>Repeat row</strong> for line items that repeat.
+          Design your template freely — all cells and formatting are saved exactly as you see.
+          Optionally: select cells and click <strong style={{ margin:"0 3px", color:"#15803d" }}>Extract here</strong> for single values,
+          or <strong style={{ margin:"0 3px", color:"#1d4ed8" }}>Repeat row</strong> for line items (AI creates one row per item).
+          If you don't mark anything, the AI will intelligently extract all visible fields.
         </div>
 
+        {/* SHEET */}
         <div style={{ flex:1, minHeight:0, padding:14, overflow:"hidden", display:"flex", flexDirection:"column" }}>
           <div style={{ flex:1, minHeight:0, border:"1px solid #e5e7eb", borderRadius:10, overflow:"hidden", boxShadow:"0 1px 8px rgba(0,0,0,0.06)", background:"#fff" }}>
             {SheetComp ? (
               <SheetComp
                 initialColumns={existing?.columns ?? []}
-                initialData={null}
-                onSheetsChange={(data: any) => { sheetDataRef.current = data; }}
+                initialData={existingLayout}
+                onSheetsChange={(data: SheetSaveData) => { sheetDataRef.current = data; }}
                 height="100%"
               />
             ) : (
               <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", background:"#f9fafb" }}>
-                <p style={{ fontSize:13, color:"#9ca3af" }}>Loading spreadsheet...</p>
+                <div style={{ textAlign:"center" }}>
+                  <div style={{ width:28, height:28, border:"3px solid #e5e7eb", borderTopColor:"#4f46e5", borderRadius:"50%", margin:"0 auto 10px", animation:"spin 0.7s linear infinite" }} />
+                  <p style={{ fontSize:13, color:"#9ca3af" }}>Loading spreadsheet...</p>
+                </div>
               </div>
             )}
           </div>

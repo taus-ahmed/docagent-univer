@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 
-// ─── Types ─────────────────────────────────────────────────────────────────
 interface CellStyle {
   bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean;
   fontSize?: number; fontFamily?: string; fontColor?: string; bgColor?: string;
@@ -14,16 +13,15 @@ interface Cell {
   style: CellStyle;
   mergeParent?: [number, number];
   mergeSpan?: { rows: number; cols: number };
-  extractTarget?: boolean;   // green — AI fills this cell
-  repeatRow?: boolean;       // blue — AI repeats this row per line item
+  extractTarget?: boolean;
+  repeatRow?: boolean;
 }
 export interface SheetSaveData {
   cells: Record<string, Cell>;
   colWidths: number[];
   merges: Record<string, { rows: number; cols: number }>;
-  extractTargets: Array<{ r: number; c: number; label: string }>;
+  extractTargets: Array<{ r: number; c: number; label: string; isRepeat: boolean }>;
   repeatRows: number[];
-  docType: string;
 }
 
 interface Props {
@@ -33,7 +31,6 @@ interface Props {
   height?: number | string;
 }
 
-// ─── Constants ─────────────────────────────────────────────────────────────
 const ROWS = 50, COLS = 26, DCW = 120, DRH = 26, RHW = 52, CHH = 26;
 const FONTS = ["Arial", "Calibri", "Segoe UI", "Times New Roman", "Georgia", "Courier New", "Verdana"];
 const SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72];
@@ -46,32 +43,31 @@ const COLORS = [
 const ck = (r: number, c: number) => `${r},${c}`;
 const cl = (i: number) => { let r = "", n = i; do { r = String.fromCharCode(65 + (n % 26)) + r; n = Math.floor(n / 26) - 1; } while (n >= 0); return r; };
 
-// ─── SVG Icons ──────────────────────────────────────────────────────────────
-const I = {
+// SVG Icons
+const Svg = {
   undo: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a8 8 0 0 1 8 8v2"/><path d="M3 10l6-6M3 10l6 6"/></svg>,
   redo: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H11a8 8 0 0 0-8 8v2"/><path d="M21 10l-6-6m6 6l-6 6"/></svg>,
   bold: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>,
   italic: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>,
   underline: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>,
-  strike: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="12" x2="20" y2="12"/><path d="M17.5 7C17.5 5.067 15.538 3.5 13 3.5c-2.538 0-4.5 1.567-4.5 3.5"/><path d="M6.5 17C6.5 18.933 8.462 20.5 11 20.5s4.5-1.567 4.5-3.5"/></svg>,
+  strike: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="12" x2="20" y2="12"/><path d="M17.5 7C17.5 5.067 15.538 3.5 13 3.5c-2.538 0-4.5 1.567-4.5 3.5"/></svg>,
   alignL: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>,
   alignC: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>,
   alignR: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>,
   borderAll: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>,
   borderOut: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>,
   wrap: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><path d="M3 12h15a3 3 0 0 1 0 6H8"/><polyline points="10 15 7 18 10 21"/></svg>,
-  extract: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
-  repeat: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
+  extract: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
+  repeat: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
 };
 
-// ─── Component ──────────────────────────────────────────────────────────────
 export default function DocAgentSpreadsheet({ initialColumns = [], initialData, onSheetsChange, height = 500 }: Props) {
-
   const initCells = (): Record<string, Cell> => {
     if (initialData?.cells) return initialData.cells;
     const c: Record<string, Cell> = {};
+    // Seed initial columns WITHOUT auto-marking as extract targets
     initialColumns.forEach((col, i) => {
-      if (i < COLS) c[ck(0, i)] = { value: col.name, style: { bold: true, fontSize: 11 }, extractTarget: true };
+      if (i < COLS) c[ck(0, i)] = { value: col.name, style: { bold: true, fontSize: 11 } };
     });
     return c;
   };
@@ -93,15 +89,20 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const mouseDown = useRef(false);
 
   const buildSaveData = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[]): SheetSaveData => {
-    const extractTargets: Array<{ r: number; c: number; label: string }> = [];
-    const repeatRows: number[] = [];
-    const seenRepeatRows = new Set<number>();
+    const extractTargets: Array<{ r: number; c: number; label: string; isRepeat: boolean }> = [];
+    const repeatRowsSet = new Set<number>();
+
     Object.entries(c).forEach(([key, cell]) => {
+      if (!cell) return;
       const [r, col] = key.split(",").map(Number);
-      if (cell.extractTarget) extractTargets.push({ r, c: col, label: cell.value || `Field_${cl(col)}${r + 1}` });
-      if (cell.repeatRow && !seenRepeatRows.has(r)) { repeatRows.push(r); seenRepeatRows.add(r); }
+      if (cell.repeatRow) repeatRowsSet.add(r);
+      // Only add to extractTargets if it has a value AND is explicitly marked
+      if (cell.extractTarget && cell.value.trim()) {
+        extractTargets.push({ r, c: col, label: cell.value.trim(), isRepeat: !!cell.repeatRow });
+      }
     });
-    return { cells: c, colWidths: cw, merges: m, extractTargets, repeatRows: [...new Set(repeatRows)].sort(), docType: "" };
+
+    return { cells: c, colWidths: cw, merges: m, extractTargets, repeatRows: [...repeatRowsSet].sort((a, b) => a - b) };
   }, []);
 
   const notify = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[]) => {
@@ -132,14 +133,13 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     upd(next);
   }, [cells, selR, selC, rng, ph, upd]);
 
-  // Mark as extract target
+  // Mark selected cells as extract targets (toggle)
   const markExtract = useCallback(() => {
     ph();
     const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
     const c1 = Math.min(selC, rng.c2), c2 = Math.max(selC, rng.c2);
     const next = { ...cells };
-    // Check if already marked — toggle
-    const alreadyMarked = next[ck(r1, c1)]?.extractTarget;
+    const alreadyMarked = next[ck(r1, c1)]?.extractTarget && !next[ck(r1, c1)]?.repeatRow;
     for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
       const k = ck(r, c);
       next[k] = { ...(next[k] ?? { value: "", style: {} }), extractTarget: !alreadyMarked, repeatRow: false };
@@ -147,17 +147,18 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     upd(next);
   }, [cells, selR, selC, rng, ph, upd]);
 
-  // Mark entire row as repeat row
+  // Mark entire selected rows as repeat rows (toggle)
   const markRepeat = useCallback(() => {
     ph();
     const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
     const next = { ...cells };
-    // Check if already marked — toggle
-    let alreadyMarked = false;
-    for (let c = 0; c < COLS; c++) { if (next[ck(r1, c)]?.repeatRow) { alreadyMarked = true; break; } }
+    const alreadyRepeat = Object.entries(next).some(([k, cell]) => {
+      const [r] = k.split(",").map(Number);
+      return r >= r1 && r <= r2 && cell.repeatRow;
+    });
     for (let r = r1; r <= r2; r++) for (let c = 0; c < COLS; c++) {
       const k = ck(r, c);
-      next[k] = { ...(next[k] ?? { value: "", style: {} }), repeatRow: !alreadyMarked, extractTarget: !alreadyMarked };
+      next[k] = { ...(next[k] ?? { value: "", style: {} }), repeatRow: !alreadyRepeat, extractTarget: !alreadyRepeat };
     }
     upd(next);
   }, [cells, selR, selC, rng, ph, upd]);
@@ -184,7 +185,10 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const startEdit = useCallback((r: number, c: number, initChar?: string) => {
     setEditR(r); setEditC(c);
     setEditVal(initChar !== undefined ? initChar : (cells[ck(r, c)]?.value ?? ""));
-    setTimeout(() => { const inp = inputRef.current; if (inp) { inp.focus(); const l = inp.value.length; inp.setSelectionRange(initChar !== undefined ? l : 0, l); } }, 0);
+    setTimeout(() => {
+      const inp = inputRef.current;
+      if (inp) { inp.focus(); const l = inp.value.length; inp.setSelectionRange(initChar !== undefined ? l : 0, l); }
+    }, 0);
   }, [cells]);
 
   const nav = useCallback((dr: number, dc: number) => {
@@ -218,7 +222,9 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
         const c1 = Math.min(selC, rng.c2), c2 = Math.max(selC, rng.c2);
         const next = { ...cells };
-        for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) { const k = ck(r, c); if (next[k]) next[k] = { ...next[k], value: "" }; }
+        for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+          const k = ck(r, c); if (next[k]) next[k] = { ...next[k], value: "" };
+        }
         upd(next);
       }
       else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { e.preventDefault(); startEdit(selR, selC, e.key); }
@@ -230,8 +236,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const mergeCells = useCallback(() => {
     const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
     const c1 = Math.min(selC, rng.c2), c2 = Math.max(selC, rng.c2);
-    if (r1 === r2 && c1 === c2) return;
-    ph();
+    if (r1 === r2 && c1 === c2) return; ph();
     const nm = { ...merges, [ck(r1, c1)]: { rows: r2 - r1 + 1, cols: c2 - c1 + 1 } };
     const next = { ...cells };
     for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
@@ -265,8 +270,8 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     return r >= r1 && r <= r2 && c >= c1 && c <= c2;
   };
 
-  const extractCount = useMemo(() => Object.values(cells).filter(c => c.extractTarget && !c.repeatRow).length, [cells]);
-  const repeatRowCount = useMemo(() => new Set(Object.entries(cells).filter(([, c]) => c.repeatRow).map(([k]) => k.split(",")[0])).size, [cells]);
+  const extractCount = useMemo(() => Object.values(cells).filter(c => c?.extractTarget && !c?.repeatRow && c?.value?.trim()).length, [cells]);
+  const repeatRowCount = useMemo(() => new Set(Object.entries(cells).filter(([, c]) => c?.repeatRow).map(([k]) => k.split(",")[0])).size, [cells]);
 
   const tb = (active = false): React.CSSProperties => ({
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -274,13 +279,12 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     borderRadius: 5, border: `1px solid ${active ? "#4f46e5" : "transparent"}`,
     background: active ? "#ede9fe" : "transparent",
     color: active ? "#4f46e5" : "#374151",
-    cursor: "pointer", userSelect: "none" as const,
-    transition: "all 0.1s", fontSize: 12, fontFamily: "inherit",
+    cursor: "pointer", userSelect: "none" as const, transition: "all 0.1s", fontSize: 12, fontFamily: "inherit",
   });
   const sep: React.CSSProperties = { width: 1, height: 20, background: "#e5e7eb", margin: "0 3px", flexShrink: 0 };
 
   const ColorPicker = ({ onPick, onClose }: { onPick: (c: string) => void; onClose: () => void }) => (
-    <div style={{ position: "absolute", top: 34, left: 0, zIndex: 300, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", display: "grid", gridTemplateColumns: "repeat(8,22px)", gap: 3, width: 208 }}>
+    <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 34, left: 0, zIndex: 300, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", display: "grid", gridTemplateColumns: "repeat(8,22px)", gap: 3, width: 208 }}>
       <div onClick={() => { onPick(""); onClose(); }} style={{ width: 22, height: 22, background: "#fff", border: "1px solid #ddd", borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>∅</div>
       {COLORS.map(c => (
         <div key={c} onClick={() => { onPick(c); onClose(); }}
@@ -292,14 +296,16 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     </div>
   );
 
+  const isRepeatRow = (r: number) => Array.from({ length: 3 }, (_, c) => cells[ck(r, c)]?.repeatRow).some(Boolean);
+
   return (
     <div style={{ height, display: "flex", flexDirection: "column", background: "#fff", userSelect: "none", fontSize: 12, fontFamily: "Segoe UI,system-ui,sans-serif" }}
       onClick={() => { setFcp(false); setBcp(false); }}>
 
-      {/* ── TOOLBAR ── */}
+      {/* TOOLBAR */}
       <div style={{ flexShrink: 0, background: "#f8f9fb", borderBottom: "1px solid #e5e7eb", padding: "4px 8px", display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", minHeight: 38 }}>
-        <button style={tb()} onClick={doUndo} title="Undo (Ctrl+Z)">{I.undo}</button>
-        <button style={tb()} onClick={doRedo} title="Redo">{I.redo}</button>
+        <button style={tb()} onClick={doUndo} title="Undo">{Svg.undo}</button>
+        <button style={tb()} onClick={doRedo} title="Redo">{Svg.redo}</button>
         <div style={sep} />
         <select value={cs.fontFamily ?? "Arial"} onChange={e => applyStyle({ fontFamily: e.target.value })}
           style={{ height: 28, border: "1px solid #e5e7eb", borderRadius: 5, fontSize: 12, padding: "0 4px", background: "#fff", cursor: "pointer", fontFamily: cs.fontFamily ?? "Arial", minWidth: 100 }}>
@@ -310,12 +316,11 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           {SIZES.map(s => <option key={s}>{s}</option>)}
         </select>
         <div style={sep} />
-        <button style={tb(!!cs.bold)} onClick={() => applyStyle({ bold: !cs.bold })} title="Bold">{I.bold}</button>
-        <button style={tb(!!cs.italic)} onClick={() => applyStyle({ italic: !cs.italic })} title="Italic">{I.italic}</button>
-        <button style={tb(!!cs.underline)} onClick={() => applyStyle({ underline: !cs.underline })} title="Underline">{I.underline}</button>
-        <button style={tb(!!cs.strike)} onClick={() => applyStyle({ strike: !cs.strike })} title="Strikethrough">{I.strike}</button>
+        <button style={tb(!!cs.bold)} onClick={() => applyStyle({ bold: !cs.bold })} title="Bold">{Svg.bold}</button>
+        <button style={tb(!!cs.italic)} onClick={() => applyStyle({ italic: !cs.italic })} title="Italic">{Svg.italic}</button>
+        <button style={tb(!!cs.underline)} onClick={() => applyStyle({ underline: !cs.underline })} title="Underline">{Svg.underline}</button>
+        <button style={tb(!!cs.strike)} onClick={() => applyStyle({ strike: !cs.strike })} title="Strike">{Svg.strike}</button>
         <div style={sep} />
-        {/* Font color */}
         <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
           <button style={{ ...tb(), flexDirection: "column", gap: 1 }} onClick={() => { setFcp(v => !v); setBcp(false); }} title="Font color">
             <span style={{ fontSize: 13, fontWeight: 700, color: cs.fontColor ?? "#000", lineHeight: 1 }}>A</span>
@@ -323,7 +328,6 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           </button>
           {fcp && <ColorPicker onPick={c => applyStyle({ fontColor: c || undefined })} onClose={() => setFcp(false)} />}
         </div>
-        {/* BG color */}
         <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
           <button style={{ ...tb(), flexDirection: "column", gap: 1 }} onClick={() => { setBcp(v => !v); setFcp(false); }} title="Fill color">
             <div style={{ width: 16, height: 12, background: cs.bgColor ?? "#ffff00", border: "1px solid #ccc", borderRadius: 2 }} />
@@ -332,34 +336,33 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           {bcp && <ColorPicker onPick={c => applyStyle({ bgColor: c || undefined })} onClose={() => setBcp(false)} />}
         </div>
         <div style={sep} />
-        <button style={tb(!cs.align || cs.align === "left")} onClick={() => applyStyle({ align: "left" })} title="Align left">{I.alignL}</button>
-        <button style={tb(cs.align === "center")} onClick={() => applyStyle({ align: "center" })} title="Center">{I.alignC}</button>
-        <button style={tb(cs.align === "right")} onClick={() => applyStyle({ align: "right" })} title="Align right">{I.alignR}</button>
+        <button style={tb(!cs.align || cs.align === "left")} onClick={() => applyStyle({ align: "left" })} title="Left">{Svg.alignL}</button>
+        <button style={tb(cs.align === "center")} onClick={() => applyStyle({ align: "center" })} title="Center">{Svg.alignC}</button>
+        <button style={tb(cs.align === "right")} onClick={() => applyStyle({ align: "right" })} title="Right">{Svg.alignR}</button>
         <div style={sep} />
-        <button style={tb(!!cs.borderAll)} onClick={() => applyStyle({ borderAll: !cs.borderAll, borderOuter: false })} title="All borders">{I.borderAll}</button>
-        <button style={tb(!!cs.borderOuter)} onClick={() => applyStyle({ borderOuter: !cs.borderOuter, borderAll: false })} title="Outer border">{I.borderOut}</button>
+        <button style={tb(!!cs.borderAll)} onClick={() => applyStyle({ borderAll: !cs.borderAll, borderOuter: false })} title="All borders">{Svg.borderAll}</button>
+        <button style={tb(!!cs.borderOuter)} onClick={() => applyStyle({ borderOuter: !cs.borderOuter, borderAll: false })} title="Outer border">{Svg.borderOut}</button>
         <div style={sep} />
-        <button style={tb()} onClick={mergeCells} title="Merge cells"><span style={{ fontSize: 11, fontWeight: 500 }}>Merge</span></button>
-        <button style={tb()} onClick={splitCells} title="Unmerge"><span style={{ fontSize: 11, fontWeight: 500 }}>Split</span></button>
+        <button style={tb()} onClick={mergeCells} title="Merge"><span style={{ fontSize: 11, fontWeight: 500 }}>Merge</span></button>
+        <button style={tb()} onClick={splitCells} title="Split"><span style={{ fontSize: 11, fontWeight: 500 }}>Split</span></button>
         <div style={sep} />
-        <button style={tb(!!cs.wrap)} onClick={() => applyStyle({ wrap: !cs.wrap })} title="Wrap text">{I.wrap}</button>
+        <button style={tb(!!cs.wrap)} onClick={() => applyStyle({ wrap: !cs.wrap })} title="Wrap">{Svg.wrap}</button>
         <div style={sep} />
 
-        {/* ── EXTRACTION MARKERS ── */}
+        {/* EXTRACTION MARKERS */}
         <button
-          style={{ ...tb(!!curCell?.extractTarget && !curCell?.repeatRow), background: curCell?.extractTarget && !curCell?.repeatRow ? "#dcfce7" : "transparent", border: `1px solid ${curCell?.extractTarget && !curCell?.repeatRow ? "#16a34a" : "transparent"}`, color: curCell?.extractTarget && !curCell?.repeatRow ? "#15803d" : "#374151", gap: 5, padding: "3px 10px", minWidth: "auto" }}
-          onClick={markExtract}
-          title="Mark selected cell(s) as extraction target — AI will fill these cells from the document"
+          style={{ ...tb(!!curCell?.extractTarget && !curCell?.repeatRow), background: curCell?.extractTarget && !curCell?.repeatRow ? "#dcfce7" : "transparent", border: `1px solid ${curCell?.extractTarget && !curCell?.repeatRow ? "#16a34a" : "#e5e7eb"}`, color: "#15803d", gap: 5, padding: "3px 10px", minWidth: "auto" }}
+          onClick={markExtract} title="AI will extract a value into this cell"
         >
-          {I.extract}
+          {Svg.extract}
           <span style={{ fontSize: 11, fontWeight: 600 }}>Extract here</span>
         </button>
+
         <button
-          style={{ ...tb(!!curCell?.repeatRow), background: curCell?.repeatRow ? "#dbeafe" : "transparent", border: `1px solid ${curCell?.repeatRow ? "#2563eb" : "transparent"}`, color: curCell?.repeatRow ? "#1d4ed8" : "#374151", gap: 5, padding: "3px 10px", minWidth: "auto" }}
-          onClick={markRepeat}
-          title="Mark selected row(s) as repeating — AI will create one row per line item"
+          style={{ ...tb(!!curCell?.repeatRow), background: curCell?.repeatRow ? "#dbeafe" : "transparent", border: `1px solid ${curCell?.repeatRow ? "#2563eb" : "#e5e7eb"}`, color: "#1d4ed8", gap: 5, padding: "3px 10px", minWidth: "auto" }}
+          onClick={markRepeat} title="AI repeats this row once per line item"
         >
-          {I.repeat}
+          {Svg.repeat}
           <span style={{ fontSize: 11, fontWeight: 600 }}>Repeat row</span>
         </button>
 
@@ -370,34 +373,28 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         </button>
       </div>
 
-      {/* ── FORMULA BAR ── */}
+      {/* FORMULA BAR */}
       <div style={{ flexShrink: 0, display: "flex", alignItems: "center", borderBottom: "1px solid #e5e7eb", background: "#fff", height: 28 }}>
         <div style={{ width: 72, textAlign: "center", borderRight: "1px solid #e5e7eb", fontSize: 12, fontWeight: 600, color: "#374151", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {cl(selC)}{selR + 1}
         </div>
         <div style={{ width: 32, borderRight: "1px solid #e5e7eb", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 13, fontStyle: "italic", flexShrink: 0 }}>ƒx</div>
-        <div style={{ flex: 1, padding: "0 10px", fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center" }}>
-          {editR !== null ? editVal : (cells[ck(selR, selC)]?.value ?? "")}
+        <div style={{ flex: 1, padding: "0 10px", fontSize: 12, color: "#374151", display: "flex", alignItems: "center", overflow: "hidden" }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {editR !== null ? editVal : (cells[ck(selR, selC)]?.value ?? "")}
+          </span>
         </div>
-        {/* Extraction status indicator */}
         {curCell?.extractTarget && (
-          <div style={{ flexShrink: 0, padding: "0 10px", display: "flex", alignItems: "center", gap: 5, borderLeft: "1px solid #e5e7eb" }}>
-            {curCell.repeatRow ? (
-              <span style={{ fontSize: 11, color: "#1d4ed8", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
-                Repeat row — one per line item
-              </span>
-            ) : (
-              <span style={{ fontSize: 11, color: "#15803d", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
-                Extract target
-              </span>
-            )}
+          <div style={{ flexShrink: 0, padding: "0 12px", borderLeft: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: curCell.repeatRow ? "#2563eb" : "#16a34a", display: "inline-block" }} />
+            <span style={{ fontSize: 11, color: curCell.repeatRow ? "#1d4ed8" : "#15803d", fontWeight: 600 }}>
+              {curCell.repeatRow ? "Repeat row — one per line item" : "Extract target"}
+            </span>
           </div>
         )}
       </div>
 
-      {/* ── GRID ── */}
+      {/* GRID */}
       <div style={{ flex: 1, overflow: "auto" }} onMouseUp={() => { mouseDown.current = false; }}>
         <table style={{ borderCollapse: "collapse", tableLayout: "fixed", minWidth: "max-content" }}>
           <thead>
@@ -416,15 +413,14 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           </thead>
           <tbody>
             {Array.from({ length: ROWS }, (_, r) => {
-              // Check if this row has any repeat markers
-              const isRepeatRow = Array.from({ length: COLS }, (_, c) => cells[ck(r, c)]?.repeatRow).some(Boolean);
+              const rowIsRepeat = isRepeatRow(r);
               return (
                 <tr key={r}>
-                  <td style={{ width: RHW, minWidth: RHW, height: DRH, background: isRepeatRow ? "#dbeafe" : "#f1f3f9", border: "1px solid #d1d5db", fontSize: 10, color: isRepeatRow ? "#1d4ed8" : "#6b7280", textAlign: "center", position: "sticky", left: 0, zIndex: 5, cursor: "pointer", userSelect: "none", fontWeight: isRepeatRow ? 700 : 400 }}
+                  <td style={{ width: RHW, minWidth: RHW, height: DRH, background: rowIsRepeat ? "#dbeafe" : "#f1f3f9", border: "1px solid #d1d5db", fontSize: 10, color: rowIsRepeat ? "#1d4ed8" : "#6b7280", textAlign: "center", position: "sticky", left: 0, zIndex: 5, cursor: "pointer", userSelect: "none", fontWeight: rowIsRepeat ? 700 : 400 }}
                     onClick={() => { setSelR(r); setSelC(0); setRng({ r1: r, c1: 0, r2: r, c2: COLS - 1 }); }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
                       <span>{r + 1}</span>
-                      {isRepeatRow && <span style={{ fontSize: 8, letterSpacing: 0 }}>RPT</span>}
+                      {rowIsRepeat && <span style={{ fontSize: 8 }}>RPT</span>}
                     </div>
                   </td>
                   {Array.from({ length: COLS }, (_, c) => {
@@ -440,11 +436,9 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                     const isExtract = cell?.extractTarget && !cell?.repeatRow;
                     const isRepeat = cell?.repeatRow;
                     const tw = Array.from({ length: cs2 }, (_, i) => colWidths[c + i] ?? DCW).reduce((a, b) => a + b, 0);
-
-                    // Background priority: user style > repeat > extract > selection > default
-                    const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.08)" : isExtract ? "rgba(22,163,74,0.08)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
+                    const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.06)" : isExtract ? "rgba(22,163,74,0.06)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
                     const bd = isSel ? "2px solid #4f46e5" : isRepeat ? "1px solid #93c5fd" : isExtract ? "1px solid #86efac" : ir ? "1px solid #a5b4fc" : "1px solid #e5e7eb";
-                    const finalBd = s.borderAll ? "1px solid #374151" : bd;
+                    const finalBd = s.borderAll ? "1px solid #374151" : s.borderOuter && isSel ? "2px solid #374151" : bd;
                     const ff = s.fontFamily ?? "Segoe UI,system-ui,sans-serif";
                     const fs = s.fontSize ?? 11;
                     const fw = s.bold ? "600" : "normal";
@@ -459,9 +453,8 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                         onMouseDown={e => { if (e.button !== 0) return; mouseDown.current = true; setSelR(r); setSelC(c); setRng({ r1: r, c1: c, r2: r, c2: c }); }}
                         onMouseEnter={() => { if (mouseDown.current) setRng(p => ({ ...p, r2: r, c2: c })); }}
                       >
-                        {/* Extract/Repeat indicator dot */}
                         {(isExtract || isRepeat) && (
-                          <div style={{ position: "absolute", top: 2, right: 3, width: 6, height: 6, borderRadius: "50%", background: isRepeat ? "#2563eb" : "#16a34a", zIndex: 2, flexShrink: 0 }} />
+                          <div style={{ position: "absolute", top: 2, right: 3, width: 6, height: 6, borderRadius: "50%", background: isRepeat ? "#2563eb" : "#16a34a", zIndex: 2 }} />
                         )}
                         {isEdit ? (
                           <input ref={inputRef} data-grid="true" value={editVal} onChange={e => setEditVal(e.target.value)}
@@ -488,23 +481,23 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         </table>
       </div>
 
-      {/* ── STATUS BAR ── */}
+      {/* STATUS BAR */}
       <div style={{ flexShrink: 0, height: 26, background: "#f8f9fb", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", padding: "0 12px", fontSize: 11, color: "#9ca3af", gap: 16 }}>
         <span style={{ color: "#6b7280", fontWeight: 500 }}>{cl(selC)}{selR + 1}</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
           <span style={{ color: extractCount > 0 ? "#15803d" : "#9ca3af", fontWeight: extractCount > 0 ? 600 : 400 }}>
             {extractCount} extract target{extractCount !== 1 ? "s" : ""}
           </span>
         </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
           <span style={{ color: repeatRowCount > 0 ? "#1d4ed8" : "#9ca3af", fontWeight: repeatRowCount > 0 ? 600 : 400 }}>
             {repeatRowCount} repeat row{repeatRowCount !== 1 ? "s" : ""}
           </span>
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#d1d5db" }}>
-          Select cells → click "Extract here" or "Repeat row" to mark for AI extraction
+          Select cells → Extract here (single value) or Repeat row (one per line item)
         </span>
       </div>
     </div>
