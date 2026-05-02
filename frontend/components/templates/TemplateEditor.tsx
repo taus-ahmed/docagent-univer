@@ -63,7 +63,11 @@ export default function TemplateEditor({ templateId }: Props) {
       const payload = { name: n, document_type: docType, columns: cols };
       return templateId ? templatesApi.update(templateId, payload) : templatesApi.create(payload);
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["templates"] }); toast.success("Template saved"); router.push("/templates"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Template saved");
+      router.push("/templates");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -71,47 +75,170 @@ export default function TemplateEditor({ templateId }: Props) {
 
   return (
     <AppLayout>
-      <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 48px)", overflow:"hidden", margin:"-24px -28px 0", background:"#f3f4f6" }}>
+      {/*
+        Override page-content padding by using negative margins to escape it,
+        then build our own full-height layout inside.
+        page-content has padding:24px 28px — we cancel that out.
+      */}
+      <div style={{
+        margin: "-24px -28px",
+        height: "calc(100vh - 0px)",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        background: "#f3f4f6",
+      }}>
 
-        {/* TOP BAR - always visible, never scrolls */}
-        <div style={{ flexShrink:0, background:"#fff", borderBottom:"1px solid #e5e7eb", padding:"0 24px", height:56, display:"flex", alignItems:"center", gap:12, boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
-          <span style={{ fontSize:13, color:"#9ca3af", cursor:"pointer", whiteSpace:"nowrap" }} onClick={() => router.push("/templates")}>Templates</span>
-          <span style={{ color:"#e5e7eb", fontSize:18 }}>&#8250;</span>
+        {/* ── TOP BAR ── always visible, never scrolls */}
+        <div style={{
+          flexShrink: 0,
+          background: "#ffffff",
+          borderBottom: "1px solid #e5e7eb",
+          height: 56,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 24px",
+          gap: 12,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+          zIndex: 10,
+        }}>
+          {/* Breadcrumb */}
+          <span
+            onClick={() => router.push("/templates")}
+            style={{ fontSize: 13, color: "#9ca3af", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+          >
+            Templates
+          </span>
+          <span style={{ color: "#d1d5db", fontSize: 16, flexShrink: 0 }}>&#8250;</span>
+
+          {/* Template name */}
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Untitled template"
             onKeyDown={e => e.stopPropagation()}
             onKeyUp={e => e.stopPropagation()}
-            style={{ flex:1, fontSize:15, fontWeight:600, color:"#111", background:"transparent", border:"none", outline:"none", fontFamily:"inherit", minWidth:0 }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: 15,
+              fontWeight: 600,
+              color: "#111827",
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              fontFamily: "inherit",
+            }}
           />
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            <span style={{ fontSize:12, color:"#6b7280" }}>Type:</span>
-            <select value={docType} onChange={e => setDocType(e.target.value)}
-              style={{ padding:"5px 8px", border:"1px solid #e5e7eb", borderRadius:6, fontSize:12, background:"#f9fafb", outline:"none", cursor:"pointer", fontFamily:"inherit" }}>
+
+          {/* Right controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: "#6b7280" }}>Type:</span>
+            <select
+              value={docType}
+              onChange={e => setDocType(e.target.value)}
+              style={{
+                padding: "5px 8px",
+                border: "1px solid #e5e7eb",
+                borderRadius: 6,
+                fontSize: 12,
+                background: "#f9fafb",
+                color: "#374151",
+                outline: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
               {DOC_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
-            <button onClick={() => router.push("/templates")}
-              style={{ padding:"6px 14px", borderRadius:7, border:"1px solid #e5e7eb", background:"#fff", fontSize:13, fontWeight:500, cursor:"pointer", color:"#6b7280", fontFamily:"inherit" }}>
+
+            <button
+              onClick={() => router.push("/templates")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 7,
+                border: "1px solid #e5e7eb",
+                background: "#ffffff",
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                color: "#6b7280",
+                fontFamily: "inherit",
+              }}
+            >
               Cancel
             </button>
-            <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
-              style={{ padding:"7px 18px", borderRadius:7, border:"none", background:"#4f46e5", fontSize:13, fontWeight:600, cursor:"pointer", color:"#fff", fontFamily:"inherit", display:"flex", alignItems:"center", gap:6, boxShadow:"0 1px 3px rgba(79,70,229,0.3)", opacity:saveMutation.isPending?0.7:1 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+
+            <button
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              style={{
+                padding: "7px 18px",
+                borderRadius: 7,
+                border: "none",
+                background: "#4f46e5",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: saveMutation.isPending ? "not-allowed" : "pointer",
+                color: "#ffffff",
+                fontFamily: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                boxShadow: "0 1px 3px rgba(79,70,229,0.3)",
+                opacity: saveMutation.isPending ? 0.7 : 1,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
               {saveMutation.isPending ? "Saving..." : "Save template"}
             </button>
           </div>
         </div>
 
-        {/* HINT BAR */}
-        <div style={{ flexShrink:0, background:"#fffbeb", borderBottom:"1px solid #fde68a", padding:"7px 24px", fontSize:12, color:"#92400e", display:"flex", alignItems:"center", gap:6 }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Type column names in <strong style={{ margin:"0 2px" }}>Row 1</strong> (e.g. Invoice Number, Vendor, Total, SKU, Price). Use the toolbar to format cells.
+        {/* ── HINT BAR ── */}
+        <div style={{
+          flexShrink: 0,
+          background: "#fffbeb",
+          borderBottom: "1px solid #fde68a",
+          padding: "7px 24px",
+          fontSize: 12,
+          color: "#92400e",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Type column names in <strong style={{ margin: "0 3px" }}>Row 1</strong>
+          (e.g. Invoice Number, Vendor, Total, SKU, Price).
+          Rows 2+ are sample data.
         </div>
 
-        {/* SHEET - fills remaining space, scrolls independently */}
-        <div style={{ flex:1, minHeight:0, padding:16, overflow:"hidden" }}>
-          <div style={{ height:"100%", border:"1px solid #e5e7eb", borderRadius:10, overflow:"hidden", boxShadow:"0 1px 6px rgba(0,0,0,0.05)", background:"#fff" }}>
+        {/* ── SHEET AREA ── fills remaining space, only this scrolls */}
+        <div style={{
+          flex: 1,
+          minHeight: 0,
+          padding: 16,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}>
+          <div style={{
+            flex: 1,
+            minHeight: 0,
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            overflow: "hidden",
+            boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+            background: "#ffffff",
+          }}>
             {SheetComp ? (
               <SheetComp
                 initialColumns={existing?.columns ?? []}
@@ -119,11 +246,8 @@ export default function TemplateEditor({ templateId }: Props) {
                 height="100%"
               />
             ) : (
-              <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", background:"#f9fafb" }}>
-                <div style={{ textAlign:"center" }}>
-                  <div style={{ width:28, height:28, border:"3px solid #e5e7eb", borderTopColor:"#4f46e5", borderRadius:"50%", animation:"spin 0.7s linear infinite", margin:"0 auto 10px" }} />
-                  <p style={{ fontSize:13, color:"#9ca3af" }}>Loading spreadsheet...</p>
-                </div>
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <p style={{ fontSize: 13, color: "#9ca3af" }}>Loading spreadsheet...</p>
               </div>
             )}
           </div>
