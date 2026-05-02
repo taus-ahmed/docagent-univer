@@ -275,12 +275,12 @@ export default function DocAgentSpreadsheet({ initialColumns = [], onSheetsChang
   return (
     <div style={{ height, display: "flex", flexDirection: "column", border: "1px solid #e3e6ec", borderRadius: 10, overflow: "hidden", background: "#fff", userSelect: "none" }}>
 
-      {/* â”€â”€ Toolbar â”€â”€ */}
+      {/* ── Toolbar ── */}
       <div style={{ background: "#f8f9fb", borderBottom: "1px solid #e3e6ec", padding: "4px 8px", display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", flexShrink: 0 }}>
 
         {/* Undo/Redo */}
-        <button style={toolbarBtnStyle()} onClick={undo} title="Undo (Ctrl+Z)">â†©</button>
-        <button style={toolbarBtnStyle()} onClick={redo} title="Redo (Ctrl+Y)">â†ª</button>
+        <button style={toolbarBtnStyle()} onClick={undo} title="Undo (Ctrl+Z)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 10h10a8 8 0 0 1 8 8v2M3 10l6-6M3 10l6 6"/></svg></button>
+        <button style={toolbarBtnStyle()} onClick={redo} title="Redo (Ctrl+Y)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10H11a8 8 0 0 0-8 8v2m18-10l-6-6m6 6l-6 6"/></svg></button>
         <div style={{ width: 1, height: 20, background: "#e3e6ec", margin: "0 4px" }} />
 
         {/* Font family */}
@@ -327,7 +327,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], onSheetsChang
         {/* Background color */}
         <div style={{ position: "relative" }}>
           <button style={{ ...toolbarBtnStyle(), flexDirection: "column", gap: 1 }} onClick={() => setShowColorPicker(v => v === "bg" ? null : "bg")} title="Background color">
-            <span style={{ fontSize: 12 }}>ðŸŽ¨</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.5 22 2 17.5 2 12S6.5 2 12 2s10 4.5 10 10"/><path d="M12 8v4l3 3"/></svg>
             <div style={{ width: 16, height: 3, background: curStyle.bgColor ?? "#ffff00", borderRadius: 1 }} />
           </button>
           {showColorPicker === "bg" && (
@@ -342,14 +342,14 @@ export default function DocAgentSpreadsheet({ initialColumns = [], onSheetsChang
         <div style={{ width: 1, height: 20, background: "#e3e6ec", margin: "0 4px" }} />
 
         {/* Alignment */}
-        <button style={toolbarBtnStyle(curStyle.align === "left")} onClick={() => applyStyle({ align: "left" })} title="Align left">â¬…</button>
-        <button style={toolbarBtnStyle(curStyle.align === "center" || !curStyle.align)} onClick={() => applyStyle({ align: "center" })} title="Center">â†”</button>
-        <button style={toolbarBtnStyle(curStyle.align === "right")} onClick={() => applyStyle({ align: "right" })} title="Align right">âž¡</button>
+        <button style={toolbarBtnStyle(curStyle.align === "left")} onClick={() => applyStyle({ align: "left" })} title="Align left"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="12" x2="3" y2="12"/><polyline points="10 19 3 12 10 5"/></svg></button>
+        <button style={toolbarBtnStyle(curStyle.align === "center" || !curStyle.align)} onClick={() => applyStyle({ align: "center" })} title="Center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="16" y2="12"/><line x1="12" y1="16" x2="16" y2="12"/></svg></button>
+        <button style={toolbarBtnStyle(curStyle.align === "right")} onClick={() => applyStyle({ align: "right" })} title="Align right"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="14 5 21 12 14 19"/></svg></button>
         <div style={{ width: 1, height: 20, background: "#e3e6ec", margin: "0 4px" }} />
 
         {/* Borders */}
-        <button style={toolbarBtnStyle()} onClick={() => applyStyle({ borders: { top: true, right: true, bottom: true, left: true } })} title="All borders">âŠž</button>
-        <button style={toolbarBtnStyle()} onClick={() => applyStyle({ borders: {} })} title="No borders">âŠŸ</button>
+        <button style={toolbarBtnStyle()} onClick={() => applyStyle({ borders: { top: true, right: true, bottom: true, left: true } })} title="All borders"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></button>
+        <button style={toolbarBtnStyle()} onClick={() => applyStyle({ borders: {} })} title="No borders"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="1"/></svg></button>
         <div style={{ width: 1, height: 20, background: "#e3e6ec", margin: "0 4px" }} />
 
         {/* Merge */}
@@ -372,20 +372,20 @@ export default function DocAgentSpreadsheet({ initialColumns = [], onSheetsChang
         </button>
       </div>
 
-      {/* â”€â”€ Formula bar â”€â”€ */}
+      {/* ── Formula bar ── */}
       <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #e3e6ec", background: "#fff", height: 28, flexShrink: 0 }}>
         <div style={{ width: 72, textAlign: "center", borderRight: "1px solid #e3e6ec", fontSize: 12, color: "#374151", fontWeight: 500, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {cellAddr}
         </div>
         <div style={{ width: 32, textAlign: "center", borderRight: "1px solid #e3e6ec", fontSize: 13, color: "#9ca3af", fontStyle: "italic", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          Æ’x
+          ƒx
         </div>
         <div style={{ flex: 1, padding: "0 8px", fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {cellVal}
         </div>
       </div>
 
-      {/* â”€â”€ Grid â”€â”€ */}
+      {/* ── Grid ── */}
       <div
         ref={scrollRef}
         style={{ flex: 1, overflow: "auto", position: "relative" }}
@@ -524,9 +524,9 @@ export default function DocAgentSpreadsheet({ initialColumns = [], onSheetsChang
         </table>
       </div>
 
-      {/* â”€â”€ Status bar â”€â”€ */}
+      {/* ── Status bar ── */}
       <div style={{ height: 22, background: "#f8f9fb", borderTop: "1px solid #e3e6ec", display: "flex", alignItems: "center", padding: "0 12px", fontSize: 11, color: "#9ca3af", gap: 16, flexShrink: 0 }}>
-        <span>{selRange ? `${selRange.r2 - selRange.r1 + 1}R Ã— ${selRange.c2 - selRange.c1 + 1}C selected` : cellAddr}</span>
+        <span>{selRange ? `${selRange.r2 - selRange.r1 + 1}R × ${selRange.c2 - selRange.c1 + 1}C selected` : cellAddr}</span>
         <span style={{ marginLeft: "auto" }}>
           {grid[0].filter(c => c.value.trim()).length} columns defined
         </span>
