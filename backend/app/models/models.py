@@ -1,5 +1,5 @@
 """
-DocAgent v2 — Database Models (PostgreSQL + SQLAlchemy 2.0)
+DocAgent v2 â€” Database Models (PostgreSQL + SQLAlchemy 2.0)
 Full production schema with proper relationships, indexes, and JSON columns.
 """
 
@@ -22,7 +22,7 @@ class Base(DeclarativeBase):
     pass
 
 
-# ─── Models ───────────────────────────────────────────────────────────────────
+# â”€â”€â”€ Models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class User(Base):
     __tablename__ = "users"
@@ -154,7 +154,7 @@ class ColumnTemplate(Base):
 
     name = Column(String(200), nullable=False)
     document_type = Column(String(100), default="invoice", nullable=False)
-    description = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)
 
     # JSON arrays
     columns_json = Column(Text, nullable=False)       # ["field1", "field2", ...]
@@ -238,7 +238,7 @@ class ClientSchema(Base):
     is_active = Column(Boolean, default=True)
 
 
-# ─── Database Engine ──────────────────────────────────────────────────────────
+# â”€â”€â”€ Database Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def create_db_engine(database_url: str = None):
     url = database_url or settings.DATABASE_URL
