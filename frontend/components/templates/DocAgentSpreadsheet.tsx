@@ -86,6 +86,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const [fcp, setFcp] = useState(false);
   const [bcp, setBcp] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const clipboard = useRef<{ cells: Record<string, Cell>; r1: number; c1: number; r2: number; c2: number } | null>(null);
   const mouseDown = useRef(false);
 
   const buildSaveData = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[]): SheetSaveData => {
@@ -208,6 +209,47 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         if (e.key === "b") { e.preventDefault(); applyStyle({ bold: !cs.bold }); return; }
         if (e.key === "i") { e.preventDefault(); applyStyle({ italic: !cs.italic }); return; }
         if (e.key === "u") { e.preventDefault(); applyStyle({ underline: !cs.underline }); return; }
+        if (e.key === "c") {
+          e.preventDefault();
+          const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
+          const c1 = Math.min(selC, rng.c2), c2 = Math.max(selC, rng.c2);
+          const copied: Record<string, Cell> = {};
+          for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+            const k = ck(r, c); if (cells[k]) copied[ck(r - r1, c - c1)] = JSON.parse(JSON.stringify(cells[k]));
+          }
+          clipboard.current = { cells: copied, r1, c1, r2, c2 };
+          return;
+        }
+        if (e.key === "x") {
+          e.preventDefault();
+          const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
+          const c1 = Math.min(selC, rng.c2), c2 = Math.max(selC, rng.c2);
+          const copied: Record<string, Cell> = {};
+          for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+            const k = ck(r, c); if (cells[k]) copied[ck(r - r1, c - c1)] = JSON.parse(JSON.stringify(cells[k]));
+          }
+          clipboard.current = { cells: copied, r1, c1, r2, c2 };
+          ph(); const next = { ...cells };
+          for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+            const k = ck(r, c); if (next[k]) next[k] = { ...next[k], value: "" };
+          }
+          upd(next); return;
+        }
+        if (e.key === "v" && clipboard.current) {
+          e.preventDefault(); ph();
+          const { cells: copied } = clipboard.current;
+          const next = { ...cells };
+          Object.entries(copied).forEach(([relKey, cell]) => {
+            const [dr, dc] = relKey.split(",").map(Number);
+            const tr = selR + dr, tc = selC + dc;
+            if (tr < ROWS && tc < COLS) {
+              const k = ck(tr, tc);
+              next[k] = JSON.parse(JSON.stringify(cell));
+              delete next[k].mergeParent; delete next[k].mergeSpan;
+            }
+          });
+          upd(next); return;
+        }
         return;
       }
       if (e.key === "ArrowUp") { e.preventDefault(); nav(-1, 0); }
@@ -285,7 +327,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
 
   const ColorPicker = ({ onPick, onClose }: { onPick: (c: string) => void; onClose: () => void }) => (
     <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 34, left: 0, zIndex: 300, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", display: "grid", gridTemplateColumns: "repeat(8,22px)", gap: 3, width: 208 }}>
-      <div onClick={() => { onPick(""); onClose(); }} style={{ width: 22, height: 22, background: "#fff", border: "1px solid #ddd", borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>∅</div>
+      <div onClick={() => { onPick(""); onClose(); }} style={{ width: 22, height: 22, background: "#fff", border: "1px solid #ddd", borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>âˆ…</div>
       {COLORS.map(c => (
         <div key={c} onClick={() => { onPick(c); onClose(); }}
           style={{ width: 22, height: 22, background: c, borderRadius: 3, cursor: "pointer", border: c === "#ffffff" ? "1px solid #ddd" : "none" }}
@@ -378,7 +420,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         <div style={{ width: 72, textAlign: "center", borderRight: "1px solid #e5e7eb", fontSize: 12, fontWeight: 600, color: "#374151", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {cl(selC)}{selR + 1}
         </div>
-        <div style={{ width: 32, borderRight: "1px solid #e5e7eb", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 13, fontStyle: "italic", flexShrink: 0 }}>ƒx</div>
+        <div style={{ width: 32, borderRight: "1px solid #e5e7eb", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 13, fontStyle: "italic", flexShrink: 0 }}>Æ’x</div>
         <div style={{ flex: 1, padding: "0 10px", fontSize: 12, color: "#374151", display: "flex", alignItems: "center", overflow: "hidden" }}>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {editR !== null ? editVal : (cells[ck(selR, selC)]?.value ?? "")}
@@ -388,7 +430,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           <div style={{ flexShrink: 0, padding: "0 12px", borderLeft: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: curCell.repeatRow ? "#2563eb" : "#16a34a", display: "inline-block" }} />
             <span style={{ fontSize: 11, color: curCell.repeatRow ? "#1d4ed8" : "#15803d", fontWeight: 600 }}>
-              {curCell.repeatRow ? "Repeat row — one per line item" : "Extract target"}
+              {curCell.repeatRow ? "Repeat row â€” one per line item" : "Extract target"}
             </span>
           </div>
         )}
@@ -497,7 +539,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           </span>
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#d1d5db" }}>
-          Select cells → Extract here (single value) or Repeat row (one per line item)
+          Select cells â†’ Extract here (single value) or Repeat row (one per line item)
         </span>
       </div>
     </div>
