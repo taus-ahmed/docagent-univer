@@ -31,6 +31,7 @@ export default function TemplateEditor({ templateId }: Props) {
   const [SheetComp, setSheetComp] = useState<React.ComponentType<any> | null>(null);
   const sheetDataRef = useRef<SheetSaveData | null>(null);
   const nameRef = useRef("");
+  const autoNameRef = useRef("Template-1");
 
   useEffect(() => { nameRef.current = name; }, [name]);
   useEffect(() => { setMounted(true); }, []);
@@ -61,6 +62,7 @@ export default function TemplateEditor({ templateId }: Props) {
     const defaultName = `Template-${nextNum}`;
     setName(defaultName);
     nameRef.current = defaultName;
+    autoNameRef.current = defaultName;
   }, [allTemplates, templateId]);
 
   const { data: existing } = useQuery<ColumnTemplate>({
@@ -99,7 +101,7 @@ export default function TemplateEditor({ templateId }: Props) {
         : docType;
 
       const sheetData = sheetDataRef.current;
-      if (!sheetData) throw new Error("Spreadsheet not loaded yet â€” please wait");
+      if (!sheetData) throw new Error("Spreadsheet not loaded yet Ã¢â‚¬â€ please wait");
 
       // Check if there are any cells with content
       const hasCells = Object.values(sheetData.cells ?? {}).some(c => c?.value?.trim());
@@ -207,7 +209,7 @@ export default function TemplateEditor({ templateId }: Props) {
         {/* TOP BAR */}
         <div style={{ flexShrink:0, background:"#fff", borderBottom:"1px solid #e5e7eb", height:56, display:"flex", alignItems:"center", padding:"0 20px", gap:10, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
           <span onClick={() => router.push("/templates")} style={{ fontSize:13, color:"#9ca3af", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0 }}>Templates</span>
-          <span style={{ color:"#d1d5db", flexShrink:0 }}>â€º</span>
+          <span style={{ color:"#d1d5db", flexShrink:0 }}>Ã¢â‚¬Âº</span>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Untitled template"
             onKeyDown={e => e.stopPropagation()} onKeyUp={e => e.stopPropagation()}
             style={{ flex:1, minWidth:0, fontSize:15, fontWeight:600, color:"#111", background:"transparent", border:"none", outline:"none", fontFamily:"inherit" }}
@@ -236,7 +238,7 @@ export default function TemplateEditor({ templateId }: Props) {
         {/* HINT */}
         <div style={{ flexShrink:0, background:"#fffbeb", borderBottom:"1px solid #fde68a", padding:"7px 20px", fontSize:12, color:"#92400e", display:"flex", alignItems:"center", gap:6 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Design your template freely â€” all cells and formatting are saved exactly as you see.
+          Design your template freely Ã¢â‚¬â€ all cells and formatting are saved exactly as you see.
           Optionally: select cells and click <strong style={{ margin:"0 3px", color:"#15803d" }}>Extract here</strong> for single values,
           or <strong style={{ margin:"0 3px", color:"#1d4ed8" }}>Repeat row</strong> for line items (AI creates one row per item).
           If you don't mark anything, the AI will intelligently extract all visible fields.
