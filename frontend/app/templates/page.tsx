@@ -21,6 +21,9 @@ export default function TemplatesPage() {
 
   const { data: templates = [], isLoading } = useQuery<ColumnTemplate[]>({
     queryKey: ["templates"],
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     queryFn: () => templatesApi.list(),
   });
 
@@ -71,7 +74,7 @@ export default function TemplatesPage() {
       </div>
 
       {isLoading ? (
-        <p style={{ color: "var(--text3)", fontSize: 13 }}>Loading…</p>
+        <p style={{ color: "var(--text3)", fontSize: 13 }}>Loadingâ€¦</p>
       ) : templates.length === 0 ? (
         <div className="card tpl-empty">
           <div style={{ width: 44, height: 44, borderRadius: 11, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
@@ -112,7 +115,7 @@ export default function TemplatesPage() {
                       </div>
                       <div>
                         <div className="tpl-card-name">{t.name}</div>
-                        <div className="tpl-card-meta">{t.columns.length} column{t.columns.length !== 1 ? "s" : ""}{t.is_shared ? " · shared" : ""}</div>
+                        <div className="tpl-card-meta">{t.columns.length} column{t.columns.length !== 1 ? "s" : ""}{t.is_shared ? " Â· shared" : ""}</div>
                       </div>
                     </div>
                     <div className="tpl-card-cols">
