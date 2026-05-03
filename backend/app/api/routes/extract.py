@@ -6,8 +6,14 @@ Fix 1:
   - When no extractTargets marked, AI fills all empty cells adjacent to labels intelligently
   - Multi-document detection: pre-pass detects document boundaries, one DocumentResult per doc
   - LLM routing unchanged (Gemini primary, Groq fallback via orchestrator)
+Fix 2:
+  - GET /api/jobs/{job_id}/export — streams an .xlsx file
+  - Reconstructs template grid from ColumnTemplate.description (SheetSaveData)
+  - One filled table block per DocumentResult, stacked vertically, one blank row between blocks
+  - Applies cell styles (bold, italic, font size, colors, borders, merges, column widths)
 """
 
+import io
 import sys
 import time
 import json
@@ -17,6 +23,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -937,3 +944,335 @@ def _get_job_or_404(job_id: int, current_user, db) -> ExtractionJob:
     if current_user.role != "admin" and job.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
     return job
+
+
+# ─── Excel Export ─────────────────────────────────────────────────────────────
+
+@router.get("/jobs/{job_id}/export")
+def export_job_excel(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Export all DocumentResults for a job as a single .xlsx file.
+
+    Layout:
+      - One filled table block per document result, stacked vertically.
+      - One blank row between blocks.
+      - Each block reproduces the template grid exactly, with AI-extracted
+        values filled into the appropriate cells.
+      - Cell styles (bold, italic, font size, colors, borders, merges,
+        column widths) are applied from the saved SheetSaveData.
+
+    Requires the job to have been run with a template (schema_id must be set).
+    Falls back to a flat key-value table if no template layout is available.
+    """
+    try:
+        import openpyxl
+        from openpyxl.styles import (
+            Font, PatternFill, Alignment, Border, Side,
+        )
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="openpyxl is not installed. Add it to requirements.txt and redeploy.",
+        )
+
+    job = _get_job_or_404(job_id, current_user, db)
+
+    # Load all results ordered by id (insertion order = document order)
+    doc_results = (
+        db.query(DocumentResult)
+        .filter(DocumentResult.job_id == job_id)
+        .order_by(DocumentResult.id)
+        .all()
+    )
+    if not doc_results:
+        raise HTTPException(status_code=404, detail="No results found for this job.")
+
+    # Try to load template layout from ColumnTemplate
+    sheet_data = None
+    if job.schema_id:
+        try:
+            tpl_id = int(job.schema_id)
+            tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == tpl_id).first()
+            if tpl and tpl.description:
+                raw = json.loads(tpl.description)
+                if isinstance(raw, dict) and "cells" in raw:
+                    sheet_data = raw
+        except Exception as e:
+            print(f"[EXPORT] Template load error: {e}", flush=True)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Results"
+
+    if sheet_data:
+        _write_template_blocks(ws, doc_results, sheet_data, openpyxl)
+    else:
+        _write_flat_table(ws, doc_results, openpyxl)
+
+    # Stream the workbook back
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"job_{job_id}_results.xlsx"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+    return StreamingResponse(buf, headers=headers)
+
+
+# ─── Excel helpers ────────────────────────────────────────────────────────────
+
+def _col_letter(c: int) -> str:
+    """0-based column index → Excel column letter (A, B, ... Z, AA, ...)."""
+    letter = ""
+    n = c
+    while True:
+        letter = chr(65 + (n % 26)) + letter
+        n = n // 26 - 1
+        if n < 0:
+            break
+    return letter
+
+
+def _parse_hex_color(hex_color: Optional[str]) -> Optional[str]:
+    """Normalise a CSS hex color (#rrggbb or #rgb) to openpyxl ARGB (FFRRGGBB)."""
+    if not hex_color:
+        return None
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(ch * 2 for ch in h)
+    if len(h) == 6:
+        return f"FF{h.upper()}"
+    return None
+
+
+def _apply_cell_style(xl_cell, style: dict, openpyxl_mod) -> None:
+    """
+    Apply a SheetSaveData CellStyle dict to an openpyxl cell.
+
+    CellStyle fields: bold, italic, underline, strike, fontSize, fontFamily,
+                      fontColor, bgColor, align, wrap, borderAll, borderOuter.
+    """
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    # Font
+    font_kwargs: dict = {}
+    if style.get("bold"):
+        font_kwargs["bold"] = True
+    if style.get("italic"):
+        font_kwargs["italic"] = True
+    if style.get("underline"):
+        font_kwargs["underline"] = "single"
+    if style.get("strike"):
+        font_kwargs["strike"] = True
+    if style.get("fontSize"):
+        font_kwargs["size"] = style["fontSize"]
+    if style.get("fontFamily"):
+        font_kwargs["name"] = style["fontFamily"]
+    fc = _parse_hex_color(style.get("fontColor"))
+    if fc:
+        font_kwargs["color"] = fc
+    if font_kwargs:
+        xl_cell.font = Font(**font_kwargs)
+
+    # Fill
+    bg = _parse_hex_color(style.get("bgColor"))
+    if bg:
+        xl_cell.fill = PatternFill(fill_type="solid", fgColor=bg)
+
+    # Alignment
+    align_map = {"left": "left", "center": "center", "right": "right"}
+    h_align = align_map.get(style.get("align", ""), "left")
+    xl_cell.alignment = Alignment(
+        horizontal=h_align,
+        wrap_text=bool(style.get("wrap")),
+        vertical="center",
+    )
+
+    # Borders
+    if style.get("borderAll"):
+        thin = Side(style="thin")
+        xl_cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    elif style.get("borderOuter"):
+        medium = Side(style="medium")
+        xl_cell.border = Border(left=medium, right=medium, top=medium, bottom=medium)
+
+
+def _find_template_dimensions(cells: dict) -> tuple[int, int]:
+    """Return (max_row, max_col) used by the template, 0-based."""
+    max_r, max_c = 0, 0
+    for key in cells:
+        parts = key.split(",")
+        if len(parts) == 2:
+            r, c = int(parts[0]), int(parts[1])
+            max_r = max(max_r, r)
+            max_c = max(max_c, c)
+    return max_r, max_c
+
+
+def _write_template_blocks(ws, doc_results, sheet_data: dict, openpyxl_mod) -> None:
+    """
+    Write one filled template block per DocumentResult, stacked vertically
+    with one blank row between blocks.
+
+    Each block:
+      - Reproduces the full template grid (label cells + filled value cells).
+      - Applies all cell styles from SheetSaveData.
+      - Handles merged cells.
+      - Sets column widths from SheetSaveData.colWidths (applied once, first block).
+    """
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+
+    cells_tpl = sheet_data.get("cells", {})
+    merges_tpl = sheet_data.get("merges", {})
+    col_widths = sheet_data.get("colWidths", [])
+
+    max_r, max_c = _find_template_dimensions(cells_tpl)
+    template_rows = max_r + 1   # number of rows in the template
+    block_height = template_rows + 1  # +1 blank row between blocks
+
+    # Apply column widths once (based on first block)
+    for c_idx, width_px in enumerate(col_widths):
+        if width_px and c_idx <= max_c:
+            # openpyxl column width is in characters (~7px each)
+            char_width = max(8, round(width_px / 7))
+            ws.column_dimensions[get_column_letter(c_idx + 1)].width = char_width
+
+    for block_idx, doc_result in enumerate(doc_results):
+        row_offset = block_idx * block_height  # 0-based row offset in worksheet
+
+        # Build cell-ref → extracted value map for this document
+        extracted_data = doc_result.get_extracted_data()
+        extracted_fields: dict = extracted_data.get("extracted_fields", {})
+        # Also build label → value map for fallback lookup
+        label_to_value: dict = {}
+        for k, v in extracted_data.get("extracted_data", {}).items():
+            if not k.startswith("_label_"):
+                if isinstance(v, dict):
+                    label_to_value[k] = v.get("value", "")
+                else:
+                    label_to_value[k] = str(v) if v is not None else ""
+
+        # Write each cell in the template
+        for key, cell_def in cells_tpl.items():
+            if not isinstance(cell_def, dict):
+                continue
+
+            # Skip cells that are children of a merge (they have mergeParent)
+            if cell_def.get("mergeParent"):
+                continue
+
+            parts = key.split(",")
+            if len(parts) != 2:
+                continue
+            tr, tc = int(parts[0]), int(parts[1])
+
+            # Worksheet row/col (1-based)
+            ws_row = row_offset + tr + 1
+            ws_col = tc + 1
+
+            xl_cell = ws.cell(row=ws_row, column=ws_col)
+
+            # Determine cell value
+            tpl_value = cell_def.get("value", "").strip()
+            is_extract = cell_def.get("extractTarget", False)
+
+            if is_extract:
+                # Look up by cell ref first (most reliable)
+                ref = f"{_col_letter(tc)}{tr + 1}"
+                filled = extracted_fields.get(ref)
+                if filled is None:
+                    # Fall back to label lookup
+                    filled = label_to_value.get(tpl_value, "")
+                xl_cell.value = filled if filled is not None else ""
+            else:
+                # Static label cell
+                xl_cell.value = tpl_value
+
+            # Apply style
+            style = cell_def.get("style", {})
+            if style:
+                _apply_cell_style(xl_cell, style, openpyxl_mod)
+
+            # Handle merge spans
+            merge_span = cell_def.get("mergeSpan") or merges_tpl.get(key)
+            if merge_span:
+                span_rows = merge_span.get("rows", 1)
+                span_cols = merge_span.get("cols", 1)
+                if span_rows > 1 or span_cols > 1:
+                    end_row = ws_row + span_rows - 1
+                    end_col = ws_col + span_cols - 1
+                    ws.merge_cells(
+                        start_row=ws_row, start_column=ws_col,
+                        end_row=end_row, end_column=end_col,
+                    )
+
+        # Add a small filename label above each block (row just before the block)
+        if block_idx > 0:
+            label_row = row_offset  # the blank separator row — put filename here
+            label_cell = ws.cell(row=label_row, column=1)
+            label_cell.value = f"▶  {doc_result.filename}"
+            from openpyxl.styles import Font as XLFont
+            label_cell.font = XLFont(bold=True, color="FF4F46E5", size=10)
+        else:
+            # First block: put filename in a row above row 1 if possible
+            # Just annotate at column max_c+2 in row 1 to avoid disturbing layout
+            note_cell = ws.cell(row=1, column=max_c + 3)
+            note_cell.value = doc_result.filename
+            from openpyxl.styles import Font as XLFont
+            note_cell.font = XLFont(color="FF9CA3AF", size=9, italic=True)
+
+
+def _write_flat_table(ws, doc_results, openpyxl_mod) -> None:
+    """
+    Fallback: no template available.
+    Write a simple flat table — one header row, then one row per DocumentResult.
+    Columns are the union of all extracted_data keys across all results.
+    """
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    # Collect all unique field names across all results
+    all_keys: list[str] = []
+    seen: set[str] = set()
+    for dr in doc_results:
+        ed = dr.get_extracted_data()
+        inner = ed.get("extracted_data", ed)
+        for k in inner:
+            if k not in seen and not k.startswith("_label_"):
+                seen.add(k)
+                all_keys.append(k)
+
+    # Header row
+    header_fill = PatternFill(fill_type="solid", fgColor="FF4F46E5")
+    header_font = Font(bold=True, color="FFFFFFFF", size=11)
+    ws.cell(row=1, column=1, value="Filename").font = header_font
+    ws.cell(row=1, column=1).fill = header_fill
+    for col_idx, key in enumerate(all_keys, start=2):
+        c = ws.cell(row=1, column=col_idx, value=key)
+        c.font = header_font
+        c.fill = header_fill
+
+    # Data rows
+    for row_idx, dr in enumerate(doc_results, start=2):
+        ws.cell(row=row_idx, column=1, value=dr.filename)
+        ed = dr.get_extracted_data()
+        inner = ed.get("extracted_data", ed)
+        for col_idx, key in enumerate(all_keys, start=2):
+            v = inner.get(key)
+            if isinstance(v, dict):
+                v = v.get("value", "")
+            ws.cell(row=row_idx, column=col_idx, value=v if v is not None else "")
+
+    # Auto-size columns roughly
+    from openpyxl.utils import get_column_letter as _gcl
+    ws.column_dimensions["A"].width = 30
+    for col_idx in range(2, len(all_keys) + 2):
+        ws.column_dimensions[_gcl(col_idx)].width = 20
