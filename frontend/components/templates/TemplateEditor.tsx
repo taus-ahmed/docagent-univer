@@ -43,6 +43,23 @@ export default function TemplateEditor({ templateId }: Props) {
       .catch(console.error);
   }, [mounted, isAuthenticated]);
 
+  // Fetch all templates to generate auto-name
+  const { data: allTemplates } = useQuery({
+    queryKey: ["templates"],
+    queryFn: () => templatesApi.list(),
+    enabled: !templateId,
+  });
+
+  // Auto-generate default name for new templates
+  useEffect(() => {
+    if (templateId) return; // editing existing, don't auto-name
+    if (name) return; // already has a name
+    const count = (allTemplates?.length ?? 0) + 1;
+    const defaultName = `Template-${count}`;
+    setName(defaultName);
+    nameRef.current = defaultName;
+  }, [allTemplates, templateId]);
+
   const { data: existing } = useQuery<ColumnTemplate>({
     queryKey: ["template", templateId],
     queryFn: () => templatesApi.get(templateId!),
@@ -71,8 +88,7 @@ export default function TemplateEditor({ templateId }: Props) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const n = nameRef.current.trim();
-      if (!n) throw new Error("Enter a template name");
+      const n = nameRef.current.trim() || `Template-${Date.now()}`;
 
       const finalDocType = docType === "other"
         ? (customDocType.trim() || "other")
@@ -178,7 +194,7 @@ export default function TemplateEditor({ templateId }: Props) {
             <div style={{ fontSize:12, fontWeight:600, color:"#e2e5f0", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user?.display_name}</div>
             <div style={{ fontSize:10, color:"#8b90ae" }}>{user?.role}</div>
           </div>
-          <button onClick={() => { logout(); router.replace("/login"); }} style={{ background:"transparent", border:"none", color:"#8b90ae", cursor:"pointer", fontSize:11, padding:4 }}>Out</button>
+          <button onClick={() => { logout(); router.replace("/login"); }} style={{ background:"transparent", border:"none", color:"#8b90ae", cursor:"pointer", fontSize:11, padding:4 }}>Sign out</button>
         </div>
       </aside>
 
