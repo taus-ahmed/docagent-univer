@@ -29,11 +29,11 @@ function Icon({ type }: { type: string }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, refreshUser } = useAuthStore();
+  const { user, isAuthenticated, logout, refreshUser, initializeFromStorage } = useAuthStore();
 
   useEffect(() => {
     if (!isAuthenticated) { router.replace("/login"); return; }
-    if (!user) refreshUser();
+    initializeFromStorage();
   }, [isAuthenticated]);
 
   if (!isAuthenticated) return null;
