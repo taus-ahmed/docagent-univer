@@ -292,7 +292,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
 
   const ColorPicker = ({ onPick, onClose }: { onPick: (c: string) => void; onClose: () => void }) => (
     <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: 34, left: 0, zIndex: 300, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", display: "grid", gridTemplateColumns: "repeat(8,22px)", gap: 3, width: 208 }}>
-      <div onClick={() => { onPick(""); onClose(); }} style={{ width: 22, height: 22, background: "#fff", border: "1px solid #ddd", borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>âˆ…</div>
+      <div onClick={() => { onPick(""); onClose(); }} style={{ width: 22, height: 22, background: "#fff", border: "1px solid #ddd", borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#999" }}>Ã¢Ë†â€¦</div>
       {COLORS.map(c => (
         <div key={c} onClick={() => { onPick(c); onClose(); }}
           style={{ width: 22, height: 22, background: c, borderRadius: 3, cursor: "pointer", border: c === "#ffffff" ? "1px solid #ddd" : "none" }}
@@ -385,7 +385,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         <div style={{ width: 72, textAlign: "center", borderRight: "1px solid #e5e7eb", fontSize: 12, fontWeight: 600, color: "#374151", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {cl(selC)}{selR + 1}
         </div>
-        <div style={{ width: 32, borderRight: "1px solid #e5e7eb", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 13, fontStyle: "italic", flexShrink: 0 }}>Æ’x</div>
+        <div style={{ width: 32, borderRight: "1px solid #e5e7eb", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 13, fontStyle: "italic", flexShrink: 0 }}>Ã†â€™x</div>
         <input
           value={editR !== null ? editVal : (cells[ck(selR, selC)]?.value ?? "")}
           onChange={e => {
@@ -428,7 +428,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           <div style={{ flexShrink: 0, padding: "0 12px", borderLeft: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: curCell.repeatRow ? "#2563eb" : "#16a34a", display: "inline-block" }} />
             <span style={{ fontSize: 11, color: curCell.repeatRow ? "#1d4ed8" : "#15803d", fontWeight: 600 }}>
-              {curCell.repeatRow ? "Repeat row â€” one per line item" : "Extract target"}
+              {curCell.repeatRow ? "Repeat row Ã¢â‚¬â€ one per line item" : "Extract target"}
             </span>
           </div>
         )}
@@ -487,7 +487,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
 
                     return (
                       <td key={c} colSpan={cs2} rowSpan={rs2}
-                        style={{ width: tw, minWidth: tw, height: DRH, background: bg, border: finalBd, padding: 0, cursor: "cell", position: "relative", verticalAlign: "middle" }}
+                        style={{ width: tw, minWidth: tw, height: DRH, maxHeight: DRH, background: bg, border: finalBd, padding: 0, cursor: "cell", position: "relative", verticalAlign: "middle", overflow: "hidden" }}
                         onClick={e => { if (e.shiftKey) { setRng(p => ({ ...p, r2: r, c2: c })); } else { setSelR(r); setSelC(c); setRng({ r1: r, c1: c, r2: r, c2: c }); } }}
                         onDoubleClick={() => startEdit(r, c)}
                         onMouseDown={e => { if (e.button !== 0) return; mouseDown.current = true; setSelR(r); setSelC(c); setRng({ r1: r, c1: c, r2: r, c2: c }); }}
@@ -537,7 +537,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           </span>
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#d1d5db" }}>
-          Select cells â†’ Extract here (single value) or Repeat row (one per line item)
+          Select cells Ã¢â€ â€™ Extract here (single value) or Repeat row (one per line item)
         </span>
       </div>
     </div>
