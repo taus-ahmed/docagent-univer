@@ -412,5 +412,9 @@ export const adminApi = {
     const res = await api.put<User>(`/api/admin/users/${userId}`, payload);
     return res.data;
   },
+  deactivateUser: async (userId: number): Promise<User> => {
+    const res = await api.put<User>(`/api/admin/users/${userId}`, { is_active: false });
+    return res.data;
+  },
   deleteUser: async (userId: number) => api.delete(`/api/admin/users/${userId}`),
 };
