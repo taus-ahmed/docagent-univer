@@ -83,6 +83,10 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
             doc.total_pages = len(pdf.pages)
             for page in pdf.pages:
                 text = page.extract_text() or ""
+                # Reassemble GTIN/barcode numbers split across lines by the PDF renderer.
+                # Pattern: long number (8+ digits) followed by 1-3 stray digits on next line.
+                import re
+                text = re.sub(r'(\d{8,})\n(\d{1,3})\n', lambda m: m.group(1) + m.group(2) + '\n', text)
                 doc.page_texts.append(text)
             doc.extracted_text = "\n\n--- PAGE BREAK ---\n\n".join(doc.page_texts)
     except Exception as e:

@@ -284,24 +284,37 @@ The user has a table template with these column headers:
 
 Your job is to extract EVERY data row from the document that belongs to this table.
 
+IMPORTANT — PDF TEXT EXTRACTION ARTEFACTS:
+The document text was extracted from a PDF and may contain line-wrapping artefacts.
+Long values (especially GTINs/barcodes) may be split across two lines like:
+  "790847112284"
+  "5"
+The trailing digit(s) on a separate line are part of the GTIN above — they are NOT
+a separate row. Reassemble them: "7908471122845" is the full GTIN.
+Any line that contains ONLY a short number (1-3 digits) with no item name is an
+artefact — skip it entirely, do not create a row for it.
+
 RULES:
-1. Return ALL rows — do not skip any, even partial rows
-2. Every row must have a value for every column (use "" if missing)
-3. Numbers: strip currency symbols and commas (e.g. "$22.49" → "22.49")
-4. Do not include the header row itself in the output
-5. Do not invent data not present in the document
-6. Preserve the exact item/product names as they appear
+1. Return ALL real data rows — do not skip any item
+2. A real row always has a non-empty Item name (product description)
+3. Every row must have a value for every column (use "" if genuinely missing)
+4. Numbers: strip currency symbols and commas ("$22.49" → "22.49")
+5. GTINs: reassemble split digits — if a GTIN line is followed by a 1-3 digit
+   continuation line, append those digits to form the complete GTIN
+6. Do not include the header row itself in the output
+7. Do not include summary rows (Subtotal, Total, Shipping etc.)
+8. Do not invent data not present in the document
+9. Preserve exact item/product names as they appear
 
 DOCUMENT CONTENT:
-{doc_text[:12000]}
+{doc_text[:14000]}
 
 Return ONLY this JSON (no markdown, no explanation):
 {{
   "document_type": "{doc_type}",
   "overall_confidence": "high|medium|low",
   "table_rows": [
-    {json.dumps(example_row)},
-    "... one object per data row ..."
+    {json.dumps(example_row)}
   ],
   "row_count": 0,
   "metadata": {{
@@ -309,8 +322,8 @@ Return ONLY this JSON (no markdown, no explanation):
   }}
 }}
 
-The "table_rows" array must contain one object per data row found.
-Each object must have exactly these keys: {json.dumps(col_names)}
+Each object in table_rows must have exactly these keys: {json.dumps(col_names)}
+The array must contain ONLY real product/item rows — no artefact rows, no summary rows.
 
 Extract all rows now:"""
 
@@ -935,6 +948,9 @@ def _process_table_result(raw, template_data, filename, doc_type, confidence, el
     col_names = [h["label"] for h in headers]
 
     # Normalise rows — ensure every row has every column key
+    # Also filter ghost rows: a real row must have a non-empty Item/first-column value
+    # that isn't just a short number (artefact from PDF line splitting)
+    first_col = col_names[0] if col_names else ""
     normalised = []
     for row in table_rows:
         if not isinstance(row, dict):
@@ -942,7 +958,19 @@ def _process_table_result(raw, template_data, filename, doc_type, confidence, el
         clean = {}
         for col in col_names:
             v = row.get(col, "")
-            clean[col] = "" if v is None else str(v)
+            clean[col] = "" if v is None else str(v).strip()
+
+        # Filter ghost rows: first column must be a non-empty, non-numeric string
+        first_val = clean.get(first_col, "")
+        if not first_val:
+            continue
+        # Skip rows where the entire first column value is just digits (artefact)
+        if first_val.replace(".", "").replace(",", "").replace("#", "").strip().isdigit():
+            continue
+        # Skip summary rows
+        skip_keywords = {"subtotal", "total", "shipping", "tax", "discount", "charges", "refund", "paid"}
+        if any(kw in first_val.lower() for kw in skip_keywords):
+            continue
         normalised.append(clean)
 
     r = DocumentExtractionResult(filename=filename)
