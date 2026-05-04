@@ -46,11 +46,24 @@ export default function HistoryPage() {
 
   const selectedJob = jobs.find(j => j.id === selectedJobId);
 
-  async function handleExport(jobId: number, mode: "combined" | "perfile") {
+  // True when the selected job was run with a template (schema_id is set)
+  const jobHasTemplate = Boolean(selectedJob?.schema_id);
+
+  async function handleExport(jobId: number, mode: "template" | "combined" | "perfile") {
     try {
-      const fn = mode === "combined" ? exportApi.combined : exportApi.perFile;
-      const blob = await fn({ job_id: jobId });
-      exportApi.downloadBlob(blob, `job_${jobId}_${mode}.xlsx`);
+      let blob: Blob;
+      let filename: string;
+      if (mode === "template") {
+        blob = await exportApi.templateExport(jobId);
+        filename = `job_${jobId}_results.xlsx`;
+      } else if (mode === "combined") {
+        blob = await exportApi.combined({ job_id: jobId });
+        filename = `job_${jobId}_combined.xlsx`;
+      } else {
+        blob = await exportApi.perFile({ job_id: jobId });
+        filename = `job_${jobId}_perfile.xlsx`;
+      }
+      exportApi.downloadBlob(blob, filename);
       toast.success("Downloaded");
     } catch { toast.error("Export failed"); }
   }
@@ -80,8 +93,8 @@ export default function HistoryPage() {
         .job-counts { display: flex; gap: 8px; margin-top: 3px; }
         .job-count { font-size: 11px; }
 
-        .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-        .detail-title { font-size: 15px; font-weight: 600; color: var(--text1); flex: 1; }
+        .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .detail-title { font-size: 15px; font-weight: 600; color: var(--text1); flex: 1; min-width: 80px; }
         .doc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 14px; margin-bottom: 8px; }
         .doc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .doc-filename { font-size: 13px; font-weight: 500; color: var(--text1); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -122,6 +135,10 @@ export default function HistoryPage() {
                     <div className="job-id-row">
                       <span className="job-id">Job #{job.id}</span>
                       <StatusBadge status={job.status} />
+                      {/* Small indicator when job was run with a template */}
+                      {job.schema_id && (
+                        <span style={{ fontSize: 9, padding: "1px 5px", background: "var(--accent-dim)", color: "var(--accent)", borderRadius: 3, fontWeight: 600 }}>TPL</span>
+                      )}
                     </div>
                     <div className="job-sub">{fmt(job.created_at)}</div>
                     <div className="job-counts">
@@ -146,9 +163,20 @@ export default function HistoryPage() {
                   <StatusBadge status={selectedJob.status} />
                   {selectedJob.status === "completed" && (
                     <>
-                      <button className="btn btn-primary btn-sm" onClick={() => handleExport(selectedJob.id, "combined")}>
+                      {/* Template Excel — only shown when job was run with a template */}
+                      {jobHasTemplate && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          title="Download template-layout Excel — one filled block per document"
+                          onClick={() => handleExport(selectedJob.id, "template")}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          Template Excel
+                        </button>
+                      )}
+                      <button className="btn btn-secondary btn-sm" onClick={() => handleExport(selectedJob.id, "combined")}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Excel
+                        Flat Excel
                       </button>
                       <button className="btn btn-secondary btn-sm" onClick={() => handleExport(selectedJob.id, "perfile")}>Per-file</button>
                     </>
@@ -163,7 +191,8 @@ export default function HistoryPage() {
                 ) : (
                   results.map(doc => {
                     const ext = doc.extracted_data?.extracted_data ?? {};
-                    const fields = Object.entries(ext);
+                    // Filter out internal _label_ keys from display
+                    const fields = Object.entries(ext).filter(([k]) => !k.startsWith("_label_"));
                     return (
                       <div key={doc.id} className="doc-card">
                         <div className="doc-header">
