@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
 
-from backend.engine.config import settings, BASE_DIR  # BASE_DIR is module-level, NOT on settings
+from config import settings, BASE_DIR  # BASE_DIR is module-level, NOT on settings
 
 
 @dataclass
