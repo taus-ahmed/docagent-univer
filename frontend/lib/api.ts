@@ -186,7 +186,11 @@ export const authApi = {
   },
   logout: () => removeToken(),
   isAuthenticated: isTokenValid,
-  getToken,
+  getToken: getToken,
+  me: async (): Promise<User> => {
+    const res = await api.get<User>("/api/auth/me");
+    return res.data;
+  },
 };
 
 // ─── Schemas API ──────────────────────────────────────────────────────────────
