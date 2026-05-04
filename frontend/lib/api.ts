@@ -338,6 +338,20 @@ export const exportApi = {
 // ─── Drive API ────────────────────────────────────────────────────────────────
 
 export const driveApi = {
+  // ── Aliases used by DriveTab ──────────────────────────────────────────────
+  /** DriveTab calls driveApi.authStatus as a queryFn */
+  authStatus: async (): Promise<DriveAuthStatus> => {
+    const res = await api.get<DriveAuthStatus>("/api/drive/auth/status");
+    return res.data;
+  },
+  /** DriveTab calls driveApi.authenticate() to open the OAuth flow */
+  authenticate: async (): Promise<void> => {
+    const res = await api.get<{ auth_url: string }>("/api/drive/auth/url");
+    if (res.data.auth_url && typeof window !== "undefined") {
+      window.open(res.data.auth_url, "_blank");
+    }
+  },
+  // ── Canonical names ───────────────────────────────────────────────────────
   getAuthStatus: async (): Promise<DriveAuthStatus> => {
     const res = await api.get<DriveAuthStatus>("/api/drive/auth/status");
     return res.data;
@@ -368,8 +382,20 @@ export const driveApi = {
     const res = await api.get<WatchFolder[]>("/api/drive/watch");
     return res.data;
   },
-  addWatchFolder: async (folderId: string, folderName: string, clientId: string): Promise<WatchFolder> => {
-    const res = await api.post<WatchFolder>("/api/drive/watch", { folder_id: folderId, folder_name: folderName, client_id: clientId });
+  /**
+   * DriveTab passes an object: { folder_id, folder_name, client_id, auto_upload_results }
+   * Old callers pass positional args: (folderId, folderName, clientId)
+   * Both shapes are supported.
+   */
+  addWatchFolder: async (
+    folderIdOrPayload: string | { folder_id: string; folder_name: string; client_id: string; auto_upload_results?: boolean },
+    folderName?: string,
+    clientId?: string
+  ): Promise<WatchFolder> => {
+    const payload = typeof folderIdOrPayload === "object"
+      ? folderIdOrPayload
+      : { folder_id: folderIdOrPayload, folder_name: folderName!, client_id: clientId! };
+    const res = await api.post<WatchFolder>("/api/drive/watch", payload);
     return res.data;
   },
   removeWatchFolder: async (watchId: number) => api.delete(`/api/drive/watch/${watchId}`),
