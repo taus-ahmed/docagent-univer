@@ -175,12 +175,7 @@ const api = createApi();
 
 export const authApi = {
   login: async (username: string, password: string): Promise<TokenResponse> => {
-    const params = new URLSearchParams();
-    params.append("username", username);
-    params.append("password", password);
-    const res = await api.post<TokenResponse>("/api/auth/login", params, {
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
+    const res = await api.post<TokenResponse>("/api/auth/login", { username, password });
     setToken(res.data.access_token, res.data.expires_in);
     return res.data;
   },
