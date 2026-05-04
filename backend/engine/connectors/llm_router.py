@@ -8,7 +8,7 @@ import logging
 from typing import Optional
 from connectors.groq_client import GroqClient, LLMResponse
 from connectors.gemini_client import GeminiClient
-from backend.engine.config import settings
+from config import settings
 
 logger = logging.getLogger("docagent.llm_router")
 

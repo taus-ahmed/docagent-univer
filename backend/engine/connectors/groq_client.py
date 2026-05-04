@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 from groq import Groq
 
-from backend.engine.config import settings
+from config import settings
 
 logger = logging.getLogger("docagent.groq")
 

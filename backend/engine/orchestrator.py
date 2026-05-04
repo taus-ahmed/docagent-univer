@@ -26,7 +26,7 @@ from core.excel_writer import ExcelWriter
 from connectors.llm_router import LLMRouter
 from connectors.groq_client import LLMResponse
 from storage.database import Database
-from backend.engine.config import settings
+from config import settings
 
 console = Console()
 

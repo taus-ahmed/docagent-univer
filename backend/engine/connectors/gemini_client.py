@@ -9,7 +9,7 @@ import base64
 from typing import Optional
 from dataclasses import dataclass
 
-from backend.engine.config import settings
+from config import settings
 from connectors.groq_client import LLMResponse, _parse_json_response
 
 
