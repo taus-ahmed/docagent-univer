@@ -378,6 +378,10 @@ export const driveApi = {
 // ─── Admin API ────────────────────────────────────────────────────────────────
 
 export const adminApi = {
+  stats: async (): Promise<SystemStats> => {
+    const res = await api.get<SystemStats>("/api/admin/stats");
+    return res.data;
+  },
   getStats: async (): Promise<SystemStats> => {
     const res = await api.get<SystemStats>("/api/admin/stats");
     return res.data;
