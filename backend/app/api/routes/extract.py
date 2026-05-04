@@ -11,6 +11,10 @@ Fix 2:
   - Reconstructs template grid from ColumnTemplate.description (SheetSaveData)
   - One filled table block per DocumentResult, stacked vertically, one blank row between blocks
   - Applies cell styles (bold, italic, font size, colors, borders, merges, column widths)
+Fix 3 (table mode):
+  - Detects header-only templates (single row, no extractTargets) as TABLE mode
+  - Sends table extraction prompt — AI returns all data rows as a JSON array
+  - Excel export writes header row + all data rows below it
 """
 
 import io
@@ -194,7 +198,126 @@ def _cell_ref(r: int, c: int) -> str:
     return f"{col_letter}{r + 1}"
 
 
-# ─── Layout Prompt Builder ────────────────────────────────────────────────────
+# ─── Table Mode Detection ─────────────────────────────────────────────────────
+
+def _is_table_template(layout: dict) -> bool:
+    """
+    Return True when the template is a header-only table.
+
+    Criteria:
+      - All non-empty cells are in row 0 (first row only)
+      - No extractTargets are marked
+      - At least 2 columns present
+
+    This matches the pattern: cyan header row with column names,
+    no rows below, no Extract here markers — the user wants all
+    data rows extracted as a table, not a single filled form.
+    """
+    cells = layout.get("cells", {})
+    extract_targets = layout.get("extractTargets", [])
+
+    if extract_targets:
+        return False  # User marked explicit targets — use form mode
+
+    row_set = set()
+    col_set = set()
+    for key, cell in cells.items():
+        if not isinstance(cell, dict):
+            continue
+        val = cell.get("value", "").strip()
+        if not val:
+            continue
+        parts = key.split(",")
+        if len(parts) == 2:
+            row_set.add(int(parts[0]))
+            col_set.add(int(parts[1]))
+
+    # Table mode: all content in row 0 only, 2+ columns
+    return row_set == {0} and len(col_set) >= 2
+
+
+def _get_table_headers(layout: dict) -> list[dict]:
+    """
+    Extract ordered column headers from a table template.
+    Returns list of {"col": int, "label": str, "ref": str}
+    """
+    cells = layout.get("cells", {})
+    headers = []
+    for key, cell in cells.items():
+        if not isinstance(cell, dict):
+            continue
+        val = cell.get("value", "").strip()
+        if not val:
+            continue
+        parts = key.split(",")
+        if len(parts) == 2 and int(parts[0]) == 0:
+            c = int(parts[1])
+            headers.append({
+                "col": c,
+                "label": val,
+                "ref": _cell_ref(0, c),
+                "style": cell.get("style", {}),
+            })
+    return sorted(headers, key=lambda x: x["col"])
+
+
+def _build_table_prompt(template_data: dict, doc_text: str) -> str:
+    """
+    Build a prompt for table-mode extraction.
+
+    The template is a header row only. The AI must find every data row
+    in the document that matches the column structure and return them
+    all as a JSON array.
+    """
+    layout = template_data["layout"]
+    doc_type = template_data.get("doc_type", "document")
+    headers = _get_table_headers(layout)
+
+    col_list = "\n".join(f"  - {h['label']}" for h in headers)
+    col_names = [h["label"] for h in headers]
+    example_row = {h["label"]: "extracted value" for h in headers}
+
+    prompt = f"""You are an expert {doc_type} data extraction agent.
+
+The user has a table template with these column headers:
+{col_list}
+
+Your job is to extract EVERY data row from the document that belongs to this table.
+
+RULES:
+1. Return ALL rows — do not skip any, even partial rows
+2. Every row must have a value for every column (use "" if missing)
+3. Numbers: strip currency symbols and commas (e.g. "$22.49" → "22.49")
+4. Do not include the header row itself in the output
+5. Do not invent data not present in the document
+6. Preserve the exact item/product names as they appear
+
+DOCUMENT CONTENT:
+{doc_text[:12000]}
+
+Return ONLY this JSON (no markdown, no explanation):
+{{
+  "document_type": "{doc_type}",
+  "overall_confidence": "high|medium|low",
+  "table_rows": [
+    {json.dumps(example_row)},
+    "... one object per data row ..."
+  ],
+  "row_count": 0,
+  "metadata": {{
+    "notes": ""
+  }}
+}}
+
+The "table_rows" array must contain one object per data row found.
+Each object must have exactly these keys: {json.dumps(col_names)}
+
+Extract all rows now:"""
+
+    return prompt
+
+
+
 
 def _build_layout_prompt(template_data: dict, doc_text: str, doc_index: int = 0, total_docs: int = 1) -> str:
     """
@@ -607,6 +730,32 @@ def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
         use_vision = doc.needs_vision and bool(doc.page_images_b64)
 
         if mode == "layout":
+            layout = template_data["layout"]
+
+            # ── Table mode: header-only template ─────────────────────────────
+            if _is_table_template(layout):
+                print(f"[EXTRACT] {file_path.name}: TABLE mode detected", flush=True)
+                prompt = _build_table_prompt(template_data, doc_text)
+
+                if use_vision:
+                    extraction = orchestrator.llm.extract(image_b64=doc.page_images_b64[0], prompt=prompt)
+                else:
+                    extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+
+                elapsed = (t.time() - start) * 1000
+
+                if not extraction.success or not extraction.parsed_json:
+                    r = _fail(file_path.name, f"Table extraction failed: {extraction.error}")
+                    r.processing_time_ms = elapsed
+                    results.append(r)
+                else:
+                    raw = extraction.parsed_json
+                    confidence = raw.get("overall_confidence", "medium")
+                    results.append(
+                        _process_table_result(raw, template_data, file_path.name, doc_type, confidence, elapsed, extraction)
+                    )
+                return results if results else [_fail(file_path.name, "No data extracted")]
+
             # ── Multi-document pre-pass ──────────────────────────────────────
             segments = _detect_document_boundaries(orchestrator, doc_text, file_path.name)
             total_docs = len(segments)
@@ -770,6 +919,53 @@ def _process_layout_result(raw, template_data, filename, doc_type, confidence, e
     r.success = True
 
     print(f"[EXTRACT] layout result: {filename} ({seg_hint}), {len(extracted_fields)} fields", flush=True)
+    return r
+
+
+def _process_table_result(raw, template_data, filename, doc_type, confidence, elapsed, extraction):
+    """
+    Process table-mode extraction result.
+    Stores all rows in extracted_data as table_rows array.
+    The Excel export reads this and writes one row per item under the header.
+    """
+    from orchestrator import DocumentExtractionResult
+
+    table_rows = raw.get("table_rows", [])
+    headers = _get_table_headers(template_data["layout"])
+    col_names = [h["label"] for h in headers]
+
+    # Normalise rows — ensure every row has every column key
+    normalised = []
+    for row in table_rows:
+        if not isinstance(row, dict):
+            continue
+        clean = {}
+        for col in col_names:
+            v = row.get(col, "")
+            clean[col] = "" if v is None else str(v)
+        normalised.append(clean)
+
+    r = DocumentExtractionResult(filename=filename)
+    r.document_type = doc_type
+    r.extracted_data = {
+        "document_type": doc_type,
+        "overall_confidence": confidence,
+        "table_mode": True,
+        "table_rows": normalised,
+        "column_headers": col_names,
+        "row_count": len(normalised),
+        "extracted_data": {
+            # Flatten first row into extracted_data for the results grid preview
+            **({col: {"value": normalised[0].get(col, ""), "confidence": "high"}
+                for col in col_names} if normalised else {}),
+            "_table_row_count": {"value": str(len(normalised)), "confidence": "high"},
+        },
+    }
+    r.extraction_response = extraction
+    r.processing_time_ms = elapsed
+    r.success = True
+
+    print(f"[EXTRACT] table result: {filename}, {len(normalised)} rows, {len(col_names)} columns", flush=True)
     return r
 
 
@@ -1119,40 +1315,105 @@ def _find_template_dimensions(cells: dict) -> tuple[int, int]:
 
 def _write_template_blocks(ws, doc_results, sheet_data: dict, openpyxl_mod) -> None:
     """
-    Write one filled template block per DocumentResult, stacked vertically
-    with one blank row between blocks.
+    Write results to Excel.
 
-    Each block:
-      - Reproduces the full template grid (label cells + filled value cells).
-      - Applies all cell styles from SheetSaveData.
-      - Handles merged cells.
-      - Sets column widths from SheetSaveData.colWidths (applied once, first block).
+    Two sub-modes:
+      TABLE mode  — header row from template + one data row per table_row entry,
+                    all stacked continuously (no block gaps between documents).
+      FORM mode   — one filled template block per DocumentResult, blank row between.
     """
     from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.utils import get_column_letter
 
     cells_tpl = sheet_data.get("cells", {})
-    merges_tpl = sheet_data.get("merges", {})
     col_widths = sheet_data.get("colWidths", [])
 
+    # Apply column widths once
     max_r, max_c = _find_template_dimensions(cells_tpl)
-    template_rows = max_r + 1   # number of rows in the template
-    block_height = template_rows + 1  # +1 blank row between blocks
-
-    # Apply column widths once (based on first block)
     for c_idx, width_px in enumerate(col_widths):
         if width_px and c_idx <= max_c:
-            # openpyxl column width is in characters (~7px each)
-            char_width = max(8, round(width_px / 7))
-            ws.column_dimensions[get_column_letter(c_idx + 1)].width = char_width
+            ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(8, round(width_px / 7))
+
+    # ── Detect table mode from first result ──────────────────────────────────
+    first_data = doc_results[0].get_extracted_data() if doc_results else {}
+    is_table_mode = first_data.get("table_mode", False)
+
+    if is_table_mode:
+        _write_table_mode(ws, doc_results, sheet_data, cells_tpl, max_c, openpyxl_mod)
+    else:
+        _write_form_mode(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
+
+
+def _write_table_mode(ws, doc_results, sheet_data, cells_tpl, max_c, openpyxl_mod):
+    """
+    Table mode Excel writer.
+
+    Layout:
+      Row 1: template header row (with original styles)
+      Row 2..N: one data row per line item across all documents
+      (If multiple PDFs were uploaded, their rows are stacked continuously)
+    """
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    # Write header row from template (row 0 cells)
+    for key, cell_def in cells_tpl.items():
+        if not isinstance(cell_def, dict):
+            continue
+        parts = key.split(",")
+        if len(parts) != 2 or int(parts[0]) != 0:
+            continue
+        tc = int(parts[1])
+        xl_cell = ws.cell(row=1, column=tc + 1)
+        xl_cell.value = cell_def.get("value", "").strip()
+        style = cell_def.get("style", {})
+        if style:
+            _apply_cell_style(xl_cell, style, openpyxl_mod)
+
+    # Get ordered column headers
+    headers = _get_table_headers(sheet_data)
+    col_names = [h["label"] for h in headers]
+    col_indices = {h["label"]: h["col"] for h in headers}
+
+    # Write data rows — one per line item, across all doc results
+    current_row = 2
+    for doc_result in doc_results:
+        extracted = doc_result.get_extracted_data()
+        table_rows = extracted.get("table_rows", [])
+
+        for row_data in table_rows:
+            for col_name in col_names:
+                c_idx = col_indices.get(col_name, 0)
+                val = row_data.get(col_name, "")
+                xl_cell = ws.cell(row=current_row, column=c_idx + 1)
+                # Try numeric conversion for clean number display
+                try:
+                    if val and val != "":
+                        xl_cell.value = float(val) if "." in str(val) else int(val)
+                    else:
+                        xl_cell.value = val
+                except (ValueError, TypeError):
+                    xl_cell.value = val
+            current_row += 1
+
+    print(f"[EXPORT] table mode: wrote header + {current_row - 2} data rows", flush=True)
+
+
+def _write_form_mode(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod):
+    """
+    Form mode Excel writer — original behaviour.
+    One filled template block per DocumentResult, stacked with blank row between.
+    """
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+
+    merges_tpl = sheet_data.get("merges", {})
+    template_rows = max_r + 1
+    block_height = template_rows + 1
 
     for block_idx, doc_result in enumerate(doc_results):
-        row_offset = block_idx * block_height  # 0-based row offset in worksheet
-
-        # Build cell-ref → extracted value map for this document
+        row_offset = block_idx * block_height
         extracted_data = doc_result.get_extracted_data()
         extracted_fields: dict = extracted_data.get("extracted_fields", {})
-        # Also build label → value map for fallback lookup
         label_to_value: dict = {}
         for k, v in extracted_data.get("extracted_data", {}).items():
             if not k.startswith("_label_"):
@@ -1161,48 +1422,31 @@ def _write_template_blocks(ws, doc_results, sheet_data: dict, openpyxl_mod) -> N
                 else:
                     label_to_value[k] = str(v) if v is not None else ""
 
-        # Write each cell in the template
         for key, cell_def in cells_tpl.items():
             if not isinstance(cell_def, dict):
                 continue
-
-            # Skip cells that are children of a merge (they have mergeParent)
             if cell_def.get("mergeParent"):
                 continue
-
             parts = key.split(",")
             if len(parts) != 2:
                 continue
             tr, tc = int(parts[0]), int(parts[1])
-
-            # Worksheet row/col (1-based)
             ws_row = row_offset + tr + 1
             ws_col = tc + 1
-
             xl_cell = ws.cell(row=ws_row, column=ws_col)
-
-            # Determine cell value
             tpl_value = cell_def.get("value", "").strip()
             is_extract = cell_def.get("extractTarget", False)
-
             if is_extract:
-                # Look up by cell ref first (most reliable)
                 ref = f"{_col_letter(tc)}{tr + 1}"
                 filled = extracted_fields.get(ref)
                 if filled is None:
-                    # Fall back to label lookup
                     filled = label_to_value.get(tpl_value, "")
                 xl_cell.value = filled if filled is not None else ""
             else:
-                # Static label cell
                 xl_cell.value = tpl_value
-
-            # Apply style
             style = cell_def.get("style", {})
             if style:
                 _apply_cell_style(xl_cell, style, openpyxl_mod)
-
-            # Handle merge spans
             merge_span = cell_def.get("mergeSpan") or merges_tpl.get(key)
             if merge_span:
                 span_rows = merge_span.get("rows", 1)
@@ -1215,20 +1459,15 @@ def _write_template_blocks(ws, doc_results, sheet_data: dict, openpyxl_mod) -> N
                         end_row=end_row, end_column=end_col,
                     )
 
-        # Add a small filename label above each block (row just before the block)
         if block_idx > 0:
-            label_row = row_offset  # the blank separator row — put filename here
+            label_row = row_offset
             label_cell = ws.cell(row=label_row, column=1)
             label_cell.value = f"▶  {doc_result.filename}"
-            from openpyxl.styles import Font as XLFont
-            label_cell.font = XLFont(bold=True, color="FF4F46E5", size=10)
+            label_cell.font = Font(bold=True, color="FF4F46E5", size=10)
         else:
-            # First block: put filename in a row above row 1 if possible
-            # Just annotate at column max_c+2 in row 1 to avoid disturbing layout
             note_cell = ws.cell(row=1, column=max_c + 3)
             note_cell.value = doc_result.filename
-            from openpyxl.styles import Font as XLFont
-            note_cell.font = XLFont(color="FF9CA3AF", size=9, italic=True)
+            note_cell.font = Font(color="FF9CA3AF", size=9, italic=True)
 
 
 def _write_flat_table(ws, doc_results, openpyxl_mod) -> None:
