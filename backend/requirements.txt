@@ -21,3 +21,5 @@ aiofiles==23.2.1
 Pillow==10.4.0
 pdf2image==1.17.0
 pytesseract==0.3.10
+
+pdfplumber>=0.10.0
