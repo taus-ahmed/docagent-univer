@@ -1,0 +1,1162 @@
+[
+  {
+    "filename": "AUD-2024-001-CLEAN-OPINION.pdf",
+    "doc_type": "audit_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'audit_report'",
+    "checks": []
+  },
+  {
+    "filename": "AUD-2024-002-QUALIFIED.pdf",
+    "doc_type": "audit_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'audit_report'",
+    "checks": []
+  },
+  {
+    "filename": "BS-2023-YE.pdf",
+    "doc_type": "balance_sheet",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'balance_sheet'",
+    "checks": []
+  },
+  {
+    "filename": "BS-2024-INTERIM.pdf",
+    "doc_type": "balance_sheet",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'balance_sheet'",
+    "checks": []
+  },
+  {
+    "filename": "BS-2024-PROJ-YE.pdf",
+    "doc_type": "balance_sheet",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'balance_sheet'",
+    "checks": []
+  },
+  {
+    "filename": "BS-2024-Q1.pdf",
+    "doc_type": "balance_sheet",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'balance_sheet'",
+    "checks": []
+  },
+  {
+    "filename": "BS-2024-Q2.pdf",
+    "doc_type": "balance_sheet",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'balance_sheet'",
+    "checks": []
+  },
+  {
+    "filename": "CHQ-001847.pdf",
+    "doc_type": "cheque",
+    "passed": true,
+    "accuracy_pct": 86.7,
+    "passed_checks": 13,
+    "total_checks": 15,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 3.6,
+    "error": "",
+    "checks": [
+      {
+        "name": "req:Cheque Number",
+        "status": "PASS",
+        "value": "001847"
+      },
+      {
+        "name": "req:Date",
+        "status": "PASS",
+        "value": "2024-01-31"
+      },
+      {
+        "name": "req:Bank Name",
+        "status": "PASS",
+        "value": "FIRST NATIONAL BANK OF NEW YORK"
+      },
+      {
+        "name": "req:Drawer Name",
+        "status": "PASS",
+        "value": "Nexus Global Trading LLC"
+      },
+      {
+        "name": "req:Payee",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Amount",
+        "status": "PASS",
+        "value": "8410.00"
+      },
+      {
+        "name": "req:Amount in Words",
+        "status": "PASS",
+        "value": "8410.00"
+      },
+      {
+        "name": "req:Memo",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Authorized By",
+        "status": "PASS",
+        "value": "Janet Wu"
+      },
+      {
+        "name": "req:Routing Number",
+        "status": "PASS",
+        "value": "021000021"
+      },
+      {
+        "name": "req:Account Number",
+        "status": "PASS",
+        "value": "C7743882201"
+      },
+      {
+        "name": "num:Amount",
+        "status": "PASS",
+        "value": "8410.00"
+      },
+      {
+        "name": "date:Date",
+        "status": "PASS",
+        "value": "2024-01-31"
+      },
+      {
+        "name": "pat:Routing Number",
+        "status": "PASS",
+        "value": "021000021"
+      },
+      {
+        "name": "pat:Amount",
+        "status": "PASS",
+        "value": "8410.00"
+      }
+    ]
+  },
+  {
+    "filename": "CHQ-001848.pdf",
+    "doc_type": "cheque",
+    "passed": true,
+    "accuracy_pct": 80.0,
+    "passed_checks": 12,
+    "total_checks": 15,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 40.5,
+    "error": "",
+    "checks": [
+      {
+        "name": "req:Cheque Number",
+        "status": "PASS",
+        "value": "001848"
+      },
+      {
+        "name": "req:Date",
+        "status": "PASS",
+        "value": "2024-02-29"
+      },
+      {
+        "name": "req:Bank Name",
+        "status": "PASS",
+        "value": "FIRST NATIONAL BANK OF NEW YORK"
+      },
+      {
+        "name": "req:Drawer Name",
+        "status": "PASS",
+        "value": "Nexus Global Trading LLC"
+      },
+      {
+        "name": "req:Payee",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Amount",
+        "status": "PASS",
+        "value": "3847.22"
+      },
+      {
+        "name": "req:Amount in Words",
+        "status": "PASS",
+        "value": "3847.22"
+      },
+      {
+        "name": "req:Memo",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Authorized By",
+        "status": "PASS",
+        "value": "Janet Wu"
+      },
+      {
+        "name": "req:Routing Number",
+        "status": "PASS",
+        "value": "A021000021"
+      },
+      {
+        "name": "req:Account Number",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "num:Amount",
+        "status": "PASS",
+        "value": "3847.22"
+      },
+      {
+        "name": "date:Date",
+        "status": "PASS",
+        "value": "2024-02-29"
+      },
+      {
+        "name": "pat:Routing Number",
+        "status": "PASS",
+        "value": "A021000021"
+      },
+      {
+        "name": "pat:Amount",
+        "status": "PASS",
+        "value": "3847.22"
+      }
+    ]
+  },
+  {
+    "filename": "CHQ-001849.pdf",
+    "doc_type": "cheque",
+    "passed": true,
+    "accuracy_pct": 86.7,
+    "passed_checks": 13,
+    "total_checks": 15,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 31.4,
+    "error": "",
+    "checks": [
+      {
+        "name": "req:Cheque Number",
+        "status": "PASS",
+        "value": "001849"
+      },
+      {
+        "name": "req:Date",
+        "status": "PASS",
+        "value": "2024-03-15"
+      },
+      {
+        "name": "req:Bank Name",
+        "status": "PASS",
+        "value": "FIRST NATIONAL BANK OF NEW YORK"
+      },
+      {
+        "name": "req:Drawer Name",
+        "status": "PASS",
+        "value": "Nexus Global Trading LLC"
+      },
+      {
+        "name": "req:Payee",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Amount",
+        "status": "PASS",
+        "value": "6250.00"
+      },
+      {
+        "name": "req:Amount in Words",
+        "status": "PASS",
+        "value": "6250.00"
+      },
+      {
+        "name": "req:Memo",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Authorized By",
+        "status": "PASS",
+        "value": "Janet Wu"
+      },
+      {
+        "name": "req:Routing Number",
+        "status": "PASS",
+        "value": "A021000021"
+      },
+      {
+        "name": "req:Account Number",
+        "status": "PASS",
+        "value": "C7743882201"
+      },
+      {
+        "name": "num:Amount",
+        "status": "PASS",
+        "value": "6250.00"
+      },
+      {
+        "name": "date:Date",
+        "status": "PASS",
+        "value": "2024-03-15"
+      },
+      {
+        "name": "pat:Routing Number",
+        "status": "PASS",
+        "value": "A021000021"
+      },
+      {
+        "name": "pat:Amount",
+        "status": "PASS",
+        "value": "6250.00"
+      }
+    ]
+  },
+  {
+    "filename": "CHQ-001850.pdf",
+    "doc_type": "cheque",
+    "passed": true,
+    "accuracy_pct": 86.7,
+    "passed_checks": 13,
+    "total_checks": 15,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 49.8,
+    "error": "",
+    "checks": [
+      {
+        "name": "req:Cheque Number",
+        "status": "PASS",
+        "value": "001850"
+      },
+      {
+        "name": "req:Date",
+        "status": "PASS",
+        "value": "2024-04-05"
+      },
+      {
+        "name": "req:Bank Name",
+        "status": "PASS",
+        "value": "FIRST NATIONAL BANK OF NEW YORK"
+      },
+      {
+        "name": "req:Drawer Name",
+        "status": "PASS",
+        "value": "Nexus Global Trading LLC"
+      },
+      {
+        "name": "req:Payee",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Amount",
+        "status": "PASS",
+        "value": "28500.00"
+      },
+      {
+        "name": "req:Amount in Words",
+        "status": "PASS",
+        "value": "28500.00"
+      },
+      {
+        "name": "req:Memo",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Authorized By",
+        "status": "PASS",
+        "value": "Janet Wu"
+      },
+      {
+        "name": "req:Routing Number",
+        "status": "PASS",
+        "value": "021000021"
+      },
+      {
+        "name": "req:Account Number",
+        "status": "PASS",
+        "value": "7743882201"
+      },
+      {
+        "name": "num:Amount",
+        "status": "PASS",
+        "value": "28500.00"
+      },
+      {
+        "name": "date:Date",
+        "status": "PASS",
+        "value": "2024-04-05"
+      },
+      {
+        "name": "pat:Routing Number",
+        "status": "PASS",
+        "value": "021000021"
+      },
+      {
+        "name": "pat:Amount",
+        "status": "PASS",
+        "value": "28500.00"
+      }
+    ]
+  },
+  {
+    "filename": "CHQ-001851.pdf",
+    "doc_type": "cheque",
+    "passed": true,
+    "accuracy_pct": 86.7,
+    "passed_checks": 13,
+    "total_checks": 15,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 12.7,
+    "error": "",
+    "checks": [
+      {
+        "name": "req:Cheque Number",
+        "status": "PASS",
+        "value": "001851"
+      },
+      {
+        "name": "req:Date",
+        "status": "PASS",
+        "value": "2024-05-20"
+      },
+      {
+        "name": "req:Bank Name",
+        "status": "PASS",
+        "value": "FIRST NATIONAL BANK OF NEW YORK"
+      },
+      {
+        "name": "req:Drawer Name",
+        "status": "PASS",
+        "value": "Nexus Global Trading LLC"
+      },
+      {
+        "name": "req:Payee",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Amount",
+        "status": "PASS",
+        "value": "12000.00"
+      },
+      {
+        "name": "req:Amount in Words",
+        "status": "PASS",
+        "value": "12000.00"
+      },
+      {
+        "name": "req:Memo",
+        "status": "MISSING",
+        "value": ""
+      },
+      {
+        "name": "req:Authorized By",
+        "status": "PASS",
+        "value": "Janet Wu"
+      },
+      {
+        "name": "req:Routing Number",
+        "status": "PASS",
+        "value": "021000021"
+      },
+      {
+        "name": "req:Account Number",
+        "status": "PASS",
+        "value": "C7743882201"
+      },
+      {
+        "name": "num:Amount",
+        "status": "PASS",
+        "value": "12000.00"
+      },
+      {
+        "name": "date:Date",
+        "status": "PASS",
+        "value": "2024-05-20"
+      },
+      {
+        "name": "pat:Routing Number",
+        "status": "PASS",
+        "value": "021000021"
+      },
+      {
+        "name": "pat:Amount",
+        "status": "PASS",
+        "value": "12000.00"
+      }
+    ]
+  },
+  {
+    "filename": "EXP-2024-0081.pdf",
+    "doc_type": "expense_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'expense_report'",
+    "checks": []
+  },
+  {
+    "filename": "EXP-2024-0092.pdf",
+    "doc_type": "expense_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'expense_report'",
+    "checks": []
+  },
+  {
+    "filename": "EXP-2024-0107.pdf",
+    "doc_type": "expense_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'expense_report'",
+    "checks": []
+  },
+  {
+    "filename": "EXP-2024-0118.pdf",
+    "doc_type": "expense_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'expense_report'",
+    "checks": []
+  },
+  {
+    "filename": "EXP-2024-0134.pdf",
+    "doc_type": "expense_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'expense_report'",
+    "checks": []
+  },
+  {
+    "filename": "FNBNY-DD-2024-0441.pdf",
+    "doc_type": "pay_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'pay_order'",
+    "checks": []
+  },
+  {
+    "filename": "FNBNY-DD-2024-0463.pdf",
+    "doc_type": "pay_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'pay_order'",
+    "checks": []
+  },
+  {
+    "filename": "FNBNY-DD-2024-0501.pdf",
+    "doc_type": "pay_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'pay_order'",
+    "checks": []
+  },
+  {
+    "filename": "FNBNY-DD-2024-0538.pdf",
+    "doc_type": "pay_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'pay_order'",
+    "checks": []
+  },
+  {
+    "filename": "FNBNY-DD-2024-0572.pdf",
+    "doc_type": "pay_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'pay_order'",
+    "checks": []
+  },
+  {
+    "filename": "FORM-1099-NEC-2023.pdf",
+    "doc_type": "tax_form",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'tax_form'",
+    "checks": []
+  },
+  {
+    "filename": "FORM-1120-2023.pdf",
+    "doc_type": "tax_form",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'tax_form'",
+    "checks": []
+  },
+  {
+    "filename": "FORM-941-Q1-2024.pdf",
+    "doc_type": "tax_form",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'tax_form'",
+    "checks": []
+  },
+  {
+    "filename": "FORM-CT3-NY-2023.pdf",
+    "doc_type": "tax_form",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'tax_form'",
+    "checks": []
+  },
+  {
+    "filename": "FORM-W2-2023.pdf",
+    "doc_type": "tax_form",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'tax_form'",
+    "checks": []
+  },
+  {
+    "filename": "INT-AUD-2024-001-INTERNAL.pdf",
+    "doc_type": "audit_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'audit_report'",
+    "checks": []
+  },
+  {
+    "filename": "INV-2024-0031.pdf",
+    "doc_type": "sales_invoice",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'sales_invoice'",
+    "checks": []
+  },
+  {
+    "filename": "INV-2024-0047.pdf",
+    "doc_type": "sales_invoice",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'sales_invoice'",
+    "checks": []
+  },
+  {
+    "filename": "INV-2024-0063.pdf",
+    "doc_type": "sales_invoice",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'sales_invoice'",
+    "checks": []
+  },
+  {
+    "filename": "INV-2024-0089.pdf",
+    "doc_type": "sales_invoice",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'sales_invoice'",
+    "checks": []
+  },
+  {
+    "filename": "INV-2024-0112.pdf",
+    "doc_type": "sales_invoice",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'sales_invoice'",
+    "checks": []
+  },
+  {
+    "filename": "IS-2023-ANNUAL.pdf",
+    "doc_type": "income_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'income_statement'",
+    "checks": []
+  },
+  {
+    "filename": "IS-2024-Q1.pdf",
+    "doc_type": "income_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'income_statement'",
+    "checks": []
+  },
+  {
+    "filename": "IS-2024-Q2.pdf",
+    "doc_type": "income_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'income_statement'",
+    "checks": []
+  },
+  {
+    "filename": "IS-2024-Q3.pdf",
+    "doc_type": "income_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'income_statement'",
+    "checks": []
+  },
+  {
+    "filename": "IS-2024-Q4.pdf",
+    "doc_type": "income_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'income_statement'",
+    "checks": []
+  },
+  {
+    "filename": "MGMT-LTR-2024-001.pdf",
+    "doc_type": "audit_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'audit_report'",
+    "checks": []
+  },
+  {
+    "filename": "PAYSLIP-EMP-0007-APR2024.pdf",
+    "doc_type": "payslip",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'payslip'",
+    "checks": []
+  },
+  {
+    "filename": "PAYSLIP-EMP-0012-APR2024.pdf",
+    "doc_type": "payslip",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'payslip'",
+    "checks": []
+  },
+  {
+    "filename": "PAYSLIP-EMP-0021-APR2024.pdf",
+    "doc_type": "payslip",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'payslip'",
+    "checks": []
+  },
+  {
+    "filename": "PAYSLIP-EMP-0034-APR2024.pdf",
+    "doc_type": "payslip",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'payslip'",
+    "checks": []
+  },
+  {
+    "filename": "PAYSLIP-EMP-0045-APR2024.pdf",
+    "doc_type": "payslip",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'payslip'",
+    "checks": []
+  },
+  {
+    "filename": "PO-2024-0018.pdf",
+    "doc_type": "purchase_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'purchase_order'",
+    "checks": []
+  },
+  {
+    "filename": "PO-2024-0029.pdf",
+    "doc_type": "purchase_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'purchase_order'",
+    "checks": []
+  },
+  {
+    "filename": "PO-2024-0041.pdf",
+    "doc_type": "purchase_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'purchase_order'",
+    "checks": []
+  },
+  {
+    "filename": "PO-2024-0057.pdf",
+    "doc_type": "purchase_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'purchase_order'",
+    "checks": []
+  },
+  {
+    "filename": "PO-2024-0078.pdf",
+    "doc_type": "purchase_order",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'purchase_order'",
+    "checks": []
+  },
+  {
+    "filename": "RCP-2024-0031.pdf",
+    "doc_type": "receipt",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'receipt'",
+    "checks": []
+  },
+  {
+    "filename": "RCP-2024-0047A.pdf",
+    "doc_type": "receipt",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'receipt'",
+    "checks": []
+  },
+  {
+    "filename": "RCP-2024-0058.pdf",
+    "doc_type": "receipt",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'receipt'",
+    "checks": []
+  },
+  {
+    "filename": "RCP-2024-0062.pdf",
+    "doc_type": "receipt",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'receipt'",
+    "checks": []
+  },
+  {
+    "filename": "RCP-2024-0081.pdf",
+    "doc_type": "receipt",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'receipt'",
+    "checks": []
+  },
+  {
+    "filename": "REV-2024-003-INTERIM-REVIEW.pdf",
+    "doc_type": "audit_report",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "",
+    "duration": 0.0,
+    "error": "No template for 'audit_report'",
+    "checks": []
+  },
+  {
+    "filename": "STMT-2024-01.pdf",
+    "doc_type": "bank_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 12.7,
+    "error": "",
+    "checks": []
+  },
+  {
+    "filename": "STMT-2024-02.pdf",
+    "doc_type": "bank_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 15.9,
+    "error": "",
+    "checks": []
+  },
+  {
+    "filename": "STMT-2024-03.pdf",
+    "doc_type": "bank_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 15.9,
+    "error": "",
+    "checks": []
+  },
+  {
+    "filename": "STMT-2024-04.pdf",
+    "doc_type": "bank_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 15.8,
+    "error": "",
+    "checks": []
+  },
+  {
+    "filename": "STMT-2024-05.pdf",
+    "doc_type": "bank_statement",
+    "passed": false,
+    "accuracy_pct": 0.0,
+    "passed_checks": 0,
+    "total_checks": 0,
+    "row_count": 0,
+    "method": "ai_form",
+    "duration": 12.7,
+    "error": "",
+    "checks": []
+  }
+]
