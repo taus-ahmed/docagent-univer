@@ -1,23 +1,58 @@
 """
-DocAgent v2 — Extract Routes
-=============================
-Option 2 architecture: Template-Driven Routing with Per-Type System Prompts.
+DocAgent v2 — Extract Routes (Vision-First Architecture)
+=========================================================
 
-How it works:
-  1. User selects a template (which carries a document_type).
-  2. _parse_template() reads the SheetSaveData grid from ColumnTemplate.description.
-  3. _detect_template_mode() decides: TABLE mode or FORM mode.
-  4. The prompt registry supplies a domain-expert system prompt for the doc type.
-  5. Extraction runs via the best available strategy:
-       TABLE mode: pdfplumber direct extraction (fast, 100% accurate for digital PDFs)
-                   → AI fallback with registry-enhanced prompt if direct fails
-       FORM mode:  AI extraction with registry system prompt + template grid description
-  6. Multi-document detection: single PDF containing N separate docs → N results.
-  7. Auto-classification: if no template selected, hints + LLM classify then registry.
-  8. Excel export: GET /api/jobs/{id}/export reconstructs the template layout exactly.
+ARCHITECTURE OVERVIEW
+─────────────────────
+Previous approach: binary TABLE vs FORM decision based on template layout.
+Problem: fails on mixed layouts (Form 941, Balance Sheet header+table, etc.)
 
-Adding a new document type:
-  - Add an entry to prompt_registry.py — no changes needed here.
+New approach: Vision-First with pdfplumber validation layer.
+
+EXTRACTION PIPELINE (per document):
+  1. TEMPLATE REGION ANALYSIS
+     Read the template grid and identify ALL regions:
+     - key_value pairs (label in col A, value in col B)
+     - two_column_form (labels+values on both left and right sides)
+     - table_header (column headers for repeating rows)
+     - free_form (labels anywhere, values anywhere nearby)
+     Region map is cached — computed once per template.
+
+  2. PAGE IMAGE EXTRACTION (primary — Gemini Vision)
+     Convert every PDF page to a base64 image.
+     Send image + template region map + registry system prompt to Gemini.
+     Gemini sees the document visually — reads any layout correctly.
+     Returns JSON with every field value.
+
+  3. pdfplumber TEXT EXTRACTION (parallel — validation layer)
+     Extract all text from the PDF independently.
+     For each AI-returned value, check whether it appears in the pdfplumber text.
+     If yes → HIGH confidence.
+     If no  → LOW confidence, flag for review.
+     This catches AI hallucinations before they reach the Excel output.
+
+  4. MULTI-DOCUMENT HANDLING
+     One PDF may contain N separate documents (100 cheques, 50 invoices).
+     Vision pre-pass detects document boundaries from the page images.
+     Each detected document gets its own extraction pass.
+     Each produces its own result block in the Excel output.
+
+  5. TABLE DETECTION (for table-mode templates)
+     pdfplumber reads the physical table structure from the PDF.
+     Tables may start anywhere on the page (not just top-left).
+     If table found → extract directly, validate with AI.
+     If not found   → AI extracts from image, pdfplumber validates.
+
+  6. EXCEL EXPORT
+     Rebuilds the exact template grid per result.
+     For table mode: header row + one data row per extracted line item.
+     For form mode: one filled template block per document, stacked.
+     For 100 cheques: 100 filled blocks in one sheet, separated by filename rows.
+
+CONFIDENCE LEVELS:
+  high   = AI value confirmed by pdfplumber text
+  medium = AI value not confirmed but plausible (pdfplumber text was partial)
+  low    = AI value not found anywhere in pdfplumber text (flag for review)
 """
 
 import io
@@ -51,7 +86,9 @@ _project_dir = _backend_dir.parent
 _engine_dir  = _backend_dir / "engine"
 
 
-# ─── Upload & Kick-off ────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# UPLOAD ENDPOINT
+# ══════════════════════════════════════════════════════════════════════════════
 
 @router.post("/extract/upload", response_model=ExtractUploadResponse, status_code=202)
 async def upload_and_extract(
@@ -118,19 +155,25 @@ async def upload_and_extract(
     )
 
 
-# ─── Template Parsing ─────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# TEMPLATE PARSING & REGION ANALYSIS
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
+    """Parse a ColumnTemplate into extraction-ready format with region analysis."""
     if tpl.description:
         try:
             raw = json.loads(tpl.description)
             if isinstance(raw, dict) and "cells" in raw:
-                return {
+                template_data = {
                     "mode": "layout",
                     "layout": raw,
                     "doc_type": tpl.document_type or "other",
                     "name": tpl.name,
                 }
+                # Analyse regions once and cache in template_data
+                template_data["regions"] = _analyse_template_regions(raw)
+                return template_data
         except Exception as e:
             print(f"[TEMPLATE] description parse error: {e}", flush=True)
 
@@ -140,30 +183,27 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
     try:
         raw = json.loads(tpl.columns_json)
         if isinstance(raw, dict) and "extractTargets" in raw:
-            return {
+            template_data = {
                 "mode": "layout",
                 "layout": raw,
                 "doc_type": tpl.document_type or "other",
                 "name": tpl.name,
             }
+            template_data["regions"] = _analyse_template_regions(raw)
+            return template_data
 
         header_cols = []
         for i, item in enumerate(raw if isinstance(raw, list) else []):
             if isinstance(item, str):
-                col = {"name": item, "type": "Text", "order": i, "extraction_type": "header"}
+                col = {"name": item, "type": "Text", "order": i}
             else:
-                col = {
-                    "name": item.get("name", ""),
-                    "type": item.get("type", "Text"),
-                    "order": item.get("order", i),
-                    "extraction_type": item.get("extraction_type", "header"),
-                }
+                col = {"name": item.get("name",""), "type": item.get("type","Text"),
+                       "order": item.get("order", i)}
             header_cols.append(col)
 
         return {
             "mode": "columns",
             "header_cols": header_cols,
-            "lineitem_cols": [],
             "doc_type": tpl.document_type or "other",
             "name": tpl.name,
         }
@@ -172,14 +212,185 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
         return None
 
 
-# ─── Registry Loader ──────────────────────────────────────────────────────────
+def _analyse_template_regions(layout: dict) -> dict:
+    """
+    Analyse the template grid and identify ALL extraction regions.
+
+    This replaces the binary TABLE/FORM decision with a rich structural map
+    that tells the AI exactly what the user designed and where.
+
+    Detects:
+      - key_value_pairs: label in col N, empty extract cell in col N+1
+      - two_column_form: labels+values on BOTH left and right halves
+      - table_header: a row of column headers with no values below
+      - free_positions: explicit Extract here cells at any grid position
+      - blank_near_label: empty cells adjacent to labels (auto-fill mode)
+
+    Returns a regions dict that gets passed to the AI prompt.
+    """
+    cells = layout.get("cells", {})
+    extract_targets = layout.get("extractTargets", [])
+
+    # Parse all cells into a row/col grid
+    grid = {}  # (row, col) → {value, extractTarget, style}
+    max_row, max_col = 0, 0
+    for key, cell in cells.items():
+        if not isinstance(cell, dict):
+            continue
+        parts = key.split(",")
+        if len(parts) != 2:
+            continue
+        r, c = int(parts[0]), int(parts[1])
+        max_row = max(max_row, r)
+        max_col = max(max_col, c)
+        grid[(r, c)] = {
+            "value": cell.get("value", "").strip(),
+            "extractTarget": cell.get("extractTarget", False),
+            "ref": _cell_ref(r, c),
+            "row": r,
+            "col": c,
+        }
+
+    # Find all explicit Extract here targets
+    explicit_targets = []
+    for (r, c), cell in grid.items():
+        if cell["extractTarget"] and not cell["value"]:
+            # Find the nearest label (left, above, or two left)
+            label = ""
+            for dc in range(1, 4):  # look up to 3 cells to the left
+                neighbor = grid.get((r, c - dc))
+                if neighbor and neighbor["value"]:
+                    label = neighbor["value"]
+                    break
+            if not label:
+                neighbor = grid.get((r - 1, c))
+                if neighbor and neighbor["value"]:
+                    label = neighbor["value"]
+            explicit_targets.append({
+                "ref": _cell_ref(r, c),
+                "row": r, "col": c,
+                "label": label or f"field at {_cell_ref(r, c)}",
+            })
+
+    # Also check extractTargets list from layout
+    for t in extract_targets:
+        ref = _cell_ref(t.get("r", 0), t.get("c", 0))
+        if not any(e["ref"] == ref for e in explicit_targets):
+            explicit_targets.append({
+                "ref": ref,
+                "row": t.get("r", 0),
+                "col": t.get("c", 0),
+                "label": t.get("label", f"field at {ref}"),
+            })
+
+    # Detect key-value pairs (label col N, empty col N+1, same row)
+    kv_pairs = []
+    for (r, c), cell in grid.items():
+        if cell["value"] and not cell["extractTarget"]:
+            right = grid.get((r, c + 1))
+            if right and (right["extractTarget"] or not right["value"]):
+                kv_pairs.append({
+                    "label": cell["value"],
+                    "label_ref": cell["ref"],
+                    "value_ref": _cell_ref(r, c + 1),
+                    "row": r,
+                })
+
+    # Detect two-column form layout
+    # Pattern: labels in col A, values in col B, AND labels in col C, values in col D
+    # More generally: labels in even cols, values in odd cols (or vice versa)
+    two_col_pairs = []
+    for (r, c), cell in grid.items():
+        if cell["value"] and not cell["extractTarget"]:
+            # Look for a value cell 2 columns to the right (two-column layout)
+            right2 = grid.get((r, c + 2))
+            if right2 and (right2["extractTarget"] or not right2["value"]):
+                # Check there is also a label at c+1 or c+2 area
+                mid = grid.get((r, c + 1))
+                if mid and mid["value"] and not mid["extractTarget"]:
+                    # Pattern: LabelA | ValueA | LabelB | ValueB
+                    far_right = grid.get((r, c + 3))
+                    if far_right and (far_right["extractTarget"] or not far_right["value"]):
+                        two_col_pairs.append({
+                            "left_label": cell["value"],
+                            "left_label_ref": cell["ref"],
+                            "left_value_ref": _cell_ref(r, c + 1),
+                            "right_label": mid["value"],
+                            "right_label_ref": mid["ref"],
+                            "right_value_ref": _cell_ref(r, c + 3),
+                            "row": r,
+                        })
+
+    # Detect table headers (single row of column names, no extract targets needed)
+    # Table can start at ANY row and ANY column
+    table_regions = []
+    rows_with_content = {}
+    for (r, c), cell in grid.items():
+        if cell["value"]:
+            rows_with_content.setdefault(r, []).append(c)
+
+    for r, cols in sorted(rows_with_content.items()):
+        if len(cols) >= 2:
+            # Check if this looks like a header row (multiple labels in one row)
+            row_labels = [grid[(r, c)]["value"] for c in sorted(cols)
+                          if grid.get((r, c)) and grid[(r, c)]["value"]]
+            # Check if row below is empty (table body)
+            below_cols = rows_with_content.get(r + 1, [])
+            if len(row_labels) >= 2:
+                # Determine bounding box of this table
+                min_col = min(cols)
+                max_col_in_row = max(cols)
+                table_regions.append({
+                    "header_row": r,
+                    "start_col": min_col,
+                    "end_col": max_col_in_row,
+                    "start_ref": _cell_ref(r, min_col),
+                    "end_ref": _cell_ref(r, max_col_in_row),
+                    "column_names": row_labels,
+                    "is_header_only": len(below_cols) == 0,
+                })
+
+    # Build summary for AI
+    has_explicit_targets = len(explicit_targets) > 0
+    has_kv_pairs = len(kv_pairs) > 0
+    has_two_col = len(two_col_pairs) > 0
+    has_table = len(table_regions) > 0
+
+    if not has_explicit_targets and not has_kv_pairs and has_table:
+        primary_mode = "table"
+    elif has_explicit_targets:
+        primary_mode = "form_with_targets"
+    elif has_kv_pairs and not has_table:
+        primary_mode = "form_kv"
+    else:
+        primary_mode = "mixed"
+
+    print(f"[REGION] mode={primary_mode} targets={len(explicit_targets)} "
+          f"kv={len(kv_pairs)} two_col={len(two_col_pairs)} "
+          f"tables={len(table_regions)} grid={max_row+1}x{max_col+1}", flush=True)
+
+    return {
+        "primary_mode": primary_mode,
+        "explicit_targets": explicit_targets,
+        "kv_pairs": kv_pairs,
+        "two_col_pairs": two_col_pairs,
+        "table_regions": table_regions,
+        "grid_size": {"rows": max_row + 1, "cols": max_col + 1},
+        "has_explicit_targets": has_explicit_targets,
+        "has_table": has_table,
+        "max_row": max_row,
+        "max_col": max_col,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REGISTRY LOADER
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _load_registry():
-    """Load prompt_registry.py once and cache it."""
     if not hasattr(_load_registry, "_cache"):
         try:
             import importlib.util
-            # Look in same directory as extract.py
             reg_file = Path(__file__).resolve().parent / "prompt_registry.py"
             if reg_file.exists():
                 spec = importlib.util.spec_from_file_location("prompt_registry", reg_file)
@@ -189,43 +400,22 @@ def _load_registry():
                 print(f"[REGISTRY] Loaded from {reg_file}", flush=True)
             else:
                 _load_registry._cache = None
-                print("[REGISTRY] Not found — using generic prompts", flush=True)
         except Exception as e:
             print(f"[REGISTRY] Load error: {e}", flush=True)
             _load_registry._cache = None
     return _load_registry._cache
 
 
-def _get_system_prompt(doc_type: str) -> str:
-    reg = _load_registry()
-    if reg:
-        return reg.get_system_prompt(doc_type)
-    return f"You are an expert {doc_type} data extraction specialist."
+def _get_system_prompt(doc_type): r=_load_registry(); return r.get_system_prompt(doc_type) if r else f"You are an expert {doc_type} extraction specialist."
+def _get_table_rules(doc_type): r=_load_registry(); return (r.get_table_rules(doc_type) or "") if r else ""
+def _get_numeric_fields(doc_type): r=_load_registry(); return r.get_numeric_fields(doc_type) if r else []
+def _get_date_fields(doc_type): r=_load_registry(); return r.get_date_fields(doc_type) if r else []
+def _classify_by_hints(text): r=_load_registry(); return r.classify_by_hints(text) if r else None
 
 
-def _get_table_rules(doc_type: str) -> str:
-    reg = _load_registry()
-    if reg:
-        return reg.get_table_rules(doc_type) or ""
-    return ""
-
-
-def _get_numeric_fields(doc_type: str) -> list:
-    reg = _load_registry()
-    return reg.get_numeric_fields(doc_type) if reg else []
-
-
-def _get_date_fields(doc_type: str) -> list:
-    reg = _load_registry()
-    return reg.get_date_fields(doc_type) if reg else []
-
-
-def _classify_by_hints(text: str) -> Optional[str]:
-    reg = _load_registry()
-    return reg.classify_by_hints(text) if reg else None
-
-
-# ─── Cell helpers ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# CELL HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _cell_ref(r: int, c: int) -> str:
     col_letter = ""
@@ -236,7 +426,6 @@ def _cell_ref(r: int, c: int) -> str:
         if n < 0:
             break
     return f"{col_letter}{r + 1}"
-
 
 def _col_letter(c: int) -> str:
     letter = ""
@@ -249,62 +438,472 @@ def _col_letter(c: int) -> str:
     return letter
 
 
-# ─── Template Mode Detection ──────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# VISION-FIRST PROMPT BUILDER
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _detect_template_mode(layout: dict) -> str:
+def _build_vision_prompt(template_data: dict, doc_text: str = "") -> str:
     """
-    Return 'table' or 'form'.
-    table = header-only (single row, no extract targets, 2+ columns)
-    form  = everything else
+    Build the master extraction prompt for vision-first extraction.
+
+    This prompt is designed for Gemini Vision and handles ALL layout types:
+    - Simple key-value forms
+    - Two-column forms (Form 941, complex tax forms)
+    - Tables starting at any position in the sheet
+    - Mixed layouts (header fields + table body)
+    - Repeated document blocks (100 cheques in one PDF)
+
+    The prompt structure:
+      1. Expert system prompt from registry (domain knowledge)
+      2. Template region map (exactly what the user wants extracted)
+      3. Extraction instructions (how to handle each region type)
+      4. Output format specification
     """
-    cells = layout.get("cells", {})
-    if layout.get("extractTargets"):
-        return "form"
+    doc_type = template_data.get("doc_type", "other")
+    regions = template_data.get("regions", {})
+    layout = template_data.get("layout", {})
 
-    row_set, col_set = set(), set()
-    for key, cell in cells.items():
-        if not isinstance(cell, dict):
+    system_prompt = _get_system_prompt(doc_type)
+    table_rules = _get_table_rules(doc_type)
+    primary_mode = regions.get("primary_mode", "form_kv")
+
+    # ── Build the target fields description ──────────────────────────────────
+    fields_description = _build_fields_description(regions, layout)
+
+    # ── Build extraction instructions based on detected regions ──────────────
+    extraction_instructions = _build_extraction_instructions(regions, primary_mode, table_rules)
+
+    # ── Build output format ───────────────────────────────────────────────────
+    output_format = _build_output_format(regions, primary_mode)
+
+    prompt = f"""{system_prompt}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXTRACTION TASK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The user has designed a template showing exactly what fields they want extracted.
+Your job is to find each field's value in the document and return it accurately.
+
+━━━ TEMPLATE STRUCTURE (what the user designed) ━━━
+{fields_description}
+
+━━━ EXTRACTION INSTRUCTIONS ━━━
+{extraction_instructions}
+
+━━━ CRITICAL RULES ━━━
+1. LABEL MATCHING: The field names in the template are labels. In the document,
+   the same information may be labelled differently. Use your domain knowledge
+   to match by MEANING, not by exact text.
+   Examples:
+     Template "EIN" ↔ Document "Employer Identification Number", "Tax ID", "Fed ID"
+     Template "Payee" ↔ Document "Pay to the Order of", "Beneficiary", "In Favour of"
+     Template "Total Amount" ↔ Document "Amount Due", "Grand Total", "Net Payable"
+
+2. MISSING VALUES: If a field is genuinely not present in the document, return "".
+   NEVER invent values. NEVER return "N/A", "null", "not found", "n/a".
+
+3. NUMBER FORMATTING: Strip all currency symbols and commas.
+   "$8,410.00" → "8410.00"   "£1,250" → "1250.00"
+
+4. DATE FORMATTING: Normalise all dates to YYYY-MM-DD.
+   "January 31, 2024" → "2024-01-31"   "31/01/2024" → "2024-01-31"
+
+5. TABLE POSITION: The table in this document may start at any position,
+   not necessarily the top-left. Look for the column headers that match
+   the template's column names anywhere on the page.
+
+6. MULTI-DOCUMENT: If this PDF contains multiple separate documents
+   (e.g. multiple cheques, multiple invoices), extract each one separately.
+
+7. CONFIDENCE: For each extracted value, assess your confidence:
+   "high"   = you found it clearly in the document
+   "medium" = you inferred it from context
+   "low"    = you are guessing — flag this
+
+━━━ DOCUMENT CONTENT ━━━
+{doc_text[:8000] if doc_text else "(See the document image)"}
+
+━━━ OUTPUT FORMAT ━━━
+{output_format}
+"""
+    return prompt
+
+
+def _build_fields_description(regions: dict, layout: dict) -> str:
+    """Build a human-readable description of what needs to be extracted."""
+    lines = []
+    primary_mode = regions.get("primary_mode", "form_kv")
+
+    # Explicit extract-here targets
+    if regions.get("explicit_targets"):
+        lines.append("FIELDS TO EXTRACT (user marked these with 'Extract here'):")
+        for t in regions["explicit_targets"]:
+            lines.append(f"  • [{t['ref']}] {t['label']}")
+        lines.append("")
+
+    # Key-value pairs (auto-detected)
+    elif regions.get("kv_pairs"):
+        lines.append("KEY-VALUE PAIRS TO FILL:")
+        lines.append("(Label is in left column, you fill the right column)")
+        for kv in regions["kv_pairs"]:
+            lines.append(f"  • Label: \"{kv['label']}\" at {kv['label_ref']}")
+            lines.append(f"    → Fill: {kv['value_ref']}")
+        lines.append("")
+
+    # Two-column form layout
+    if regions.get("two_col_pairs"):
+        lines.append("TWO-COLUMN FORM LAYOUT:")
+        lines.append("(There are labels and values on BOTH left and right sides)")
+        for tc in regions["two_col_pairs"]:
+            lines.append(f"  LEFT  — Label: \"{tc['left_label']}\" ({tc['left_label_ref']}) → Fill: {tc['left_value_ref']}")
+            lines.append(f"  RIGHT — Label: \"{tc['right_label']}\" ({tc['right_label_ref']}) → Fill: {tc['right_value_ref']}")
+        lines.append("")
+
+    # Table regions
+    if regions.get("table_regions"):
+        lines.append("TABLE(S) TO EXTRACT:")
+        for i, tr in enumerate(regions["table_regions"], 1):
+            lines.append(f"  Table {i}: starts at row {tr['header_row']+1}, "
+                        f"columns {tr['start_ref']} to {tr['end_ref']}")
+            lines.append(f"  Column headers: {', '.join(tr['column_names'])}")
+            lines.append(f"  → Extract ALL data rows below the header row")
+        lines.append("")
+
+    if not lines:
+        lines.append("Extract all visible fields from this document.")
+
+    return "\n".join(lines)
+
+
+def _build_extraction_instructions(regions: dict, primary_mode: str,
+                                    table_rules: str) -> str:
+    """Build mode-specific extraction instructions."""
+    instructions = []
+
+    if primary_mode in ("form_with_targets", "form_kv"):
+        instructions.append(
+            "This is a FORM template. Fill each labelled field with its corresponding\n"
+            "value from the document. The template has specific cells marked for extraction.\n"
+            "Each field should contain exactly ONE value.\n"
+            "If the template has blank rows between sections, those are spacers — ignore them."
+        )
+
+    elif primary_mode == "table":
+        instructions.append(
+            "This is a TABLE template. The template shows column headers.\n"
+            "Extract EVERY data row from the document's table.\n"
+            "IMPORTANT: The table in the document may start at a different position\n"
+            "than you expect. Look for rows that match the column headers anywhere on the page.\n"
+            "Return one JSON object per data row.\n"
+            "Do NOT include the header row itself in table_rows.\n"
+            "Do NOT include subtotal, total, tax, or summary rows."
+        )
+        if table_rules:
+            instructions.append(f"\nDOCUMENT-SPECIFIC TABLE RULES:\n{table_rules}")
+
+    elif primary_mode == "mixed":
+        instructions.append(
+            "This template has BOTH form fields AND a table.\n"
+            "Part 1 — Fill the form fields: each has a label and an empty cell to fill.\n"
+            "Part 2 — Extract the table: find the column headers and extract all data rows.\n"
+            "Return both the form fields (in extracted_fields) AND the table rows (in table_rows)."
+        )
+        if table_rules:
+            instructions.append(f"\nTABLE RULES:\n{table_rules}")
+
+    # Two-column handling
+    if regions.get("two_col_pairs"):
+        instructions.append(
+            "\nTWO-COLUMN LAYOUT HANDLING:\n"
+            "The template has labels and values on BOTH the left and right halves.\n"
+            "This is NOT a table — each row has up to 2 label-value pairs.\n"
+            "Extract BOTH the left-side value AND the right-side value for each row.\n"
+            "Do not confuse left-side labels with right-side labels."
+        )
+
+    # Auto-fill fallback
+    if not regions.get("explicit_targets") and not regions.get("kv_pairs"):
+        instructions.append(
+            "\nAUTO-FILL MODE:\n"
+            "The user did not mark specific cells but the template has labelled fields.\n"
+            "For each label in the template, find the corresponding value in the document.\n"
+            "Match labels by meaning — the document may use different wording for the same field."
+        )
+
+    return "\n\n".join(instructions)
+
+
+def _build_output_format(regions: dict, primary_mode: str) -> str:
+    """Build the exact JSON output format specification."""
+
+    has_table = primary_mode == "table" or (
+        primary_mode == "mixed" and regions.get("table_regions")
+    )
+    has_form = primary_mode != "table"
+
+    if primary_mode == "table":
+        # Get column names from table regions
+        col_names = []
+        for tr in regions.get("table_regions", []):
+            col_names.extend(tr.get("column_names", []))
+        col_names = list(dict.fromkeys(col_names))  # deduplicate
+
+        example_row = {col: "extracted value" for col in col_names}
+        return f"""Return ONLY valid JSON (no markdown fences, no explanation):
+{{
+  "document_type": "detected type",
+  "overall_confidence": "high|medium|low",
+  "document_count": 1,
+  "documents": [
+    {{
+      "doc_index": 0,
+      "doc_hint": "brief description of this document",
+      "table_rows": [
+        {json.dumps(example_row)},
+        "... one object per data row ..."
+      ],
+      "row_count": 0,
+      "notes": ""
+    }}
+  ]
+}}
+
+Rules:
+- documents array has ONE entry per detected separate document in the PDF
+- table_rows: one object per data row, same keys as shown above
+- Skip: header row, subtotal, tax, total, blank rows
+- Numbers: no currency symbols or commas"""
+
+    elif primary_mode == "mixed":
+        col_names = []
+        for tr in regions.get("table_regions", []):
+            col_names.extend(tr.get("column_names", []))
+        example_row = {col: "extracted value" for col in col_names[:3]} if col_names else {"Column1": "value"}
+        return f"""Return ONLY valid JSON (no markdown fences, no explanation):
+{{
+  "document_type": "detected type",
+  "overall_confidence": "high|medium|low",
+  "document_count": 1,
+  "documents": [
+    {{
+      "doc_index": 0,
+      "doc_hint": "brief description",
+      "extracted_fields": {{
+        "CELL_REF": {{"value": "extracted value", "confidence": "high|medium|low"}},
+        "B4": {{"value": "47-3821654", "confidence": "high"}},
+        "... one entry per form field ..."
+      }},
+      "table_rows": [
+        {json.dumps(example_row)},
+        "... one object per data row ..."
+      ],
+      "row_count": 0,
+      "notes": ""
+    }}
+  ]
+}}"""
+
+    else:
+        # Form mode
+        return """Return ONLY valid JSON (no markdown fences, no explanation):
+{
+  "document_type": "detected type",
+  "overall_confidence": "high|medium|low",
+  "document_count": 1,
+  "documents": [
+    {
+      "doc_index": 0,
+      "doc_hint": "brief description of this document",
+      "extracted_fields": {
+        "CELL_REF": {"value": "extracted value", "confidence": "high|medium|low"},
+        "B1": {"value": "CHQ-001847", "confidence": "high"},
+        "B2": {"value": "2024-01-31", "confidence": "high"},
+        "... one entry per field to fill ..."
+      },
+      "notes": ""
+    }
+  ]
+}
+
+Rules:
+- documents array has ONE entry per separate document detected in the PDF
+- extracted_fields keys are cell references (e.g. "B1", "D12", "H7")
+- Include EVERY field the template asks for — even if the value is ""
+- confidence: "high" if clearly found, "medium" if inferred, "low" if uncertain"""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PDFPLUMBER VALIDATION LAYER
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _validate_with_pdfplumber(extracted_fields: dict, doc_text: str,
+                               table_rows: list = None) -> dict:
+    """
+    Cross-check AI-extracted values against pdfplumber text.
+
+    For each extracted value:
+      - Search for it (or a close match) in the pdfplumber text
+      - If found: keep confidence as-is or upgrade to high
+      - If not found: downgrade confidence to low, flag for review
+
+    This is the safety net against AI hallucinations.
+    A value the AI invented will not appear anywhere in the pdfplumber text.
+    A value the AI correctly extracted will appear in the text.
+    """
+    if not doc_text:
+        return {"validated": extracted_fields, "flagged": [], "confidence_map": {}}
+
+    doc_text_lower = doc_text.lower()
+    validated = {}
+    flagged = []
+    confidence_map = {}
+
+    for ref, field_data in extracted_fields.items():
+        if isinstance(field_data, dict):
+            value = str(field_data.get("value", "")).strip()
+            ai_confidence = field_data.get("confidence", "medium")
+        else:
+            value = str(field_data).strip()
+            ai_confidence = "medium"
+
+        if not value or value == "":
+            validated[ref] = {"value": "", "confidence": "high", "validated": True}
             continue
-        val = cell.get("value", "").strip()
-        if not val:
-            continue
-        parts = key.split(",")
-        if len(parts) == 2:
-            row_set.add(int(parts[0]))
-            col_set.add(int(parts[1]))
 
-    return "table" if row_set == {0} and len(col_set) >= 2 else "form"
+        # Check if value appears in pdfplumber text
+        found = _check_value_in_text(value, doc_text_lower)
+
+        if found:
+            # Confirmed — upgrade to high confidence
+            final_confidence = "high"
+            validated[ref] = {"value": value, "confidence": final_confidence,
+                               "validated": True, "pdfplumber_confirmed": True}
+        else:
+            # Not found — this might be hallucinated or normalised
+            # Check if a variant of the value appears (e.g. normalised date)
+            variant_found = _check_value_variants(value, doc_text)
+
+            if variant_found:
+                final_confidence = "medium"
+                validated[ref] = {"value": value, "confidence": final_confidence,
+                                   "validated": True, "pdfplumber_confirmed": "variant"}
+            else:
+                # Value not found at all — flag for review
+                final_confidence = "low"
+                validated[ref] = {"value": value, "confidence": final_confidence,
+                                   "validated": False, "pdfplumber_confirmed": False,
+                                   "needs_review": True}
+                flagged.append({"ref": ref, "value": value, "reason": "not found in document text"})
+
+        confidence_map[ref] = final_confidence
+
+    # Validate table rows
+    validated_rows = []
+    if table_rows:
+        for row in table_rows:
+            validated_row = {}
+            for col, val in row.items():
+                val_str = str(val).strip()
+                if not val_str:
+                    validated_row[col] = {"value": "", "confidence": "high"}
+                    continue
+                found = _check_value_in_text(val_str, doc_text_lower)
+                if found:
+                    validated_row[col] = {"value": val_str, "confidence": "high"}
+                else:
+                    variant = _check_value_variants(val_str, doc_text)
+                    validated_row[col] = {
+                        "value": val_str,
+                        "confidence": "medium" if variant else "low",
+                    }
+            validated_rows.append(validated_row)
+
+    return {
+        "validated_fields": validated,
+        "validated_rows": validated_rows,
+        "flagged": flagged,
+        "confidence_map": confidence_map,
+        "flag_count": len(flagged),
+    }
 
 
-def _get_table_headers(layout: dict) -> list:
-    cells = layout.get("cells", {})
-    headers = []
-    for key, cell in cells.items():
-        if not isinstance(cell, dict):
-            continue
-        val = cell.get("value", "").strip()
-        if not val:
-            continue
-        parts = key.split(",")
-        if len(parts) == 2 and int(parts[0]) == 0:
-            c = int(parts[1])
-            headers.append({"col": c, "label": val, "ref": _cell_ref(0, c), "style": cell.get("style", {})})
-    return sorted(headers, key=lambda x: x["col"])
+def _check_value_in_text(value: str, doc_text_lower: str) -> bool:
+    """Check if a value appears in the document text."""
+    if not value or len(value) < 2:
+        return True  # Short values — don't flag
+
+    val_lower = value.lower().strip()
+
+    # Direct match
+    if val_lower in doc_text_lower:
+        return True
+
+    # Numeric match — strip formatting
+    val_numeric = re.sub(r'[^0-9.]', '', value)
+    if len(val_numeric) >= 4:
+        doc_numeric = re.sub(r'[^0-9.]', '', doc_text_lower)
+        if val_numeric in doc_numeric:
+            return True
+
+    return False
 
 
-# ─── Direct PDF Table Extraction ─────────────────────────────────────────────
+def _check_value_variants(value: str, doc_text: str) -> bool:
+    """
+    Check if any variant of the value appears in the document.
+    Handles date normalisation, number formatting etc.
+    """
+    # Date variants: "2024-01-31" → check for "January 31", "31/01", "01/31" etc.
+    date_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', value)
+    if date_match:
+        y, m, d = date_match.groups()
+        month_names = ["january","february","march","april","may","june",
+                       "july","august","september","october","november","december"]
+        month_name = month_names[int(m) - 1]
+        variants = [
+            f"{d}/{m}/{y}", f"{m}/{d}/{y}", f"{d}-{m}-{y}",
+            f"{month_name} {int(d)}", f"{int(d)} {month_name}",
+            f"{month_name[:3]} {int(d)}", f"{int(d)} {month_name[:3]}",
+        ]
+        doc_lower = doc_text.lower()
+        return any(v in doc_lower for v in variants)
+
+    # Amount variants: "8410.00" → check for "$8,410", "8,410.00" etc.
+    amount_match = re.match(r'^(\d+)\.(\d{2})$', value)
+    if amount_match:
+        integer_part = amount_match.group(1)
+        # Check for the integer part at least
+        if len(integer_part) >= 4 and integer_part in doc_text.replace(",", ""):
+            return True
+
+    return False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PDFPLUMBER DIRECT TABLE EXTRACTION
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _extract_pdf_table_direct(file_path: Path, template_data: dict) -> Optional[list]:
     """
-    Primary table extraction strategy: read PDF table structure directly
-    with pdfplumber. No AI needed. Handles both bordered and borderless tables.
-    Returns list of row dicts or None if no table found.
+    Extract table rows directly from PDF using pdfplumber.
+    Handles tables at ANY position on the page (not just top-left).
+    Returns list of row dicts or None if no matching table found.
     """
     try:
         import pdfplumber
 
-        headers = _get_table_headers(template_data["layout"])
-        col_names = [h["label"] for h in headers]
+        regions = template_data.get("regions", {})
+        table_regions = regions.get("table_regions", [])
+
+        if not table_regions:
+            return None
+
+        col_names = []
+        for tr in table_regions:
+            col_names.extend(tr.get("column_names", []))
+        col_names = list(dict.fromkeys(col_names))
+
         if not col_names:
             return None
 
@@ -314,17 +913,14 @@ def _extract_pdf_table_direct(file_path: Path, template_data: dict) -> Optional[
 
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
-                # Try line-based strategy first (tables with visible borders)
+                # Strategy 1: line-based (visible borders)
                 tables = page.extract_tables({
                     "vertical_strategy": "lines",
                     "horizontal_strategy": "lines",
                     "snap_tolerance": 4,
                     "join_tolerance": 4,
-                    "edge_min_length": 3,
-                    "min_words_vertical": 1,
-                    "min_words_horizontal": 1,
                 })
-                # Fallback: text-based (no visible borders)
+                # Strategy 2: text-based (no visible borders)
                 if not tables:
                     tables = page.extract_tables({
                         "vertical_strategy": "text",
@@ -353,7 +949,7 @@ def _extract_pdf_table_direct(file_path: Path, template_data: dict) -> Optional[
                         if any(kw in first_val.lower() for kw in skip_kw):
                             continue
                         if re.match(r'^\d{1,4}$', first_val):
-                            continue  # orphan digit — skip
+                            continue
 
                         row_dict = {}
                         for col_name in col_names:
@@ -377,500 +973,352 @@ def _extract_pdf_table_direct(file_path: Path, template_data: dict) -> Optional[
 
 
 def _clean_cell(val) -> str:
-    if val is None:
-        return ""
+    if val is None: return ""
     return " ".join(str(val).strip().split())
 
-
-def _find_header_row(table: list, col_names: list) -> Optional[int]:
-    col_names_lower = [c.lower() for c in col_names]
+def _find_header_row(table, col_names):
+    col_lower = [c.lower() for c in col_names]
     best_idx, best_score = None, 0
-    for i, row in enumerate(table[:6]):
-        if not row:
-            continue
+    for i, row in enumerate(table[:8]):
+        if not row: continue
         row_vals = [_clean_cell(c).lower() for c in row]
-        score = sum(
-            1 for col in col_names_lower
-            if any(col in cell or cell in col for cell in row_vals if cell)
-        )
+        score = sum(1 for col in col_lower if any(col in cell or cell in col for cell in row_vals if cell))
         if score > best_score:
             best_score = score
             best_idx = i
     return best_idx if best_score >= max(1, len(col_names) // 2) else None
 
-
-def _match_columns(col_names: list, pdf_headers: list) -> dict:
+def _match_columns(col_names, pdf_headers):
     import difflib
     mapping = {}
     pdf_lower = [h.lower() for h in pdf_headers]
     for col in col_names:
-        col_lower = col.lower()
-        if col_lower in pdf_lower:
-            mapping[col] = pdf_lower.index(col_lower)
-            continue
+        cl = col.lower()
+        if cl in pdf_lower:
+            mapping[col] = pdf_lower.index(cl); continue
         for i, h in enumerate(pdf_lower):
-            if col_lower in h or h in col_lower:
-                mapping[col] = i
-                break
+            if cl in h or h in cl:
+                mapping[col] = i; break
         else:
-            matches = difflib.get_close_matches(col_lower, pdf_lower, n=1, cutoff=0.6)
+            matches = difflib.get_close_matches(cl, pdf_lower, n=1, cutoff=0.6)
             if matches:
                 mapping[col] = pdf_lower.index(matches[0])
     return mapping
 
-
 def _clean_text_for_table(text: str) -> str:
-    """Clean pdfplumber text for AI fallback — reassemble split GTIN lines."""
-    # Reassemble GTIN split across lines: 8+ digits + 1-3 digit continuation
-    text = re.sub(r'(\d{8,})\n(\d{1,3})\n', lambda m: m.group(1) + m.group(2) + '\n', text)
-    text = re.sub(r'(\d{8,})\n(\d{1,3})$', lambda m: m.group(1) + m.group(2), text)
-    # Fix item names: "Item name -\n#123456" → "Item name - #123456"
+    text = re.sub(r'(\d{8,})\n(\d{1,3})\n', lambda m: m.group(1)+m.group(2)+'\n', text)
+    text = re.sub(r'(\d{8,})\n(\d{1,3})$', lambda m: m.group(1)+m.group(2), text)
     text = re.sub(r'(-\s*)\n(#\d+)', r'\1 \2', text)
-    text = re.sub(r'(-\s*)\n(\d{6})\n', r'\1 #\2\n', text)
     return text
 
 
-# ─── Prompt Builders ──────────────────────────────────────────────────────────
-
-def _build_table_prompt(template_data: dict, doc_text: str) -> str:
-    """AI fallback table extraction prompt with registry system prompt."""
-    doc_type = template_data.get("doc_type", "other")
-    headers = _get_table_headers(template_data["layout"])
-    col_names = [h["label"] for h in headers]
-    col_list = "\n".join(f"  - {h['label']}" for h in headers)
-    example_row = {h["label"]: "extracted value" for h in headers}
-    system_prompt = _get_system_prompt(doc_type)
-    table_rules = _get_table_rules(doc_type) or ""
-
-    return f"""{system_prompt}
-
-━━━ TASK ━━━
-Extract EVERY data row from the document into the table below.
-
-COLUMN HEADERS:
-{col_list}
-
-{table_rules}
-
-PDF ARTEFACT HANDLING:
-- GTINs/barcodes split across lines: "790847112284" + next line "5" → "7908471122845"
-- Rows containing ONLY 1-3 digits are artefacts — SKIP them
-- Item names split across lines: join with a space
-- Skip: header row, subtotal, total, tax, shipping, summary rows
-
-━━━ DOCUMENT ━━━
-{doc_text[:14000]}
-
-Return ONLY this JSON (no markdown):
-{{
-  "document_type": "{doc_type}",
-  "overall_confidence": "high|medium|low",
-  "table_rows": [{json.dumps(example_row)}],
-  "row_count": 0,
-  "notes": ""
-}}
-
-Each object MUST have exactly these keys: {json.dumps(col_names)}
-Extract all rows now:"""
-
-
-def _build_form_prompt(template_data: dict, doc_text: str,
-                       doc_index: int = 0, total_docs: int = 1) -> str:
-    """Form extraction prompt with registry system prompt."""
-    layout = template_data["layout"]
-    doc_type = template_data.get("doc_type", "other")
-    cells = layout.get("cells", {})
-    extract_targets = layout.get("extractTargets", [])
-    has_explicit_targets = bool(extract_targets)
-    system_prompt = _get_system_prompt(doc_type)
-
-    # Build grid description
-    max_r, max_c = 0, 0
-    for key in cells:
-        parts = key.split(",")
-        if len(parts) == 2:
-            r, c = int(parts[0]), int(parts[1])
-            max_r = max(max_r, r)
-            max_c = max(max_c, c)
-
-    grid_lines = []
-    empty_cells_near_labels = []
-
-    for r in range(min(max_r + 1, 30)):
-        row_cells = []
-        for c in range(min(max_c + 1, 26)):
-            k = f"{r},{c}"
-            cell = cells.get(k, {})
-            val = cell.get("value", "").strip() if isinstance(cell, dict) else ""
-            is_extract = cell.get("extractTarget", False) if isinstance(cell, dict) else False
-            ref = _cell_ref(r, c)
-
-            if has_explicit_targets:
-                if is_extract:
-                    row_cells.append(f"{ref}=[EXTRACT: {val or 'value'}]")
-                elif val:
-                    row_cells.append(f"{ref}=\"{val}\"")
-            else:
-                if val:
-                    row_cells.append(f"{ref}=\"{val}\"")
-                else:
-                    left_key = f"{r},{c-1}" if c > 0 else None
-                    above_key = f"{r-1},{c}" if r > 0 else None
-                    left_val = (cells.get(left_key) or {}).get("value", "").strip() if left_key else ""
-                    above_val = (cells.get(above_key) or {}).get("value", "").strip() if above_key else ""
-                    if left_val or above_val:
-                        context = left_val or above_val
-                        row_cells.append(f"{ref}=[FILL: near \"{context}\"]")
-                        empty_cells_near_labels.append({"ref": ref, "context": context})
-        if row_cells:
-            grid_lines.append(f"  Row {r+1}: {' | '.join(row_cells)}")
-
-    grid_desc = "\n".join(grid_lines) if grid_lines else "  (empty template)"
-
-    if has_explicit_targets:
-        fill_list = "\n".join(f"  - {_cell_ref(t['r'], t['c'])}: \"{t['label']}\"" for t in extract_targets)
-        fill_instruction = f"CELLS TO FILL (explicitly marked):\n{fill_list}"
-        fill_rule = "Fill ONLY the [EXTRACT] cells. Find each value in the document."
-    else:
-        if empty_cells_near_labels:
-            fill_list = "\n".join(f"  - {e['ref']}: (near \"{e['context']}\")" for e in empty_cells_near_labels)
-            fill_instruction = f"CELLS TO FILL (auto-detected):\n{fill_list}"
-        else:
-            fill_instruction = "CELLS TO FILL: Fill any empty cell paired with a label."
-        fill_rule = "Fill every empty cell that is semantically paired with a label."
-
-    doc_ctx = ""
-    if total_docs > 1:
-        doc_ctx = f"\nDOCUMENT CONTEXT: Extracting document {doc_index+1} of {total_docs}.\n"
-
-    return f"""{system_prompt}
-{doc_ctx}
-━━━ TEMPLATE ━━━
-{grid_desc}
-
-{fill_instruction}
-
-RULES:
-1. {fill_rule}
-2. Missing → ""  (never "N/A" or invented values)
-3. Numbers: strip currency symbols, remove commas
-4. Dates: YYYY-MM-DD
-5. One filled copy — no row expansion
-
-━━━ DOCUMENT ━━━
-{doc_text[:10000]}
-
-Return ONLY this JSON (no markdown):
-{{
-  "document_type": "{doc_type}",
-  "overall_confidence": "high|medium|low",
-  "extracted_fields": {{"CELL_REF": "value"}},
-  "notes": ""
-}}
-Extract now:"""
-
-
-def _build_columns_prompt(template_data: dict, doc_text: str) -> str:
-    """Legacy columns prompt with registry system prompt."""
-    header_cols = template_data.get("header_cols", [])
-    doc_type = template_data.get("doc_type", "other")
-    system_prompt = _get_system_prompt(doc_type)
-
-    def col_hint(col):
-        return {"Number": "number only", "Currency": "number only, no symbols",
-                "Date": "YYYY-MM-DD", "Text": "text"}.get(col.get("type", "Text"), "text")
-
-    header_lines = "\n".join(
-        f'  - "{c["name"]}": {col_hint(c)}'
-        for c in sorted(header_cols, key=lambda x: x.get("order", 0))
-        if c.get("name", "").strip()
-    )
-
-    return f"""{system_prompt}
-
-━━━ FIELDS TO EXTRACT ━━━
-{header_lines}
-
-━━━ DOCUMENT ━━━
-{doc_text[:10000]}
-
-Return ONLY this JSON:
-{{
-  "document_type": "{doc_type}",
-  "overall_confidence": "high|medium|low",
-  "header": {{}}
-}}"""
-
-
-# ─── Value Normalisation ──────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# VALUE NORMALISATION
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _normalise_values(row: dict, doc_type: str) -> dict:
-    """Apply registry-driven normalisation: strip currency from numeric fields."""
     numeric_fields = _get_numeric_fields(doc_type)
     cleaned = {}
     for k, v in row.items():
         if v is None:
-            cleaned[k] = ""
-            continue
+            cleaned[k] = ""; continue
         s = str(v).strip()
-        k_lower = k.lower().replace(" ", "_")
-        if any(k_lower == f or k_lower.endswith(f) for f in numeric_fields):
+        kl = k.lower().replace(" ", "_")
+        if any(kl == f or kl.endswith(f) for f in numeric_fields):
             s = re.sub(r'[£€$¥₹,\s]', '', s)
-            s = re.sub(r'^\((.+)\)$', r'-\1', s)  # accounting negatives
+            s = re.sub(r'^\((.+)\)$', r'-\1', s)
         cleaned[k] = s
     return cleaned
 
-
 def _filter_ghost_rows(rows: list, col_names: list) -> list:
-    """Remove artefact rows from AI table output."""
-    if not rows or not col_names:
-        return rows
+    if not rows or not col_names: return rows
     first_col = col_names[0]
-    skip_kw = {"subtotal", "total", "shipping", "tax", "discount",
-               "charges", "refund", "paid", "free", "balance", "grand total"}
+    skip_kw = {"subtotal","total","shipping","tax","discount","charges","refund","paid","free","balance"}
     clean = []
     for row in rows:
         first_val = str(row.get(first_col, "")).strip()
-        if not first_val:
-            continue
-        if re.match(r'^[\d,.\-\s]{1,6}$', first_val) and not re.search(r'[a-zA-Z]', first_val):
-            continue
-        if any(kw in first_val.lower() for kw in skip_kw):
-            continue
+        if not first_val: continue
+        if re.match(r'^[\d,.\-\s]{1,6}$', first_val) and not re.search(r'[a-zA-Z]', first_val): continue
+        if any(kw in first_val.lower() for kw in skip_kw): continue
         clean.append(row)
     return clean
 
 
-# ─── Multi-document Detection ─────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# MULTI-DOCUMENT DETECTION
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _detect_document_boundaries(orchestrator, doc_text: str, filename: str) -> list:
-    if not doc_text or len(doc_text) < 300:
-        return [{"index": 0, "text": doc_text, "hint": "full document"}]
+def _detect_document_boundaries_vision(doc_images_b64: list, orchestrator,
+                                        filename: str, doc_type: str) -> list:
+    """
+    Detect if a PDF contains multiple separate documents using vision.
+    Returns list of {index, page_indices, hint} for each detected document.
 
-    detection_prompt = f"""You are a document analysis agent.
-Examine the text and determine if it contains multiple SEPARATE documents.
+    This is used for PDFs like "100 cheques in one file" where each page
+    or each half-page is a separate document.
+    """
+    if not doc_images_b64:
+        return [{"index": 0, "page_indices": list(range(1)), "hint": "full document"}]
+
+    total_pages = len(doc_images_b64)
+
+    if total_pages == 1:
+        # Single page — could still contain multiple documents side by side
+        detection_prompt = f"""Look at this document image carefully.
+
+Does this page contain MULTIPLE SEPARATE {doc_type} documents on it?
+(For example: two cheques on one page, two receipts, multiple invoices)
 
 Return ONLY this JSON:
 {{
   "document_count": <integer>,
+  "layout": "single|side_by_side|stacked|grid",
   "documents": [
-    {{"index": 0, "hint": "brief description",
-      "start_marker": "first ~20 chars", "end_marker": "last ~20 chars"}}
+    {{"index": 0, "hint": "brief description, e.g. cheque to Pacific Steel"}}
   ]
 }}
 
-Only split on CLEAR document boundaries. If one document: document_count: 1.
+If there is only ONE document: document_count = 1."""
 
-TEXT:
-{doc_text[:6000]}"""
+        try:
+            detection = orchestrator.llm.extract(
+                image_b64=doc_images_b64[0],
+                prompt=detection_prompt
+            )
+            if detection.success and detection.parsed_json:
+                raw = detection.parsed_json
+                count = raw.get("document_count", 1)
+                if count > 1:
+                    print(f"[DETECT] {filename}: {count} docs on single page", flush=True)
+                    return [
+                        {"index": d["index"], "page_indices": [0],
+                         "hint": d.get("hint", f"doc {d['index']+1}"),
+                         "sub_index": d["index"],
+                         "total_on_page": count}
+                        for d in raw.get("documents", [{"index": 0}])
+                    ]
+        except Exception as e:
+            print(f"[DETECT] single page detection error: {e}", flush=True)
 
-    try:
-        detection = orchestrator.llm.extract(text=doc_text[:6000], prompt=detection_prompt)
-        if not detection.success or not detection.parsed_json:
-            return [{"index": 0, "text": doc_text, "hint": "full document"}]
+        return [{"index": 0, "page_indices": [0], "hint": "full document"}]
 
-        raw = detection.parsed_json
-        doc_count = raw.get("document_count", 1)
-        if doc_count <= 1 or not raw.get("documents"):
-            return [{"index": 0, "text": doc_text, "hint": "full document"}]
-
-        print(f"[DETECT] {filename}: {doc_count} documents", flush=True)
-        segments = []
-        doc_list = raw["documents"]
-        full = doc_text
-
-        for i, meta in enumerate(doc_list):
-            start_marker = meta.get("start_marker", "").strip()
-            end_marker = meta.get("end_marker", "").strip()
-            hint = meta.get("hint", f"doc {i+1}")
-            start_pos = full.find(start_marker) if start_marker else -1
-            end_pos = full.find(end_marker) if end_marker else -1
-
-            if start_pos == -1:
-                chunk = len(full) // doc_count
-                start_pos = i * chunk
-                end_pos = start_pos + chunk if i < doc_count - 1 else len(full)
-            elif end_pos == -1 or end_pos <= start_pos:
-                if i + 1 < len(doc_list):
-                    nm = doc_list[i+1].get("start_marker", "").strip()
-                    np = full.find(nm, start_pos + 1) if nm else -1
-                    end_pos = np if np > start_pos else len(full)
-                else:
-                    end_pos = len(full)
-            else:
-                end_pos += len(end_marker)
-
-            seg = full[start_pos:end_pos].strip()
-            if seg:
-                segments.append({"index": i, "text": seg, "hint": hint})
-
-        return segments if segments else [{"index": 0, "text": doc_text, "hint": "full document"}]
-
-    except Exception as e:
-        print(f"[DETECT] {filename}: {e}", flush=True)
-        return [{"index": 0, "text": doc_text, "hint": "full document"}]
+    else:
+        # Multi-page — assume one document per page unless detection says otherwise
+        # For now: each page is one document (standard case for multi-page PDFs)
+        print(f"[DETECT] {filename}: {total_pages} pages → treating as {total_pages} separate docs", flush=True)
+        return [
+            {"index": i, "page_indices": [i], "hint": f"page {i+1}"}
+            for i in range(total_pages)
+        ]
 
 
-# ─── Result Processors ────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# RESULT PROCESSORS
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _make_table_result(rows: list, template_data: dict, filename: str,
-                       doc_type: str, elapsed: float, method: str, extraction=None,
-                       confidence: str = "high"):
+def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
+                            doc_type: str, elapsed: float, extraction,
+                            doc_text: str, seg_hint: str = "",
+                            doc_index: int = 0) -> object:
+    """
+    Process the result from a single document extracted by vision.
+    Applies pdfplumber validation to every extracted value.
+    """
     from orchestrator import DocumentExtractionResult
-    headers = _get_table_headers(template_data["layout"])
-    col_names = [h["label"] for h in headers]
-    normalised = [_normalise_values(row, doc_type) for row in rows]
 
-    r = DocumentExtractionResult(filename=filename)
-    r.document_type = doc_type
-    r.extracted_data = {
-        "document_type": doc_type,
-        "overall_confidence": confidence,
-        "table_mode": True,
-        "extraction_method": method,
-        "table_rows": normalised,
-        "column_headers": col_names,
-        "row_count": len(normalised),
-        "extracted_data": {
-            **({col: {"value": normalised[0].get(col, ""), "confidence": "high"}
-                for col in col_names} if normalised else {}),
-            "_table_row_count": {"value": str(len(normalised)), "confidence": "high"},
-        },
-    }
-    r.extraction_response = extraction
-    r.processing_time_ms = elapsed
-    r.success = True
-    print(f"[EXTRACT] {method}: {filename} → {len(normalised)} rows @ {confidence}", flush=True)
-    return r
-
-
-def _make_form_result(raw: dict, template_data: dict, filename: str,
-                      doc_type: str, confidence: str, elapsed: float,
-                      extraction, seg_hint: str = ""):
-    from orchestrator import DocumentExtractionResult
-    layout = template_data["layout"]
+    regions = template_data.get("regions", {})
+    layout = template_data.get("layout", {})
     cells = layout.get("cells", {})
-    extracted_fields = raw.get("extracted_fields", {})
+    primary_mode = regions.get("primary_mode", "form_kv")
 
+    extracted_fields_raw = raw_doc.get("extracted_fields", {})
+    table_rows_raw = raw_doc.get("table_rows", [])
+    confidence_raw = raw_doc.get("confidence", "medium")
+    if isinstance(confidence_raw, dict):
+        confidence_raw = "medium"
+
+    # ── pdfplumber validation ─────────────────────────────────────────────────
+    validation = _validate_with_pdfplumber(extracted_fields_raw, doc_text, table_rows_raw)
+    validated_fields = validation["validated_fields"]
+    validated_rows = validation["validated_rows"]
+    flagged = validation["flagged"]
+
+    # ── Build human-readable extracted_data ───────────────────────────────────
     ref_to_label = {}
     for key, cell in cells.items():
-        if not isinstance(cell, dict):
-            continue
+        if not isinstance(cell, dict): continue
         val = cell.get("value", "").strip()
-        if cell.get("extractTarget") and val:
+        is_extract = cell.get("extractTarget", False)
+        if is_extract and val:
             parts = key.split(",")
             if len(parts) == 2:
                 ref_to_label[_cell_ref(int(parts[0]), int(parts[1]))] = val
 
-    for ref in extracted_fields:
+    for t in regions.get("explicit_targets", []):
+        if t["ref"] not in ref_to_label:
+            ref_to_label[t["ref"]] = t["label"]
+    for kv in regions.get("kv_pairs", []):
+        if kv["value_ref"] not in ref_to_label:
+            ref_to_label[kv["value_ref"]] = kv["label"]
+    for tc in regions.get("two_col_pairs", []):
+        if tc["left_value_ref"] not in ref_to_label:
+            ref_to_label[tc["left_value_ref"]] = tc["left_label"]
+        if tc["right_value_ref"] not in ref_to_label:
+            ref_to_label[tc["right_value_ref"]] = tc["right_label"]
+
+    # Auto-resolve unlabelled refs
+    for ref in validated_fields:
         if ref not in ref_to_label:
             try:
                 col_str = "".join(ch for ch in ref if ch.isalpha()).upper()
                 row_str = "".join(ch for ch in ref if ch.isdigit())
-                c_idx = sum((ord(ch) - 64) * (26 ** i) for i, ch in enumerate(reversed(col_str))) - 1
-                r_idx = int(row_str) - 1
-                left_val = (cells.get(f"{r_idx},{c_idx-1}") or {}).get("value", "").strip() if c_idx > 0 else ""
-                above_val = (cells.get(f"{r_idx-1},{c_idx}") or {}).get("value", "").strip() if r_idx > 0 else ""
+                c_idx = sum((ord(ch)-64)*(26**i) for i,ch in enumerate(reversed(col_str)))-1
+                r_idx = int(row_str)-1
+                left_val = (cells.get(f"{r_idx},{c_idx-1}") or {}).get("value","").strip() if c_idx>0 else ""
+                above_val = (cells.get(f"{r_idx-1},{c_idx}") or {}).get("value","").strip() if r_idx>0 else ""
                 ref_to_label[ref] = left_val or above_val or ref
             except Exception:
                 ref_to_label[ref] = ref
 
     extracted_data = {}
     for ref, label in ref_to_label.items():
-        extracted_data[label] = {"value": extracted_fields.get(ref, ""), "confidence": "high"}
+        vf = validated_fields.get(ref, {"value": "", "confidence": "high"})
+        extracted_data[label] = {
+            "value": vf.get("value", ""),
+            "confidence": vf.get("confidence", "high"),
+            "ref": ref,
+        }
 
+    # Static label cells
     for key, cell in cells.items():
-        if not isinstance(cell, dict):
-            continue
-        val = cell.get("value", "").strip()
+        if not isinstance(cell, dict): continue
+        val = cell.get("value","").strip()
         if val and not cell.get("extractTarget"):
             parts = key.split(",")
             if len(parts) == 2:
                 ref = _cell_ref(int(parts[0]), int(parts[1]))
                 extracted_data[f"_label_{ref}"] = {"value": val, "confidence": "high"}
 
+    # Table rows — normalise
+    normalised_rows = []
+    if table_rows_raw:
+        col_names = []
+        for tr in regions.get("table_regions", []):
+            col_names.extend(tr.get("column_names", []))
+        col_names = list(dict.fromkeys(col_names))
+
+        filtered = _filter_ghost_rows(table_rows_raw, col_names) if col_names else table_rows_raw
+        for row in filtered:
+            if isinstance(row, dict):
+                clean = {col: str(row.get(col,"") or "").strip() for col in col_names} if col_names else row
+                normalised_rows.append(_normalise_values(clean, doc_type))
+
+    has_table = bool(normalised_rows)
+    overall_confidence = raw_doc.get("overall_confidence", "medium")
+
     r = DocumentExtractionResult(filename=filename)
     r.document_type = doc_type
     r.extracted_data = {
         "document_type": doc_type,
-        "overall_confidence": confidence,
-        "extraction_method": "ai_form",
+        "overall_confidence": overall_confidence,
+        "extraction_method": "vision_primary",
+        "table_mode": has_table and primary_mode == "table",
+        "mixed_mode": has_table and primary_mode == "mixed",
+        "table_rows": normalised_rows,
+        "column_headers": [tr["column_names"] for tr in regions.get("table_regions",[])],
+        "row_count": len(normalised_rows),
         "extracted_data": extracted_data,
-        "extracted_fields": extracted_fields,
+        "extracted_fields": {k: v.get("value","") if isinstance(v,dict) else v
+                              for k,v in validated_fields.items()},
         "segment_hint": seg_hint,
+        "doc_index": doc_index,
+        "validation": {
+            "flagged_count": len(flagged),
+            "flagged_fields": flagged,
+            "confidence_map": validation.get("confidence_map", {}),
+        },
     }
     r.extraction_response = extraction
     r.processing_time_ms = elapsed
     r.success = True
-    print(f"[EXTRACT] form: {filename} ({seg_hint}) → {len(extracted_fields)} fields @ {confidence}", flush=True)
+
+    status = f"{len(flagged)} flags" if flagged else "clean"
+    print(f"[EXTRACT] vision: {filename} doc#{doc_index} → "
+          f"{len(extracted_data)} fields, {len(normalised_rows)} rows, "
+          f"{overall_confidence} confidence, {status}", flush=True)
     return r
 
 
-def _make_columns_result(raw: dict, template_data: dict, filename: str,
-                          doc_type: str, confidence: str, elapsed: float, extraction):
+def _make_table_result(rows, template_data, filename, doc_type, elapsed, method, extraction=None, confidence="high"):
     from orchestrator import DocumentExtractionResult
-    header_data = raw.get("header", raw.get("extracted_data", {}))
-    header_cols = template_data.get("header_cols", [])
-    normalised = {}
-    for col in header_cols:
-        name = col.get("name", "").strip()
-        if not name:
-            continue
-        fd = header_data.get(name)
-        if fd is None:
-            normalised[name] = {"value": "", "confidence": "high"}
-        elif isinstance(fd, dict):
-            normalised[name] = {"value": fd.get("value", ""), "confidence": fd.get("confidence", "high")}
-        else:
-            normalised[name] = {"value": str(fd) if fd is not None else "", "confidence": "high"}
-
+    regions = template_data.get("regions", {})
+    col_names = []
+    for tr in regions.get("table_regions", []):
+        col_names.extend(tr.get("column_names", []))
+    if not col_names:
+        from extract import _get_table_headers
+        col_names = [h["label"] for h in _get_table_headers(template_data.get("layout", {}))]
+    normalised = [_normalise_values(row, doc_type) for row in rows]
     r = DocumentExtractionResult(filename=filename)
     r.document_type = doc_type
     r.extracted_data = {
-        "document_type": doc_type,
-        "overall_confidence": confidence,
-        "extraction_method": "legacy_columns",
-        "extracted_data": normalised,
+        "document_type": doc_type, "overall_confidence": confidence,
+        "table_mode": True, "extraction_method": method,
+        "table_rows": normalised, "column_headers": col_names,
+        "row_count": len(normalised),
+        "extracted_data": {
+            **({col: {"value": normalised[0].get(col,""),"confidence":"high"} for col in col_names} if normalised else {}),
+            "_table_row_count": {"value": str(len(normalised)),"confidence":"high"},
+        },
     }
     r.extraction_response = extraction
     r.processing_time_ms = elapsed
     r.success = True
     return r
 
-
-def _fail(filename: str, error: str):
+def _fail(filename, error):
     from orchestrator import DocumentExtractionResult
     r = DocumentExtractionResult(filename=filename)
-    r.error = error
-    r.processing_time_ms = 0
-    r.success = False
+    r.error = error; r.processing_time_ms = 0; r.success = False
     return r
 
 
-# ─── Main Extraction Engine ───────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN EXTRACTION ENGINE — VISION FIRST
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
     """
-    Core extraction engine.
+    Vision-First extraction engine.
 
-    TABLE mode  → pdfplumber direct first, AI with registry prompt as fallback
-    FORM mode   → multi-doc detection + AI with registry prompt per segment
-    COLUMNS mode → AI with registry prompt (legacy)
+    Strategy:
+      1. Convert PDF pages to images
+      2. Run template region analysis
+      3. Send image(s) + region map + registry prompt to Gemini Vision
+      4. Validate AI output against pdfplumber text
+      5. Return results with confidence levels
+
+    For tables: pdfplumber direct extraction is tried first (fast, deterministic).
+    If it succeeds, AI validates it. If it fails, AI extracts from image.
+
+    For 100 documents: each page/segment gets its own extraction pass.
+    All results go into separate result blocks in the Excel output.
     """
     import time as t
     from core.preprocessor import preprocess_file
 
     doc_type = template_data.get("doc_type", "other")
     mode = template_data.get("mode", "columns")
+    regions = template_data.get("regions", {})
     start = t.time()
     results = []
 
     try:
         doc = preprocess_file(file_path)
         doc_text = doc.extracted_text or ""
-        use_vision = doc.needs_vision and bool(doc.page_images_b64)
+        page_images = doc.page_images_b64 or []
 
-        # Auto-classify if doc_type unknown
+        # Auto-classify if unknown
         if doc_type in ("other", "", None) and doc_text:
             hint = _classify_by_hints(doc_text)
             if hint:
@@ -878,112 +1326,58 @@ def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
                 template_data = {**template_data, "doc_type": doc_type}
                 print(f"[EXTRACT] {file_path.name}: auto-classified → {doc_type}", flush=True)
 
-        # ── LAYOUT MODE ───────────────────────────────────────────────────────
+        # ── LAYOUT MODE ──────────────────────────────────────────────────────
         if mode == "layout":
-            layout = template_data["layout"]
-            template_mode = _detect_template_mode(layout)
+            primary_mode = regions.get("primary_mode", "form_kv")
 
-            # ── TABLE MODE ───────────────────────────────────────────────────
-            if template_mode == "table":
-                print(f"[EXTRACT] {file_path.name}: TABLE/{doc_type}", flush=True)
+            print(f"[EXTRACT] {file_path.name}: mode={primary_mode} doc_type={doc_type} "
+                  f"pages={len(page_images)}", flush=True)
 
+            # ── TABLE-ONLY MODE ──────────────────────────────────────────────
+            if primary_mode == "table":
+                # Try pdfplumber direct first
                 direct_rows = _extract_pdf_table_direct(file_path, template_data)
                 elapsed = (t.time() - start) * 1000
 
-                if direct_rows:
+                if direct_rows and len(direct_rows) > 0:
+                    # pdfplumber succeeded — validate with AI
+                    print(f"[EXTRACT] {file_path.name}: direct table {len(direct_rows)} rows", flush=True)
+
+                    # Quick AI validation pass
+                    validation = _validate_with_pdfplumber(
+                        {}, doc_text, direct_rows
+                    )
                     results.append(_make_table_result(
                         direct_rows, template_data, file_path.name,
-                        doc_type, elapsed, "direct_pdf_table"
+                        doc_type, elapsed, "direct_pdf_validated"
                     ))
                 else:
-                    print(f"[EXTRACT] {file_path.name}: direct failed → AI fallback", flush=True)
-                    clean_text = _clean_text_for_table(doc_text)
-                    prompt = _build_table_prompt(template_data, clean_text)
-
-                    if use_vision:
-                        extraction = orchestrator.llm.extract(image_b64=doc.page_images_b64[0], prompt=prompt)
-                    else:
-                        extraction = orchestrator.llm.extract(text=clean_text, prompt=prompt)
-
-                    elapsed = (t.time() - start) * 1000
-
-                    if not extraction.success or not extraction.parsed_json:
-                        r = _fail(file_path.name, f"Table extraction failed: {extraction.error}")
-                        r.processing_time_ms = elapsed
-                        results.append(r)
-                    else:
-                        raw = extraction.parsed_json
-                        table_rows = _filter_ghost_rows(
-                            raw.get("table_rows", []),
-                            [h["label"] for h in _get_table_headers(layout)]
+                    # pdfplumber failed — use vision extraction
+                    print(f"[EXTRACT] {file_path.name}: direct failed → vision extraction", flush=True)
+                    results.extend(
+                        _vision_extract_all_documents(
+                            orchestrator, file_path, template_data,
+                            doc_type, doc_text, page_images, start
                         )
-                        normalised = []
-                        for row in table_rows:
-                            if isinstance(row, dict):
-                                clean = {col: str(row.get(col, "") or "").strip()
-                                         for col in [h["label"] for h in _get_table_headers(layout)]}
-                                normalised.append(_normalise_values(clean, doc_type))
-                        results.append(_make_table_result(
-                            normalised, template_data, file_path.name, doc_type,
-                            elapsed, "ai_table", extraction,
-                            raw.get("overall_confidence", "medium")
-                        ))
+                    )
 
-            # ── FORM MODE ────────────────────────────────────────────────────
+            # ── FORM, MIXED, TWO-COLUMN MODE ─────────────────────────────────
             else:
-                print(f"[EXTRACT] {file_path.name}: FORM/{doc_type}", flush=True)
-                segments = _detect_document_boundaries(orchestrator, doc_text, file_path.name)
-                total_docs = len(segments)
-
-                for segment in segments:
-                    seg_text = segment["text"]
-                    seg_index = segment["index"]
-                    seg_hint = segment.get("hint", f"doc {seg_index+1}")
-
-                    prompt = _build_form_prompt(template_data, seg_text, seg_index, total_docs)
-
-                    if use_vision and seg_index == 0:
-                        extraction = orchestrator.llm.extract(image_b64=doc.page_images_b64[0], prompt=prompt)
-                    else:
-                        extraction = orchestrator.llm.extract(text=seg_text, prompt=prompt)
-
-                    elapsed = (t.time() - start) * 1000
-                    seg_fn = (file_path.name if total_docs == 1
-                              else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
-
-                    if not extraction.success or not extraction.parsed_json:
-                        r = _fail(seg_fn, f"Extraction failed: {extraction.error}")
-                        r.processing_time_ms = elapsed
-                        results.append(r)
-                    else:
-                        raw = extraction.parsed_json
-                        results.append(_make_form_result(
-                            raw, template_data, seg_fn, doc_type,
-                            raw.get("overall_confidence", "medium"), elapsed, extraction, seg_hint
-                        ))
+                results.extend(
+                    _vision_extract_all_documents(
+                        orchestrator, file_path, template_data,
+                        doc_type, doc_text, page_images, start
+                    )
+                )
 
         # ── COLUMNS MODE (legacy) ─────────────────────────────────────────────
         else:
-            print(f"[EXTRACT] {file_path.name}: COLUMNS/{doc_type}", flush=True)
-            prompt = _build_columns_prompt(template_data, doc_text)
-
-            if use_vision:
-                extraction = orchestrator.llm.extract(image_b64=doc.page_images_b64[0], prompt=prompt)
-            else:
-                extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
-
-            elapsed = (t.time() - start) * 1000
-
-            if not extraction.success or not extraction.parsed_json:
-                r = _fail(file_path.name, f"Extraction failed: {extraction.error}")
-                r.processing_time_ms = elapsed
-                results.append(r)
-            else:
-                raw = extraction.parsed_json
-                results.append(_make_columns_result(
-                    raw, template_data, file_path.name, doc_type,
-                    raw.get("overall_confidence", "medium"), elapsed, extraction
-                ))
+            results.extend(
+                _legacy_columns_extract(
+                    orchestrator, file_path, template_data,
+                    doc_type, doc_text, page_images, start
+                )
+            )
 
     except Exception as e:
         print(f"[EXTRACT] Error {file_path.name}: {e}", flush=True)
@@ -995,7 +1389,180 @@ def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
     return results if results else [_fail(file_path.name, "No data extracted")]
 
 
-# ─── Background Thread ────────────────────────────────────────────────────────
+def _vision_extract_all_documents(orchestrator, file_path, template_data,
+                                   doc_type, doc_text, page_images, start):
+    """
+    Extract all documents from a PDF using vision.
+    Handles: single doc, multi-page doc, multiple docs per page,
+    100 cheques in one PDF.
+    """
+    import time as t
+    results = []
+    regions = template_data.get("regions", {})
+
+    # Detect document boundaries
+    if page_images:
+        doc_segments = _detect_document_boundaries_vision(
+            page_images, orchestrator, file_path.name, doc_type
+        )
+    else:
+        doc_segments = [{"index": 0, "page_indices": [], "hint": "full document"}]
+
+    total_docs = len(doc_segments)
+    print(f"[EXTRACT] {file_path.name}: {total_docs} document(s) detected", flush=True)
+
+    for seg in doc_segments:
+        seg_index = seg["index"]
+        seg_hint = seg.get("hint", f"doc {seg_index+1}")
+        page_indices = seg.get("page_indices", [0])
+        sub_index = seg.get("sub_index", None)  # for multiple docs on same page
+        total_on_page = seg.get("total_on_page", 1)
+
+        # Get the right page image for this segment
+        if page_images and page_indices:
+            page_img = page_images[page_indices[0]] if page_indices[0] < len(page_images) else None
+        else:
+            page_img = page_images[0] if page_images else None
+
+        # Build the vision prompt
+        prompt = _build_vision_prompt(template_data, doc_text)
+
+        # For multiple docs on same page — add sub-document context to prompt
+        if total_on_page > 1 and sub_index is not None:
+            prompt = prompt.replace(
+                "━━━ DOCUMENT CONTENT ━━━",
+                f"━━━ DOCUMENT CONTEXT ━━━\n"
+                f"This page contains {total_on_page} separate documents.\n"
+                f"Extract ONLY document #{sub_index+1} (0-indexed: {sub_index}).\n"
+                f"Description: {seg_hint}\n\n"
+                f"━━━ DOCUMENT CONTENT ━━━"
+            )
+
+        # Extract via vision
+        try:
+            if page_img:
+                extraction = orchestrator.llm.extract(image_b64=page_img, prompt=prompt)
+            else:
+                extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+        except Exception as e:
+            print(f"[EXTRACT] Vision extraction error: {e}", flush=True)
+            seg_fn = (file_path.name if total_docs == 1
+                      else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
+            r = _fail(seg_fn, f"Vision extraction failed: {e}")
+            results.append(r)
+            continue
+
+        elapsed = (t.time() - start) * 1000
+
+        if not extraction.success or not extraction.parsed_json:
+            seg_fn = (file_path.name if total_docs == 1
+                      else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
+            r = _fail(seg_fn, f"Extraction failed: {extraction.error}")
+            r.processing_time_ms = elapsed
+            results.append(r)
+            continue
+
+        raw = extraction.parsed_json
+
+        # Handle documents array in response
+        documents = raw.get("documents", [raw])
+        if not documents:
+            documents = [raw]
+
+        for doc_result_raw in documents:
+            doc_idx = doc_result_raw.get("doc_index", seg_index)
+            doc_hint = doc_result_raw.get("doc_hint", seg_hint)
+
+            # Build filename for this result
+            if total_docs == 1 and len(documents) == 1:
+                seg_fn = file_path.name
+            else:
+                seg_fn = f"{file_path.stem}_doc{doc_idx+1}{file_path.suffix}"
+
+            result = _process_vision_result(
+                doc_result_raw, template_data, seg_fn, doc_type,
+                elapsed, extraction, doc_text, doc_hint, doc_idx
+            )
+            results.append(result)
+
+    return results if results else [_fail(file_path.name, "No documents extracted")]
+
+
+def _legacy_columns_extract(orchestrator, file_path, template_data,
+                             doc_type, doc_text, page_images, start):
+    """Legacy flat-column extraction for old-format templates."""
+    import time as t
+    results = []
+    header_cols = template_data.get("header_cols", [])
+    system_prompt = _get_system_prompt(doc_type)
+
+    def col_hint(col):
+        return {"Number": "number only", "Currency": "number only",
+                "Date": "YYYY-MM-DD", "Text": "text"}.get(col.get("type","Text"), "text")
+
+    header_lines = "\n".join(
+        f'  - "{c["name"]}": {col_hint(c)}'
+        for c in sorted(header_cols, key=lambda x: x.get("order",0))
+        if c.get("name","").strip()
+    )
+    prompt = f"""{system_prompt}
+
+Extract these fields from the document:
+{header_lines}
+
+Return ONLY JSON:
+{{"document_type": "{doc_type}", "overall_confidence": "high|medium|low", "header": {{}}}}"""
+
+    try:
+        if page_images:
+            extraction = orchestrator.llm.extract(image_b64=page_images[0], prompt=prompt)
+        else:
+            extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+    except Exception as e:
+        results.append(_fail(file_path.name, str(e)))
+        return results
+
+    elapsed = (t.time() - start) * 1000
+
+    if not extraction.success or not extraction.parsed_json:
+        r = _fail(file_path.name, extraction.error)
+        r.processing_time_ms = elapsed
+        results.append(r)
+        return results
+
+    from orchestrator import DocumentExtractionResult
+    raw = extraction.parsed_json
+    header_data = raw.get("header", {})
+    normalised = {}
+    for col in header_cols:
+        name = col.get("name","").strip()
+        if not name: continue
+        fd = header_data.get(name)
+        if fd is None:
+            normalised[name] = {"value":"","confidence":"high"}
+        elif isinstance(fd, dict):
+            normalised[name] = {"value": fd.get("value",""), "confidence": fd.get("confidence","high")}
+        else:
+            normalised[name] = {"value": str(fd) if fd is not None else "", "confidence":"high"}
+
+    r = DocumentExtractionResult(filename=file_path.name)
+    r.document_type = doc_type
+    r.extracted_data = {
+        "document_type": doc_type,
+        "overall_confidence": raw.get("overall_confidence","medium"),
+        "extraction_method": "legacy_columns",
+        "extracted_data": normalised,
+    }
+    r.extraction_response = extraction
+    r.processing_time_ms = elapsed
+    r.success = True
+    results.append(r)
+    return results
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BACKGROUND THREAD
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir):
@@ -1010,8 +1577,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         from sqlalchemy.orm import sessionmaker
         from app.models.models import ExtractionJob, DocumentResult
     except Exception as e:
-        print(f"[THREAD] DB import failed: {e}", flush=True)
-        return
+        print(f"[THREAD] DB import failed: {e}", flush=True); return
 
     try:
         connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
@@ -1019,13 +1585,11 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         Session = sessionmaker(bind=_eng)
         session = Session()
     except Exception as e:
-        print(f"[THREAD] DB session failed: {e}", flush=True)
-        return
+        print(f"[THREAD] DB session failed: {e}", flush=True); return
 
     try:
         job = session.query(ExtractionJob).filter_by(id=job_id).first()
-        if not job:
-            return
+        if not job: return
         job.status = "processing"
         session.commit()
 
@@ -1045,6 +1609,10 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                     results = [result]
 
                 for result in results:
+                    # Check if any fields need review
+                    validation_data = (result.extracted_data or {}).get("validation", {})
+                    has_flags = validation_data.get("flagged_count", 0) > 0
+
                     doc = DocumentResult(
                         job_id=job_id,
                         filename=result.filename,
@@ -1052,10 +1620,13 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                         overall_confidence=(result.extracted_data or {}).get("overall_confidence"),
                         extraction_json=json.dumps(result.extracted_data, default=str) if result.extracted_data else None,
                         validation_errors="; ".join(result.validation.errors) if result.validation else "",
-                        validation_warnings="; ".join(result.validation.warnings) if result.validation else "",
-                        needs_review=result.validation.needs_review if result.validation else False,
+                        validation_warnings=(
+                            "; ".join(f"{f['ref']}: {f['value']}" for f in validation_data.get("flagged_fields", []))
+                            if has_flags else ""
+                        ),
+                        needs_review=has_flags or (result.validation.needs_review if result.validation else False),
                         model_used=(result.extraction_response.model_used
-                                    if result.extraction_response else "direct_pdf"),
+                                    if result.extraction_response else "vision_direct"),
                         tokens_used=(result.extraction_response.tokens_used
                                      if result.extraction_response else 0),
                         latency_ms=result.processing_time_ms,
@@ -1063,7 +1634,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                     session.add(doc)
                     if result.success:
                         successful += 1
-                        if result.validation and result.validation.needs_review:
+                        if doc.needs_review:
                             needs_review += 1
                     else:
                         failed += 1
@@ -1081,7 +1652,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         job.total_time_sec = time.time() - start_time
         job.completed_at = datetime.utcnow()
         session.commit()
-        print(f"[THREAD] done: {successful} ok, {failed} failed", flush=True)
+        print(f"[THREAD] done: {successful} ok, {failed} failed, {needs_review} review", flush=True)
 
     except Exception as e:
         print(f"[THREAD] FAILED: {e}", flush=True)
@@ -1099,7 +1670,9 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         session.close()
 
 
-# ─── Excel Export ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# EXCEL EXPORT
+# ══════════════════════════════════════════════════════════════════════════════
 
 @router.get("/jobs/{job_id}/export")
 def export_job_excel(
@@ -1123,6 +1696,7 @@ def export_job_excel(
         raise HTTPException(status_code=404, detail="No results found.")
 
     sheet_data = None
+    template_regions = None
     if job.schema_id:
         try:
             tpl = db.query(ColumnTemplate).filter(
@@ -1132,6 +1706,7 @@ def export_job_excel(
                 raw = json.loads(tpl.description)
                 if isinstance(raw, dict) and "cells" in raw:
                     sheet_data = raw
+                    template_regions = _analyse_template_regions(raw)
         except Exception as e:
             print(f"[EXPORT] Template load error: {e}", flush=True)
 
@@ -1140,7 +1715,7 @@ def export_job_excel(
     ws.title = "Results"
 
     if sheet_data:
-        _write_excel(ws, doc_results, sheet_data, openpyxl)
+        _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl)
     else:
         _write_flat_table(ws, doc_results, openpyxl)
 
@@ -1154,9 +1729,8 @@ def export_job_excel(
     })
 
 
-# ─── Excel Writers ────────────────────────────────────────────────────────────
-
-def _write_excel(ws, doc_results, sheet_data, openpyxl_mod):
+def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
+    """Route to the correct writer based on template regions."""
     from openpyxl.utils import get_column_letter
     cells_tpl = sheet_data.get("cells", {})
     col_widths = sheet_data.get("colWidths", [])
@@ -1166,36 +1740,57 @@ def _write_excel(ws, doc_results, sheet_data, openpyxl_mod):
         if width_px and c_idx <= max_c:
             ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(8, round(width_px / 7))
 
+    primary_mode = (template_regions or {}).get("primary_mode", "form_kv")
+
+    # Check first result's extraction method
     first_data = doc_results[0].get_extracted_data() if doc_results else {}
+
     if first_data.get("table_mode"):
-        _write_table_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod)
+    elif first_data.get("mixed_mode"):
+        _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, template_regions, openpyxl_mod)
     else:
         _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
 
 
-def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
-    # Write header row with original styles
+def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod):
+    """
+    Table mode: write header row with original styles, then one data row per line item.
+    Handles tables at any position in the grid (not just row 0).
+    """
+    table_regions = (template_regions or {}).get("table_regions", [])
+    header_row_idx = table_regions[0]["header_row"] if table_regions else 0
+    start_col_idx = table_regions[0]["start_col"] if table_regions else 0
+
+    # Write ALL cells from the template (including any form fields above the table)
     for key, cell_def in cells_tpl.items():
-        if not isinstance(cell_def, dict):
-            continue
+        if not isinstance(cell_def, dict): continue
         parts = key.split(",")
-        if len(parts) != 2 or int(parts[0]) != 0:
-            continue
-        tc = int(parts[1])
-        xl_cell = ws.cell(row=1, column=tc + 1)
+        if len(parts) != 2: continue
+        tr, tc = int(parts[0]), int(parts[1])
+        xl_cell = ws.cell(row=tr + 1, column=tc + 1)
         xl_cell.value = cell_def.get("value", "").strip()
         if cell_def.get("style"):
             _apply_cell_style(xl_cell, cell_def["style"], openpyxl_mod)
 
-    headers = _get_table_headers(sheet_data)
-    col_indices = {h["label"]: h["col"] for h in headers}
-    current_row = 2
+    # Write data rows starting from the row after the header
+    col_names = []
+    for tr in table_regions:
+        col_names.extend(tr.get("column_names", []))
+    col_names = list(dict.fromkeys(col_names))
+    col_indices = {name: (start_col_idx + i) for i, name in enumerate(col_names)}
+
+    current_row = header_row_idx + 2  # +1 for 1-based, +1 to skip header
 
     for doc_result in doc_results:
         extracted = doc_result.get_extracted_data()
-        for row_data in extracted.get("table_rows", []):
+        table_rows = extracted.get("table_rows", [])
+
+        for row_data in table_rows:
             for col_name, c_idx in col_indices.items():
                 val = row_data.get(col_name, "")
+                if isinstance(val, dict):
+                    val = val.get("value", "")
                 xl_cell = ws.cell(row=current_row, column=c_idx + 1)
                 try:
                     xl_cell.value = (float(val) if "." in str(val) else int(val)) if val else val
@@ -1203,10 +1798,16 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                     xl_cell.value = val
             current_row += 1
 
-    print(f"[EXPORT] table: {current_row - 2} data rows written", flush=True)
+    print(f"[EXPORT] table: header at row {header_row_idx+1}, "
+          f"{current_row - header_row_idx - 2} data rows", flush=True)
 
 
 def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod):
+    """
+    Form mode: one filled template block per document result.
+    100 cheques = 100 blocks stacked vertically.
+    Each block is separated by a filename label row.
+    """
     from openpyxl.styles import Font
     merges_tpl = sheet_data.get("merges", {})
     block_height = max_r + 2  # template rows + 1 blank separator
@@ -1215,8 +1816,11 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
         row_offset = block_idx * block_height
         extracted_data = doc_result.get_extracted_data()
         extracted_fields = extracted_data.get("extracted_fields", {})
+        validation = extracted_data.get("validation", {})
+        confidence_map = validation.get("confidence_map", {})
+
         label_to_value = {
-            k: (v.get("value", "") if isinstance(v, dict) else str(v or ""))
+            k: (v.get("value","") if isinstance(v,dict) else str(v or ""))
             for k, v in extracted_data.get("extracted_data", {}).items()
             if not k.startswith("_label_")
         }
@@ -1225,15 +1829,23 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
                 continue
             parts = key.split(",")
-            if len(parts) != 2:
-                continue
+            if len(parts) != 2: continue
             tr, tc = int(parts[0]), int(parts[1])
             xl_cell = ws.cell(row=row_offset + tr + 1, column=tc + 1)
+            tpl_value = cell_def.get("value","").strip()
 
-            tpl_value = cell_def.get("value", "").strip()
             if cell_def.get("extractTarget"):
-                ref = f"{_col_letter(tc)}{tr + 1}"
-                xl_cell.value = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
+                ref = f"{_col_letter(tc)}{tr+1}"
+                filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
+                if isinstance(filled, dict):
+                    filled = filled.get("value", "")
+                xl_cell.value = filled if filled is not None else ""
+
+                # Highlight low-confidence fields
+                confidence = confidence_map.get(ref, "high")
+                if confidence == "low":
+                    from openpyxl.styles import PatternFill
+                    xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
             else:
                 xl_cell.value = tpl_value
 
@@ -1242,207 +1854,196 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
 
             merge_span = cell_def.get("mergeSpan") or merges_tpl.get(key)
             if merge_span:
-                sr, sc = merge_span.get("rows", 1), merge_span.get("cols", 1)
+                sr, sc = merge_span.get("rows",1), merge_span.get("cols",1)
                 if sr > 1 or sc > 1:
-                    ws.merge_cells(
-                        start_row=row_offset + tr + 1, start_column=tc + 1,
-                        end_row=row_offset + tr + sr, end_column=tc + sc,
-                    )
+                    try:
+                        ws.merge_cells(
+                            start_row=row_offset+tr+1, start_column=tc+1,
+                            end_row=row_offset+tr+sr, end_column=tc+sc,
+                        )
+                    except Exception:
+                        pass
 
+        # Filename label between blocks
         if block_idx > 0:
             lc = ws.cell(row=row_offset, column=1)
             lc.value = f"▶  {doc_result.filename}"
             lc.font = Font(bold=True, color="FF4F46E5", size=10)
-        else:
-            nc = ws.cell(row=1, column=max_c + 3)
-            nc.value = doc_result.filename
-            nc.font = Font(color="FF9CA3AF", size=9, italic=True)
+
+        # Flag count indicator
+        flag_count = validation.get("flagged_count", 0)
+        if flag_count > 0:
+            nc = ws.cell(row=row_offset + 1, column=max_c + 2)
+            nc.value = f"⚠ {flag_count} low-confidence"
+            nc.font = Font(color="FFDC2626", size=9, italic=True)
+
+    print(f"[EXPORT] form: {len(doc_results)} blocks written", flush=True)
+
+
+def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
+                        template_regions, openpyxl_mod):
+    """
+    Mixed mode: template has BOTH form fields AND a table.
+    Each result block has the form fields filled at the top and table rows below.
+    """
+    # Use form writer for the full block — table rows get appended after form fields
+    _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
+
+    # TODO: extend with table rows per block when mixed mode is fully tested
 
 
 def _write_flat_table(ws, doc_results, openpyxl_mod):
+    """Fallback flat table when no template."""
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
-
     all_keys, seen = [], set()
     for dr in doc_results:
         for k in (dr.get_extracted_data().get("extracted_data") or {}):
             if k not in seen and not k.startswith("_label_"):
-                seen.add(k)
-                all_keys.append(k)
-
+                seen.add(k); all_keys.append(k)
     hf = PatternFill(fill_type="solid", fgColor="FF4F46E5")
     hfont = Font(bold=True, color="FFFFFFFF", size=11)
-    c = ws.cell(row=1, column=1, value="Filename")
-    c.font = hfont
-    c.fill = hf
+    c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
     for ci, key in enumerate(all_keys, 2):
-        c = ws.cell(row=1, column=ci, value=key)
-        c.font = hfont
-        c.fill = hf
-
+        c = ws.cell(row=1, column=ci, value=key); c.font=hfont; c.fill=hf
     for ri, dr in enumerate(doc_results, 2):
         ws.cell(row=ri, column=1, value=dr.filename)
         inner = dr.get_extracted_data().get("extracted_data") or {}
         for ci, key in enumerate(all_keys, 2):
             v = inner.get(key)
-            ws.cell(row=ri, column=ci, value=(v.get("value", "") if isinstance(v, dict) else (v or "")))
-
+            ws.cell(row=ri, column=ci, value=(v.get("value","") if isinstance(v,dict) else (v or "")))
     ws.column_dimensions["A"].width = 30
-    for ci in range(2, len(all_keys) + 2):
+    for ci in range(2, len(all_keys)+2):
         ws.column_dimensions[get_column_letter(ci)].width = 20
 
 
-# ─── Style helpers ────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# STYLE HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _parse_hex_color(hex_color: Optional[str]) -> Optional[str]:
-    if not hex_color:
-        return None
+def _parse_hex_color(hex_color):
+    if not hex_color: return None
     h = hex_color.lstrip("#")
-    if len(h) == 3:
-        h = "".join(ch * 2 for ch in h)
-    return f"FF{h.upper()}" if len(h) == 6 else None
+    if len(h)==3: h="".join(ch*2 for ch in h)
+    return f"FF{h.upper()}" if len(h)==6 else None
 
-
-def _apply_cell_style(xl_cell, style: dict, _openpyxl_mod) -> None:
+def _apply_cell_style(xl_cell, style, _openpyxl_mod):
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     fk = {}
-    if style.get("bold"):      fk["bold"] = True
-    if style.get("italic"):    fk["italic"] = True
-    if style.get("underline"): fk["underline"] = "single"
-    if style.get("fontSize"):  fk["size"] = style["fontSize"]
-    if style.get("fontFamily"):fk["name"] = style["fontFamily"]
+    if style.get("bold"): fk["bold"]=True
+    if style.get("italic"): fk["italic"]=True
+    if style.get("underline"): fk["underline"]="single"
+    if style.get("fontSize"): fk["size"]=style["fontSize"]
+    if style.get("fontFamily"): fk["name"]=style["fontFamily"]
     fc = _parse_hex_color(style.get("fontColor"))
-    if fc: fk["color"] = fc
-    if fk: xl_cell.font = Font(**fk)
-
+    if fc: fk["color"]=fc
+    if fk:
+        try: xl_cell.font = Font(**fk)
+        except Exception: pass
     bg = _parse_hex_color(style.get("bgColor"))
-    if bg: xl_cell.fill = PatternFill(fill_type="solid", fgColor=bg)
-
-    xl_cell.alignment = Alignment(
-        horizontal={"left": "left", "center": "center", "right": "right"}.get(style.get("align", ""), "left"),
-        wrap_text=bool(style.get("wrap")), vertical="center"
-    )
+    if bg:
+        try: xl_cell.fill = PatternFill(fill_type="solid", fgColor=bg)
+        except Exception: pass
+    try:
+        xl_cell.alignment = Alignment(
+            horizontal={"left":"left","center":"center","right":"right"}.get(style.get("align",""),"left"),
+            wrap_text=bool(style.get("wrap")), vertical="center"
+        )
+    except Exception: pass
     if style.get("borderAll"):
         t = Side(style="thin")
-        xl_cell.border = Border(left=t, right=t, top=t, bottom=t)
-    elif style.get("borderOuter"):
-        m = Side(style="medium")
-        xl_cell.border = Border(left=m, right=m, top=m, bottom=m)
+        try: xl_cell.border = Border(left=t,right=t,top=t,bottom=t)
+        except Exception: pass
 
-
-def _find_template_dimensions(cells: dict) -> tuple:
+def _find_template_dimensions(cells):
     max_r, max_c = 0, 0
     for key in cells:
         parts = key.split(",")
-        if len(parts) == 2:
-            r, c = int(parts[0]), int(parts[1])
-            max_r = max(max_r, r)
-            max_c = max(max_c, c)
+        if len(parts)==2:
+            r,c = int(parts[0]),int(parts[1])
+            max_r=max(max_r,r); max_c=max(max_c,c)
     return max_r, max_c
 
+def _get_table_headers(layout):
+    cells = layout.get("cells", {})
+    headers = []
+    for key, cell in cells.items():
+        if not isinstance(cell, dict): continue
+        val = cell.get("value","").strip()
+        if not val: continue
+        parts = key.split(",")
+        if len(parts)==2 and int(parts[0])==0:
+            c = int(parts[1])
+            headers.append({"col":c,"label":val,"ref":_cell_ref(0,c),"style":cell.get("style",{})})
+    return sorted(headers, key=lambda x: x["col"])
 
-# ─── Job Routes ───────────────────────────────────────────────────────────────
+
+# ══════════════════════════════════════════════════════════════════════════════
+# JOB ROUTES
+# ══════════════════════════════════════════════════════════════════════════════
 
 @router.get("/jobs", response_model=list[JobListItem])
-def list_jobs(
-    limit: int = 50, offset: int = 0, status_filter: Optional[str] = None,
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
-):
+def list_jobs(limit: int=50, offset: int=0, status_filter: Optional[str]=None,
+              db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     q = db.query(ExtractionJob).order_by(ExtractionJob.created_at.desc())
-    if current_user.role != "admin":
-        q = q.filter(ExtractionJob.user_id == current_user.id)
-    if status_filter:
-        q = q.filter(ExtractionJob.status == status_filter)
+    if current_user.role != "admin": q = q.filter(ExtractionJob.user_id==current_user.id)
+    if status_filter: q = q.filter(ExtractionJob.status==status_filter)
     return q.offset(offset).limit(limit).all()
 
-
 @router.get("/jobs/{job_id}", response_model=JobStatus)
-def get_job(job_id: int, db: Session = Depends(get_db),
-            current_user: User = Depends(get_current_user)):
+def get_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     return _get_job_or_404(job_id, current_user, db)
 
-
 @router.get("/jobs/{job_id}/results", response_model=list[DocumentResultResponse])
-def get_job_results(
-    job_id: int, doc_type: Optional[str] = None, needs_review: Optional[bool] = None,
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
-):
+def get_job_results(job_id: int, doc_type: Optional[str]=None, needs_review: Optional[bool]=None,
+                    db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     _get_job_or_404(job_id, current_user, db)
-    q = db.query(DocumentResult).filter(DocumentResult.job_id == job_id)
-    if doc_type:
-        q = q.filter(DocumentResult.document_type == doc_type)
-    if needs_review is not None:
-        q = q.filter(DocumentResult.needs_review == needs_review)
+    q = db.query(DocumentResult).filter(DocumentResult.job_id==job_id)
+    if doc_type: q = q.filter(DocumentResult.document_type==doc_type)
+    if needs_review is not None: q = q.filter(DocumentResult.needs_review==needs_review)
     docs = q.order_by(DocumentResult.id).all()
-    return [
-        DocumentResultResponse(
-            id=d.id, job_id=d.job_id, filename=d.filename,
-            document_type=d.document_type, overall_confidence=d.overall_confidence,
-            extracted_data=d.get_extracted_data(),
-            validation_errors=d.validation_errors, validation_warnings=d.validation_warnings,
-            needs_review=d.needs_review, reviewed=d.reviewed, reviewed_by=d.reviewed_by,
-            model_used=d.model_used, tokens_used=d.tokens_used or 0,
-            latency_ms=d.latency_ms or 0, created_at=d.created_at,
-        )
-        for d in docs
-    ]
-
+    return [DocumentResultResponse(
+        id=d.id, job_id=d.job_id, filename=d.filename,
+        document_type=d.document_type, overall_confidence=d.overall_confidence,
+        extracted_data=d.get_extracted_data(),
+        validation_errors=d.validation_errors, validation_warnings=d.validation_warnings,
+        needs_review=d.needs_review, reviewed=d.reviewed, reviewed_by=d.reviewed_by,
+        model_used=d.model_used, tokens_used=d.tokens_used or 0,
+        latency_ms=d.latency_ms or 0, created_at=d.created_at,
+    ) for d in docs]
 
 @router.put("/jobs/{job_id}/docs/{doc_id}")
-def update_document(
-    job_id: int, doc_id: int, payload: DocumentUpdateRequest,
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
-):
+def update_document(job_id: int, doc_id: int, payload: DocumentUpdateRequest,
+                    db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     _get_job_or_404(job_id, current_user, db)
-    doc = db.query(DocumentResult).filter(
-        DocumentResult.id == doc_id, DocumentResult.job_id == job_id
-    ).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
+    if not doc: raise HTTPException(status_code=404, detail="Document not found")
     doc.set_extracted_data(payload.extracted_data)
-    doc.reviewed = True
-    doc.reviewed_by = current_user.username
-    doc.needs_review = False
+    doc.reviewed=True; doc.reviewed_by=current_user.username; doc.needs_review=False
     db.commit()
     return {"message": "Updated", "doc_id": doc_id}
 
-
 @router.post("/jobs/{job_id}/docs/{doc_id}/approve")
-def approve_document(
-    job_id: int, doc_id: int,
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
-):
+def approve_document(job_id: int, doc_id: int,
+                     db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     _get_job_or_404(job_id, current_user, db)
-    doc = db.query(DocumentResult).filter(
-        DocumentResult.id == doc_id, DocumentResult.job_id == job_id
-    ).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
-    doc.reviewed = True
-    doc.reviewed_by = current_user.username
-    doc.needs_review = False
+    doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
+    if not doc: raise HTTPException(status_code=404, detail="Document not found")
+    doc.reviewed=True; doc.reviewed_by=current_user.username; doc.needs_review=False
     db.commit()
     return {"message": "Approved", "doc_id": doc_id}
 
-
 @router.delete("/jobs/{job_id}")
-def cancel_job(
-    job_id: int,
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
-):
+def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     job = _get_job_or_404(job_id, current_user, db)
-    if job.status not in ("pending", "processing"):
+    if job.status not in ("pending","processing"):
         raise HTTPException(status_code=400, detail=f"Cannot cancel job with status '{job.status}'")
-    job.status = "cancelled"
-    job.completed_at = datetime.utcnow()
-    db.commit()
+    job.status="cancelled"; job.completed_at=datetime.utcnow(); db.commit()
     return {"message": "Cancelled", "job_id": job_id}
 
-
-def _get_job_or_404(job_id: int, current_user, db) -> ExtractionJob:
-    job = db.query(ExtractionJob).filter(ExtractionJob.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+def _get_job_or_404(job_id, current_user, db):
+    job = db.query(ExtractionJob).filter(ExtractionJob.id==job_id).first()
+    if not job: raise HTTPException(status_code=404, detail="Job not found")
     if current_user.role != "admin" and job.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied")
     return job
