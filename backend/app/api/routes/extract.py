@@ -1332,6 +1332,9 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
         doc_text = doc.extracted_text or ""
         page_images = doc.page_images_b64 or []
 
+        print(f"[EXTRACT] {file_path.name}: text_len={len(doc_text)} "
+              f"pages={len(page_images)} has_vision={bool(page_images)}", flush=True)
+
         # Auto-classify if unknown
         if doc_type in ("other", "", None) and doc_text:
             hint = _classify_by_hints(doc_text)
@@ -1406,63 +1409,81 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
 def _vision_extract_all_documents(orchestrator, file_path, template_data,
                                    doc_type, doc_text, page_images, start):
     """
-    Extract all documents from a PDF using vision.
-    Handles: single doc, multi-page doc, multiple docs per page,
-    100 cheques in one PDF.
+    Extract all documents from a PDF.
+    Uses vision (images) when available, falls back to text when not.
+    Handles: single doc, multi-page, multiple docs per page, 100 cheques in one PDF.
     """
     import time as t
     results = []
     regions = template_data.get("regions", {})
+    has_images = bool(page_images)
 
-    # Detect document boundaries
-    if page_images:
+    # Only attempt vision-based boundary detection if we actually have images
+    if has_images:
         doc_segments = _detect_document_boundaries_vision(
             page_images, orchestrator, file_path.name, doc_type
         )
     else:
+        # No images — treat as single document, use text extraction
+        print(f"[EXTRACT] {file_path.name}: no page images, using text-only extraction", flush=True)
         doc_segments = [{"index": 0, "page_indices": [], "hint": "full document"}]
 
     total_docs = len(doc_segments)
-    print(f"[EXTRACT] {file_path.name}: {total_docs} document(s) detected", flush=True)
+    print(f"[EXTRACT] {file_path.name}: {total_docs} document(s) to process", flush=True)
 
     for seg in doc_segments:
         seg_index = seg["index"]
         seg_hint = seg.get("hint", f"doc {seg_index+1}")
         page_indices = seg.get("page_indices", [0])
-        sub_index = seg.get("sub_index", None)  # for multiple docs on same page
+        sub_index = seg.get("sub_index", None)
         total_on_page = seg.get("total_on_page", 1)
 
-        # Get the right page image for this segment
-        if page_images and page_indices:
-            page_img = page_images[page_indices[0]] if page_indices[0] < len(page_images) else None
-        else:
-            page_img = page_images[0] if page_images else None
+        # Get page image for this segment if available
+        page_img = None
+        if has_images and page_indices:
+            idx = page_indices[0] if page_indices[0] < len(page_images) else 0
+            page_img = page_images[idx]
+        elif has_images and page_images:
+            page_img = page_images[0]
 
-        # Build the vision prompt
+        # Build the extraction prompt
         prompt = _build_vision_prompt(template_data, doc_text)
 
-        # For multiple docs on same page — add sub-document context to prompt
+        # Add sub-document context for multiple docs on same page
         if total_on_page > 1 and sub_index is not None:
             prompt = prompt.replace(
                 "━━━ DOCUMENT CONTENT ━━━",
                 f"━━━ DOCUMENT CONTEXT ━━━\n"
                 f"This page contains {total_on_page} separate documents.\n"
-                f"Extract ONLY document #{sub_index+1} (0-indexed: {sub_index}).\n"
+                f"Extract ONLY document #{sub_index+1} (index {sub_index}).\n"
                 f"Description: {seg_hint}\n\n"
                 f"━━━ DOCUMENT CONTENT ━━━"
             )
 
-        # Extract via vision
+        # Extract — use image if available, text otherwise
         try:
             if page_img:
+                print(f"[EXTRACT] {file_path.name}: sending image to AI (doc {seg_index+1})", flush=True)
                 extraction = orchestrator.llm.extract(image_b64=page_img, prompt=prompt)
-            else:
+                # If vision fails, fall back to text
+                if not extraction.success and doc_text:
+                    print(f"[EXTRACT] {file_path.name}: vision failed → text fallback", flush=True)
+                    extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+            elif doc_text:
+                print(f"[EXTRACT] {file_path.name}: sending text to AI (doc {seg_index+1})", flush=True)
                 extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+            else:
+                seg_fn = (file_path.name if total_docs == 1
+                          else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
+                r = _fail(seg_fn, "No content available — PDF has no extractable text or images")
+                results.append(r)
+                continue
+
         except Exception as e:
-            print(f"[EXTRACT] Vision extraction error: {e}", flush=True)
+            print(f"[EXTRACT] LLM error for {file_path.name}: {e}", flush=True)
             seg_fn = (file_path.name if total_docs == 1
                       else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
-            r = _fail(seg_fn, f"Vision extraction failed: {e}")
+            r = _fail(seg_fn, f"LLM error: {str(e)[:150]}")
             results.append(r)
             continue
 
@@ -1487,11 +1508,8 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
             doc_idx = doc_result_raw.get("doc_index", seg_index)
             doc_hint = doc_result_raw.get("doc_hint", seg_hint)
 
-            # Build filename for this result
-            if total_docs == 1 and len(documents) == 1:
-                seg_fn = file_path.name
-            else:
-                seg_fn = f"{file_path.stem}_doc{doc_idx+1}{file_path.suffix}"
+            seg_fn = (file_path.name if total_docs == 1 and len(documents) == 1
+                      else f"{file_path.stem}_doc{doc_idx+1}{file_path.suffix}")
 
             result = _process_vision_result(
                 doc_result_raw, template_data, seg_fn, doc_type,
