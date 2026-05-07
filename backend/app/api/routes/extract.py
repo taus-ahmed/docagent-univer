@@ -321,34 +321,70 @@ def _analyse_template_regions(layout: dict) -> dict:
                             "row": r,
                         })
 
-    # Detect table headers (single row of column names, no extract targets needed)
-    # Table can start at ANY row and ANY column
+    # Detect table headers — the actual column header row for repeating data rows.
+    # Rules for a valid table header row:
+    #   1. Has 2+ non-empty cells
+    #   2. NONE of the cells in that row are extract targets (those are form fields)
+    #   3. NONE of the cells in adjacent columns of same row are extract targets
+    #   4. The row BELOW is empty (data will go there) OR it is the last content row
+    # This prevents two-column form rows from being misidentified as table headers.
     table_regions = []
     rows_with_content = {}
     for (r, c), cell in grid.items():
-        if cell["value"]:
+        if cell["value"] or cell["extractTarget"]:
             rows_with_content.setdefault(r, []).append(c)
 
+    # Build a set of rows that contain extract targets — these are form rows
+    form_rows_set = set()
+    for (r, c), cell in grid.items():
+        if cell["extractTarget"]:
+            form_rows_set.add(r)
+        # Also mark the row of any cell adjacent to an extract target
+        for dc in range(-3, 4):
+            neighbor = grid.get((r, c + dc))
+            if neighbor and neighbor["extractTarget"]:
+                form_rows_set.add(r)
+
     for r, cols in sorted(rows_with_content.items()):
-        if len(cols) >= 2:
-            # Check if this looks like a header row (multiple labels in one row)
-            row_labels = [grid[(r, c)]["value"] for c in sorted(cols)
-                          if grid.get((r, c)) and grid[(r, c)]["value"]]
-            # Check if row below is empty (table body)
-            below_cols = rows_with_content.get(r + 1, [])
-            if len(row_labels) >= 2:
-                # Determine bounding box of this table
-                min_col = min(cols)
-                max_col_in_row = max(cols)
-                table_regions.append({
-                    "header_row": r,
-                    "start_col": min_col,
-                    "end_col": max_col_in_row,
-                    "start_ref": _cell_ref(r, min_col),
-                    "end_ref": _cell_ref(r, max_col_in_row),
-                    "column_names": row_labels,
-                    "is_header_only": len(below_cols) == 0,
-                })
+        # Skip rows that are form rows (have extract targets nearby)
+        if r in form_rows_set:
+            continue
+
+        value_cols = [c for c in cols
+                      if grid.get((r, c)) and grid[(r, c)]["value"]
+                      and not grid[(r, c)]["extractTarget"]]
+
+        if len(value_cols) < 2:
+            continue
+
+        row_labels = [grid[(r, c)]["value"] for c in sorted(value_cols)]
+
+        # The row below should be empty (table body placeholder)
+        below_cols = [c for c in rows_with_content.get(r + 1, [])
+                      if grid.get((r + 1, c)) and grid[(r + 1, c)]["value"]]
+        is_header_only = len(below_cols) == 0
+
+        min_col = min(value_cols)
+        max_col = max(value_cols)
+        table_regions.append({
+            "header_row": r,
+            "start_col": min_col,
+            "end_col": max_col,
+            "start_ref": _cell_ref(r, min_col),
+            "end_ref": _cell_ref(r, max_col),
+            "column_names": row_labels,
+            "is_header_only": is_header_only,
+        })
+
+    # If multiple table regions detected, keep only the best one:
+    # prefer the one with the most columns AND whose row below is empty
+    if len(table_regions) > 1:
+        table_regions.sort(key=lambda t: (
+            t["is_header_only"],          # empty row below = more likely table header
+            len(t["column_names"]),        # more columns = more likely table header
+            t["header_row"],               # later row = below the form fields
+        ), reverse=True)
+        table_regions = table_regions[:1]  # keep only the best candidate
 
     # Build summary for AI
     has_explicit_targets = len(explicit_targets) > 0
@@ -356,12 +392,17 @@ def _analyse_template_regions(layout: dict) -> dict:
     has_two_col = len(two_col_pairs) > 0
     has_table = len(table_regions) > 0
 
-    if not has_explicit_targets and not has_kv_pairs and has_table:
-        primary_mode = "table"
-    elif has_explicit_targets:
+    # Mixed mode: has BOTH form fields (targets or kv pairs) AND a table
+    # This is the most important detection — Balance Sheet, Expense Report,
+    # Purchase Order, Tax Form all have header fields + line items table
+    if has_table and (has_explicit_targets or has_kv_pairs):
+        primary_mode = "mixed"
+    elif not has_table and has_explicit_targets:
         primary_mode = "form_with_targets"
-    elif has_kv_pairs and not has_table:
+    elif not has_table and has_kv_pairs:
         primary_mode = "form_kv"
+    elif has_table and not has_explicit_targets and not has_kv_pairs:
+        primary_mode = "table"
     else:
         primary_mode = "mixed"
 
@@ -1627,7 +1668,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         successful = failed = needs_review = 0
         start_time = time.time()
 
-        for fp in file_paths:
+        for i, fp in enumerate(file_paths):
             try:
                 file_path = Path(fp)
                 if template_data:
@@ -1672,6 +1713,12 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                 print(f"[THREAD] doc error: {doc_err}", flush=True)
                 traceback.print_exc()
                 failed += 1
+
+            # Rate limit protection: small delay between documents
+            # Prevents Groq/Gemini 429 errors on batch uploads
+            if i < len(file_paths) - 1:
+                delay = getattr(settings, 'RATE_LIMIT_DELAY', 2.0)
+                time.sleep(delay)
 
         session.commit()
         job.status = "completed"
@@ -1759,7 +1806,9 @@ def export_job_excel(
 
 
 def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
-    """Route to the correct writer based on template regions."""
+    """Route to the correct writer based on template regions primary_mode.
+    Always uses the template structure for routing — never relies on AI output
+    flags which can be stale or wrong from a previous extraction run."""
     from openpyxl.utils import get_column_letter
     cells_tpl = sheet_data.get("cells", {})
     col_widths = sheet_data.get("colWidths", [])
@@ -1769,16 +1818,17 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
         if width_px and c_idx <= max_c:
             ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(8, round(width_px / 7))
 
+    # Route based on template structure — authoritative, never stale
     primary_mode = (template_regions or {}).get("primary_mode", "form_kv")
 
-    # Check first result's extraction method
-    first_data = doc_results[0].get_extracted_data() if doc_results else {}
+    print(f"[EXPORT] routing: primary_mode={primary_mode}", flush=True)
 
-    if first_data.get("table_mode"):
+    if primary_mode == "table":
         _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod)
-    elif first_data.get("mixed_mode"):
+    elif primary_mode == "mixed":
         _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, template_regions, openpyxl_mod)
     else:
+        # form_with_targets, form_kv, two_column — all use form writer
         _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
 
 
@@ -1996,8 +2046,6 @@ def _adjust_formula_for_block(formula: str, row_offset: int) -> str:
         return f"{col}{row + row_offset}"
 
     return re.sub(r'([A-Z]+)(\d+)', adjust_ref, formula)
-
-    print(f"[EXPORT] form: {len(doc_results)} blocks written", flush=True)
 
 
 def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
