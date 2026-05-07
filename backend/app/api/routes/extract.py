@@ -1498,43 +1498,61 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
             )
 
         # Extract - use image if available, text otherwise
-        try:
-            if page_img:
-                print(f"[EXTRACT] {file_path.name}: sending image to AI (doc {seg_index+1})", flush=True)
-                extraction = orchestrator.llm.extract(image_b64=page_img, prompt=prompt)
-                # If vision fails, fall back to text
-                if not extraction.success and doc_text:
-                    print(f"[EXTRACT] {file_path.name}: vision failed -> text fallback", flush=True)
+        # Retry up to 3 times with exponential backoff to handle 429 rate limits
+        extraction = None
+        last_error = ""
+        for attempt in range(3):
+            try:
+                if page_img:
+                    print(f"[EXTRACT] {file_path.name}: sending image to AI "
+                          f"(attempt {attempt+1})", flush=True)
+                    extraction = orchestrator.llm.extract(image_b64=page_img, prompt=prompt)
+                    if not extraction.success and doc_text:
+                        print(f"[EXTRACT] {file_path.name}: vision failed -> text fallback", flush=True)
+                        extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+                elif doc_text:
+                    print(f"[EXTRACT] {file_path.name}: sending text to AI "
+                          f"(attempt {attempt+1})", flush=True)
                     extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
-            elif doc_text:
-                print(f"[EXTRACT] {file_path.name}: sending text to AI (doc {seg_index+1})", flush=True)
-                extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
-            else:
-                seg_fn = (file_path.name if total_docs == 1
-                          else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
-                r = _fail(seg_fn, "No content available - PDF has no extractable text or images")
-                results.append(r)
-                continue
+                else:
+                    seg_fn = (file_path.name if total_docs == 1
+                              else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
+                    r = _fail(seg_fn, "No content - PDF has no extractable text or images")
+                    results.append(r)
+                    extraction = None
+                    break
 
-        except Exception as e:
-            print(f"[EXTRACT] LLM error for {file_path.name}: {e}", flush=True)
-            seg_fn = (file_path.name if total_docs == 1
-                      else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
-            r = _fail(seg_fn, f"LLM error: {str(e)[:150]}")
-            results.append(r)
-            continue
+                if extraction and extraction.success and extraction.parsed_json:
+                    break  # success
 
-        elapsed = (t.time() - start) * 1000
+                last_error = (extraction.error if extraction else "no response")[:100]
+                print(f"[EXTRACT] {file_path.name}: attempt {attempt+1} failed "
+                      f"({last_error}) - "
+                      f"{'retrying' if attempt < 2 else 'giving up'}", flush=True)
+                if attempt < 2:
+                    wait = 5 * (3 ** attempt)  # 5s, 15s
+                    print(f"[EXTRACT] waiting {wait}s before retry", flush=True)
+                    time.sleep(wait)
+
+            except Exception as e:
+                last_error = str(e)[:100]
+                print(f"[EXTRACT] LLM error attempt {attempt+1}: {e}", flush=True)
+                if attempt < 2:
+                    time.sleep(5 * (3 ** attempt))
+
+        if extraction is None:
+            continue  # already added fail result above
 
         if not extraction.success or not extraction.parsed_json:
             seg_fn = (file_path.name if total_docs == 1
                       else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
-            r = _fail(seg_fn, f"Extraction failed: {extraction.error}")
-            r.processing_time_ms = elapsed
+            r = _fail(seg_fn, f"All retries failed: {last_error}")
+            r.processing_time_ms = (t.time() - start) * 1000
             results.append(r)
             continue
 
         raw = extraction.parsed_json
+        elapsed = (t.time() - start) * 1000
 
         # Handle documents array in response
         documents = raw.get("documents", [raw])
@@ -1714,10 +1732,12 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                 traceback.print_exc()
                 failed += 1
 
-            # Rate limit protection: small delay between documents
+            # Rate limit protection: delay between documents
             # Prevents Groq/Gemini 429 errors on batch uploads
+            # Default 3s — enough for Groq free tier (30 req/min = 2s min gap)
             if i < len(file_paths) - 1:
-                delay = getattr(settings, 'RATE_LIMIT_DELAY', 2.0)
+                delay = float(getattr(settings, 'RATE_LIMIT_DELAY', 3.0))
+                print(f"[THREAD] rate limit delay {delay}s before next doc", flush=True)
                 time.sleep(delay)
 
         session.commit()
