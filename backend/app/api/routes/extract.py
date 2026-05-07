@@ -2004,12 +2004,152 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                         template_regions, openpyxl_mod):
     """
     Mixed mode: template has BOTH form fields AND a table.
-    Each result block has the form fields filled at the top and table rows below.
-    """
-    # Use form writer for the full block - table rows get appended after form fields
-    _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
+    Structure per block:
+      - Form fields written first (rows 1..max_r of the template)
+      - Table header row from the template
+      - Table data rows appended directly below
 
-    # TODO: extend with table rows per block when mixed mode is fully tested
+    The block height is dynamic per document because each document
+    may have a different number of table rows.
+    """
+    from openpyxl.styles import Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    merges_tpl = sheet_data.get("merges", {})
+
+    # Get table region info
+    table_regions = (template_regions or {}).get("table_regions", [])
+    col_names = []
+    start_col_idx = 0
+    header_row_idx = max_r  # default: table header at last row of template
+
+    if table_regions:
+        header_row_idx = table_regions[0]["header_row"]
+        start_col_idx  = table_regions[0]["start_col"]
+        for tr in table_regions:
+            col_names.extend(tr.get("column_names", []))
+        col_names = list(dict.fromkeys(col_names))
+
+    # Calculate how many form rows are above the table header
+    form_rows = header_row_idx  # rows 0..header_row_idx-1 are form rows
+
+    current_output_row = 1  # 1-based Excel row counter
+
+    for block_idx, doc_result in enumerate(doc_results):
+        extracted_data  = doc_result.get_extracted_data()
+        extracted_fields = extracted_data.get("extracted_fields", {})
+        validation       = extracted_data.get("validation", {})
+        confidence_map   = validation.get("confidence_map", {})
+        table_rows       = extracted_data.get("table_rows", [])
+
+        label_to_value = {
+            k: (v.get("value", "") if isinstance(v, dict) else str(v or ""))
+            for k, v in extracted_data.get("extracted_data", {}).items()
+            if not k.startswith("_label_")
+        }
+
+        block_start_row = current_output_row
+
+        # ── Write filename separator (except first block) ─────────────────
+        if block_idx > 0:
+            lc = ws.cell(row=current_output_row, column=1)
+            lc.value = f">  {doc_result.filename}"
+            lc.font = Font(bold=True, color="FF4F46E5", size=10)
+            current_output_row += 1
+
+        # ── Write all template cells (form + table header) ────────────────
+        for key, cell_def in sorted(cells_tpl.items(),
+                                     key=lambda x: (int(x[0].split(",")[0]),
+                                                    int(x[0].split(",")[1]))):
+            if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
+                continue
+            parts = key.split(",")
+            if len(parts) != 2:
+                continue
+            tr, tc = int(parts[0]), int(parts[1])
+            tpl_value = cell_def.get("value", "").strip()
+
+            # Map template row to output row
+            out_row = current_output_row + tr
+
+            xl_cell = ws.cell(row=out_row, column=tc + 1)
+
+            if cell_def.get("extractTarget"):
+                ref   = f"{_col_letter(tc)}{tr + 1}"
+                filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
+                if isinstance(filled, dict):
+                    filled = filled.get("value", "")
+                # Write as number if possible
+                try:
+                    num = float(str(filled).replace(",", "")) if filled else None
+                    xl_cell.value = num if num is not None else (filled or "")
+                except (ValueError, TypeError):
+                    xl_cell.value = filled or ""
+
+                confidence = confidence_map.get(ref, "high")
+                if confidence == "low":
+                    try:
+                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
+                    except Exception:
+                        pass
+
+            elif tpl_value.startswith("="):
+                # Formula — write as-is (relative refs will be correct since
+                # we're writing at the right output row)
+                xl_cell.value = tpl_value
+            else:
+                xl_cell.value = tpl_value
+
+            if cell_def.get("style"):
+                _apply_cell_style(xl_cell, cell_def["style"], openpyxl_mod)
+
+            # Merges
+            merge_span = cell_def.get("mergeSpan") or merges_tpl.get(key)
+            if merge_span:
+                sr, sc = merge_span.get("rows", 1), merge_span.get("cols", 1)
+                if sr > 1 or sc > 1:
+                    try:
+                        ws.merge_cells(
+                            start_row=out_row, start_column=tc + 1,
+                            end_row=out_row + sr - 1, end_column=tc + sc,
+                        )
+                    except Exception:
+                        pass
+
+        # After writing the template (max_r+1 rows), advance past it
+        current_output_row += max_r + 1  # +1 to land on the row after the header
+
+        # ── Write table data rows ─────────────────────────────────────────
+        if table_rows and col_names:
+            col_indices = {name: (start_col_idx + i) for i, name in enumerate(col_names)}
+
+            for row_data in table_rows:
+                for col_name, c_idx in col_indices.items():
+                    val = row_data.get(col_name, "")
+                    if isinstance(val, dict):
+                        val = val.get("value", "")
+                    val = str(val).strip() if val is not None else ""
+                    xl_cell = ws.cell(row=current_output_row, column=c_idx + 1)
+                    try:
+                        # Numeric — strip currency symbols
+                        clean = val.replace(",", "").replace("$", "").replace("£", "").strip()
+                        xl_cell.value = float(clean) if clean and clean not in ("", "-") else val
+                    except (ValueError, TypeError):
+                        xl_cell.value = val
+                current_output_row += 1
+
+        # Flag count indicator
+        flag_count = validation.get("flagged_count", 0)
+        if flag_count > 0:
+            nc = ws.cell(row=block_start_row, column=max_c + 2)
+            nc.value = f"! {flag_count} low-confidence"
+            nc.font = Font(color="FFDC2626", size=9, italic=True)
+
+        # Blank row between blocks
+        current_output_row += 1
+
+    print(f"[EXPORT] mixed: {len(doc_results)} blocks, "
+          f"{current_output_row} total rows written", flush=True)
 
 
 def _write_flat_table(ws, doc_results, openpyxl_mod):
