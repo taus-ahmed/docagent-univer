@@ -1255,9 +1255,21 @@ def _make_table_result(rows, template_data, filename, doc_type, elapsed, method,
     col_names = []
     for tr in regions.get("table_regions", []):
         col_names.extend(tr.get("column_names", []))
+    col_names = list(dict.fromkeys(col_names))
     if not col_names:
-        from extract import _get_table_headers
-        col_names = [h["label"] for h in _get_table_headers(template_data.get("layout", {}))]
+        # Fallback: read from layout directly
+        layout = template_data.get("layout", {})
+        cells = layout.get("cells", {})
+        headers = []
+        for key, cell in cells.items():
+            if not isinstance(cell, dict): continue
+            val = cell.get("value","").strip()
+            if not val: continue
+            parts = key.split(",")
+            if len(parts) == 2 and int(parts[0]) == 0:
+                c = int(parts[1])
+                headers.append((c, val))
+        col_names = [v for _, v in sorted(headers)]
     normalised = [_normalise_values(row, doc_type) for row in rows]
     r = DocumentExtractionResult(filename=filename)
     r.document_type = doc_type
@@ -1274,6 +1286,7 @@ def _make_table_result(rows, template_data, filename, doc_type, elapsed, method,
     r.extraction_response = extraction
     r.processing_time_ms = elapsed
     r.success = True
+    print(f"[EXTRACT] {method}: {filename} → {len(normalised)} rows @ {confidence}", flush=True)
     return r
 
 def _fail(filename, error):
@@ -1289,21 +1302,22 @@ def _fail(filename, error):
 
 def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
     """
-    Vision-First extraction engine.
-
-    Strategy:
-      1. Convert PDF pages to images
-      2. Run template region analysis
-      3. Send image(s) + region map + registry prompt to Gemini Vision
-      4. Validate AI output against pdfplumber text
-      5. Return results with confidence levels
-
-    For tables: pdfplumber direct extraction is tried first (fast, deterministic).
-    If it succeeds, AI validates it. If it fails, AI extracts from image.
-
-    For 100 documents: each page/segment gets its own extraction pass.
-    All results go into separate result blocks in the Excel output.
+    Vision-First extraction engine — safety-wrapped version.
+    All errors are caught and returned as failed DocumentResult objects
+    so the job always completes with meaningful error messages.
     """
+    try:
+        return _extract_with_template_inner(orchestrator, file_path, template_data)
+    except Exception as e:
+        print(f"[EXTRACT] FATAL {file_path.name}: {e}", flush=True)
+        traceback.print_exc()
+        r = _fail(file_path.name, f"Fatal extraction error: {str(e)[:200]}")
+        r.processing_time_ms = 0
+        return [r]
+
+
+def _extract_with_template_inner(orchestrator, file_path: Path, template_data: dict):
+    """Inner extraction logic — called by the safety wrapper."""
     import time as t
     from core.preprocessor import preprocess_file
 
@@ -1612,6 +1626,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                     # Check if any fields need review
                     validation_data = (result.extracted_data or {}).get("validation", {})
                     has_flags = validation_data.get("flagged_count", 0) > 0
+                    error_msg = result.error if hasattr(result, 'error') and result.error else ""
 
                     doc = DocumentResult(
                         job_id=job_id,
@@ -1619,7 +1634,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                         document_type=result.document_type if result.success else "unknown",
                         overall_confidence=(result.extracted_data or {}).get("overall_confidence"),
                         extraction_json=json.dumps(result.extracted_data, default=str) if result.extracted_data else None,
-                        validation_errors="; ".join(result.validation.errors) if result.validation else "",
+                        validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
                         validation_warnings=(
                             "; ".join(f"{f['ref']}: {f['value']}" for f in validation_data.get("flagged_fields", []))
                             if has_flags else ""
