@@ -1,9 +1,9 @@
 """
-DocAgent v2 — Extract Routes (Vision-First Architecture)
+DocAgent v2 - Extract Routes (Vision-First Architecture)
 =========================================================
 
 ARCHITECTURE OVERVIEW
-─────────────────────
+---------------------
 Previous approach: binary TABLE vs FORM decision based on template layout.
 Problem: fails on mixed layouts (Form 941, Balance Sheet header+table, etc.)
 
@@ -16,19 +16,19 @@ EXTRACTION PIPELINE (per document):
      - two_column_form (labels+values on both left and right sides)
      - table_header (column headers for repeating rows)
      - free_form (labels anywhere, values anywhere nearby)
-     Region map is cached — computed once per template.
+     Region map is cached - computed once per template.
 
-  2. PAGE IMAGE EXTRACTION (primary — Gemini Vision)
+  2. PAGE IMAGE EXTRACTION (primary - Gemini Vision)
      Convert every PDF page to a base64 image.
      Send image + template region map + registry system prompt to Gemini.
-     Gemini sees the document visually — reads any layout correctly.
+     Gemini sees the document visually - reads any layout correctly.
      Returns JSON with every field value.
 
-  3. pdfplumber TEXT EXTRACTION (parallel — validation layer)
+  3. pdfplumber TEXT EXTRACTION (parallel - validation layer)
      Extract all text from the PDF independently.
      For each AI-returned value, check whether it appears in the pdfplumber text.
-     If yes → HIGH confidence.
-     If no  → LOW confidence, flag for review.
+     If yes -> HIGH confidence.
+     If no  -> LOW confidence, flag for review.
      This catches AI hallucinations before they reach the Excel output.
 
   4. MULTI-DOCUMENT HANDLING
@@ -40,8 +40,8 @@ EXTRACTION PIPELINE (per document):
   5. TABLE DETECTION (for table-mode templates)
      pdfplumber reads the physical table structure from the PDF.
      Tables may start anywhere on the page (not just top-left).
-     If table found → extract directly, validate with AI.
-     If not found   → AI extracts from image, pdfplumber validates.
+     If table found -> extract directly, validate with AI.
+     If not found   -> AI extracts from image, pdfplumber validates.
 
   6. EXCEL EXPORT
      Rebuilds the exact template grid per result.
@@ -86,9 +86,9 @@ _project_dir = _backend_dir.parent
 _engine_dir  = _backend_dir / "engine"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # UPLOAD ENDPOINT
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 @router.post("/extract/upload", response_model=ExtractUploadResponse, status_code=202)
 async def upload_and_extract(
@@ -155,9 +155,9 @@ async def upload_and_extract(
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # TEMPLATE PARSING & REGION ANALYSIS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
     """Parse a ColumnTemplate into extraction-ready format with region analysis."""
@@ -232,7 +232,7 @@ def _analyse_template_regions(layout: dict) -> dict:
     extract_targets = layout.get("extractTargets", [])
 
     # Parse all cells into a row/col grid
-    grid = {}  # (row, col) → {value, extractTarget, style}
+    grid = {}  # (row, col) -> {value, extractTarget, style}
     max_row, max_col = 0, 0
     for key, cell in cells.items():
         if not isinstance(cell, dict):
@@ -383,9 +383,9 @@ def _analyse_template_regions(layout: dict) -> dict:
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # REGISTRY LOADER
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _load_registry():
     if not hasattr(_load_registry, "_cache"):
@@ -413,9 +413,9 @@ def _get_date_fields(doc_type): r=_load_registry(); return r.get_date_fields(doc
 def _classify_by_hints(text): r=_load_registry(); return r.classify_by_hints(text) if r else None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # CELL HELPERS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _cell_ref(r: int, c: int) -> str:
     col_letter = ""
@@ -438,26 +438,15 @@ def _col_letter(c: int) -> str:
     return letter
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # VISION-FIRST PROMPT BUILDER
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _build_vision_prompt(template_data: dict, doc_text: str = "") -> str:
     """
     Build the master extraction prompt for vision-first extraction.
-
-    This prompt is designed for Gemini Vision and handles ALL layout types:
-    - Simple key-value forms
-    - Two-column forms (Form 941, complex tax forms)
-    - Tables starting at any position in the sheet
-    - Mixed layouts (header fields + table body)
-    - Repeated document blocks (100 cheques in one PDF)
-
-    The prompt structure:
-      1. Expert system prompt from registry (domain knowledge)
-      2. Template region map (exactly what the user wants extracted)
-      3. Extraction instructions (how to handle each region type)
-      4. Output format specification
+    Uses plain ASCII only - no unicode box-drawing characters that can
+    cause encoding issues with Gemini Flash API.
     """
     doc_type = template_data.get("doc_type", "other")
     regions = template_data.get("regions", {})
@@ -467,64 +456,73 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> str:
     table_rules = _get_table_rules(doc_type)
     primary_mode = regions.get("primary_mode", "form_kv")
 
-    # ── Build the target fields description ──────────────────────────────────
     fields_description = _build_fields_description(regions, layout)
-
-    # ── Build extraction instructions based on detected regions ──────────────
     extraction_instructions = _build_extraction_instructions(regions, primary_mode, table_rules)
-
-    # ── Build output format ───────────────────────────────────────────────────
     output_format = _build_output_format(regions, primary_mode)
 
     prompt = f"""{system_prompt}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXTRACTION TASK
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+=== EXTRACTION TASK ===
 
 The user has designed a template showing exactly what fields they want extracted.
-Your job is to find each field's value in the document and return it accurately.
+Your job is to find each field value in the document and return it accurately.
 
-━━━ TEMPLATE STRUCTURE (what the user designed) ━━━
+=== TEMPLATE STRUCTURE ===
 {fields_description}
 
-━━━ EXTRACTION INSTRUCTIONS ━━━
+=== EXTRACTION INSTRUCTIONS ===
 {extraction_instructions}
 
-━━━ CRITICAL RULES ━━━
-1. LABEL MATCHING: The field names in the template are labels. In the document,
-   the same information may be labelled differently. Use your domain knowledge
-   to match by MEANING, not by exact text.
-   Examples:
-     Template "EIN" ↔ Document "Employer Identification Number", "Tax ID", "Fed ID"
-     Template "Payee" ↔ Document "Pay to the Order of", "Beneficiary", "In Favour of"
-     Template "Total Amount" ↔ Document "Amount Due", "Grand Total", "Net Payable"
+=== CRITICAL RULES ===
+1. ABBREVIATION AND SYNONYM MATCHING — THIS IS THE MOST IMPORTANT RULE:
+   The template label and the document label will OFTEN be different.
+   You MUST match by MEANING and CONCEPT, not by exact words.
 
-2. MISSING VALUES: If a field is genuinely not present in the document, return "".
-   NEVER invent values. NEVER return "N/A", "null", "not found", "n/a".
+   You are an expert in business documents. Use your knowledge to understand
+   that a short label in a template refers to the same concept as a longer
+   label in a document, even if the words are completely different.
 
-3. NUMBER FORMATTING: Strip all currency symbols and commas.
-   "$8,410.00" → "8410.00"   "£1,250" → "1250.00"
+   General principles:
+   - Abbreviations: "No" = "Number", "Emp" = "Employee/Employer", "Amt" = "Amount",
+     "Qty" = "Quantity", "Addr" = "Address", "Dept" = "Department", "Mgr" = "Manager",
+     "Bal" = "Balance", "Qtr" = "Quarter", "Fed" = "Federal", "YTD" = "Year to Date"
+   - Acronyms: "EIN" = "Employer Identification Number", "SSN" = "Social Security Number",
+     "DOB" = "Date of Birth", "PO" = "Purchase Order", "AR" = "Accounts Receivable"
+   - Synonyms: "Total" = "Grand Total" = "Amount Due" = "Net Payable" = "Sum"
+   - Combinations: "No of Emp" means "Number of Employees" — combine the abbreviations
 
-4. DATE FORMATTING: Normalise all dates to YYYY-MM-DD.
-   "January 31, 2024" → "2024-01-31"   "31/01/2024" → "2024-01-31"
+   RULE: If a template label is an abbreviation or shortening of something in the
+   document, they refer to the same field. Extract the value.
 
-5. TABLE POSITION: The table in this document may start at any position,
-   not necessarily the top-left. Look for the column headers that match
-   the template's column names anywhere on the page.
+   RULE: If you cannot find an EXACT label match, find the CLOSEST MEANING match.
+   A conceptual match is better than leaving a field empty.
+   Only use "" if the information is GENUINELY ABSENT from the document entirely.
 
-6. MULTI-DOCUMENT: If this PDF contains multiple separate documents
-   (e.g. multiple cheques, multiple invoices), extract each one separately.
+2. LABEL MATCHING — match by MEANING, not exact text:
+   - Template "EIN" = Document "Employer Identification Number" or "Tax ID"
+   - Template "Payee" = Document "Pay to the Order of" or "Beneficiary"
+   - Template "Total" = Document "Amount Due" or "Grand Total" or "Net Payable"
 
-7. CONFIDENCE: For each extracted value, assess your confidence:
-   "high"   = you found it clearly in the document
-   "medium" = you inferred it from context
-   "low"    = you are guessing — flag this
+3. MISSING VALUES: Only use "" if the information is GENUINELY ABSENT from the document.
+   If the information exists but uses different wording — EXTRACT IT.
+   NEVER return "N/A", "null", "not found".
 
-━━━ DOCUMENT CONTENT ━━━
-{doc_text[:8000] if doc_text else "(See the document image)"}
+4. NUMBERS: Strip all currency symbols and commas.
+   "$8,410.00" becomes "8410.00"
 
-━━━ OUTPUT FORMAT ━━━
+5. DATES: Normalise all dates to YYYY-MM-DD format.
+   "January 31, 2024" becomes "2024-01-31"
+   "March 31, 2024" becomes "2024-03-31"
+
+6. TABLE POSITION: Tables may start anywhere on the page, not just top-left.
+
+7. CONFIDENCE: Rate each value:
+   "high" = clearly found, "medium" = inferred, "low" = uncertain
+
+=== DOCUMENT TEXT ===
+{doc_text[:6000] if doc_text else "(See the document image provided)"}
+
+=== OUTPUT FORMAT ===
 {output_format}
 """
     return prompt
@@ -539,7 +537,7 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
     if regions.get("explicit_targets"):
         lines.append("FIELDS TO EXTRACT (user marked these with 'Extract here'):")
         for t in regions["explicit_targets"]:
-            lines.append(f"  • [{t['ref']}] {t['label']}")
+            lines.append(f"  - [{t['ref']}] {t['label']}")
         lines.append("")
 
     # Key-value pairs (auto-detected)
@@ -547,8 +545,8 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
         lines.append("KEY-VALUE PAIRS TO FILL:")
         lines.append("(Label is in left column, you fill the right column)")
         for kv in regions["kv_pairs"]:
-            lines.append(f"  • Label: \"{kv['label']}\" at {kv['label_ref']}")
-            lines.append(f"    → Fill: {kv['value_ref']}")
+            lines.append(f"  - Label: \"{kv['label']}\" at {kv['label_ref']}")
+            lines.append(f"    -> Fill: {kv['value_ref']}")
         lines.append("")
 
     # Two-column form layout
@@ -556,8 +554,8 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
         lines.append("TWO-COLUMN FORM LAYOUT:")
         lines.append("(There are labels and values on BOTH left and right sides)")
         for tc in regions["two_col_pairs"]:
-            lines.append(f"  LEFT  — Label: \"{tc['left_label']}\" ({tc['left_label_ref']}) → Fill: {tc['left_value_ref']}")
-            lines.append(f"  RIGHT — Label: \"{tc['right_label']}\" ({tc['right_label_ref']}) → Fill: {tc['right_value_ref']}")
+            lines.append(f"  LEFT  - Label: \"{tc['left_label']}\" ({tc['left_label_ref']}) -> Fill: {tc['left_value_ref']}")
+            lines.append(f"  RIGHT - Label: \"{tc['right_label']}\" ({tc['right_label_ref']}) -> Fill: {tc['right_value_ref']}")
         lines.append("")
 
     # Table regions
@@ -567,7 +565,7 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
             lines.append(f"  Table {i}: starts at row {tr['header_row']+1}, "
                         f"columns {tr['start_ref']} to {tr['end_ref']}")
             lines.append(f"  Column headers: {', '.join(tr['column_names'])}")
-            lines.append(f"  → Extract ALL data rows below the header row")
+            lines.append(f"  -> Extract ALL data rows below the header row")
         lines.append("")
 
     if not lines:
@@ -586,7 +584,7 @@ def _build_extraction_instructions(regions: dict, primary_mode: str,
             "This is a FORM template. Fill each labelled field with its corresponding\n"
             "value from the document. The template has specific cells marked for extraction.\n"
             "Each field should contain exactly ONE value.\n"
-            "If the template has blank rows between sections, those are spacers — ignore them."
+            "If the template has blank rows between sections, those are spacers - ignore them."
         )
 
     elif primary_mode == "table":
@@ -605,8 +603,8 @@ def _build_extraction_instructions(regions: dict, primary_mode: str,
     elif primary_mode == "mixed":
         instructions.append(
             "This template has BOTH form fields AND a table.\n"
-            "Part 1 — Fill the form fields: each has a label and an empty cell to fill.\n"
-            "Part 2 — Extract the table: find the column headers and extract all data rows.\n"
+            "Part 1 - Fill the form fields: each has a label and an empty cell to fill.\n"
+            "Part 2 - Extract the table: find the column headers and extract all data rows.\n"
             "Return both the form fields (in extracted_fields) AND the table rows (in table_rows)."
         )
         if table_rules:
@@ -617,7 +615,7 @@ def _build_extraction_instructions(regions: dict, primary_mode: str,
         instructions.append(
             "\nTWO-COLUMN LAYOUT HANDLING:\n"
             "The template has labels and values on BOTH the left and right halves.\n"
-            "This is NOT a table — each row has up to 2 label-value pairs.\n"
+            "This is NOT a table - each row has up to 2 label-value pairs.\n"
             "Extract BOTH the left-side value AND the right-side value for each row.\n"
             "Do not confuse left-side labels with right-side labels."
         )
@@ -628,114 +626,112 @@ def _build_extraction_instructions(regions: dict, primary_mode: str,
             "\nAUTO-FILL MODE:\n"
             "The user did not mark specific cells but the template has labelled fields.\n"
             "For each label in the template, find the corresponding value in the document.\n"
-            "Match labels by meaning — the document may use different wording for the same field."
+            "Match labels by meaning - the document may use different wording for the same field."
         )
 
     return "\n\n".join(instructions)
 
 
 def _build_output_format(regions: dict, primary_mode: str) -> str:
-    """Build the exact JSON output format specification."""
+    """Build simple, clean JSON output format - no unicode, Gemini Flash compatible."""
 
-    has_table = primary_mode == "table" or (
-        primary_mode == "mixed" and regions.get("table_regions")
-    )
+    has_table = primary_mode in ("table", "mixed")
     has_form = primary_mode != "table"
 
     if primary_mode == "table":
-        # Get column names from table regions
         col_names = []
         for tr in regions.get("table_regions", []):
             col_names.extend(tr.get("column_names", []))
-        col_names = list(dict.fromkeys(col_names))  # deduplicate
+        col_names = list(dict.fromkeys(col_names))
+        example_row = {col: "value" for col in col_names} if col_names else {"Column1": "value"}
 
-        example_row = {col: "extracted value" for col in col_names}
-        return f"""Return ONLY valid JSON (no markdown fences, no explanation):
+        return f"""Return ONLY valid JSON, no markdown fences, no explanation:
 {{
-  "document_type": "detected type",
-  "overall_confidence": "high|medium|low",
+  "document_type": "detected document type",
+  "overall_confidence": "high",
   "document_count": 1,
   "documents": [
     {{
       "doc_index": 0,
-      "doc_hint": "brief description of this document",
+      "doc_hint": "brief description",
       "table_rows": [
-        {json.dumps(example_row)},
-        "... one object per data row ..."
+        {json.dumps(example_row)}
       ],
-      "row_count": 0,
+      "row_count": 1,
       "notes": ""
     }}
   ]
 }}
 
-Rules:
-- documents array has ONE entry per detected separate document in the PDF
-- table_rows: one object per data row, same keys as shown above
-- Skip: header row, subtotal, tax, total, blank rows
-- Numbers: no currency symbols or commas"""
+RULES:
+- table_rows: one object per data row, using the exact column names shown
+- Skip: header row, subtotal rows, total rows, blank rows
+- Numbers: no currency symbols, no commas"""
 
     elif primary_mode == "mixed":
         col_names = []
         for tr in regions.get("table_regions", []):
             col_names.extend(tr.get("column_names", []))
-        example_row = {col: "extracted value" for col in col_names[:3]} if col_names else {"Column1": "value"}
-        return f"""Return ONLY valid JSON (no markdown fences, no explanation):
+        example_row = {col: "value" for col in col_names[:3]} if col_names else {"Col1": "value"}
+
+        return f"""Return ONLY valid JSON, no markdown fences, no explanation:
 {{
-  "document_type": "detected type",
-  "overall_confidence": "high|medium|low",
+  "document_type": "detected document type",
+  "overall_confidence": "high",
   "document_count": 1,
   "documents": [
     {{
       "doc_index": 0,
       "doc_hint": "brief description",
       "extracted_fields": {{
-        "CELL_REF": {{"value": "extracted value", "confidence": "high|medium|low"}},
-        "B4": {{"value": "47-3821654", "confidence": "high"}},
-        "... one entry per form field ..."
+        "B3": {{"value": "extracted value", "confidence": "high"}},
+        "B4": {{"value": "extracted value", "confidence": "high"}}
       }},
       "table_rows": [
-        {json.dumps(example_row)},
-        "... one object per data row ..."
+        {json.dumps(example_row)}
       ],
-      "row_count": 0,
+      "row_count": 1,
       "notes": ""
     }}
   ]
-}}"""
+}}
+
+RULES:
+- extracted_fields keys are cell references like B3, D10, F5
+- table_rows: one object per data row
+- Numbers: no currency symbols"""
 
     else:
-        # Form mode
-        return """Return ONLY valid JSON (no markdown fences, no explanation):
+        # Form mode - simplest format
+        return """Return ONLY valid JSON, no markdown fences, no explanation:
 {
-  "document_type": "detected type",
-  "overall_confidence": "high|medium|low",
+  "document_type": "detected document type",
+  "overall_confidence": "high",
   "document_count": 1,
   "documents": [
     {
       "doc_index": 0,
       "doc_hint": "brief description of this document",
       "extracted_fields": {
-        "CELL_REF": {"value": "extracted value", "confidence": "high|medium|low"},
-        "B1": {"value": "CHQ-001847", "confidence": "high"},
-        "B2": {"value": "2024-01-31", "confidence": "high"},
-        "... one entry per field to fill ..."
+        "B3": {"value": "47-3821654", "confidence": "high"},
+        "B4": {"value": "Nexus Global Trading LLC", "confidence": "high"},
+        "B5": {"value": "25", "confidence": "high"}
       },
       "notes": ""
     }
   ]
 }
 
-Rules:
-- documents array has ONE entry per separate document detected in the PDF
-- extracted_fields keys are cell references (e.g. "B1", "D12", "H7")
-- Include EVERY field the template asks for — even if the value is ""
-- confidence: "high" if clearly found, "medium" if inferred, "low" if uncertain"""
+RULES:
+- extracted_fields keys MUST be cell references (B3, D10, etc.) matching the template
+- Include every field from the template, even if the value is ""
+- Numbers: no currency symbols or commas
+- Dates: YYYY-MM-DD format"""
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # PDFPLUMBER VALIDATION LAYER
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _validate_with_pdfplumber(extracted_fields: dict, doc_text: str,
                                table_rows: list = None) -> dict:
@@ -775,12 +771,12 @@ def _validate_with_pdfplumber(extracted_fields: dict, doc_text: str,
         found = _check_value_in_text(value, doc_text_lower)
 
         if found:
-            # Confirmed — upgrade to high confidence
+            # Confirmed - upgrade to high confidence
             final_confidence = "high"
             validated[ref] = {"value": value, "confidence": final_confidence,
                                "validated": True, "pdfplumber_confirmed": True}
         else:
-            # Not found — this might be hallucinated or normalised
+            # Not found - this might be hallucinated or normalised
             # Check if a variant of the value appears (e.g. normalised date)
             variant_found = _check_value_variants(value, doc_text)
 
@@ -789,7 +785,7 @@ def _validate_with_pdfplumber(extracted_fields: dict, doc_text: str,
                 validated[ref] = {"value": value, "confidence": final_confidence,
                                    "validated": True, "pdfplumber_confirmed": "variant"}
             else:
-                # Value not found at all — flag for review
+                # Value not found at all - flag for review
                 final_confidence = "low"
                 validated[ref] = {"value": value, "confidence": final_confidence,
                                    "validated": False, "pdfplumber_confirmed": False,
@@ -831,7 +827,7 @@ def _validate_with_pdfplumber(extracted_fields: dict, doc_text: str,
 def _check_value_in_text(value: str, doc_text_lower: str) -> bool:
     """Check if a value appears in the document text."""
     if not value or len(value) < 2:
-        return True  # Short values — don't flag
+        return True  # Short values - don't flag
 
     val_lower = value.lower().strip()
 
@@ -839,7 +835,7 @@ def _check_value_in_text(value: str, doc_text_lower: str) -> bool:
     if val_lower in doc_text_lower:
         return True
 
-    # Numeric match — strip formatting
+    # Numeric match - strip formatting
     val_numeric = re.sub(r'[^0-9.]', '', value)
     if len(val_numeric) >= 4:
         doc_numeric = re.sub(r'[^0-9.]', '', doc_text_lower)
@@ -854,7 +850,7 @@ def _check_value_variants(value: str, doc_text: str) -> bool:
     Check if any variant of the value appears in the document.
     Handles date normalisation, number formatting etc.
     """
-    # Date variants: "2024-01-31" → check for "January 31", "31/01", "01/31" etc.
+    # Date variants: "2024-01-31" -> check for "January 31", "31/01", "01/31" etc.
     date_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', value)
     if date_match:
         y, m, d = date_match.groups()
@@ -869,7 +865,7 @@ def _check_value_variants(value: str, doc_text: str) -> bool:
         doc_lower = doc_text.lower()
         return any(v in doc_lower for v in variants)
 
-    # Amount variants: "8410.00" → check for "$8,410", "8,410.00" etc.
+    # Amount variants: "8410.00" -> check for "$8,410", "8,410.00" etc.
     amount_match = re.match(r'^(\d+)\.(\d{2})$', value)
     if amount_match:
         integer_part = amount_match.group(1)
@@ -880,9 +876,9 @@ def _check_value_variants(value: str, doc_text: str) -> bool:
     return False
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # PDFPLUMBER DIRECT TABLE EXTRACTION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _extract_pdf_table_direct(file_path: Path, template_data: dict) -> Optional[list]:
     """
@@ -1012,9 +1008,9 @@ def _clean_text_for_table(text: str) -> str:
     return text
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # VALUE NORMALISATION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _normalise_values(row: dict, doc_type: str) -> dict:
     numeric_fields = _get_numeric_fields(doc_type)
@@ -1044,9 +1040,9 @@ def _filter_ghost_rows(rows: list, col_names: list) -> list:
     return clean
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # MULTI-DOCUMENT DETECTION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _detect_document_boundaries_vision(doc_images_b64: list, orchestrator,
                                         filename: str, doc_type: str) -> list:
@@ -1063,7 +1059,7 @@ def _detect_document_boundaries_vision(doc_images_b64: list, orchestrator,
     total_pages = len(doc_images_b64)
 
     if total_pages == 1:
-        # Single page — could still contain multiple documents side by side
+        # Single page - could still contain multiple documents side by side
         detection_prompt = f"""Look at this document image carefully.
 
 Does this page contain MULTIPLE SEPARATE {doc_type} documents on it?
@@ -1103,18 +1099,18 @@ If there is only ONE document: document_count = 1."""
         return [{"index": 0, "page_indices": [0], "hint": "full document"}]
 
     else:
-        # Multi-page — assume one document per page unless detection says otherwise
+        # Multi-page - assume one document per page unless detection says otherwise
         # For now: each page is one document (standard case for multi-page PDFs)
-        print(f"[DETECT] {filename}: {total_pages} pages → treating as {total_pages} separate docs", flush=True)
+        print(f"[DETECT] {filename}: {total_pages} pages -> treating as {total_pages} separate docs", flush=True)
         return [
             {"index": i, "page_indices": [i], "hint": f"page {i+1}"}
             for i in range(total_pages)
         ]
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # RESULT PROCESSORS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                             doc_type: str, elapsed: float, extraction,
@@ -1137,13 +1133,13 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     if isinstance(confidence_raw, dict):
         confidence_raw = "medium"
 
-    # ── pdfplumber validation ─────────────────────────────────────────────────
+    # -- pdfplumber validation -------------------------------------------------
     validation = _validate_with_pdfplumber(extracted_fields_raw, doc_text, table_rows_raw)
     validated_fields = validation["validated_fields"]
     validated_rows = validation["validated_rows"]
     flagged = validation["flagged"]
 
-    # ── Build human-readable extracted_data ───────────────────────────────────
+    # -- Build human-readable extracted_data -----------------------------------
     ref_to_label = {}
     for key, cell in cells.items():
         if not isinstance(cell, dict): continue
@@ -1199,7 +1195,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                 ref = _cell_ref(int(parts[0]), int(parts[1]))
                 extracted_data[f"_label_{ref}"] = {"value": val, "confidence": "high"}
 
-    # Table rows — normalise
+    # Table rows - normalise
     normalised_rows = []
     if table_rows_raw:
         col_names = []
@@ -1243,7 +1239,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     r.success = True
 
     status = f"{len(flagged)} flags" if flagged else "clean"
-    print(f"[EXTRACT] vision: {filename} doc#{doc_index} → "
+    print(f"[EXTRACT] vision: {filename} doc#{doc_index} -> "
           f"{len(extracted_data)} fields, {len(normalised_rows)} rows, "
           f"{overall_confidence} confidence, {status}", flush=True)
     return r
@@ -1286,7 +1282,7 @@ def _make_table_result(rows, template_data, filename, doc_type, elapsed, method,
     r.extraction_response = extraction
     r.processing_time_ms = elapsed
     r.success = True
-    print(f"[EXTRACT] {method}: {filename} → {len(normalised)} rows @ {confidence}", flush=True)
+    print(f"[EXTRACT] {method}: {filename} -> {len(normalised)} rows @ {confidence}", flush=True)
     return r
 
 def _fail(filename, error):
@@ -1296,13 +1292,13 @@ def _fail(filename, error):
     return r
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# MAIN EXTRACTION ENGINE — VISION FIRST
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+# MAIN EXTRACTION ENGINE - VISION FIRST
+# ==============================================================================
 
 def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
     """
-    Vision-First extraction engine — safety-wrapped version.
+    Vision-First extraction engine - safety-wrapped version.
     All errors are caught and returned as failed DocumentResult objects
     so the job always completes with meaningful error messages.
     """
@@ -1317,7 +1313,7 @@ def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
 
 
 def _extract_with_template_inner(orchestrator, file_path: Path, template_data: dict):
-    """Inner extraction logic — called by the safety wrapper."""
+    """Inner extraction logic - called by the safety wrapper."""
     import time as t
     from core.preprocessor import preprocess_file
 
@@ -1341,23 +1337,23 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
             if hint:
                 doc_type = hint
                 template_data = {**template_data, "doc_type": doc_type}
-                print(f"[EXTRACT] {file_path.name}: auto-classified → {doc_type}", flush=True)
+                print(f"[EXTRACT] {file_path.name}: auto-classified -> {doc_type}", flush=True)
 
-        # ── LAYOUT MODE ──────────────────────────────────────────────────────
+        # -- LAYOUT MODE ------------------------------------------------------
         if mode == "layout":
             primary_mode = regions.get("primary_mode", "form_kv")
 
             print(f"[EXTRACT] {file_path.name}: mode={primary_mode} doc_type={doc_type} "
                   f"pages={len(page_images)}", flush=True)
 
-            # ── TABLE-ONLY MODE ──────────────────────────────────────────────
+            # -- TABLE-ONLY MODE ----------------------------------------------
             if primary_mode == "table":
                 # Try pdfplumber direct first
                 direct_rows = _extract_pdf_table_direct(file_path, template_data)
                 elapsed = (t.time() - start) * 1000
 
                 if direct_rows and len(direct_rows) > 0:
-                    # pdfplumber succeeded — validate with AI
+                    # pdfplumber succeeded - validate with AI
                     print(f"[EXTRACT] {file_path.name}: direct table {len(direct_rows)} rows", flush=True)
 
                     # Quick AI validation pass
@@ -1369,8 +1365,8 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
                         doc_type, elapsed, "direct_pdf_validated"
                     ))
                 else:
-                    # pdfplumber failed — use vision extraction
-                    print(f"[EXTRACT] {file_path.name}: direct failed → vision extraction", flush=True)
+                    # pdfplumber failed - use vision extraction
+                    print(f"[EXTRACT] {file_path.name}: direct failed -> vision extraction", flush=True)
                     results.extend(
                         _vision_extract_all_documents(
                             orchestrator, file_path, template_data,
@@ -1378,7 +1374,7 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
                         )
                     )
 
-            # ── FORM, MIXED, TWO-COLUMN MODE ─────────────────────────────────
+            # -- FORM, MIXED, TWO-COLUMN MODE ---------------------------------
             else:
                 results.extend(
                     _vision_extract_all_documents(
@@ -1387,7 +1383,7 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
                     )
                 )
 
-        # ── COLUMNS MODE (legacy) ─────────────────────────────────────────────
+        # -- COLUMNS MODE (legacy) ---------------------------------------------
         else:
             results.extend(
                 _legacy_columns_extract(
@@ -1424,7 +1420,7 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
             page_images, orchestrator, file_path.name, doc_type
         )
     else:
-        # No images — treat as single document, use text extraction
+        # No images - treat as single document, use text extraction
         print(f"[EXTRACT] {file_path.name}: no page images, using text-only extraction", flush=True)
         doc_segments = [{"index": 0, "page_indices": [], "hint": "full document"}]
 
@@ -1452,22 +1448,22 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         # Add sub-document context for multiple docs on same page
         if total_on_page > 1 and sub_index is not None:
             prompt = prompt.replace(
-                "━━━ DOCUMENT CONTENT ━━━",
-                f"━━━ DOCUMENT CONTEXT ━━━\n"
+                "=== DOCUMENT CONTENT ===",
+                f"=== DOCUMENT CONTEXT ===\n"
                 f"This page contains {total_on_page} separate documents.\n"
                 f"Extract ONLY document #{sub_index+1} (index {sub_index}).\n"
                 f"Description: {seg_hint}\n\n"
-                f"━━━ DOCUMENT CONTENT ━━━"
+                f"=== DOCUMENT CONTENT ==="
             )
 
-        # Extract — use image if available, text otherwise
+        # Extract - use image if available, text otherwise
         try:
             if page_img:
                 print(f"[EXTRACT] {file_path.name}: sending image to AI (doc {seg_index+1})", flush=True)
                 extraction = orchestrator.llm.extract(image_b64=page_img, prompt=prompt)
                 # If vision fails, fall back to text
                 if not extraction.success and doc_text:
-                    print(f"[EXTRACT] {file_path.name}: vision failed → text fallback", flush=True)
+                    print(f"[EXTRACT] {file_path.name}: vision failed -> text fallback", flush=True)
                     extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
             elif doc_text:
                 print(f"[EXTRACT] {file_path.name}: sending text to AI (doc {seg_index+1})", flush=True)
@@ -1475,7 +1471,7 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
             else:
                 seg_fn = (file_path.name if total_docs == 1
                           else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
-                r = _fail(seg_fn, "No content available — PDF has no extractable text or images")
+                r = _fail(seg_fn, "No content available - PDF has no extractable text or images")
                 results.append(r)
                 continue
 
@@ -1592,9 +1588,9 @@ Return ONLY JSON:
     return results
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # BACKGROUND THREAD
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir):
@@ -1703,9 +1699,9 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         session.close()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # EXCEL EXPORT
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 @router.get("/jobs/{job_id}/export")
 def export_job_excel(
@@ -1838,12 +1834,14 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
 def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod):
     """
     Form mode: one filled template block per document result.
-    100 cheques = 100 blocks stacked vertically.
-    Each block is separated by a filename label row.
+    Handles formulas: =SUM() and other Excel formulas are written and
+    also pre-calculated where possible so values show without needing
+    manual recalculation in Excel.
     """
     from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
     merges_tpl = sheet_data.get("merges", {})
-    block_height = max_r + 2  # template rows + 1 blank separator
+    block_height = max_r + 2
 
     for block_idx, doc_result in enumerate(doc_results):
         row_offset = block_idx * block_height
@@ -1858,11 +1856,16 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             if not k.startswith("_label_")
         }
 
+        # First pass: write all cells and collect numeric values by ref
+        # so we can calculate formulas
+        cell_values = {}  # ref -> numeric value for formula calculation
+
         for key, cell_def in cells_tpl.items():
             if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
                 continue
             parts = key.split(",")
-            if len(parts) != 2: continue
+            if len(parts) != 2:
+                continue
             tr, tc = int(parts[0]), int(parts[1])
             xl_cell = ws.cell(row=row_offset + tr + 1, column=tc + 1)
             tpl_value = cell_def.get("value","").strip()
@@ -1872,13 +1875,41 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
                 if isinstance(filled, dict):
                     filled = filled.get("value", "")
-                xl_cell.value = filled if filled is not None else ""
+                filled = filled if filled is not None else ""
 
-                # Highlight low-confidence fields
+                # Try to store as number for formula calculation
+                try:
+                    num_val = float(filled.replace(",","")) if filled else None
+                    if num_val is not None:
+                        xl_cell.value = num_val
+                        cell_values[ref] = num_val
+                    else:
+                        xl_cell.value = filled
+                except (ValueError, AttributeError):
+                    xl_cell.value = filled
+
+                # Highlight low-confidence
                 confidence = confidence_map.get(ref, "high")
                 if confidence == "low":
-                    from openpyxl.styles import PatternFill
-                    xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
+                    try:
+                        from openpyxl.styles import PatternFill
+                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
+                    except Exception:
+                        pass
+
+            elif tpl_value.startswith("="):
+                # It's a formula — calculate it if possible
+                calculated = _calculate_formula(tpl_value, cell_values, row_offset)
+                if calculated is not None:
+                    # Write the calculated value (Excel will recalc on open anyway)
+                    xl_cell.value = calculated
+                    # Also store for downstream formula references
+                    ref = f"{_col_letter(tc)}{tr+1}"
+                    cell_values[ref] = calculated
+                else:
+                    # Write the formula with adjusted row offset for this block
+                    adjusted = _adjust_formula_for_block(tpl_value, row_offset)
+                    xl_cell.value = adjusted
             else:
                 xl_cell.value = tpl_value
 
@@ -1900,15 +1931,71 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
         # Filename label between blocks
         if block_idx > 0:
             lc = ws.cell(row=row_offset, column=1)
-            lc.value = f"▶  {doc_result.filename}"
+            lc.value = f">  {doc_result.filename}"
             lc.font = Font(bold=True, color="FF4F46E5", size=10)
 
         # Flag count indicator
         flag_count = validation.get("flagged_count", 0)
         if flag_count > 0:
             nc = ws.cell(row=row_offset + 1, column=max_c + 2)
-            nc.value = f"⚠ {flag_count} low-confidence"
+            nc.value = f"! {flag_count} low-confidence fields"
             nc.font = Font(color="FFDC2626", size=9, italic=True)
+
+    print(f"[EXPORT] form: {len(doc_results)} blocks written", flush=True)
+
+
+def _calculate_formula(formula: str, cell_values: dict, row_offset: int) -> Optional[float]:
+    """
+    Calculate simple Excel formulas using known cell values.
+    Handles: =SUM(B9:B11), =SUM(B3,B5,B7), basic arithmetic.
+    Returns calculated value or None if cannot calculate.
+    """
+    import re
+    f = formula.strip()
+
+    # =SUM(range) e.g. =SUM(B9:B11)
+    sum_range = re.match(r'^=SUM\(([A-Z]+)(\d+):([A-Z]+)(\d+)\)$', f, re.IGNORECASE)
+    if sum_range:
+        col1, row1, col2, row2 = sum_range.groups()
+        total = 0.0
+        found_any = False
+        for r in range(int(row1), int(row2) + 1):
+            ref = f"{col1.upper()}{r}"
+            if ref in cell_values:
+                total += cell_values[ref]
+                found_any = True
+        return round(total, 2) if found_any else None
+
+    # =SUM(B3,B5,B7) comma-separated
+    sum_list = re.match(r'^=SUM\(([^)]+)\)$', f, re.IGNORECASE)
+    if sum_list:
+        refs = [r.strip() for r in sum_list.group(1).split(",")]
+        total = 0.0
+        found_any = False
+        for ref in refs:
+            if ref.upper() in cell_values:
+                total += cell_values[ref.upper()]
+                found_any = True
+        return round(total, 2) if found_any else None
+
+    return None
+
+
+def _adjust_formula_for_block(formula: str, row_offset: int) -> str:
+    """
+    Adjust cell references in a formula for a block offset.
+    =SUM(B9:B11) with offset 20 becomes =SUM(B29:B31)
+    """
+    import re
+    if row_offset == 0:
+        return formula
+
+    def adjust_ref(match):
+        col = match.group(1)
+        row = int(match.group(2))
+        return f"{col}{row + row_offset}"
+
+    return re.sub(r'([A-Z]+)(\d+)', adjust_ref, formula)
 
     print(f"[EXPORT] form: {len(doc_results)} blocks written", flush=True)
 
@@ -1919,7 +2006,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
     Mixed mode: template has BOTH form fields AND a table.
     Each result block has the form fields filled at the top and table rows below.
     """
-    # Use form writer for the full block — table rows get appended after form fields
+    # Use form writer for the full block - table rows get appended after form fields
     _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
 
     # TODO: extend with table rows per block when mixed mode is fully tested
@@ -1950,9 +2037,9 @@ def _write_flat_table(ws, doc_results, openpyxl_mod):
         ws.column_dimensions[get_column_letter(ci)].width = 20
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # STYLE HELPERS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def _parse_hex_color(hex_color):
     if not hex_color: return None
@@ -2011,9 +2098,9 @@ def _get_table_headers(layout):
     return sorted(headers, key=lambda x: x["col"])
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # JOB ROUTES
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 @router.get("/jobs", response_model=list[JobListItem])
 def list_jobs(limit: int=50, offset: int=0, status_filter: Optional[str]=None,
