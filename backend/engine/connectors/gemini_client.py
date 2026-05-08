@@ -68,11 +68,11 @@ class GeminiClient:
 
     BASE_URL    = "https://generativelanguage.googleapis.com/v1beta/models"
     CANDIDATES  = [
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-pro",
-        "gemini-pro",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-001",
+        "gemini-2.0-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash-lite-001",
     ]
 
     def __init__(self, api_key: str = ""):
