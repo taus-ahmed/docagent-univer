@@ -85,9 +85,34 @@ class GeminiClient:
             import google.generativeai as genai
             genai.configure(api_key=self.api_key)
             self._genai      = genai
-            self._model_name = getattr(settings, 'GEMINI_MODEL', 'gemini-1.5-flash')
+            # Map friendly names to the exact model strings the v1beta API accepts
+            raw_name = getattr(settings, 'GEMINI_MODEL', 'gemini-1.5-flash')
+            self._model_name = self._resolve_model_name(raw_name)
             self._base_model = genai.GenerativeModel(self._model_name)
             print(f"[GEMINI] ready: {self._model_name}", flush=True)
+
+    @staticmethod
+    def _resolve_model_name(name: str) -> str:
+        """
+        Resolve the model name to the exact string accepted by the
+        google-generativeai SDK (v1beta API).
+        Common aliases and their correct SDK names:
+        """
+        aliases = {
+            "gemini-1.5-flash":        "models/gemini-1.5-flash",
+            "gemini-1.5-flash-latest": "models/gemini-1.5-flash",
+            "gemini-1.5-pro":          "models/gemini-1.5-pro",
+            "gemini-1.5-pro-latest":   "models/gemini-1.5-pro",
+            "gemini-2.0-flash":        "models/gemini-2.0-flash",
+            "gemini-flash":            "models/gemini-1.5-flash",
+            "flash":                   "models/gemini-1.5-flash",
+        }
+        # If already has models/ prefix, use as-is
+        if name.startswith("models/"):
+            return name
+        # Check aliases
+        resolved = aliases.get(name.lower(), f"models/{name}")
+        return resolved
 
     def _model(self, system_instruction: str = ""):
         """
