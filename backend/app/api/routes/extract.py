@@ -483,90 +483,71 @@ def _col_letter(c: int) -> str:
 # VISION-FIRST PROMPT BUILDER
 # ==============================================================================
 
-def _build_vision_prompt(template_data: dict, doc_text: str = "") -> str:
+def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     """
-    Build the master extraction prompt for vision-first extraction.
-    Uses plain ASCII only - no unicode box-drawing characters that can
-    cause encoding issues with Gemini Flash API.
-    """
-    doc_type = template_data.get("doc_type", "other")
-    regions = template_data.get("regions", {})
-    layout = template_data.get("layout", {})
+    Build extraction prompt split into (system_instruction, user_prompt).
 
-    system_prompt = _get_system_prompt(doc_type)
-    table_rules = _get_table_rules(doc_type)
+    system_instruction = registry expert persona (stable, doc-type specific).
+      Passed as Gemini system_instruction — billed at reduced rate, cached
+      server-side. Identical for ALL documents of the same type in a batch.
+
+    user_prompt = template fields + rules + doc text.
+      Variable per document. Only this is billed as normal input tokens.
+
+    This saves ~30% tokens on batch jobs because the system prompt
+    is not re-billed for each document.
+    """
+    doc_type     = template_data.get("doc_type", "other")
+    regions      = template_data.get("regions", {})
+    layout       = template_data.get("layout", {})
     primary_mode = regions.get("primary_mode", "form_kv")
 
-    fields_description = _build_fields_description(regions, layout)
-    extraction_instructions = _build_extraction_instructions(regions, primary_mode, table_rules)
-    output_format = _build_output_format(regions, primary_mode)
+    # System instruction — expert persona from registry (stable part)
+    system_instruction = _get_system_prompt(doc_type)
+    table_rules = _get_table_rules(doc_type)
+    if table_rules and primary_mode in ("table", "mixed"):
+        system_instruction += f"\n\nTABLE RULES:\n{table_rules}"
 
-    prompt = f"""{system_prompt}
+    # Trim doc text — form docs need less context than table docs
+    # Form: first 3000 chars covers all header fields
+    # Table/mixed: up to 5000 chars for transaction rows
+    if primary_mode in ("form_with_targets", "form_kv"):
+        doc_text_use = doc_text[:3000] if doc_text else ""
+    else:
+        doc_text_use = doc_text[:5000] if doc_text else ""
 
-=== EXTRACTION TASK ===
+    fields_description      = _build_fields_description(regions, layout)
+    extraction_instructions = _build_extraction_instructions(
+        regions, primary_mode, ""  # table_rules already in system_instruction
+    )
+    output_format           = _build_output_format(regions, primary_mode)
 
-The user has designed a template showing exactly what fields they want extracted.
-Your job is to find each field value in the document and return it accurately.
+    user_prompt = f"""=== EXTRACTION TASK ===
 
-=== TEMPLATE STRUCTURE ===
 {fields_description}
 
-=== EXTRACTION INSTRUCTIONS ===
+=== INSTRUCTIONS ===
 {extraction_instructions}
 
-=== CRITICAL RULES ===
-1. ABBREVIATION AND SYNONYM MATCHING — THIS IS THE MOST IMPORTANT RULE:
-   The template label and the document label will OFTEN be different.
-   You MUST match by MEANING and CONCEPT, not by exact words.
-
-   You are an expert in business documents. Use your knowledge to understand
-   that a short label in a template refers to the same concept as a longer
-   label in a document, even if the words are completely different.
-
-   General principles:
-   - Abbreviations: "No" = "Number", "Emp" = "Employee/Employer", "Amt" = "Amount",
-     "Qty" = "Quantity", "Addr" = "Address", "Dept" = "Department", "Mgr" = "Manager",
-     "Bal" = "Balance", "Qtr" = "Quarter", "Fed" = "Federal", "YTD" = "Year to Date"
-   - Acronyms: "EIN" = "Employer Identification Number", "SSN" = "Social Security Number",
-     "DOB" = "Date of Birth", "PO" = "Purchase Order", "AR" = "Accounts Receivable"
-   - Synonyms: "Total" = "Grand Total" = "Amount Due" = "Net Payable" = "Sum"
-   - Combinations: "No of Emp" means "Number of Employees" — combine the abbreviations
-
-   RULE: If a template label is an abbreviation or shortening of something in the
-   document, they refer to the same field. Extract the value.
-
-   RULE: If you cannot find an EXACT label match, find the CLOSEST MEANING match.
-   A conceptual match is better than leaving a field empty.
-   Only use "" if the information is GENUINELY ABSENT from the document entirely.
-
-2. LABEL MATCHING — match by MEANING, not exact text:
-   - Template "EIN" = Document "Employer Identification Number" or "Tax ID"
-   - Template "Payee" = Document "Pay to the Order of" or "Beneficiary"
-   - Template "Total" = Document "Amount Due" or "Grand Total" or "Net Payable"
-
-3. MISSING VALUES: Only use "" if the information is GENUINELY ABSENT from the document.
-   If the information exists but uses different wording — EXTRACT IT.
-   NEVER return "N/A", "null", "not found".
-
-4. NUMBERS: Strip all currency symbols and commas.
-   "$8,410.00" becomes "8410.00"
-
-5. DATES: Normalise all dates to YYYY-MM-DD format.
-   "January 31, 2024" becomes "2024-01-31"
-   "March 31, 2024" becomes "2024-03-31"
-
-6. TABLE POSITION: Tables may start anywhere on the page, not just top-left.
-
-7. CONFIDENCE: Rate each value:
-   "high" = clearly found, "medium" = inferred, "low" = uncertain
+=== RULES ===
+1. MATCH BY MEANING: Template labels and document labels often differ.
+   Match by concept. "No of Emp"="Number of Employees". "Amt"="Amount".
+   Common abbreviations: No=Number, Emp=Employee/Employer, Amt=Amount,
+   Qty=Quantity, Bal=Balance, Qtr=Quarter, Fed=Federal, YTD=Year to Date.
+   Acronyms: EIN=Employer ID Number, SSN=Social Security, PO=Purchase Order.
+   Synonyms: Total=Grand Total=Amount Due=Net Payable.
+2. MISSING: Use "" only if genuinely absent. Never "N/A" or "null".
+3. NUMBERS: Strip $ £ € and commas. "$8,410.00" -> "8410.00"
+4. DATES: YYYY-MM-DD. "January 31 2024" -> "2024-01-31"
+5. TABLE POSITION: Table may start anywhere on page.
 
 === DOCUMENT TEXT ===
-{doc_text[:6000] if doc_text else "(See the document image provided)"}
+{doc_text_use if doc_text_use else "(See document image)"}
 
 === OUTPUT FORMAT ===
 {output_format}
 """
-    return prompt
+    return system_instruction, user_prompt
 
 
 def _build_fields_description(regions: dict, layout: dict) -> str:
@@ -1483,19 +1464,19 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         elif has_images and page_images:
             page_img = page_images[0]
 
-        # Build the extraction prompt
-        prompt = _build_vision_prompt(template_data, doc_text)
+        # Build extraction prompt — returns (system_instruction, user_prompt)
+        # system_instruction = registry expert persona (stable, cached by Gemini)
+        # user_prompt = template fields + doc text (variable per document)
+        system_instruction, prompt = _build_vision_prompt(template_data, doc_text)
 
         # Add sub-document context for multiple docs on same page
         if total_on_page > 1 and sub_index is not None:
-            prompt = prompt.replace(
-                "=== DOCUMENT CONTENT ===",
+            prompt = (
                 f"=== DOCUMENT CONTEXT ===\n"
                 f"This page contains {total_on_page} separate documents.\n"
                 f"Extract ONLY document #{sub_index+1} (index {sub_index}).\n"
                 f"Description: {seg_hint}\n\n"
-                f"=== DOCUMENT CONTENT ==="
-            )
+            ) + prompt
 
         # Extract - use image if available, text otherwise
         # Retry up to 3 times with exponential backoff to handle 429 rate limits
@@ -1506,14 +1487,20 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
                 if page_img:
                     print(f"[EXTRACT] {file_path.name}: sending image to AI "
                           f"(attempt {attempt+1})", flush=True)
-                    extraction = orchestrator.llm.extract(image_b64=page_img, prompt=prompt)
+                    extraction = orchestrator.llm.extract(
+                        image_b64=page_img, prompt=prompt,
+                        system_instruction=system_instruction)
                     if not extraction.success and doc_text:
                         print(f"[EXTRACT] {file_path.name}: vision failed -> text fallback", flush=True)
-                        extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+                        extraction = orchestrator.llm.extract(
+                            text=doc_text, prompt=prompt,
+                            system_instruction=system_instruction)
                 elif doc_text:
                     print(f"[EXTRACT] {file_path.name}: sending text to AI "
                           f"(attempt {attempt+1})", flush=True)
-                    extraction = orchestrator.llm.extract(text=doc_text, prompt=prompt)
+                    extraction = orchestrator.llm.extract(
+                        text=doc_text, prompt=prompt,
+                        system_instruction=system_instruction)
                 else:
                     seg_fn = (file_path.name if total_docs == 1
                               else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
@@ -1684,9 +1671,12 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         orchestrator = Orchestrator(client_schema_path=schema_path)
 
         successful = failed = needs_review = 0
+        total_tokens_used = 0
+        total_cost_usd = 0.0
         start_time = time.time()
 
         for i, fp in enumerate(file_paths):
+            print(f"[THREAD] processing file {i+1}/{len(file_paths)}: {fp}", flush=True)
             try:
                 file_path = Path(fp)
                 if template_data:
@@ -1696,35 +1686,54 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                     results = [result]
 
                 for result in results:
-                    # Check if any fields need review
-                    validation_data = (result.extracted_data or {}).get("validation", {})
-                    has_flags = validation_data.get("flagged_count", 0) > 0
-                    error_msg = result.error if hasattr(result, 'error') and result.error else ""
+                    try:
+                        # Check if any fields need review
+                        validation_data = (result.extracted_data or {}).get("validation", {})
+                        has_flags = validation_data.get("flagged_count", 0) > 0
+                        error_msg = result.error if hasattr(result, 'error') and result.error else ""
 
-                    doc = DocumentResult(
-                        job_id=job_id,
-                        filename=result.filename,
-                        document_type=result.document_type if result.success else "unknown",
-                        overall_confidence=(result.extracted_data or {}).get("overall_confidence"),
-                        extraction_json=json.dumps(result.extracted_data, default=str) if result.extracted_data else None,
-                        validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
-                        validation_warnings=(
-                            "; ".join(f"{f['ref']}: {f['value']}" for f in validation_data.get("flagged_fields", []))
-                            if has_flags else ""
-                        ),
-                        needs_review=has_flags or (result.validation.needs_review if result.validation else False),
-                        model_used=(result.extraction_response.model_used
-                                    if result.extraction_response else "vision_direct"),
-                        tokens_used=(result.extraction_response.tokens_used
-                                     if result.extraction_response else 0),
-                        latency_ms=result.processing_time_ms,
-                    )
-                    session.add(doc)
-                    if result.success:
-                        successful += 1
-                        if doc.needs_review:
-                            needs_review += 1
-                    else:
+                        doc = DocumentResult(
+                            job_id=job_id,
+                            filename=result.filename,
+                            document_type=result.document_type if result.success else "unknown",
+                            overall_confidence=(result.extracted_data or {}).get("overall_confidence"),
+                            extraction_json=json.dumps(result.extracted_data, default=str) if result.extracted_data else None,
+                            validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
+                            validation_warnings=(
+                                "; ".join(f"{f['ref']}: {f['value']}" for f in validation_data.get("flagged_fields", []))
+                                if has_flags else ""
+                            ),
+                            needs_review=has_flags or (result.validation.needs_review if result.validation else False),
+                            model_used=(result.extraction_response.model_used
+                                        if result.extraction_response else "vision_direct"),
+                            tokens_used=(result.extraction_response.tokens_used
+                                         if result.extraction_response else 0),
+                            latency_ms=result.processing_time_ms,
+                        )
+                        session.add(doc)
+                        session.flush()  # catch DB errors immediately per-document
+                        doc_tokens = (result.extraction_response.tokens_used
+                                      if result.extraction_response else 0) or 0
+                        total_tokens_used += doc_tokens
+                        # gemini-1.5-flash pricing
+                        doc_cost = (doc_tokens / 1_000_000) * 0.15  # blended rate
+                        total_cost_usd += doc_cost
+
+                        print(f"[THREAD] saved: {result.filename} "
+                              f"tokens={doc_tokens} cost=${doc_cost:.5f} "
+                              f"| job_total={total_tokens_used} tokens "
+                              f"${total_cost_usd:.4f}", flush=True)
+
+                        if result.success:
+                            successful += 1
+                            if doc.needs_review:
+                                needs_review += 1
+                        else:
+                            failed += 1
+
+                    except Exception as save_err:
+                        print(f"[THREAD] SAVE ERROR for {result.filename}: {save_err}", flush=True)
+                        traceback.print_exc()
                         failed += 1
 
             except Exception as doc_err:
@@ -1748,7 +1757,11 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         job.total_time_sec = time.time() - start_time
         job.completed_at = datetime.utcnow()
         session.commit()
-        print(f"[THREAD] done: {successful} ok, {failed} failed, {needs_review} review", flush=True)
+        print(f"[THREAD] COMPLETE: {successful} ok, {failed} failed, "
+              f"{needs_review} review | "
+              f"TOKENS: {total_tokens_used:,} total | "
+              f"COST: ${total_cost_usd:.4f} | "
+              f"TIME: {job.total_time_sec:.1f}s", flush=True)
 
     except Exception as e:
         print(f"[THREAD] FAILED: {e}", flush=True)
