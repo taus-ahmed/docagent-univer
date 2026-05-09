@@ -71,8 +71,8 @@ class GeminiClient:
         "gemini-2.0-flash",
         "gemini-2.0-flash-001",
         "gemini-2.0-flash-lite",
-        "gemini-2.5-flash",
         "gemini-2.0-flash-lite-001",
+        "gemini-2.5-flash",
     ]
 
     def __init__(self, api_key: str = ""):
@@ -118,9 +118,10 @@ class GeminiClient:
         body: dict = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
-                "temperature":      temperature,
-                "maxOutputTokens":  max_tokens,
-                "responseMimeType": "application/json",
+                "temperature":     temperature,
+                "maxOutputTokens": max_tokens,
+                # NOTE: responseMimeType removed — not supported on all models
+                # JSON is enforced via the prompt instruction instead
             },
         }
         if system_instruction:
@@ -185,9 +186,8 @@ class GeminiClient:
                 ]
             }],
             "generationConfig": {
-                "temperature":      0.1,
-                "maxOutputTokens":  8192,
-                "responseMimeType": "application/json",
+                "temperature":     0.1,
+                "maxOutputTokens": 8192,
             },
         }
         if system_instruction:
