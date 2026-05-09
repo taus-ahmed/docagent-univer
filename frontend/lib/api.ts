@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosError } from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// ─── Token storage (localStorage for cross-origin production support) ────────
+// --- Token storage ---
 
 const TOKEN_KEY = "da_token";
 
@@ -29,7 +29,7 @@ function isTokenValid(): boolean {
   return Date.now() < parseInt(exp);
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types ---
 
 export interface User {
   id: number;
@@ -81,7 +81,6 @@ export interface JobStatus {
   total_time_sec: number;
   output_file: string | null;
   error_message: string | null;
-  // schema_id is set when the job was run with a template
   schema_id: string | null;
 }
 
@@ -119,7 +118,14 @@ export interface DriveAuthStatus {
 
 export interface DriveFolderContents {
   folders: { id: string; name: string; path?: string }[];
-  files: { id: string; name: string; mime_type: string; size: number; modified_time: string | null; is_supported: boolean }[];
+  files: {
+    id: string;
+    name: string;
+    mime_type: string;
+    size: number;
+    modified_time: string | null;
+    is_supported: boolean;
+  }[];
   total_files: number;
   supported_files: number;
 }
@@ -147,7 +153,16 @@ export interface SystemStats {
   jobs_last_7_days: number;
 }
 
-// ─── Axios Instance ───────────────────────────────────────────────────────────
+/**
+ * Post-extraction processing options.
+ * categorize: AI assigns Category to each table row (backend, uses LLM)
+ * summary:    AI generates 2-3 sentence summary (backend, uses LLM)
+ * anomaly:    AI flags unusual values (backend, uses LLM)
+ * graphs:     Charts rendered from extracted data (frontend only, no LLM)
+ */
+export type ExtractionOption = "categorize" | "summary" | "anomaly" | "graphs";
+
+// --- Axios Instance ---
 
 function createApi(): AxiosInstance {
   const instance = axios.create({ baseURL: BASE_URL });
@@ -171,7 +186,7 @@ function createApi(): AxiosInstance {
 
 const api = createApi();
 
-// ─── Auth API ─────────────────────────────────────────────────────────────────
+// --- Auth API ---
 
 export const authApi = {
   login: async (username: string, password: string): Promise<TokenResponse> => {
@@ -181,14 +196,14 @@ export const authApi = {
   },
   logout: () => removeToken(),
   isAuthenticated: isTokenValid,
-  getToken: getToken,
+  getToken,
   me: async (): Promise<User> => {
     const res = await api.get<User>("/api/auth/me");
     return res.data;
   },
 };
 
-// ─── Schemas API ──────────────────────────────────────────────────────────────
+// --- Schemas API ---
 
 export const schemasApi = {
   list: async (): Promise<SchemaInfo[]> => {
@@ -206,7 +221,7 @@ export const schemasApi = {
   delete: async (clientId: string) => api.delete(`/api/schemas/${clientId}`),
 };
 
-// ─── Templates API ────────────────────────────────────────────────────────────
+// --- Templates API ---
 
 export const templatesApi = {
   list: async (documentType?: string): Promise<ColumnTemplate[]> => {
@@ -229,36 +244,53 @@ export const templatesApi = {
     const res = await api.post<ColumnTemplate>("/api/templates", payload);
     return res.data;
   },
-  update: async (id: number, payload: {
-    name?: string;
-    document_type?: string;
-    columns?: TemplateColumn[];
-    description?: string;
-    is_shared?: boolean;
-  }): Promise<ColumnTemplate> => {
+  update: async (id: number, payload: Partial<{
+    name: string;
+    document_type: string;
+    columns: TemplateColumn[];
+    description: string;
+    is_shared: boolean;
+  }>): Promise<ColumnTemplate> => {
     const res = await api.put<ColumnTemplate>(`/api/templates/${id}`, payload);
     return res.data;
   },
   delete: async (id: number) => api.delete(`/api/templates/${id}`),
 };
 
-// ─── Extract API ──────────────────────────────────────────────────────────────
+// --- Extract API ---
 
 export const extractApi = {
+  /**
+   * Upload files for extraction.
+   *
+   * options: post-extraction processing to run server-side.
+   *   "categorize" - AI assigns Category to each table row using LLM
+   *   "summary"    - AI generates a plain-English summary, stored in extracted_data.summary
+   *   "anomaly"    - AI detects anomalies, stored in extracted_data.anomalies
+   *   "graphs"     - frontend rendering only, no backend processing
+   */
   upload: async (
     files: File[],
     clientId: string,
-    templateId?: number
+    templateId?: number,
+    options: ExtractionOption[] = [],
   ): Promise<{ job_id: number; message: string; total_files: number; status: string }> => {
     const fd = new FormData();
     files.forEach(f => fd.append("files", f));
     fd.append("client_id", clientId);
     if (templateId != null) fd.append("template_id", String(templateId));
+    // Backend-processed options only (not "graphs" which is frontend-only)
+    const backendOptions = options.filter(o => o !== "graphs");
+    if (backendOptions.length > 0) fd.append("options", JSON.stringify(backendOptions));
     const res = await api.post("/api/extract/upload", fd);
     return res.data;
   },
 
-  listJobs: async (params?: { limit?: number; offset?: number; status_filter?: string }): Promise<JobStatus[]> => {
+  listJobs: async (params?: {
+    limit?: number;
+    offset?: number;
+    status_filter?: string;
+  }): Promise<JobStatus[]> => {
     const res = await api.get<JobStatus[]>("/api/jobs", { params });
     return res.data;
   },
@@ -268,13 +300,22 @@ export const extractApi = {
     return res.data;
   },
 
-  getResults: async (jobId: number, params?: { doc_type?: string; needs_review?: boolean }): Promise<DocumentResult[]> => {
+  getResults: async (
+    jobId: number,
+    params?: { doc_type?: string; needs_review?: boolean },
+  ): Promise<DocumentResult[]> => {
     const res = await api.get<DocumentResult[]>(`/api/jobs/${jobId}/results`, { params });
     return res.data;
   },
 
-  updateDocument: async (jobId: number, docId: number, extractedData: Record<string, any>) => {
-    const res = await api.put(`/api/jobs/${jobId}/docs/${docId}`, { extracted_data: extractedData });
+  updateDocument: async (
+    jobId: number,
+    docId: number,
+    extractedData: Record<string, any>,
+  ) => {
+    const res = await api.put(`/api/jobs/${jobId}/docs/${docId}`, {
+      extracted_data: extractedData,
+    });
     return res.data;
   },
 
@@ -289,39 +330,25 @@ export const extractApi = {
   },
 };
 
-// ─── Export API ───────────────────────────────────────────────────────────────
+// --- Export API ---
 
 export const exportApi = {
-  /**
-   * Combined Excel export (legacy flat format, one sheet, one row per document).
-   */
-  combined: async (params: { job_id: number; template_id?: number; include_line_items?: boolean }): Promise<Blob> => {
+  combined: async (params: {
+    job_id: number;
+    template_id?: number;
+    include_line_items?: boolean;
+  }): Promise<Blob> => {
     const res = await api.post("/api/export/combined", params, { responseType: "blob" });
     return res.data;
   },
-
-  /**
-   * Per-file Excel export (legacy format, one sheet per document).
-   */
   perFile: async (params: { job_id: number; template_id?: number }): Promise<Blob> => {
     const res = await api.post("/api/export/per-file", params, { responseType: "blob" });
     return res.data;
   },
-
-  /**
-   * Template-aware Excel export (new).
-   * Reconstructs the exact template grid layout, one filled block per document.
-   * Only available for jobs run with a template (schema_id is set).
-   * Hits GET /api/jobs/{job_id}/export
-   */
   templateExport: async (jobId: number): Promise<Blob> => {
     const res = await api.get(`/api/jobs/${jobId}/export`, { responseType: "blob" });
     return res.data;
   },
-
-  /**
-   * Trigger a browser file download from a blob.
-   */
   downloadBlob: (blob: Blob, filename: string): void => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -334,23 +361,19 @@ export const exportApi = {
   },
 };
 
-// ─── Drive API ────────────────────────────────────────────────────────────────
+// --- Drive API ---
 
 export const driveApi = {
-  // ── Aliases used by DriveTab ──────────────────────────────────────────────
-  /** DriveTab calls driveApi.authStatus as a queryFn */
   authStatus: async (): Promise<DriveAuthStatus> => {
     const res = await api.get<DriveAuthStatus>("/api/drive/auth/status");
     return res.data;
   },
-  /** DriveTab calls driveApi.authenticate() to open the OAuth flow */
   authenticate: async (): Promise<void> => {
     const res = await api.get<{ auth_url: string }>("/api/drive/auth/url");
     if (res.data.auth_url && typeof window !== "undefined") {
       window.open(res.data.auth_url, "_blank");
     }
   },
-  // ── Canonical names ───────────────────────────────────────────────────────
   getAuthStatus: async (): Promise<DriveAuthStatus> => {
     const res = await api.get<DriveAuthStatus>("/api/drive/auth/status");
     return res.data;
@@ -369,7 +392,11 @@ export const driveApi = {
     });
     return res.data;
   },
-  extractFolder: async (folderId: string, clientId: string, templateId?: number): Promise<{ job_id: number }> => {
+  extractFolder: async (
+    folderId: string,
+    clientId: string,
+    templateId?: number,
+  ): Promise<{ job_id: number }> => {
     const res = await api.post("/api/drive/extract", {
       folder_id: folderId,
       client_id: clientId,
@@ -381,26 +408,34 @@ export const driveApi = {
     const res = await api.get<WatchFolder[]>("/api/drive/watch");
     return res.data;
   },
-  /**
-   * DriveTab passes an object: { folder_id, folder_name, client_id, auto_upload_results }
-   * Old callers pass positional args: (folderId, folderName, clientId)
-   * Both shapes are supported.
-   */
   addWatchFolder: async (
-    folderIdOrPayload: string | { folder_id: string; folder_name: string; client_id: string; auto_upload_results?: boolean },
+    folderIdOrPayload:
+      | string
+      | {
+          folder_id: string;
+          folder_name: string;
+          client_id: string;
+          auto_upload_results?: boolean;
+        },
     folderName?: string,
-    clientId?: string
+    clientId?: string,
   ): Promise<WatchFolder> => {
-    const payload = typeof folderIdOrPayload === "object"
-      ? folderIdOrPayload
-      : { folder_id: folderIdOrPayload, folder_name: folderName!, client_id: clientId! };
+    const payload =
+      typeof folderIdOrPayload === "object"
+        ? folderIdOrPayload
+        : {
+            folder_id: folderIdOrPayload,
+            folder_name: folderName!,
+            client_id: clientId!,
+          };
     const res = await api.post<WatchFolder>("/api/drive/watch", payload);
     return res.data;
   },
-  removeWatchFolder: async (watchId: number) => api.delete(`/api/drive/watch/${watchId}`),
+  removeWatchFolder: async (watchId: number) =>
+    api.delete(`/api/drive/watch/${watchId}`),
 };
 
-// ─── Admin API ────────────────────────────────────────────────────────────────
+// --- Admin API ---
 
 export const adminApi = {
   stats: async (): Promise<SystemStats> => {
@@ -426,14 +461,17 @@ export const adminApi = {
     const res = await api.post<User>("/api/admin/users", payload);
     return res.data;
   },
-  updateUser: async (userId: number, payload: Partial<{
-    display_name: string;
-    email: string;
-    password: string;
-    role: string;
-    client_id: string;
-    is_active: boolean;
-  }>): Promise<User> => {
+  updateUser: async (
+    userId: number,
+    payload: Partial<{
+      display_name: string;
+      email: string;
+      password: string;
+      role: string;
+      client_id: string;
+      is_active: boolean;
+    }>,
+  ): Promise<User> => {
     const res = await api.put<User>(`/api/admin/users/${userId}`, payload);
     return res.data;
   },

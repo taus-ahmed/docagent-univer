@@ -136,25 +136,26 @@ function BarChart({ data, height = 100 }: { data: { label: string; value: number
   );
 }
 
-// ─── InsightsPanel ─────────────────────────────────────────────────────────────
+// ─── InsightsPanel ────────────────────────────────────────────────────────────
+// Reads summary, anomalies, categorization from extraction_json (set by backend).
+// Graphs are rendered from the already-extracted numeric fields.
+// No browser API calls to Anthropic — everything is pre-computed server-side.
 
 function InsightsPanel({
-  results, options, docType,
+  results, options,
 }: {
-  results: DocumentResult[]; options: OptionId[]; docType: string;
+  results: DocumentResult[]; options: OptionId[];
 }) {
-  const [summary, setSummary] = useState("");
-  const [anomalies, setAnomalies] = useState<string[]>([]);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [loadingAnomalies, setLoadingAnomalies] = useState(false);
-  const didSummary = useRef(false);
-  const didAnomaly = useRef(false);
+  if (!options.length) return null;
 
-  // Flatten all extracted fields and table rows from results
+  // ── Flatten data from all results ─────────────────────────────────────────
   const allFields: Record<string, string> = {};
-  const tableRows: Record<string, string>[] = [];
+  const tableRows: Record<string, any>[] = [];
+  const summaries: string[] = [];
+  const anomalies: string[] = [];
+
   results.forEach(r => {
-    const data = (r as any).extracted_data ?? {};
+    const data = r.extracted_data ?? {};
     const inner = data.extracted_data ?? {};
     Object.entries(inner).forEach(([k, v]: any) => {
       if (!k.startsWith("_label_")) {
@@ -162,16 +163,16 @@ function InsightsPanel({
       }
     });
     (data.table_rows ?? []).forEach((row: any) => tableRows.push(row));
+    if (data.summary) summaries.push(data.summary);
+    if (Array.isArray(data.anomalies)) anomalies.push(...data.anomalies);
   });
 
-  const hasTable = tableRows.length > 0;
-
-  // ── Categorization counts ─────────────────────────────────────────────────
+  // ── Categorization ────────────────────────────────────────────────────────
   const catCount: Record<string, number> = {};
   const catAmount: Record<string, number> = {};
-  if (options.includes("categorize") && hasTable) {
+  if (options.includes("categorize") && tableRows.length > 0) {
     tableRows.forEach(row => {
-      const cat = row.Category ?? row.category ?? "Other Expense";
+      const cat = row.Category ?? row.category ?? "Other";
       catCount[cat] = (catCount[cat] ?? 0) + 1;
       const amt = parseFloat(String(
         row.Amount ?? row.Debit ?? row.Credit ?? row["Item Subtotal"] ?? row.Price ?? "0"
@@ -181,108 +182,76 @@ function InsightsPanel({
   }
   const catPie = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 8)
     .map(([label, value]) => ({ label, value, color: catColor(label) }));
-  const catBar = Object.entries(catAmount).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).slice(0, 7)
+  const catBar = Object.entries(catAmount).filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]).slice(0, 7)
     .map(([label, value]) => ({ label, value: Math.round(value * 100) / 100, color: catColor(label) }));
 
-  // ── Numeric fields for graphs ────────────────────────────────────────────
+  // ── Numeric fields for graphs ─────────────────────────────────────────────
   const numericFields = Object.entries(allFields)
-    .filter(([,v]) => !isNaN(parseFloat(v)) && parseFloat(v) > 0)
+    .filter(([, v]) => !isNaN(parseFloat(v)) && parseFloat(v) > 0)
     .map(([k, v]) => ({ label: k, value: parseFloat(v) }))
     .sort((a, b) => b.value - a.value).slice(0, 6);
   const fieldBar = numericFields.map((f, i) => ({ ...f, color: CHART_COLORS[i % CHART_COLORS.length] }));
   const fieldPie = numericFields.map((f, i) => ({ ...f, color: CHART_COLORS[i % CHART_COLORS.length] }));
 
-  // ── AI Summary ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!options.includes("summary") || didSummary.current || !Object.keys(allFields).length) return;
-    didSummary.current = true;
-    setLoadingSummary(true);
-    const fieldStr = Object.entries(allFields).slice(0, 20).map(([k, v]) => `${k}: ${v}`).join("\n");
-    fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514", max_tokens: 200,
-        messages: [{ role: "user", content: `Summarise this ${docType} document in 2-3 plain English sentences. Be specific about key values. No bullet points.\n\n${fieldStr}` }],
-      }),
-    }).then(r => r.json())
-      .then(d => setSummary(d?.content?.[0]?.text ?? ""))
-      .catch(() => setSummary("Summary unavailable."))
-      .finally(() => setLoadingSummary(false));
-  }, [options.join(","), results.length]);
-
-  // ── AI Anomaly ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!options.includes("anomaly") || didAnomaly.current) return;
-    didAnomaly.current = true;
-    setLoadingAnomalies(true);
-    const fieldStr = Object.entries(allFields).slice(0, 15).map(([k, v]) => `${k}: ${v}`).join("\n");
-    const rowStr = tableRows.slice(0, 30).map((r, i) => `Row ${i + 1}: ${JSON.stringify(r)}`).join("\n");
-    fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514", max_tokens: 300,
-        messages: [{ role: "user", content: `Analyse this extracted document data and identify anomalies, unusual values, duplicates or items needing review. Return a JSON array of strings, max 5 items. If nothing unusual return []. Return ONLY the JSON array.\n\nFields:\n${fieldStr}\n\nRows:\n${rowStr}` }],
-      }),
-    }).then(r => r.json())
-      .then(d => {
-        const text = d?.content?.[0]?.text ?? "[]";
-        try { setAnomalies(JSON.parse(text.replace(/```json|```/g, "").trim())); } catch { setAnomalies([]); }
-      })
-      .catch(() => setAnomalies([]))
-      .finally(() => setLoadingAnomalies(false));
-  }, [options.join(","), results.length]);
-
-  if (!options.length) return null;
+  const summary = summaries[0] ?? "";
+  const uniqueAnomalies = [...new Set(anomalies)];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
 
-      {/* Summary */}
+      {/* AI Summary — read from extracted_data.summary (set by backend) */}
       {options.includes("summary") && (
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#f59e0b18", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#f59e0b18",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
             </div>
             <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>AI Summary</span>
           </div>
-          {loadingSummary ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text3)" }}>
-              <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-              Generating summary…
-            </div>
-          ) : (
-            <p style={{ fontSize: 12.5, color: "var(--text2)", lineHeight: 1.65 }}>{summary || "No summary available."}</p>
-          )}
+          <p style={{ fontSize: 12.5, color: "var(--text2)", lineHeight: 1.65 }}>
+            {summary || "Summary was requested — check that extraction completed successfully."}
+          </p>
         </div>
       )}
 
-      {/* Categorization */}
+      {/* Categorization — reads Category field from table_rows */}
       {options.includes("categorize") && catPie.length > 0 && (
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#6366f118", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#6366f118",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
             </div>
             <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>Categorization</span>
-            <span style={{ fontSize: 10, color: "var(--text3)", marginLeft: "auto" }}>{tableRows.length} items</span>
+            <span style={{ fontSize: 10, color: "var(--text3)", marginLeft: "auto" }}>
+              {tableRows.length} items
+            </span>
           </div>
-
           <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "center", marginBottom: 14 }}>
             <PieChart data={catPie} size={120}/>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {catPie.map((d, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ width: 7, height: 7, borderRadius: 2, background: d.color, flexShrink: 0 }}/>
-                  <span style={{ fontSize: 10.5, color: "var(--text2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</span>
+                  <span style={{ fontSize: 10.5, color: "var(--text2)", flex: 1,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {d.label}
+                  </span>
                   <span style={{ fontSize: 10.5, color: "var(--text3)", fontWeight: 600 }}>{d.value}</span>
                 </div>
               ))}
             </div>
           </div>
-
           {catBar.length > 0 && (
             <>
               <p style={{ fontSize: 10, color: "var(--text3)", marginBottom: 6 }}>Amount by category</p>
@@ -292,63 +261,96 @@ function InsightsPanel({
         </div>
       )}
 
-      {/* Graphs — shown when no categorization data or in addition */}
+      {/* Categorization no data */}
+      {options.includes("categorize") && catPie.length === 0 && tableRows.length === 0 && (
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#6366f118",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              </svg>
+            </div>
+            <div>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>Categorization</span>
+              <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
+                No table rows found. Categorization works with documents that have line items
+                (bank statements, expense reports, invoices).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Graphs — pure frontend, no API call, renders from extracted numeric fields */}
       {options.includes("graphs") && fieldBar.length > 0 && (
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#10b98118", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#10b98118",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+              </svg>
             </div>
             <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>Numeric Breakdown</span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, alignItems: "center", marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14,
+            alignItems: "center", marginBottom: 14 }}>
             <PieChart data={fieldPie} size={110}/>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {fieldPie.map((d, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ width: 7, height: 7, borderRadius: 2, background: d.color, flexShrink: 0 }}/>
-                  <span style={{ fontSize: 10.5, color: "var(--text2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</span>
-                  <span style={{ fontSize: 10.5, color: "var(--text3)", fontWeight: 600 }}>{d.value.toLocaleString()}</span>
+                  <span style={{ fontSize: 10.5, color: "var(--text2)", flex: 1,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {d.label}
+                  </span>
+                  <span style={{ fontSize: 10.5, color: "var(--text3)", fontWeight: 600 }}>
+                    {d.value.toLocaleString()}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
           <BarChart data={fieldBar} height={90}/>
-          {hasTable && (
-            <div style={{ marginTop: 10, display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {Object.keys(tableRows[0] ?? {}).slice(0, 6).map((col, i) => (
-                <span key={i} style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: "var(--surface2)", color: "var(--text3)" }}>{col}</span>
-              ))}
-              {tableRows.length > 0 && <span style={{ fontSize: 9.5, color: "var(--text4)" }}>· {tableRows.length} rows</span>}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Anomaly Detection */}
+      {/* Anomaly Detection — reads from extracted_data.anomalies (set by backend) */}
       {options.includes("anomaly") && (
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#ef444418", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#ef444418",
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
             </div>
             <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>Anomaly Detection</span>
           </div>
-          {loadingAnomalies ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text3)" }}>
-              <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-              Analysing for anomalies…
-            </div>
-          ) : anomalies.length === 0 ? (
+          {uniqueAnomalies.length === 0 ? (
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="var(--green)" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
               <span style={{ fontSize: 12, color: "var(--text3)" }}>No anomalies detected</span>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {anomalies.map((a, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, padding: "7px 10px", background: "#ef444410", borderRadius: 6, border: "1px solid #ef444428" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {uniqueAnomalies.map((a, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, padding: "7px 10px",
+                  background: "#ef444410", borderRadius: 6, border: "1px solid #ef444428" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="#ef4444" strokeWidth="2"
+                    style={{ flexShrink: 0, marginTop: 2 }}>
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
                   <span style={{ fontSize: 11.5, color: "var(--text2)", lineHeight: 1.5 }}>{a}</span>
                 </div>
               ))}
@@ -430,7 +432,7 @@ export default function ExtractPage() {
     setResults([]);
     prevStatus.current = "";
     try {
-      const res = await extractApi.upload(files, clientId, selectedTemplate.id);
+      const res = await extractApi.upload(files, clientId, selectedTemplate.id, selectedOptions);
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
@@ -448,7 +450,6 @@ export default function ExtractPage() {
   const isDone = jobStatus?.status === "completed";
   const isFailed = jobStatus?.status === "failed";
   const hasResults = results.length > 0;
-  const docType = selectedTemplate?.document_type ?? "document";
 
   return (
     <AppLayout>
@@ -741,7 +742,7 @@ export default function ExtractPage() {
             <>
               <ResultsGrid results={results} jobId={activeJobId!} template={selectedTemplate}/>
               {selectedOptions.length > 0 && (
-                <InsightsPanel results={results} options={selectedOptions} docType={docType}/>
+                <InsightsPanel results={results} options={selectedOptions}/>
               )}
             </>
           ) : (
