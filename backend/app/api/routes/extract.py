@@ -95,6 +95,7 @@ async def upload_and_extract(
     files: list[UploadFile] = File(...),
     client_id: str = Form(...),
     template_id: Optional[int] = Form(None),
+    options: Optional[str] = Form(None),  # JSON array: ["categorize","summary","anomaly","graphs"]
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     storage=Depends(get_storage),
@@ -118,6 +119,14 @@ async def upload_and_extract(
         tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id).first()
         if tpl:
             template_data = _parse_template(tpl)
+
+    # Parse options
+    selected_options: list = []
+    if options:
+        try:
+            selected_options = json.loads(options)
+        except Exception:
+            selected_options = [o.strip() for o in options.split(",") if o.strip()]
 
     job = ExtractionJob(
         user_id=current_user.id,
@@ -143,6 +152,7 @@ async def upload_and_extract(
         target=_run_extraction_sync,
         args=(job_id, saved_paths, str(schema_path), settings.DATABASE_URL,
               template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
+        kwargs={"options": selected_options},
         daemon=True,
     )
     thread.start()
@@ -1638,8 +1648,110 @@ Return ONLY JSON:
 # BACKGROUND THREAD
 # ==============================================================================
 
+def _post_categorize(extracted: dict, orchestrator, doc_type: str) -> dict:
+    """
+    Second-pass categorization when the extraction didn't produce Category values.
+    Sends only the table rows to Gemini for categorization — minimal tokens.
+    """
+    try:
+        table_rows = extracted.get("table_rows", [])
+        if not table_rows:
+            return extracted
+
+        rows_text = "\n".join(
+            f"Row {i+1}: {json.dumps(row)}"
+            for i, row in enumerate(table_rows[:50])  # max 50 rows
+        )
+        prompt = (
+            f"Assign a business category to each row below.\n"
+            f"Use these categories: Travel, Meals, Lodging, Office Supplies, "
+            f"Software, Marketing, Professional Fees, Utilities, Salary, "
+            f"Rent, Insurance, Equipment, Tax, Bank Charges, Other.\n\n"
+            f"Return ONLY a JSON object: {{\"categories\": [\"cat1\", \"cat2\", ...]}}\n"
+            f"One category per row in the same order.\n\n"
+            f"Rows:\n{rows_text}"
+        )
+        result = orchestrator.llm.extract(text=rows_text, prompt=prompt)
+        if result.success and result.parsed_json:
+            cats = result.parsed_json.get("categories", [])
+            for i, row in enumerate(table_rows):
+                if i < len(cats) and not row.get("Category"):
+                    row["Category"] = cats[i]
+            extracted["table_rows"] = table_rows
+            print(f"[OPTIONS] categorized {len(cats)} rows", flush=True)
+    except Exception as e:
+        print(f"[OPTIONS] categorize failed: {e}", flush=True)
+    return extracted
+
+
+def _post_summarize(extracted: dict, orchestrator, doc_type: str) -> dict:
+    """
+    Generate a 2-3 sentence plain English summary of the extracted document.
+    Uses Gemini — stored in extracted['summary'].
+    """
+    try:
+        inner = extracted.get("extracted_data", {})
+        fields = {k: (v.get("value", "") if isinstance(v, dict) else v)
+                  for k, v in inner.items() if not k.startswith("_label_")}
+        if not fields:
+            return extracted
+
+        field_str = "\n".join(f"{k}: {v}" for k, v in list(fields.items())[:20])
+        table_rows = extracted.get("table_rows", [])
+        table_str = f"\n{len(table_rows)} line items." if table_rows else ""
+
+        prompt = (
+            f"Summarise this {doc_type} document in 2-3 plain English sentences. "
+            f"Be specific about key values. No bullet points.\n\n"
+            f"Fields:\n{field_str}{table_str}\n\n"
+            f"Return ONLY a JSON object: {{\"summary\": \"your summary here\"}}"
+        )
+        result = orchestrator.llm.extract(text=field_str, prompt=prompt)
+        if result.success and result.parsed_json:
+            summary = result.parsed_json.get("summary", "")
+            if summary:
+                extracted["summary"] = summary
+                print(f"[OPTIONS] summary generated: {summary[:80]}...", flush=True)
+    except Exception as e:
+        print(f"[OPTIONS] summary failed: {e}", flush=True)
+    return extracted
+
+
+def _post_anomaly(extracted: dict, orchestrator, doc_type: str) -> dict:
+    """
+    Detect anomalies in extracted data — duplicate values, unusual amounts,
+    missing required fields, outliers.
+    Stored in extracted['anomalies'] as a list of strings.
+    """
+    try:
+        inner = extracted.get("extracted_data", {})
+        fields = {k: (v.get("value", "") if isinstance(v, dict) else v)
+                  for k, v in inner.items() if not k.startswith("_label_")}
+        table_rows = extracted.get("table_rows", [])[:30]
+
+        field_str = "\n".join(f"{k}: {v}" for k, v in list(fields.items())[:15])
+        row_str   = "\n".join(f"Row {i+1}: {json.dumps(r)}"
+                               for i, r in enumerate(table_rows))
+
+        prompt = (
+            f"Analyse this extracted {doc_type} data for anomalies: "
+            f"unusual values, duplicates, outliers, or missing required fields.\n"
+            f"Return ONLY a JSON object: {{\"anomalies\": [\"issue1\", \"issue2\"]}}\n"
+            f"Maximum 5 items. If nothing unusual return {{\"anomalies\": []}}\n\n"
+            f"Fields:\n{field_str}\n\nRows:\n{row_str}"
+        )
+        result = orchestrator.llm.extract(text=field_str, prompt=prompt)
+        if result.success and result.parsed_json:
+            anomalies = result.parsed_json.get("anomalies", [])
+            extracted["anomalies"] = anomalies if isinstance(anomalies, list) else []
+            print(f"[OPTIONS] anomalies: {len(extracted['anomalies'])} found", flush=True)
+    except Exception as e:
+        print(f"[OPTIONS] anomaly failed: {e}", flush=True)
+    return extracted
+
+
 def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
-                          project_dir, backend_dir, engine_dir):
+                          project_dir, backend_dir, engine_dir, options=None):
     import os
     os.environ["PYTHONUTF8"] = "1"
     for p in [engine_dir, backend_dir, project_dir]:
@@ -1687,17 +1799,51 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
 
                 for result in results:
                     try:
-                        # Check if any fields need review
                         validation_data = (result.extracted_data or {}).get("validation", {})
-                        has_flags = validation_data.get("flagged_count", 0) > 0
-                        error_msg = result.error if hasattr(result, 'error') and result.error else ""
+                        has_flags      = validation_data.get("flagged_count", 0) > 0
+                        error_msg      = result.error if hasattr(result, 'error') and result.error else ""
+
+                        # ── Post-extraction processing based on selected options ──
+                        extracted = result.extracted_data or {}
+
+                        if result.success and options:
+                            # --- CATEGORIZATION ---
+                            # Category is already embedded by the AI in table_rows
+                            # via the extraction prompt (bank_statement taxonomy,
+                            # expense_report Category column etc.)
+                            # If categorize option is on and Category is missing from
+                            # table rows, inject it via a second Gemini call
+                            if "categorize" in options:
+                                table_rows = extracted.get("table_rows", [])
+                                missing_cat = table_rows and not table_rows[0].get("Category")
+                                if missing_cat:
+                                    extracted = _post_categorize(
+                                        extracted, orchestrator, result.document_type or ""
+                                    )
+
+                            # --- AI SUMMARY ---
+                            # Gemini generates a 2-3 sentence plain English summary
+                            # stored in extraction_json.summary
+                            if "summary" in options and not extracted.get("summary"):
+                                extracted = _post_summarize(
+                                    extracted, orchestrator, result.document_type or ""
+                                )
+
+                            # --- ANOMALY DETECTION ---
+                            # Gemini flags unusual values, stored in extraction_json.anomalies
+                            if "anomaly" in options and not extracted.get("anomalies"):
+                                extracted = _post_anomaly(
+                                    extracted, orchestrator, result.document_type or ""
+                                )
+
+                            result.extracted_data = extracted
 
                         doc = DocumentResult(
                             job_id=job_id,
                             filename=result.filename,
                             document_type=result.document_type if result.success else "unknown",
-                            overall_confidence=(result.extracted_data or {}).get("overall_confidence"),
-                            extraction_json=json.dumps(result.extracted_data, default=str) if result.extracted_data else None,
+                            overall_confidence=extracted.get("overall_confidence"),
+                            extraction_json=json.dumps(extracted, default=str) if extracted else None,
                             validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
                             validation_warnings=(
                                 "; ".join(f"{f['ref']}: {f['value']}" for f in validation_data.get("flagged_fields", []))
@@ -1711,12 +1857,12 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                             latency_ms=result.processing_time_ms,
                         )
                         session.add(doc)
-                        session.flush()  # catch DB errors immediately per-document
+                        session.flush()
+
                         doc_tokens = (result.extraction_response.tokens_used
                                       if result.extraction_response else 0) or 0
                         total_tokens_used += doc_tokens
-                        # gemini-1.5-flash pricing
-                        doc_cost = (doc_tokens / 1_000_000) * 0.15  # blended rate
+                        doc_cost = (doc_tokens / 1_000_000) * 0.15
                         total_cost_usd += doc_cost
 
                         print(f"[THREAD] saved: {result.filename} "

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-import type { ColDef, CellValueChangedEvent } from "ag-grid-community";
+import type { ColDef, CellValueChangedEvent, ICellRendererParams } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import { extractApi, type DocumentResult, type ColumnTemplate } from "@/lib/api";
@@ -14,9 +14,88 @@ interface Props {
   template: ColumnTemplate | null;
 }
 
+// ── Cell renderers (React components, no innerHTML) ───────────────────────────
+
+function ConfidenceCell({ value }: ICellRendererParams) {
+  if (!value) return null;
+  const colors: Record<string, string> = {
+    high:   "var(--green,#22c55e)",
+    medium: "var(--amber,#f59e0b)",
+    low:    "var(--red,#ef4444)",
+  };
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600,
+      color: colors[value] ?? "var(--text3)",
+      textTransform: "capitalize",
+    }}>
+      {value}
+    </span>
+  );
+}
+
+function StatusCell({ value }: ICellRendererParams) {
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600,
+      color: value ? "var(--amber,#f59e0b)" : "var(--green,#22c55e)",
+    }}>
+      {value ? "Review" : "OK"}
+    </span>
+  );
+}
+
+// ── Table rows sub-panel ──────────────────────────────────────────────────────
+
+function TableRowsPanel({ rows }: { rows: Record<string, any>[] }) {
+  if (!rows.length) return null;
+  const cols = Object.keys(rows[0]);
+  return (
+    <div style={{ marginTop: 10, overflowX: "auto" }}>
+      <p style={{ fontSize: 11, color: "var(--text3)", marginBottom: 6 }}>
+        {rows.length} line item{rows.length !== 1 ? "s" : ""}
+      </p>
+      <table style={{ borderCollapse: "collapse", fontSize: 11, width: "100%" }}>
+        <thead>
+          <tr>
+            {cols.map(c => (
+              <th key={c} style={{
+                padding: "4px 8px", textAlign: "left",
+                borderBottom: "1px solid var(--border)",
+                color: "var(--text3)", fontWeight: 600, whiteSpace: "nowrap",
+              }}>
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} style={{ background: i % 2 === 0 ? "var(--surface2)" : "transparent" }}>
+              {cols.map(c => (
+                <td key={c} style={{
+                  padding: "4px 8px",
+                  borderBottom: "1px solid var(--border)",
+                  color: "var(--text2)",
+                  whiteSpace: "nowrap",
+                }}>
+                  {String(row[c] ?? "")}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Main grid ─────────────────────────────────────────────────────────────────
+
 export default function ResultsGrid({ results, jobId, template }: Props) {
   const gridRef = useRef<AgGridReact>(null);
   const [saving, setSaving] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { rowData, colDefs } = useMemo(() => {
     const templateCols = template?.columns ?? null;
@@ -35,18 +114,21 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
 
     const rows = results.map(doc => {
       const ext = doc.extracted_data?.extracted_data ?? {};
+      const tableRows = doc.extracted_data?.table_rows ?? [];
       const row: Record<string, unknown> = {
-        _id: doc.id,
-        _filename: doc.filename,
-        _confidence: doc.overall_confidence,
+        _id:           doc.id,
+        _filename:     doc.filename,
+        _confidence:   doc.overall_confidence,
         _needs_review: doc.needs_review,
+        _table_rows:   tableRows,
+        _has_rows:     tableRows.length > 0,
       };
       for (const key of fieldKeys) {
         const fd = ext[key];
         if (fd === undefined || fd === null) {
           row[key] = "";
         } else if (typeof fd === "object" && "value" in fd) {
-          row[key] = (fd as any).value === null || (fd as any).value === undefined ? "" : (fd as any).value;
+          row[key] = (fd as any).value ?? "";
         } else {
           row[key] = fd;
         }
@@ -68,21 +150,31 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
         headerName: "Confidence",
         width: 112,
         editable: false,
-        cellRenderer: ({ value }: any) => {
-          if (!value) return "";
-          const cls = value === "high" ? "conf-high" : value === "medium" ? "conf-medium" : "conf-low";
-          return `<span class="${cls}">${value}</span>`;
-        },
+        cellRenderer: ConfidenceCell,
       },
       {
         field: "_needs_review",
         headerName: "Status",
         width: 95,
         editable: false,
-        cellRenderer: ({ value }: any) =>
-          value
-            ? `<span style="color:var(--amber);font-size:11px;font-weight:600">Review</span>`
-            : `<span style="color:var(--green);font-size:11px">OK</span>`,
+        cellRenderer: StatusCell,
+      },
+      {
+        field: "_has_rows",
+        headerName: "Rows",
+        width: 70,
+        editable: false,
+        cellRenderer: ({ value, data }: ICellRendererParams) =>
+          value ? (
+            <span style={{ fontSize: 11, color: "var(--accent)", cursor: "pointer" }}>
+              {(data._table_rows as any[]).length}
+            </span>
+          ) : null,
+        onCellClicked: ({ data }: any) => {
+          if (data._has_rows) {
+            setExpandedId(prev => prev === data._id ? null : data._id);
+          }
+        },
       },
     ];
 
@@ -121,24 +213,47 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
     }
   }, [results, jobId]);
 
+  // Find expanded document's table rows
+  const expandedDoc = expandedId != null
+    ? results.find(r => r.id === expandedId)
+    : null;
+  const expandedRows = expandedDoc?.extracted_data?.table_rows ?? [];
+
   return (
     <div>
+      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text1)" }}>
             {results.length} document{results.length !== 1 ? "s" : ""}
-            {template && <span style={{ fontSize: 12, color: "var(--text3)", marginLeft: 8, fontWeight: 400 }}>· {template.name}</span>}
+            {template && (
+              <span style={{ fontSize: 12, color: "var(--text3)", marginLeft: 8, fontWeight: 400 }}>
+                · {template.name}
+              </span>
+            )}
           </div>
-          <div style={{ fontSize: 11, color: "var(--text3)" }}>Click any cell to edit · changes save automatically</div>
+          <div style={{ fontSize: 11, color: "var(--text3)" }}>
+            Click any cell to edit · changes save automatically
+            {results.some(r => (r.extracted_data?.table_rows?.length ?? 0) > 0) && (
+              <span style={{ marginLeft: 8, color: "var(--accent)" }}>
+                · Click row count to expand line items
+              </span>
+            )}
+          </div>
         </div>
         {saving && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text3)" }}>
-            <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-            Saving…
+            <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24"
+              fill="none" stroke="var(--accent)" strokeWidth="2">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            Saving...
           </div>
         )}
       </div>
-      <div className="ag-theme-alpine" style={{ height: 420, width: "100%" }}>
+
+      {/* AG Grid */}
+      <div className="ag-theme-alpine" style={{ height: 380, width: "100%" }}>
         <AgGridReact
           ref={gridRef}
           rowData={rowData}
@@ -149,6 +264,25 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
           getRowId={p => String(p.data._id)}
         />
       </div>
+
+      {/* Expandable table rows panel */}
+      {expandedDoc && expandedRows.length > 0 && (
+        <div className="card" style={{ marginTop: 12, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text1)" }}>
+              {expandedDoc.filename} — Line Items
+            </span>
+            <button
+              onClick={() => setExpandedId(null)}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                color: "var(--text3)", fontSize: 18, lineHeight: 1 }}
+            >
+              ×
+            </button>
+          </div>
+          <TableRowsPanel rows={expandedRows} />
+        </div>
+      )}
     </div>
   );
 }
