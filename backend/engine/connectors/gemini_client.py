@@ -33,9 +33,17 @@ def _parse_json_robust(raw: str) -> Optional[dict]:
     if not raw:
         return None
     text = raw.strip()
+
+    # Strip thinking model tags <think>...</think> or <thought>...</thought>
+    text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.IGNORECASE).strip()
+    text = re.sub(r'<thought>[\s\S]*?</thought>', '', text, flags=re.IGNORECASE).strip()
+
+    # Strip markdown fences
     m = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
     if m:
         text = m.group(1).strip()
+
+    # Find first { … last }
     s, e = text.find('{'), text.rfind('}')
     if s != -1 and e > s:
         try:
@@ -68,11 +76,10 @@ class GeminiClient:
 
     BASE_URL    = "https://generativelanguage.googleapis.com/v1beta/models"
     CANDIDATES  = [
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-001",
-        "gemini-2.0-flash-lite",
-        "gemini-2.0-flash-lite-001",
+        "gemini-2.5-flash-lite",
         "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
     ]
 
     def __init__(self, api_key: str = ""):
