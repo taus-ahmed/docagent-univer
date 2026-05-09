@@ -88,9 +88,29 @@ const CAT_COLORS: Record<string, string> = {
   "Office & Supplies": "#ca8a04", "Software & Subscriptions": "#2563eb",
   "Marketing": "#db2777", "Equipment": "#475569", "Transfer Out": "#9ca3af",
   "ATM / Cash": "#64748b", "Cheque Payment": "#78716c", "Other Expense": "#94a3b8",
+  // Subcategory variants
+  "Accommodation": "#0891b2", "Lodging": "#0891b2",
+  "Meals": "#16a34a", "Meals - Business": "#15803d",
+  "Airfare": "#3b82f6",
 };
 const CHART_COLORS = ["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#8b5cf6","#ec4899","#14b8a6"];
-function catColor(c: string) { return CAT_COLORS[c] ?? "#94a3b8"; }
+
+// Match category to color — handles subcategories like "Travel - Air"
+function catColor(c: string): string {
+  if (CAT_COLORS[c]) return CAT_COLORS[c];
+  // Fuzzy match: "Travel - Air" -> Travel color, "Meals & Entmt" -> Meals color
+  const cl = c.toLowerCase();
+  if (cl.includes("travel")) return "#0891b2";
+  if (cl.includes("meal") || cl.includes("food") || cl.includes("entertainment")) return "#16a34a";
+  if (cl.includes("accommodation") || cl.includes("hotel") || cl.includes("lodg")) return "#0891b2";
+  if (cl.includes("salary") || cl.includes("payroll")) return "#6366f1";
+  if (cl.includes("rent") || cl.includes("lease")) return "#ef4444";
+  if (cl.includes("tax")) return "#dc2626";
+  if (cl.includes("software") || cl.includes("subscription")) return "#2563eb";
+  if (cl.includes("office") || cl.includes("supply") || cl.includes("supplies")) return "#ca8a04";
+  if (cl.includes("professional") || cl.includes("consulting") || cl.includes("fee")) return "#7c3aed";
+  return "#94a3b8";
+}
 
 // ─── Inline SVG charts ─────────────────────────────────────────────────────────
 
@@ -186,10 +206,17 @@ function InsightsPanel({
     .sort((a, b) => b[1] - a[1]).slice(0, 7)
     .map(([label, value]) => ({ label, value: Math.round(value * 100) / 100, color: catColor(label) }));
 
-  // ── Numeric fields for graphs ─────────────────────────────────────────────
+  // Numeric fields for graphs — exclude dates, years, IDs, counts
+  const DATE_LIKE = /^\d{4}$|^\d{4}-\d{2}|^\d{2}\/\d{2}\/\d{4}$/;
+  const EXCLUDE_LABELS = /date|period|year|month|day|id|no\.|number|emp|phone|zip|code/i;
   const numericFields = Object.entries(allFields)
-    .filter(([, v]) => !isNaN(parseFloat(v)) && parseFloat(v) > 0)
-    .map(([k, v]) => ({ label: k, value: parseFloat(v) }))
+    .filter(([k, v]) => {
+      if (EXCLUDE_LABELS.test(k)) return false;
+      if (DATE_LIKE.test(String(v).trim())) return false;
+      const num = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
+      return !isNaN(num) && num > 0 && num < 1_000_000_000;
+    })
+    .map(([k, v]) => ({ label: k, value: parseFloat(String(v).replace(/[^0-9.-]/g, "")) }))
     .sort((a, b) => b.value - a.value).slice(0, 6);
   const fieldBar = numericFields.map((f, i) => ({ ...f, color: CHART_COLORS[i % CHART_COLORS.length] }));
   const fieldPie = numericFields.map((f, i) => ({ ...f, color: CHART_COLORS[i % CHART_COLORS.length] }));
