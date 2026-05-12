@@ -72,6 +72,23 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const [cells, setCells] = useState<Record<string, Cell>>(initCells);
   const [colWidths, setColWidths] = useState<number[]>(() => initialData?.colWidths ?? Array(COLS).fill(DCW));
   const [merges, setMerges] = useState<Record<string, { rows: number; cols: number }>>(() => initialData?.merges ?? {});
+
+  // FIX: Sync state when initialData arrives after mount.
+  // useState initializer only runs once — if initialData is null on first render
+  // (API still loading) and arrives later, cells/merges/colWidths never update.
+  // We track whether we've loaded real data with a ref to avoid overwriting
+  // user edits with stale data on subsequent renders.
+  const hasLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!initialData) return;
+    if (hasLoadedRef.current) return; // don't overwrite after user starts editing
+    hasLoadedRef.current = true;
+    setCells(initialData.cells ?? {});
+    setMerges(initialData.merges ?? {});
+    setColWidths(initialData.colWidths ?? Array(COLS).fill(DCW));
+    // Notify parent with the loaded data so sheetDataRef is populated immediately
+    onSheetsChange?.(initialData);
+  }, [initialData]); // eslint-disable-line react-hooks/exhaustive-deps
   const [selR, setSelR] = useState(0);
   const [selC, setSelC] = useState(0);
   const [rng, setRng] = useState({ r1: 0, c1: 0, r2: 0, c2: 0 });
@@ -312,10 +329,24 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const startColResize = useCallback((e: React.MouseEvent, c: number) => {
     e.preventDefault(); e.stopPropagation();
     const sx = e.clientX, sw = colWidths[c];
-    const mv = (ev: MouseEvent) => { const nw = Math.max(30, sw + ev.clientX - sx); setColWidths(p => { const n = [...p]; n[c] = nw; return n; }); };
-    const up = () => { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
-    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
-  }, [colWidths]);
+    const mv = (ev: MouseEvent) => {
+      const nw = Math.max(30, sw + ev.clientX - sx);
+      setColWidths(p => { const n = [...p]; n[c] = nw; return n; });
+    };
+    const up = (ev: MouseEvent) => {
+      document.removeEventListener("mousemove", mv);
+      document.removeEventListener("mouseup", up);
+      // Notify parent with updated colWidths so the new width is saved
+      const nw = Math.max(30, sw + ev.clientX - sx);
+      setColWidths(p => {
+        const n = [...p]; n[c] = nw;
+        notify(cells, merges, n);
+        return n;
+      });
+    };
+    document.addEventListener("mousemove", mv);
+    document.addEventListener("mouseup", up);
+  }, [colWidths, cells, merges, notify]);
 
   const inRange = (r: number, c: number) => {
     const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
