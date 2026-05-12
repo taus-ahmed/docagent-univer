@@ -127,6 +127,7 @@ class TemplateCreate(BaseModel):
 class TemplateUpdate(BaseModel):
     name: Optional[str] = None
     document_type: Optional[str] = None
+    description: Optional[str] = None
     columns: Optional[list[TemplateColumn]] = None
     is_shared: Optional[bool] = None
 
