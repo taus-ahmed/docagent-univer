@@ -102,6 +102,8 @@ def update_template(
         tpl.name = payload.name
     if payload.document_type is not None:
         tpl.document_type = payload.document_type
+    if payload.description is not None:          # FIX: was missing — grid layout never saved on update
+        tpl.description = payload.description
     if payload.columns is not None:
         columns_with_order = [
             {"name": col.name, "type": col.type, "order": i}
