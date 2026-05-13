@@ -350,7 +350,6 @@ export default function TemplateEditor({ templateId }: Props) {
           <div style={{ flex:1, minHeight:0, border:"1px solid #e5e7eb", borderRadius:10, overflow:"hidden", boxShadow:"0 1px 8px rgba(0,0,0,0.06)", background:"#fff" }}>
             {canRenderSheet ? (
               <SheetComp
-                key={templateId ?? "new"}
                 initialColumns={existing?.columns ?? []}
                 initialData={existingLayout}
                 onSheetsChange={handleSheetsChange}

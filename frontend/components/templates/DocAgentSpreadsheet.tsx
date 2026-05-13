@@ -76,17 +76,20 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   // FIX: Sync state when initialData arrives after mount.
   // useState initializer only runs once — if initialData is null on first render
   // (API still loading) and arrives later, cells/merges/colWidths never update.
-  // We track whether we've loaded real data with a ref to avoid overwriting
-  // user edits with stale data on subsequent renders.
-  const hasLoadedRef = useRef(false);
+  // We use a ref to track the last initialData we loaded so we only sync once
+  // per unique initialData object (identified by savedAt timestamp).
+  const loadedTimestampRef = useRef<string | null>(null);
   useEffect(() => {
     if (!initialData) return;
-    if (hasLoadedRef.current) return; // don't overwrite after user starts editing
-    hasLoadedRef.current = true;
+    // Use savedAt as a unique identifier for this version of the template
+    const savedAt = (initialData as any).savedAt ?? JSON.stringify(Object.keys(initialData.cells ?? {}).slice(0, 3));
+    if (loadedTimestampRef.current === savedAt) return; // already loaded this version
+    loadedTimestampRef.current = savedAt;
     setCells(initialData.cells ?? {});
     setMerges(initialData.merges ?? {});
     setColWidths(initialData.colWidths ?? Array(COLS).fill(DCW));
-    // Notify parent with the loaded data so sheetDataRef is populated immediately
+    // Notify parent so sheetDataRef is populated — but only with the loaded data
+    // NOT called again after user edits (notify is called by upd/markExtract etc.)
     onSheetsChange?.(initialData);
   }, [initialData]); // eslint-disable-line react-hooks/exhaustive-deps
   const [selR, setSelR] = useState(0);
