@@ -781,7 +781,20 @@ from US, UK, Canada, Australia, India, UAE, Singapore and globally.
 
 ━━━ DOCUMENT IDENTITY ━━━
 A payslip (pay stub / salary slip / earnings statement) shows an employee's
-pay calculation for a specific pay period.
+pay calculation for a specific pay period. It may span TWO pages — all data
+from BOTH pages must be extracted.
+
+━━━ PAGE-BREAK HANDLING (CRITICAL) ━━━
+Payslips often break across pages mid-table. The deductions table may start
+on page 1 and continue on page 2. You MUST read ALL pages and combine:
+- ALL earning rows from every page
+- ALL deduction rows from every page
+A row that appears on page 2 is just as real as one on page 1.
+
+━━━ NUMERIC INTEGRITY ━━━
+When a number appears split across pages (e.g. "7,513.0" on page 1 and "3"
+at the top of page 2), combine them into the correct value: 7513.03.
+Never write a lone digit like "3" as a separate field value.
 
 ━━━ HEADER FIELDS ━━━
 
@@ -829,7 +842,7 @@ GROSS PAY
 TOTAL DEDUCTIONS
   Labels: Total Deductions, Deductions Total, Total Deducted,
     Less Deductions, Total Withholding
-  RULE: Numeric.
+  RULE: Numeric. Must be extracted even if it appears at the bottom of deductions.
 
 NET PAY
   Labels: Net Pay, Take Home Pay, Net Salary, Net Wages, Net Amount,
@@ -841,20 +854,27 @@ Each earning type = ONE row: Type | Amount | YTD
 Common types: Basic Salary, Overtime, Bonus, Commission, Holiday Pay,
   Allowance, Housing Allowance (HRA), Transport Allowance, Shift Premium,
   Incentive, Arrears, Back Pay, Advance
+RULE: Extract EVERY earning line. Section labelled "Earnings" or "Earning Table".
+Do NOT confuse earnings rows with deduction rows.
 
 ━━━ DEDUCTIONS TABLE ━━━
 Each deduction = ONE row: Type | Amount | YTD
-Common types: Income Tax / PAYE / Withholding Tax, National Insurance (UK),
-  Social Security (US), Medicare (US), Pension / EPF / 401k,
-  Health Insurance, Dental, Life Insurance, Union Dues, Student Loan,
-  Professional Tax, PF (India), ESI (India), Loan Repayment
+Common types: Income Tax / PAYE / Withholding Tax, Federal Income Tax,
+  NY State Income Tax, NY City Tax, National Insurance (UK),
+  Social Security (US 6.2%), Medicare (US 1.45%), Pension / EPF / 401k,
+  Health Insurance, Dental, Vision, Life Insurance, Union Dues, Student Loan
+RULE: Extract EVERY deduction line from BOTH pages.
+Section labelled "Deductions" or "Deduction Table".
+Do NOT stop at the end of page 1 — continue to page 2.
+Do NOT confuse deduction rows with earning rows.
 
 ━━━ RULES ━━━
 1. Net Pay = Gross Pay - Total Deductions — most critical field
 2. Gross Pay = sum of all earnings (never includes employer contributions)
 3. YTD = cumulative from start of TAX YEAR (not calendar year)
-4. Extract ALL earning lines and ALL deduction lines
+4. Extract ALL earning lines and ALL deduction lines from ALL pages
 5. Missing fields: use ""
+6. Amounts: numeric only, no $ signs, no commas
 """,
         "table_rules": """
 EARNINGS & DEDUCTIONS TABLE RULES:

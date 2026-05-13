@@ -386,15 +386,26 @@ def _analyse_template_regions(layout: dict) -> dict:
             "is_header_only": is_header_only,
         })
 
-    # If multiple table regions detected, keep only the best one:
-    # prefer the one with the most columns AND whose row below is empty
+    # Keep ALL valid table regions — sorted by position (top to bottom)
+    # Each table gets its own label from the nearest section header above it
     if len(table_regions) > 1:
-        table_regions.sort(key=lambda t: (
-            t["is_header_only"],          # empty row below = more likely table header
-            len(t["column_names"]),        # more columns = more likely table header
-            t["header_row"],               # later row = below the form fields
-        ), reverse=True)
-        table_regions = table_regions[:1]  # keep only the best candidate
+        # Sort by row position — tables appear in document order
+        table_regions.sort(key=lambda t: t["header_row"])
+        # Find the section label above each table (nearest non-form, non-empty row above)
+        for tbl in table_regions:
+            section_label = ""
+            for row_above in range(tbl["header_row"] - 1, max(0, tbl["header_row"] - 8), -1):
+                for c in range(max_col + 1):
+                    cell = grid.get((row_above, c))
+                    if cell and cell["value"] and not cell["extractTarget"]:
+                        section_label = cell["value"]
+                        break
+                if section_label:
+                    break
+            tbl["section_label"] = section_label or f"Table {table_regions.index(tbl) + 1}"
+
+    print(f"[REGION] {len(table_regions)} table(s) detected: "
+          f"{[t['section_label'] for t in table_regions]}", flush=True)
 
     # Build summary for AI
     has_explicit_targets = len(explicit_targets) > 0
@@ -561,204 +572,271 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
 
 
 def _build_fields_description(regions: dict, layout: dict) -> str:
-    """Build a human-readable description of what needs to be extracted."""
+    """
+    Build a complete, unambiguous description of the template structure for the AI.
+    Handles: multiple tables, two-column layouts, mixed mode, any position.
+    """
     lines = []
     primary_mode = regions.get("primary_mode", "form_kv")
+    table_regions = regions.get("table_regions", [])
+    explicit_targets = regions.get("explicit_targets", [])
+    kv_pairs = regions.get("kv_pairs", [])
+    two_col_pairs = regions.get("two_col_pairs", [])
 
-    # Explicit extract-here targets
-    if regions.get("explicit_targets"):
-        lines.append("FIELDS TO EXTRACT (user marked these with 'Extract here'):")
-        for t in regions["explicit_targets"]:
-            lines.append(f"  - [{t['ref']}] {t['label']}")
+    # ── FORM FIELDS ────────────────────────────────────────────────────────────
+    if explicit_targets:
+        lines.append("=== FORM FIELDS (marked Extract here) ===")
+        lines.append("Fill each cell reference with the matching value from the document.")
+        lines.append("Use the cell reference as the key in extracted_fields.")
+        for t in explicit_targets:
+            lines.append(f"  [{t['ref']}] {t['label']}")
         lines.append("")
 
-    # Key-value pairs (auto-detected)
-    elif regions.get("kv_pairs"):
-        lines.append("KEY-VALUE PAIRS TO FILL:")
-        lines.append("(Label is in left column, you fill the right column)")
-        for kv in regions["kv_pairs"]:
-            lines.append(f"  - Label: \"{kv['label']}\" at {kv['label_ref']}")
-            lines.append(f"    -> Fill: {kv['value_ref']}")
+    elif kv_pairs and not table_regions:
+        lines.append("=== FORM FIELDS (label-value pairs) ===")
+        lines.append("Labels are in the left column. Fill the right column.")
+        for kv in kv_pairs[:30]:  # limit to avoid token waste
+            lines.append(f"  Label: \"{kv['label']}\" -> Fill cell: {kv['value_ref']}")
         lines.append("")
 
-    # Two-column form layout
-    if regions.get("two_col_pairs"):
-        lines.append("TWO-COLUMN FORM LAYOUT:")
-        lines.append("(There are labels and values on BOTH left and right sides)")
-        for tc in regions["two_col_pairs"]:
-            lines.append(f"  LEFT  - Label: \"{tc['left_label']}\" ({tc['left_label_ref']}) -> Fill: {tc['left_value_ref']}")
-            lines.append(f"  RIGHT - Label: \"{tc['right_label']}\" ({tc['right_label_ref']}) -> Fill: {tc['right_value_ref']}")
+    if two_col_pairs:
+        lines.append("=== TWO-COLUMN FORM LAYOUT ===")
+        lines.append("This template has label-value pairs on BOTH the left AND right sides of each row.")
+        lines.append("Extract BOTH sides. Do NOT treat this as a table.")
+        for tc in two_col_pairs[:20]:
+            lines.append(f"  LEFT:  [{tc['left_value_ref']}] = \"{tc['left_label']}\"")
+            lines.append(f"  RIGHT: [{tc['right_value_ref']}] = \"{tc['right_label']}\"")
         lines.append("")
 
-    # Table regions
-    if regions.get("table_regions"):
-        lines.append("TABLE(S) TO EXTRACT:")
-        for i, tr in enumerate(regions["table_regions"], 1):
-            lines.append(f"  Table {i}: starts at row {tr['header_row']+1}, "
-                        f"columns {tr['start_ref']} to {tr['end_ref']}")
-            lines.append(f"  Column headers: {', '.join(tr['column_names'])}")
-            lines.append(f"  -> Extract ALL data rows below the header row")
-        lines.append("")
+    # ── TABLES ─────────────────────────────────────────────────────────────────
+    if table_regions:
+        n = len(table_regions)
+        if n == 1:
+            lines.append("=== TABLE ===")
+        else:
+            lines.append(f"=== {n} SEPARATE TABLES ===")
+            lines.append(f"This template has {n} distinct tables. Extract each one SEPARATELY.")
+            lines.append("Each table has its own section label and its own set of rows.")
+            lines.append("")
+
+        for i, tr in enumerate(table_regions):
+            section = tr.get("section_label", f"Table {i+1}")
+            lines.append(f"TABLE {i+1}: \"{section}\"")
+            lines.append(f"  Header row: {tr['header_row']+1}")
+            lines.append(f"  Columns: {', '.join(tr['column_names'])}")
+            lines.append(f"  Extract: ALL data rows belonging to the \"{section}\" section")
+            if i + 1 < n:
+                next_section = table_regions[i+1].get("section_label", f"Table {i+2}")
+                lines.append(f"  STOP: before \"{next_section}\" section begins")
+            lines.append(f"  Output key: table_{i+1}_rows (e.g. earnings_rows, deductions_rows)")
+            lines.append("")
 
     if not lines:
-        lines.append("Extract all visible fields from this document.")
+        lines.append("=== AUTO-EXTRACT MODE ===")
+        lines.append("The template has labelled fields. Match each label to its value in the document.")
+        lines.append("Use cell references as keys.")
 
     return "\n".join(lines)
 
 
 def _build_extraction_instructions(regions: dict, primary_mode: str,
                                     table_rules: str) -> str:
-    """Build mode-specific extraction instructions."""
+    """Build extraction instructions covering all known failure scenarios."""
     instructions = []
+    table_regions = regions.get("table_regions", [])
+    n_tables = len(table_regions)
 
+    # ── UNIVERSAL RULES (always included) ─────────────────────────────────────
+    instructions.append("""=== UNIVERSAL EXTRACTION RULES ===
+1. MATCH BY MEANING: Template labels and document labels will differ.
+   Match by concept, not exact text.
+   "Rcpt No" = "Receipt Number", "Amt Rcvd" = "Amount Received",
+   "Inv Ref" = "Invoice Reference", "Pmt Mthd" = "Payment Method".
+   An abbreviation in the template refers to the full label in the document.
+
+2. SECTION HEADERS ARE NOT DATA: Cells like "Bank Information", "Payment Details",
+   "Earning Table", "Deduction Table" are visual section organizers.
+   NEVER extract a section header text as a field value.
+
+3. MULTI-PAGE DOCUMENTS: The document may span 2 or more pages.
+   Extract data from ALL pages. Tables may continue across page breaks.
+   A row on page 2 is just as valid as a row on page 1.
+   Do NOT stop extracting at the end of page 1.
+
+4. NUMBERS: Strip all currency symbols ($, £, €, ₹) and commas.
+   Negative values: "(2.85)" means -2.85. "8.41K" means 8410.
+   Page-break splits: if "7,513.0" appears on page 1 and "3" on page 2,
+   the correct value is 7513.03 — combine them.
+
+5. DATES: Always YYYY-MM-DD. "Feb 10, 2024" -> "2024-02-10".
+
+6. EMPTY CELLS: If a field has no corresponding value, use "".
+   Never invent values. Never copy a label as a value.
+
+7. CELL REFERENCES: Use the exact cell reference from the template (B3, D10, etc.)
+   as the key in extracted_fields. The label is for your understanding only.
+
+8. FORMULA CELLS: If the template shows =SUM(...), calculate and return the number.""")
+
+    # ── MODE-SPECIFIC INSTRUCTIONS ─────────────────────────────────────────────
     if primary_mode in ("form_with_targets", "form_kv"):
-        instructions.append(
-            "This is a FORM template. Fill each labelled field with its corresponding\n"
-            "value from the document. The template has specific cells marked for extraction.\n"
-            "Each field should contain exactly ONE value.\n"
-            "If the template has blank rows between sections, those are spacers - ignore them."
-        )
+        instructions.append("""=== FORM EXTRACTION ===
+Fill each marked field with exactly ONE value from the document.
+Blank rows between sections are visual spacers — skip them.
+Merged header cells are section titles — do not extract their text as values.
+If a field appears in both a section header and as a real value,
+extract the real value (the data, not the heading).""")
 
     elif primary_mode == "table":
-        instructions.append(
-            "This is a TABLE template. The template shows column headers.\n"
-            "Extract EVERY data row from the document's table.\n"
-            "IMPORTANT: The table in the document may start at a different position\n"
-            "than you expect. Look for rows that match the column headers anywhere on the page.\n"
-            "Return one JSON object per data row.\n"
-            "Do NOT include the header row itself in table_rows.\n"
-            "Do NOT include subtotal, total, tax, or summary rows."
-        )
+        instructions.append("""=== TABLE EXTRACTION ===
+Extract EVERY data row from the document table.
+The table may start anywhere on the page — find the column headers.
+Skip: the header row itself, subtotal rows, total rows, blank rows.
+Include ALL data rows including those on page 2.""")
         if table_rules:
-            instructions.append(f"\nDOCUMENT-SPECIFIC TABLE RULES:\n{table_rules}")
+            instructions.append(f"Document-specific rules:\n{table_rules}")
 
     elif primary_mode == "mixed":
-        instructions.append(
-            "This template has BOTH form fields AND a table.\n"
-            "Part 1 - Fill the form fields: each has a label and an empty cell to fill.\n"
-            "Part 2 - Extract the table: find the column headers and extract all data rows.\n"
-            "Return both the form fields (in extracted_fields) AND the table rows (in table_rows)."
-        )
+        if n_tables == 1:
+            instructions.append("""=== MIXED MODE: FORM FIELDS + TABLE ===
+PART 1 - FORM FIELDS: Fill each labelled extraction cell with its value.
+PART 2 - TABLE: Extract every data row from the table section.
+Both parts are equally important. Do not skip either.""")
+        else:
+            # Multiple tables — this is the payslip/complex case
+            table_names = [tr.get("section_label", f"Table {i+1}")
+                          for i, tr in enumerate(table_regions)]
+            instructions.append(f"""=== MIXED MODE: FORM FIELDS + {n_tables} SEPARATE TABLES ===
+PART 1 - FORM FIELDS: Fill each labelled extraction cell with its value.
+PARTS 2-{n_tables+1} - SEPARATE TABLES: This template has {n_tables} distinct tables:
+  {', '.join(f'"{n}"' for n in table_names)}
+
+CRITICAL MULTI-TABLE RULES:
+- Each table is a SEPARATE section with its own rows.
+- Do NOT mix rows from "{table_names[0]}" into "{table_names[-1]}" or vice versa.
+- Use the section label above each table to identify which rows belong to it.
+- Extract rows for EACH table independently.
+- Return them as separate arrays in the JSON output.""")
         if table_rules:
-            instructions.append(f"\nTABLE RULES:\n{table_rules}")
+            instructions.append(f"Document-specific rules:\n{table_rules}")
 
-    # Two-column handling
+    # ── TWO-COLUMN REMINDER ────────────────────────────────────────────────────
     if regions.get("two_col_pairs"):
-        instructions.append(
-            "\nTWO-COLUMN LAYOUT HANDLING:\n"
-            "The template has labels and values on BOTH the left and right halves.\n"
-            "This is NOT a table - each row has up to 2 label-value pairs.\n"
-            "Extract BOTH the left-side value AND the right-side value for each row.\n"
-            "Do not confuse left-side labels with right-side labels."
-        )
-
-    # Auto-fill fallback
-    if not regions.get("explicit_targets") and not regions.get("kv_pairs"):
-        instructions.append(
-            "\nAUTO-FILL MODE:\n"
-            "The user did not mark specific cells but the template has labelled fields.\n"
-            "For each label in the template, find the corresponding value in the document.\n"
-            "Match labels by meaning - the document may use different wording for the same field."
-        )
+        instructions.append("""=== TWO-COLUMN LAYOUT REMINDER ===
+Extract BOTH left-side and right-side values on each row.
+This is a form, not a table. Each row has 2 label-value pairs.
+Left label and right label are independent fields.""")
 
     return "\n\n".join(instructions)
 
 
 def _build_output_format(regions: dict, primary_mode: str) -> str:
-    """Build simple, clean JSON output format - no unicode, Gemini Flash compatible."""
-
-    has_table = primary_mode in ("table", "mixed")
+    """
+    Build the JSON output format specification.
+    Handles: single table, multiple tables, form only, mixed mode.
+    """
+    table_regions = regions.get("table_regions", [])
+    n_tables = len(table_regions)
     has_form = primary_mode != "table"
 
-    if primary_mode == "table":
-        col_names = []
-        for tr in regions.get("table_regions", []):
-            col_names.extend(tr.get("column_names", []))
-        col_names = list(dict.fromkeys(col_names))
-        example_row = {col: "value" for col in col_names} if col_names else {"Column1": "value"}
+    # Build example extracted_fields
+    field_example = '"B3": {"value": "extracted value", "confidence": "high"}'
 
-        return f"""Return ONLY valid JSON, no markdown fences, no explanation:
+    # Build table examples
+    def table_example(tr):
+        cols = tr.get("column_names", ["Col1", "Col2"])[:4]
+        return "{" + ", ".join(f'"{c}": "value"' for c in cols) + "}"
+
+    if primary_mode == "table" and n_tables == 1:
+        ex = table_example(table_regions[0])
+        return f"""Return ONLY valid JSON:
 {{
-  "document_type": "detected document type",
+  "document_type": "detected type",
   "overall_confidence": "high",
   "document_count": 1,
-  "documents": [
-    {{
-      "doc_index": 0,
-      "doc_hint": "brief description",
-      "table_rows": [
-        {json.dumps(example_row)}
-      ],
-      "row_count": 1,
-      "notes": ""
-    }}
-  ]
+  "documents": [{{
+    "doc_index": 0,
+    "doc_hint": "brief description",
+    "table_rows": [{ex}, {ex}],
+    "row_count": 2,
+    "notes": ""
+  }}]
 }}
+RULES: table_rows = one object per data row. Skip headers, totals, blank rows. Numbers: no $ or commas."""
 
-RULES:
-- table_rows: one object per data row, using the exact column names shown
-- Skip: header row, subtotal rows, total rows, blank rows
-- Numbers: no currency symbols, no commas"""
-
-    elif primary_mode == "mixed":
-        col_names = []
-        for tr in regions.get("table_regions", []):
-            col_names.extend(tr.get("column_names", []))
-        example_row = {col: "value" for col in col_names[:3]} if col_names else {"Col1": "value"}
-
-        return f"""Return ONLY valid JSON, no markdown fences, no explanation:
+    elif primary_mode == "mixed" and n_tables == 1:
+        ex = table_example(table_regions[0])
+        return f"""Return ONLY valid JSON:
 {{
-  "document_type": "detected document type",
+  "document_type": "detected type",
   "overall_confidence": "high",
   "document_count": 1,
-  "documents": [
-    {{
-      "doc_index": 0,
-      "doc_hint": "brief description",
-      "extracted_fields": {{
-        "B3": {{"value": "extracted value", "confidence": "high"}},
-        "B4": {{"value": "extracted value", "confidence": "high"}}
-      }},
-      "table_rows": [
-        {json.dumps(example_row)}
-      ],
-      "row_count": 1,
-      "notes": ""
-    }}
-  ]
+  "documents": [{{
+    "doc_index": 0,
+    "doc_hint": "brief description",
+    "extracted_fields": {{{field_example}}},
+    "table_rows": [{ex}],
+    "row_count": 1,
+    "notes": ""
+  }}]
 }}
-
 RULES:
-- extracted_fields keys are cell references like B3, D10, F5
-- table_rows: one object per data row
-- Numbers: no currency symbols"""
+- extracted_fields: cell refs as keys (B3, D10), one value per field
+- table_rows: one object per data row, using exact column names
+- Numbers: no $ or commas. Dates: YYYY-MM-DD."""
+
+    elif primary_mode == "mixed" and n_tables > 1:
+        # Multiple tables — each gets its own array
+        table_arrays = []
+        for i, tr in enumerate(table_regions):
+            section = tr.get("section_label", f"table_{i+1}")
+            # Make a safe JSON key from the section label
+            key = re.sub(r'[^a-z0-9_]', '_',
+                        section.lower().strip().replace(" ", "_"))[:30] + "_rows"
+            ex = table_example(tr)
+            table_arrays.append(f'    "{key}": [{ex}]')
+        tables_json = ",\n".join(table_arrays)
+
+        return f"""Return ONLY valid JSON:
+{{
+  "document_type": "detected type",
+  "overall_confidence": "high",
+  "document_count": 1,
+  "documents": [{{
+    "doc_index": 0,
+    "doc_hint": "brief description",
+    "extracted_fields": {{{field_example}}},
+{tables_json},
+    "notes": ""
+  }}]
+}}
+RULES:
+- extracted_fields: cell refs as keys (B3, D10)
+- Each table has its OWN array key based on its section label
+- Do NOT mix rows between tables
+- Numbers: no $ or commas. Dates: YYYY-MM-DD."""
 
     else:
-        # Form mode - simplest format
-        return """Return ONLY valid JSON, no markdown fences, no explanation:
-{
-  "document_type": "detected document type",
+        # Form only
+        return f"""Return ONLY valid JSON:
+{{
+  "document_type": "detected type",
   "overall_confidence": "high",
   "document_count": 1,
-  "documents": [
-    {
-      "doc_index": 0,
-      "doc_hint": "brief description of this document",
-      "extracted_fields": {
-        "B3": {"value": "47-3821654", "confidence": "high"},
-        "B4": {"value": "Nexus Global Trading LLC", "confidence": "high"},
-        "B5": {"value": "25", "confidence": "high"}
-      },
-      "notes": ""
-    }
-  ]
-}
-
+  "documents": [{{
+    "doc_index": 0,
+    "doc_hint": "brief description",
+    "extracted_fields": {{
+      {field_example},
+      "D3": {{"value": "another value", "confidence": "high"}}
+    }},
+    "notes": ""
+  }}]
+}}
 RULES:
-- extracted_fields keys MUST be cell references (B3, D10, etc.) matching the template
-- Include every field from the template, even if the value is ""
-- Numbers: no currency symbols or commas
-- Dates: YYYY-MM-DD format"""
+- extracted_fields keys MUST be cell references (B3, D10, etc.)
+- Include every marked field, even if value is ""
+- Numbers: no $ or commas. Dates: YYYY-MM-DD."""
 
 
 # ==============================================================================
@@ -1141,8 +1219,149 @@ If there is only ONE document: document_count = 1."""
 
 
 # ==============================================================================
+# VALUE NORMALIZATION
+# ==============================================================================
+
+def _normalize_value(v) -> str:
+    """
+    Normalize a single extracted value:
+    - Numbers: strip $£€₹ and commas, convert (x) to -x, expand K/M
+    - Dates: normalize to YYYY-MM-DD
+    - Empty/null: return ""
+    """
+    if v is None:
+        return ""
+    s = str(v).strip()
+    if not s or s.lower() in ("null", "n/a", "none", "not found", "–", "-"):
+        return ""
+
+    # Negative accounting format: (2.85) -> -2.85
+    m = re.match(r'^\(([0-9,]+\.?[0-9]*)\)$', s)
+    if m:
+        return "-" + m.group(1).replace(",", "")
+
+    # Month name date formats
+    months = {"jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,
+              "jul":7,"aug":8,"sep":9,"oct":10,"nov":11,"dec":12}
+    m_name = re.match(
+        r'^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})$|^([A-Za-z]{3,9})[. ]+(\d{1,2}),?\s+(\d{4})$', s)
+    if m_name:
+        try:
+            if m_name.group(1):
+                d, mo, y = int(m_name.group(1)), months.get(m_name.group(2).lower()[:3]), int(m_name.group(3))
+            else:
+                mo = months.get(m_name.group(4).lower()[:3])
+                d, y = int(m_name.group(5)), int(m_name.group(6))
+            if mo:
+                return f"{y}-{mo:02d}-{d:02d}"
+        except Exception:
+            pass
+
+    # Numeric date formats
+    date_patterns = [
+        (r'^(\d{1,2})/(\d{1,2})/(\d{4})$',  lambda m: f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"),
+        (r'^(\d{1,2})-(\d{1,2})-(\d{4})$',  lambda m: f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"),
+    ]
+    for pattern, formatter in date_patterns:
+        m = re.match(pattern, s)
+        if m:
+            try:
+                return formatter(m)
+            except Exception:
+                pass
+
+    # Currency/number cleanup: strip symbols and commas
+    num_candidate = re.sub(r'[$£€₹,\s]', '', s)
+    km = re.match(r'^(-?[0-9.]+)[Kk]$', num_candidate)
+    if km:
+        try:
+            return str(float(km.group(1)) * 1000)
+        except Exception:
+            pass
+    mm = re.match(r'^(-?[0-9.]+)[Mm][Mm]?$', num_candidate)
+    if mm:
+        try:
+            return str(float(mm.group(1)) * 1_000_000)
+        except Exception:
+            pass
+
+    return s
+
+
+def _normalize_field_values(fields: dict) -> dict:
+    """Normalize all values in an extracted_fields dict."""
+    if not fields:
+        return fields
+    result = {}
+    for k, v in fields.items():
+        if isinstance(v, dict):
+            val = v.get("value", "")
+            result[k] = {**v, "value": _normalize_value(val)}
+        else:
+            result[k] = _normalize_value(v)
+    return result
+
+
+def _normalize_row_values(row: dict) -> dict:
+    """Normalize all values in a table row."""
+    if not row:
+        return row
+    return {k: _normalize_value(v) for k, v in row.items()}
+
+
+# ==============================================================================
 # RESULT PROCESSORS
 # ==============================================================================
+
+def _fix_split_decimals(fields: dict) -> dict:
+    """
+    Fix numeric values split across page breaks.
+    e.g. {"Net Pay": "7513.0", "unknown_1": "3"} -> {"Net Pay": "7513.03"}
+    Pattern: a value ending in ".<digit>" or ".<digit>0" followed by a lone
+    1-2 digit orphan value that completes the decimal.
+    """
+    if not fields:
+        return fields
+    result = {}
+    items = list(fields.items())
+    skip_next = False
+    for i, (key, val) in enumerate(items):
+        if skip_next:
+            skip_next = False
+            continue
+        val_str = str(val).strip() if val is not None else ""
+        # Check if this value looks like a truncated decimal: ends with "."
+        # or has fewer decimal digits than expected (e.g. "7513.0" when full is "7513.03")
+        if i + 1 < len(items):
+            next_key, next_val = items[i + 1]
+            next_str = str(next_val).strip() if next_val is not None else ""
+            # If next value is a lone 1-2 digit number and current ends with decimal
+            if (re.match(r'^\d{1,2}$', next_str) and
+                re.match(r'^\d[\d,]*\.\d{0,2}$', val_str.replace(',', ''))):
+                # Combine: "7513.0" + "3" = "7513.03"
+                clean = val_str.replace(',', '')
+                if clean.endswith('.'):
+                    merged = clean + next_str
+                elif len(clean.split('.')[-1]) < 2:
+                    merged = clean + next_str
+                else:
+                    merged = val_str
+                    result[key] = val
+                    continue
+                try:
+                    result[key] = float(merged)
+                    skip_next = True
+                    continue
+                except ValueError:
+                    pass
+        result[key] = val
+    return result
+
+
+def _fix_split_decimals_row(row: dict) -> dict:
+    """Apply decimal split fix to a single table row."""
+    return _fix_split_decimals(row) if row else row
+
 
 def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                             doc_type: str, elapsed: float, extraction,
@@ -1160,10 +1379,32 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     primary_mode = regions.get("primary_mode", "form_kv")
 
     extracted_fields_raw = raw_doc.get("extracted_fields", {})
-    table_rows_raw = raw_doc.get("table_rows", [])
     confidence_raw = raw_doc.get("confidence", "medium")
     if isinstance(confidence_raw, dict):
         confidence_raw = "medium"
+
+    # -- Collect table rows from ALL tables in response ------------------------
+    # For single-table responses: raw_doc["table_rows"]
+    # For multi-table responses: raw_doc["earning_table_rows"], raw_doc["deduction_table_rows"] etc.
+    # We collect all into a single list, adding a "table_source" key to each row
+    table_rows_raw = []
+    if raw_doc.get("table_rows"):
+        table_rows_raw.extend(raw_doc["table_rows"])
+    # Collect any additional table arrays (multi-table templates)
+    for key, val in raw_doc.items():
+        if key.endswith("_rows") and key != "table_rows" and isinstance(val, list):
+            for row in val:
+                if isinstance(row, dict):
+                    row["_table_source"] = key.replace("_rows", "")
+                    table_rows_raw.append(row)
+
+    # -- Fix page-break decimal splits -----------------------------------------
+    extracted_fields_raw = _fix_split_decimals(extracted_fields_raw)
+    table_rows_raw = [_fix_split_decimals_row(r) for r in table_rows_raw]
+
+    # -- Normalize numeric and date values -------------------------------------
+    extracted_fields_raw = _normalize_field_values(extracted_fields_raw)
+    table_rows_raw = [_normalize_row_values(r) for r in table_rows_raw]
 
     # -- pdfplumber validation -------------------------------------------------
     validation = _validate_with_pdfplumber(extracted_fields_raw, doc_text, table_rows_raw)
