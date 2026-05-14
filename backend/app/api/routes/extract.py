@@ -708,15 +708,18 @@ Both parts are equally important. Do not skip either.""")
                           for i, tr in enumerate(table_regions)]
             instructions.append(f"""=== MIXED MODE: FORM FIELDS + {n_tables} SEPARATE TABLES ===
 PART 1 - FORM FIELDS: Fill each labelled extraction cell with its value.
-PARTS 2-{n_tables+1} - SEPARATE TABLES: This template has {n_tables} distinct tables:
+PART 2 - ALL TABLES COMBINED: This template has {n_tables} distinct tables:
   {', '.join(f'"{n}"' for n in table_names)}
 
 CRITICAL MULTI-TABLE RULES:
-- Each table is a SEPARATE section with its own rows.
-- Do NOT mix rows from "{table_names[0]}" into "{table_names[-1]}" or vice versa.
-- Use the section label above each table to identify which rows belong to it.
-- Extract rows for EACH table independently.
-- Return them as separate arrays in the JSON output.""")
+- Put ALL rows from ALL tables into ONE single "table_rows" array
+- Add a "Table" field to EVERY row showing which section it belongs to
+- "Table" value must be EXACTLY one of: {', '.join(f'"{n}"' for n in table_names)}
+- Extract EVERY row from EVERY table - zero rows from any table is WRONG
+- "{table_names[0]}" rows = earnings/income items
+- "{table_names[-1]}" rows = deductions/withholdings
+- Tables may span multiple pages - extract from ALL pages
+- Do NOT return separate arrays per table - use ONE table_rows array""")
         if table_rules:
             instructions.append(f"Document-specific rules:\n{table_rules}")
 
@@ -786,16 +789,23 @@ RULES:
 - Numbers: no $ or commas. Dates: YYYY-MM-DD."""
 
     elif primary_mode == "mixed" and n_tables > 1:
-        # Multiple tables — each gets its own array
-        table_arrays = []
-        for i, tr in enumerate(table_regions):
-            section = tr.get("section_label", f"table_{i+1}")
-            # Make a safe JSON key from the section label
-            key = re.sub(r'[^a-z0-9_]', '_',
-                        section.lower().strip().replace(" ", "_"))[:30] + "_rows"
-            ex = table_example(tr)
-            table_arrays.append(f'    "{key}": [{ex}]')
-        tables_json = ",\n".join(table_arrays)
+        # Multiple tables — use ONE table_rows array with a "Table" column
+        # indicating which section each row belongs to.
+        # This is simpler for the AI and we split them in post-processing.
+        all_cols = []
+        for tr in table_regions:
+            for col in tr.get("column_names", []):
+                if col not in all_cols:
+                    all_cols.append(col)
+        # Add Table column to identify source
+        if "Table" not in all_cols:
+            all_cols = ["Table"] + all_cols
+
+        section_names = [tr.get("section_label", f"Table {i+1}")
+                        for i, tr in enumerate(table_regions)]
+        ex_cols = {c: "value" for c in all_cols[:5]}
+        ex1 = dict(ex_cols); ex1["Table"] = section_names[0]
+        ex2 = dict(ex_cols); ex2["Table"] = section_names[-1]
 
         return f"""Return ONLY valid JSON:
 {{
@@ -806,15 +816,21 @@ RULES:
     "doc_index": 0,
     "doc_hint": "brief description",
     "extracted_fields": {{{field_example}}},
-{tables_json},
+    "table_rows": [
+      {json.dumps(ex1)},
+      {json.dumps(ex2)}
+    ],
     "notes": ""
   }}]
 }}
-RULES:
-- extracted_fields: cell refs as keys (B3, D10)
-- Each table has its OWN array key based on its section label
-- Do NOT mix rows between tables
-- Numbers: no $ or commas. Dates: YYYY-MM-DD."""
+CRITICAL RULES FOR MULTIPLE TABLES:
+This template has {len(table_regions)} separate tables: {', '.join(f'"{s}"' for s in section_names)}
+- Put ALL rows from ALL tables into the SINGLE "table_rows" array
+- Add a "Table" field to EVERY row indicating which section it came from
+- "Table" value must be EXACTLY one of: {', '.join(f'"{s}"' for s in section_names)}
+- Extract EVERY row from EVERY table - do NOT skip any table
+- Numbers: no $ or commas. Dates: YYYY-MM-DD
+- Do NOT return separate arrays - only ONE table_rows array"""
 
     else:
         # Form only
