@@ -386,26 +386,62 @@ def _analyse_template_regions(layout: dict) -> dict:
             "is_header_only": is_header_only,
         })
 
-    # Keep ALL valid table regions — sorted by position (top to bottom)
-    # Each table gets its own label from the nearest section header above it
-    if len(table_regions) > 1:
-        # Sort by row position — tables appear in document order
-        table_regions.sort(key=lambda t: t["header_row"])
-        # Find the section label above each table (nearest non-form, non-empty row above)
+    # Keep ALL valid table regions — sorted by row then by column position
+    # Each table gets a label from the nearest section header above it
+    # OR from its column position if it shares a row with another table
+    if table_regions:
+        # Sort by row first, then by start column
+        table_regions.sort(key=lambda t: (t["header_row"], t["start_col"]))
+
+        # Group tables that share the same header_row
+        from itertools import groupby
+        same_row_groups = {}
         for tbl in table_regions:
-            section_label = ""
-            for row_above in range(tbl["header_row"] - 1, max(0, tbl["header_row"] - 8), -1):
-                for c in range(max_col + 1):
-                    cell = grid.get((row_above, c))
-                    if cell and cell["value"] and not cell["extractTarget"]:
-                        section_label = cell["value"]
+            same_row_groups.setdefault(tbl["header_row"], []).append(tbl)
+
+        for row, tbls_on_row in same_row_groups.items():
+            for idx, tbl in enumerate(tbls_on_row):
+                # Try to find a section label ABOVE this table
+                section_label = ""
+                for row_above in range(row - 1, max(0, row - 8), -1):
+                    # Only look in the column range of THIS table
+                    for c in range(tbl["start_col"], tbl["end_col"] + 1):
+                        cell = grid.get((row_above, c))
+                        if cell and cell["value"] and not cell["extractTarget"]:
+                            section_label = cell["value"]
+                            break
+                    if section_label:
                         break
-                if section_label:
-                    break
-            tbl["section_label"] = section_label or f"Table {table_regions.index(tbl) + 1}"
+
+                if not section_label:
+                    if len(tbls_on_row) > 1:
+                        # Multiple tables on same row — use column range as label
+                        start_letter = chr(ord('A') + tbl["start_col"])
+                        end_letter   = chr(ord('A') + tbl["end_col"])
+                        section_label = (
+                            f"Table {_cell_ref(row, tbl['start_col'])[:1]}"
+                            f"-{_cell_ref(row, tbl['end_col'])[:1]}"
+                            f" ({', '.join(tbl['column_names'][:2])})"
+                        )
+                    else:
+                        section_label = f"Table {table_regions.index(tbl) + 1}"
+
+                tbl["section_label"] = section_label
+
+                # Store col_range so AI knows which columns belong to this table
+                tbl["col_range"] = (tbl["start_col"], tbl["end_col"])
+                tbl["col_letters"] = (
+                    chr(ord('A') + tbl["start_col"]),
+                    chr(ord('A') + min(tbl["end_col"], 25))
+                )
 
     print(f"[REGION] {len(table_regions)} table(s) detected: "
-          f"{[t['section_label'] for t in table_regions]}", flush=True)
+          f"{[t.get('section_label','?') for t in table_regions]}", flush=True)
+
+    # Detect transposed tables (headers in col A, data in cols B+)
+    transposed_tables = _detect_transposed_table(grid, max_row, max_col)
+    if transposed_tables:
+        print(f"[REGION] {len(transposed_tables)} transposed table(s) detected", flush=True)
 
     # Build summary for AI
     has_explicit_targets = len(explicit_targets) > 0
@@ -432,16 +468,17 @@ def _analyse_template_regions(layout: dict) -> dict:
           f"tables={len(table_regions)} grid={max_row+1}x{max_col+1}", flush=True)
 
     return {
-        "primary_mode": primary_mode,
-        "explicit_targets": explicit_targets,
-        "kv_pairs": kv_pairs,
-        "two_col_pairs": two_col_pairs,
-        "table_regions": table_regions,
-        "grid_size": {"rows": max_row + 1, "cols": max_col + 1},
+        "primary_mode":       primary_mode,
+        "explicit_targets":   explicit_targets,
+        "kv_pairs":           kv_pairs,
+        "two_col_pairs":      two_col_pairs,
+        "table_regions":      table_regions,
+        "transposed_tables":  transposed_tables,
+        "grid_size":          {"rows": max_row + 1, "cols": max_col + 1},
         "has_explicit_targets": has_explicit_targets,
-        "has_table": has_table,
-        "max_row": max_row,
-        "max_col": max_col,
+        "has_table":          has_table,
+        "max_row":            max_row,
+        "max_col":            max_col,
     }
 
 
@@ -504,44 +541,182 @@ def _col_letter(c: int) -> str:
 # VISION-FIRST PROMPT BUILDER
 # ==============================================================================
 
+def _smart_truncate(doc_text: str, primary_mode: str, regions: dict) -> str:
+    """
+    Smart text truncation for long documents.
+    Instead of blindly cutting at N chars, extracts the most relevant sections.
+
+    Strategy:
+    1. For form-only docs: take first 3000 chars (header data is always at top)
+    2. For table/mixed docs:
+       a. Take first 1500 chars (header fields)
+       b. Find each table section in the text and extract its rows
+       c. Join them — total stays under 8000 chars
+    3. If doc is short enough — return as-is (no truncation needed)
+    """
+    if not doc_text:
+        return ""
+
+    MAX_FORM   = 3000
+    MAX_TABLE  = 8000
+
+    # Short doc — no truncation needed
+    if len(doc_text) <= MAX_TABLE:
+        return doc_text
+
+    if primary_mode in ("form_with_targets", "form_kv"):
+        return doc_text[:MAX_FORM]
+
+    # For table/mixed — smart extraction
+    table_regions = regions.get("table_regions", [])
+    lines = doc_text.split('\n')
+
+    # Always include first 1500 chars for header fields
+    header_text = doc_text[:1500]
+    collected   = [header_text]
+    used_chars  = len(header_text)
+
+    if table_regions:
+        # For each table, find its section in the document text and extract rows
+        for tr in table_regions:
+            col_names  = tr.get("column_names", [])
+            section_lbl = tr.get("section_label", "")
+            if not col_names:
+                continue
+
+            # Find where this table section starts in the text
+            section_start = -1
+            search_terms  = col_names[:2] + ([section_lbl] if section_lbl else [])
+
+            for i, line in enumerate(lines):
+                if any(term.lower() in line.lower() for term in search_terms if term):
+                    section_start = i
+                    break
+
+            if section_start == -1:
+                continue
+
+            # Extract up to 100 lines from this section
+            section_lines = lines[section_start:section_start + 100]
+            section_text  = '\n'.join(section_lines)
+
+            budget = min(2000, MAX_TABLE - used_chars - 100)
+            if budget <= 0:
+                break
+
+            snippet = section_text[:budget]
+            collected.append(f"\n--- SECTION: {section_lbl or 'Table'} ---\n{snippet}")
+            used_chars += len(snippet)
+
+    result = '\n'.join(collected)
+
+    # If we still have budget, add more of the original text
+    if used_chars < MAX_TABLE:
+        remaining = doc_text[1500:MAX_TABLE - used_chars + 1500]
+        result += '\n' + remaining
+
+    return result[:MAX_TABLE]
+
+
+def _detect_transposed_table(grid: dict, max_row: int, max_col: int) -> list:
+    """
+    Detect transposed (horizontal) tables where:
+    - Headers are in COLUMN A (rows going down)
+    - Data is in columns B, C, D... (each column = one record)
+
+    Example:
+      A1=Name    B1=Alice  C1=Bob
+      A2=Dept    B2=HR     C2=Eng
+      A3=Salary  B3=50000  C3=60000
+
+    Returns list of transposed table regions, each with:
+      header_col, start_row, end_row, row_names, data_cols
+    """
+    transposed = []
+
+    # Check if column 0 has multiple consecutive labels
+    col0_labels = []
+    for r in range(max_row + 1):
+        cell = grid.get((r, 0))
+        if cell and cell["value"] and not cell["extractTarget"]:
+            col0_labels.append((r, cell["value"]))
+
+    if len(col0_labels) < 3:
+        return []  # Not enough labels in col A to be a transposed table
+
+    # Check if columns 1+ have data in the same rows
+    label_rows = [r for r, _ in col0_labels]
+    data_cols  = []
+    for c in range(1, min(max_col + 1, 20)):
+        filled = sum(
+            1 for r in label_rows
+            if grid.get((r, c)) and grid[(r, c)]["value"]
+        )
+        if filled >= len(label_rows) * 0.5:  # at least 50% of label rows have data
+            data_cols.append(c)
+
+    if data_cols:
+        transposed.append({
+            "header_col":  0,
+            "start_row":   min(label_rows),
+            "end_row":     max(label_rows),
+            "row_names":   [lbl for _, lbl in col0_labels],
+            "data_cols":   data_cols,
+            "is_transposed": True,
+        })
+
+    return transposed
+
+
+def _preserve_currency(value: str) -> tuple:
+    """
+    Extract currency symbol before stripping it.
+    Returns (normalized_number, currency_code).
+    Used when currency context is important.
+    """
+    symbols = {
+        '$': 'USD', '£': 'GBP', '€': 'EUR', '₹': 'INR',
+        '¥': 'JPY', '₩': 'KRW', 'A$': 'AUD', 'C$': 'CAD',
+        'HK$': 'HKD', 'S$': 'SGD', 'NZ$': 'NZD',
+    }
+    s = str(value).strip()
+    for symbol, code in sorted(symbols.items(), key=lambda x: -len(x[0])):
+        if s.startswith(symbol):
+            number = s[len(symbol):].replace(',', '').strip()
+            return number, code
+    return s, ""
+
+
 def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     """
     Build extraction prompt split into (system_instruction, user_prompt).
 
     system_instruction = registry expert persona (stable, doc-type specific).
-      Passed as Gemini system_instruction — billed at reduced rate, cached
-      server-side. Identical for ALL documents of the same type in a batch.
-
-    user_prompt = template fields + rules + doc text.
-      Variable per document. Only this is billed as normal input tokens.
-
-    This saves ~30% tokens on batch jobs because the system prompt
-    is not re-billed for each document.
+    user_prompt = template structure + self-verification rules + document text.
     """
-    doc_type     = template_data.get("doc_type", "other")
-    regions      = template_data.get("regions", {})
-    layout       = template_data.get("layout", {})
-    primary_mode = regions.get("primary_mode", "form_kv")
+    doc_type      = template_data.get("doc_type", "other")
+    regions       = template_data.get("regions", {})
+    layout        = template_data.get("layout", {})
+    primary_mode  = regions.get("primary_mode", "form_kv")
+    table_regions = regions.get("table_regions", [])
 
-    # System instruction — expert persona from registry (stable part)
+    # System instruction — expert persona from registry
     system_instruction = _get_system_prompt(doc_type)
     table_rules = _get_table_rules(doc_type)
     if table_rules and primary_mode in ("table", "mixed"):
         system_instruction += f"\n\nTABLE RULES:\n{table_rules}"
 
-    # Trim doc text — form docs need less context than table docs
-    # Form: first 3000 chars covers all header fields
-    # Table/mixed: up to 5000 chars for transaction rows
-    if primary_mode in ("form_with_targets", "form_kv"):
-        doc_text_use = doc_text[:3000] if doc_text else ""
-    else:
-        doc_text_use = doc_text[:5000] if doc_text else ""
+    # Smart text truncation — not a hard cutoff
+    # For long documents (50+ pages) we extract the most relevant sections
+    # rather than blindly taking the first N chars
+    doc_text_use = _smart_truncate(doc_text, primary_mode, regions)
 
     fields_description      = _build_fields_description(regions, layout)
-    extraction_instructions = _build_extraction_instructions(
-        regions, primary_mode, ""  # table_rules already in system_instruction
-    )
+    extraction_instructions = _build_extraction_instructions(regions, primary_mode, "")
     output_format           = _build_output_format(regions, primary_mode)
+
+    # Build self-verification block — generic, works for any template/document
+    verify_block = _build_verification_block(primary_mode, table_regions)
 
     user_prompt = f"""=== EXTRACTION TASK ===
 
@@ -550,17 +725,21 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
 === INSTRUCTIONS ===
 {extraction_instructions}
 
+=== SELF-VERIFICATION (run this before returning) ===
+{verify_block}
+
 === RULES ===
-1. MATCH BY MEANING: Template labels and document labels often differ.
-   Match by concept. "No of Emp"="Number of Employees". "Amt"="Amount".
-   Common abbreviations: No=Number, Emp=Employee/Employer, Amt=Amount,
-   Qty=Quantity, Bal=Balance, Qtr=Quarter, Fed=Federal, YTD=Year to Date.
-   Acronyms: EIN=Employer ID Number, SSN=Social Security, PO=Purchase Order.
-   Synonyms: Total=Grand Total=Amount Due=Net Payable.
-2. MISSING: Use "" only if genuinely absent. Never "N/A" or "null".
-3. NUMBERS: Strip $ £ € and commas. "$8,410.00" -> "8410.00"
-4. DATES: YYYY-MM-DD. "January 31 2024" -> "2024-01-31"
-5. TABLE POSITION: Table may start anywhere on page.
+1. MATCH BY MEANING: Labels in the template and the document will differ.
+   Match by concept, not exact text.
+   Examples: "Rcpt No"="Receipt Number", "Amt"="Amount", "Inv Ref"="Invoice Reference"
+   "No of Emp"="Number of Employees", "Fed"="Federal", "YTD"="Year to Date"
+   "EIN"="Employer ID Number", "SSN"="Social Security Number"
+2. BLANK ROWS IN TEMPLATE are placeholders only — they do NOT limit row count.
+   If the document has 15 rows, return 15 rows. If it has 2, return 2.
+3. NUMBERS: Remove $ £ € ₹ and commas. "(2.85)" means -2.85.
+4. DATES: Always YYYY-MM-DD format.
+5. MISSING VALUES: Use "" — never "N/A", "null", or "not found".
+6. ALL PAGES: The document may span multiple pages. Extract from every page.
 
 === DOCUMENT TEXT ===
 {doc_text_use if doc_text_use else "(See document image)"}
@@ -569,6 +748,67 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
 {output_format}
 """
     return system_instruction, user_prompt
+
+
+def _build_verification_block(primary_mode: str, table_regions: list) -> str:
+    """
+    Build a generic self-verification checklist the AI runs before returning.
+    No hardcoded numbers, names, or document-specific logic.
+    Works for any template structure.
+    """
+    checks = []
+
+    # Universal checks for all modes
+    checks.append(
+        "STEP 1 — COUNT CHECK:\n"
+        "  Go back to the document text.\n"
+        "  Count every data row that exists in EACH table section.\n"
+        "  Compare that count to the rows you are about to return.\n"
+        "  If your row count is LESS than what the document contains — add the missing rows.\n"
+        "  Common mistake: stopping at page 1 when data continues on page 2."
+    )
+
+    checks.append(
+        "STEP 2 — COMPLETENESS CHECK:\n"
+        "  For every table header you identified in the template:\n"
+        "    - Did you extract rows for it? If any table has zero rows, that is wrong.\n"
+        "    - Scan the document text specifically for that section and add any missing rows.\n"
+        "  For every form field marked for extraction:\n"
+        "    - Is the value filled? If blank, scan the document again for that label."
+    )
+
+    checks.append(
+        "STEP 3 — FORMAT CHECK:\n"
+        "  For every numeric value you extracted:\n"
+        "    - Remove currency symbols ($ £ € ₹) and thousand-separator commas\n"
+        "    - Convert accounting negatives: (1,245.00) → -1245.00\n"
+        "    - Expand suffixes: 8.41K → 8410, 1.2M → 1200000\n"
+        "  For every date value:\n"
+        "    - Convert to YYYY-MM-DD\n"
+        "    - 'April 30, 2024' → '2024-04-30', '30/04/2024' → '2024-04-30'\n"
+        "  For every text value:\n"
+        "    - Remove line breaks within a value\n"
+        "    - Trim leading/trailing whitespace"
+    )
+
+    checks.append(
+        "STEP 4 — CROSS-CHECK:\n"
+        "  Pick 3 random values you extracted.\n"
+        "  Find each one in the document text and confirm it matches exactly.\n"
+        "  If any value does not match — correct it before returning."
+    )
+
+    if table_regions:
+        checks.append(
+            "STEP 5 — TABLE INTEGRITY:\n"
+            "  For each table, verify:\n"
+            "    - Every row has values in ALL columns (no empty columns mid-row)\n"
+            "    - No row is a header row, section title, or total/subtotal row\n"
+            "    - Rows from different tables are not mixed together\n"
+            "    - If a table spans a page break, rows from BOTH pages are included"
+        )
+
+    return "\n\n".join(checks)
 
 
 def _build_fields_description(regions: dict, layout: dict) -> str:
@@ -611,30 +851,65 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
     # ── TABLES ─────────────────────────────────────────────────────────────────
     if table_regions:
         n = len(table_regions)
+
+        # Group by row to detect same-row tables
+        same_row = {}
+        for tr in table_regions:
+            same_row.setdefault(tr["header_row"], []).append(tr)
+        has_same_row = any(len(v) > 1 for v in same_row.values())
+
         if n == 1:
             lines.append("=== TABLE ===")
         else:
-            lines.append(f"=== {n} SEPARATE TABLES ===")
-            lines.append(f"This template has {n} distinct tables. Extract each one SEPARATELY.")
-            lines.append("Each table has its own section label and its own set of rows.")
+            lines.append(f"=== {n} TABLES ===")
+            if has_same_row:
+                lines.append(
+                    "IMPORTANT: Some tables appear SIDE BY SIDE on the same row.\n"
+                    "They are separated by empty columns. Use the column range to\n"
+                    "identify which data belongs to which table."
+                )
             lines.append("")
 
         for i, tr in enumerate(table_regions):
-            section = tr.get("section_label", f"Table {i+1}")
+            section   = tr.get("section_label", f"Table {i+1}")
+            col_start = chr(ord('A') + tr.get("start_col", 0))
+            col_end   = chr(ord('A') + min(tr.get("end_col", 0), 25))
+            col_range = f"columns {col_start} to {col_end}"
+
             lines.append(f"TABLE {i+1}: \"{section}\"")
-            lines.append(f"  Header row: {tr['header_row']+1}")
-            lines.append(f"  Columns: {', '.join(tr['column_names'])}")
-            lines.append(f"  Extract: ALL data rows belonging to the \"{section}\" section")
-            if i + 1 < n:
-                next_section = table_regions[i+1].get("section_label", f"Table {i+2}")
-                lines.append(f"  STOP: before \"{next_section}\" section begins")
-            lines.append(f"  Output key: table_{i+1}_rows (e.g. earnings_rows, deductions_rows)")
+            lines.append(f"  Position: row {tr['header_row']+1}, {col_range}")
+            lines.append(f"  Columns:  {', '.join(tr['column_names'])}")
+            lines.append(
+                f"  Extract:  ALL data rows for this table from the document.\n"
+                f"            There is NO row limit — blank rows in the template\n"
+                f"            are just placeholders. Extract every row that exists."
+            )
+            if tr.get("col_range") and n > 1:
+                lines.append(
+                    f"  NOTE: Data for this table is in {col_range} of the document.\n"
+                    f"        Do not mix it with data from other tables."
+                )
             lines.append("")
 
     if not lines:
         lines.append("=== AUTO-EXTRACT MODE ===")
         lines.append("The template has labelled fields. Match each label to its value in the document.")
         lines.append("Use cell references as keys.")
+
+    # ── TRANSPOSED TABLES ──────────────────────────────────────────────────────
+    transposed = regions.get("transposed_tables", [])
+    if transposed:
+        lines.append("=== TRANSPOSED TABLE (horizontal layout) ===")
+        lines.append("This template has a HORIZONTAL table where:")
+        lines.append("  - Row LABELS are in the leftmost column (column A)")
+        lines.append("  - Each subsequent column contains one complete record")
+        lines.append("  - Extract each column as a separate record/row")
+        lines.append("")
+        for tt in transposed:
+            lines.append(f"  Row labels: {', '.join(tt['row_names'][:6])}")
+            lines.append(f"  Data columns: {len(tt['data_cols'])} records")
+            lines.append("  Return each column as one object in table_rows")
+        lines.append("")
 
     return "\n".join(lines)
 
@@ -790,22 +1065,27 @@ RULES:
 
     elif primary_mode == "mixed" and n_tables > 1:
         # Multiple tables — use ONE table_rows array with a "Table" column
-        # indicating which section each row belongs to.
-        # This is simpler for the AI and we split them in post-processing.
         all_cols = []
         for tr in table_regions:
             for col in tr.get("column_names", []):
                 if col not in all_cols:
                     all_cols.append(col)
-        # Add Table column to identify source
-        if "Table" not in all_cols:
-            all_cols = ["Table"] + all_cols
 
         section_names = [tr.get("section_label", f"Table {i+1}")
                         for i, tr in enumerate(table_regions)]
-        ex_cols = {c: "value" for c in all_cols[:5]}
-        ex1 = dict(ex_cols); ex1["Table"] = section_names[0]
-        ex2 = dict(ex_cols); ex2["Table"] = section_names[-1]
+        ex_cols = {c: "value" for c in all_cols[:4]}
+        ex1 = {"Table": section_names[0],  **ex_cols}
+        ex2 = {"Table": section_names[-1], **ex_cols}
+
+        # Build table summary with column ranges
+        table_summary = []
+        for tr in table_regions:
+            col_s = chr(ord('A') + tr.get("start_col", 0))
+            col_e = chr(ord('A') + min(tr.get("end_col", 0), 25))
+            table_summary.append(
+                f'  "{tr.get("section_label","")}" → cols {col_s}-{col_e}, '
+                f'columns: {", ".join(tr.get("column_names",[]))}'
+            )
 
         return f"""Return ONLY valid JSON:
 {{
@@ -823,14 +1103,16 @@ RULES:
     "notes": ""
   }}]
 }}
-CRITICAL RULES FOR MULTIPLE TABLES:
-This template has {len(table_regions)} separate tables: {', '.join(f'"{s}"' for s in section_names)}
-- Put ALL rows from ALL tables into the SINGLE "table_rows" array
-- Add a "Table" field to EVERY row indicating which section it came from
-- "Table" value must be EXACTLY one of: {', '.join(f'"{s}"' for s in section_names)}
-- Extract EVERY row from EVERY table - do NOT skip any table
-- Numbers: no $ or commas. Dates: YYYY-MM-DD
-- Do NOT return separate arrays - only ONE table_rows array"""
+RULES FOR {len(table_regions)} TABLES:
+Put ALL rows from ALL tables into the ONE "table_rows" array.
+Add a "Table" field to EVERY row — its value is the table name.
+Tables in this template:
+{chr(10).join(table_summary)}
+
+"Table" values must be EXACTLY one of: {', '.join(f'"{s}"' for s in section_names)}
+Extract EVERY row from EVERY table. Zero rows from any table is WRONG.
+Blank rows in the template are just placeholders — extract as many rows as the document has.
+Numbers: no $ or commas. Dates: YYYY-MM-DD."""
 
     else:
         # Form only
