@@ -294,25 +294,11 @@ def _analyse_template_regions(layout: dict) -> dict:
             })
 
     # Detect key-value pairs (label col N, empty col N+1, same row)
-    # EXCLUDE rows that are directly above a table header — those are section labels
-    # Pre-compute table header rows so we can exclude the row above each
-    pre_table_header_rows = set()
-    for r_candidate, cols_candidate in rows_with_content.items():
-        value_cols_candidate = [c for c in cols_candidate
-                                if grid.get((r_candidate, c))
-                                and grid[(r_candidate, c)]["value"]
-                                and not grid[(r_candidate, c)]["extractTarget"]]
-        if len(value_cols_candidate) >= 2:
-            # This row looks like a table header — mark the rows above it
-            for r_above in range(max(0, r_candidate - 4), r_candidate):
-                pre_table_header_rows.add(r_above)
-
+    # Section label rows (rows above table headers) are excluded below
+    # after rows_with_content is built
     kv_pairs = []
     for (r, c), cell in grid.items():
         if cell["value"] and not cell["extractTarget"]:
-            # Skip rows that appear above table headers (section labels)
-            if r in pre_table_header_rows:
-                continue
             right = grid.get((r, c + 1))
             if right and (right["extractTarget"] or not right["value"]):
                 kv_pairs.append({
@@ -362,11 +348,30 @@ def _analyse_template_regions(layout: dict) -> dict:
 
     # Build a set of rows that contain extract targets — these are form rows.
     # IMPORTANT: Only mark a row as a form row if IT ITSELF contains extract targets.
-    # Do NOT mark neighbouring rows — that was blocking nearby table headers from detection.
     form_rows_set = set()
     for (r, c), cell in grid.items():
         if cell["extractTarget"]:
             form_rows_set.add(r)
+
+    # Now compute pre_table_header_rows — rows directly above table header candidates.
+    # These are section labels (e.g. "Earning Table", "Deduction Table") and should
+    # be excluded from kv_pairs so they aren't sent to AI as form fields to fill.
+    pre_table_header_rows = set()
+    for r_candidate, cols_candidate in rows_with_content.items():
+        if r_candidate in form_rows_set:
+            continue
+        value_cols_candidate = [c for c in cols_candidate
+                                if grid.get((r_candidate, c))
+                                and grid[(r_candidate, c)]["value"]
+                                and not grid[(r_candidate, c)]["extractTarget"]]
+        if len(value_cols_candidate) >= 2:
+            # This row looks like a table header — mark rows above it as section labels
+            for r_above in range(max(0, r_candidate - 4), r_candidate):
+                if r_above not in form_rows_set:
+                    pre_table_header_rows.add(r_above)
+
+    # Filter kv_pairs to exclude section label rows
+    kv_pairs = [kv for kv in kv_pairs if kv["row"] not in pre_table_header_rows]
 
     for r, cols in sorted(rows_with_content.items()):
         # Skip rows that are form rows (have extract targets nearby)
