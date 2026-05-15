@@ -437,13 +437,27 @@ def _analyse_template_regions(layout: dict) -> dict:
 
         for row, tbls_on_row in same_row_groups.items():
             for idx, tbl in enumerate(tbls_on_row):
-                # Try to find a section label ABOVE this table
+                # Find section label: row directly above table header (1-2 rows max)
+                # MUST be blank row between form fields and table OR be a merged header
+                # Do NOT pick up form field labels that are 3+ rows above
                 section_label = ""
-                for row_above in range(row - 1, max(0, row - 8), -1):
-                    # Only look in the column range of THIS table
+                for row_above in range(row - 1, max(0, row - 3), -1):
                     for c in range(tbl["start_col"], tbl["end_col"] + 1):
                         cell = grid.get((row_above, c))
-                        if cell and cell["value"] and not cell["extractTarget"]:
+                        if not cell or not cell["value"] or cell["extractTarget"]:
+                            continue
+                        # Accept as section label only if:
+                        # 1. It's a wide merged cell (span >= 2 cols), OR
+                        # 2. It's directly above (1 row) and the row between is blank
+                        is_merged = cell.get("mergeSpan", {}).get("cols", 1) >= 2
+                        is_directly_above = (row_above == row - 1)
+                        row_between_empty = not any(
+                            grid.get((r, c2), {}).get("value") or
+                            grid.get((r, c2), {}).get("extractTarget")
+                            for r in range(row_above + 1, row)
+                            for c2 in range(tbl["start_col"], tbl["end_col"] + 1)
+                        )
+                        if is_merged or (is_directly_above and row_between_empty):
                             section_label = cell["value"]
                             break
                     if section_label:
