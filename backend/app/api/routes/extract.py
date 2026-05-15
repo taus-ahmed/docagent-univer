@@ -1505,8 +1505,8 @@ def _extract_pdf_table_direct(file_path: Path, template_data: dict) -> Optional[
         if not col_names:
             return None
 
-        skip_kw = {"subtotal", "total", "shipping", "tax", "discount",
-                   "charges", "refund", "paid", "free", "balance", "grand total"}
+        skip_kw = {"subtotal", "grand total", "shipping", "discount",
+                   "charges", "refund", "paid", "free", "balance due"}
         all_rows = []
 
         with pdfplumber.open(file_path) as pdf:
@@ -1631,13 +1631,15 @@ def _normalise_values(row: dict, doc_type: str) -> dict:
 def _filter_ghost_rows(rows: list, col_names: list) -> list:
     if not rows or not col_names: return rows
     first_col = col_names[0]
-    skip_kw = {"subtotal","total","shipping","tax","discount","charges","refund","paid","free","balance"}
+    # Only skip clear summary rows — never skip "tax" as it's a valid row type
+    skip_exact = {"subtotal", "grand total", "shipping", "discount",
+                  "charges", "refund", "balance due", "amount due"}
     clean = []
     for row in rows:
         first_val = str(row.get(first_col, "")).strip()
         if not first_val: continue
         if re.match(r'^[\d,.\-\s]{1,6}$', first_val) and not re.search(r'[a-zA-Z]', first_val): continue
-        if any(kw in first_val.lower() for kw in skip_kw): continue
+        if first_val.lower() in skip_exact: continue
         clean.append(row)
     return clean
 
@@ -2005,8 +2007,14 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                 first_val = str(row.get(first_col, "")).strip()
                 if not first_val:
                     continue
-                skip_kw = {"subtotal","total","shipping","tax","discount","charges","refund","paid","free","balance"}
-                if any(kw in first_val.lower() for kw in skip_kw):
+                # Only skip rows that are clearly summary/total rows
+                # Do NOT skip "tax" — it's a legitimate deduction type
+                skip_kw = {"subtotal", "grand total", "shipping", "discount",
+                           "charges", "refund", "balance due", "amount due"}
+                if any(first_val.lower() == kw for kw in skip_kw):
+                    continue
+                # Skip rows where first value is ONLY a number (row number artifacts)
+                if re.match(r'^\d{1,3}$', first_val):
                     continue
 
             # Build clean row with only this table's columns
