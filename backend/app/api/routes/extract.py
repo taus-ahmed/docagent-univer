@@ -254,17 +254,35 @@ def _analyse_template_regions(layout: dict) -> dict:
         max_row = max(max_row, r)
         max_col = max(max_col, c)
         grid[(r, c)] = {
-            "value": cell.get("value", "").strip(),
+            "value":         cell.get("value", "").strip(),
             "extractTarget": cell.get("extractTarget", False),
-            "ref": _cell_ref(r, c),
-            "row": r,
-            "col": c,
+            "mergeParent":   cell.get("mergeParent"),   # [parent_row, parent_col] if child
+            "mergeSpan":     cell.get("mergeSpan"),     # {rows, cols} if parent
+            "ref":           _cell_ref(r, c),
+            "row":           r,
+            "col":           c,
         }
 
     # Find all explicit Extract here targets
+    # EXCLUDE: merge child cells whose parent is a section header (merged label row)
+    # e.g. "Vendor Info" merged across 4 cols — its child cells should not be targets
+    merged_section_header_rows = set()
+    for (r, c), cell in grid.items():
+        if cell["mergeSpan"] and cell["value"] and not cell["extractTarget"]:
+            # This is a merged label cell (section header) — mark its row
+            span_cols = cell["mergeSpan"].get("cols", 1)
+            if span_cols >= 2:  # only wide merges are section headers
+                merged_section_header_rows.add(r)
+
     explicit_targets = []
     for (r, c), cell in grid.items():
         if cell["extractTarget"] and not cell["value"]:
+            # Skip merge child cells in section header rows
+            if cell["mergeParent"] and r in merged_section_header_rows:
+                continue
+            # Skip cells whose own row is a merged section header
+            if r in merged_section_header_rows:
+                continue
             # Find the nearest label (left, above, or two left)
             label = ""
             for dc in range(1, 4):  # look up to 3 cells to the left
