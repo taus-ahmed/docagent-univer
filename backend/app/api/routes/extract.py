@@ -3104,6 +3104,9 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             lc.font = Font(bold=True, color="FF4F46E5", size=10)
             current_output_row += 1
 
+        # Track which output row each template row maps to
+        template_row_to_output = {}
+
         # Step 1: Write form rows ABOVE first table
         # Skip: section label rows (written in Step 2 before each table header)
         #        blank rows between sections
