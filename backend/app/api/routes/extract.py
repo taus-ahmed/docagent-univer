@@ -299,7 +299,7 @@ def _analyse_template_regions(layout: dict) -> dict:
     for (r, c), cell in grid.items():
         if cell["mergeSpan"] and cell["value"] and not cell["extractTarget"]:
             # This is a merged label cell (section header) — mark its row
-            span_cols = cell["mergeSpan"].get("cols", 1)
+            span_cols = (cell["mergeSpan"] or {}).get("cols", 1)
             if span_cols >= 2:  # only wide merges are section headers
                 merged_section_header_rows.add(r)
 
@@ -478,11 +478,12 @@ def _analyse_template_regions(layout: dict) -> dict:
                         # Accept as section label only if:
                         # 1. It's a wide merged cell (span >= 2 cols), OR
                         # 2. It's directly above (1 row) and the row between is blank
-                        is_merged = cell.get("mergeSpan", {}).get("cols", 1) >= 2
+                        merge_span = cell.get("mergeSpan") or {}
+                        is_merged = merge_span.get("cols", 1) >= 2
                         is_directly_above = (row_above == row - 1)
                         row_between_empty = not any(
-                            grid.get((r, c2), {}).get("value") or
-                            grid.get((r, c2), {}).get("extractTarget")
+                            (grid.get((r, c2)) or {}).get("value") or
+                            (grid.get((r, c2)) or {}).get("extractTarget")
                             for r in range(row_above + 1, row)
                             for c2 in range(tbl["start_col"], tbl["end_col"] + 1)
                         )
