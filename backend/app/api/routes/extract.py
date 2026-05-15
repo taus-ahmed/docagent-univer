@@ -294,9 +294,25 @@ def _analyse_template_regions(layout: dict) -> dict:
             })
 
     # Detect key-value pairs (label col N, empty col N+1, same row)
+    # EXCLUDE rows that are directly above a table header — those are section labels
+    # Pre-compute table header rows so we can exclude the row above each
+    pre_table_header_rows = set()
+    for r_candidate, cols_candidate in rows_with_content.items():
+        value_cols_candidate = [c for c in cols_candidate
+                                if grid.get((r_candidate, c))
+                                and grid[(r_candidate, c)]["value"]
+                                and not grid[(r_candidate, c)]["extractTarget"]]
+        if len(value_cols_candidate) >= 2:
+            # This row looks like a table header — mark the rows above it
+            for r_above in range(max(0, r_candidate - 4), r_candidate):
+                pre_table_header_rows.add(r_above)
+
     kv_pairs = []
     for (r, c), cell in grid.items():
         if cell["value"] and not cell["extractTarget"]:
+            # Skip rows that appear above table headers (section labels)
+            if r in pre_table_header_rows:
+                continue
             right = grid.get((r, c + 1))
             if right and (right["extractTarget"] or not right["value"]):
                 kv_pairs.append({
@@ -880,6 +896,19 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
 === OUTPUT FORMAT ===
 {output_format}
 """
+    # Log the output format section so we can verify AI is getting correct instructions
+    print(f"[PROMPT] mode={primary_mode} n_tables={len(table_regions)} "
+          f"targets={len(regions.get('explicit_targets',[]))} "
+          f"kv={len(regions.get('kv_pairs',[]))}", flush=True)
+    if table_regions:
+        for i, tr in enumerate(table_regions):
+            print(f"[PROMPT] table_{i+1}: '{tr.get('section_label','')}' "
+                  f"cols={tr.get('column_names',[])} "
+                  f"key={'table_'+str(i+1)+'_rows'}", flush=True)
+    # Log key section of output format to verify separate arrays are being sent
+    fmt_preview = output_format[:300].replace('\n',' ')
+    print(f"[PROMPT] output_format preview: {fmt_preview}", flush=True)
+
     return system_instruction, user_prompt
 
 
@@ -1209,26 +1238,42 @@ RULES:
 
     elif primary_mode == "mixed" and n_tables > 1:
         # Multiple tables — use ONE table_rows array with a "Table" column
-        all_cols = []
-        for tr in table_regions:
-            for col in tr.get("column_names", []):
-                if col not in all_cols:
-                    all_cols.append(col)
-
+        # Show a SEPARATE example row for each table with its OWN columns
+        # This prevents the AI from merging columns across tables
         section_names = [tr.get("section_label", f"Table {i+1}")
                         for i, tr in enumerate(table_regions)]
-        ex_cols = {c: "value" for c in all_cols[:4]}
-        ex1 = {"Table": section_names[0],  **ex_cols}
-        ex2 = {"Table": section_names[-1], **ex_cols}
 
-        # Build table summary with column ranges
-        table_summary = []
+        # Build separate array key and example for each table
+        # Using SEPARATE arrays per table is the ONLY reliable way to prevent
+        # the AI from merging columns across tables into one row structure
+        table_blocks = []
+        table_keys   = []
         for tr in table_regions:
+            name    = tr.get("section_label", "")
+            cols    = tr.get("column_names", [])
+            col_s   = chr(ord('A') + tr.get("start_col", 0))
+            col_e   = chr(ord('A') + min(tr.get("end_col", 0), 25))
+            # Make a safe JSON key from section label
+            key     = re.sub(r'[^a-z0-9]', '_', name.lower()).strip('_') + "_rows"
+            table_keys.append(key)
+            ex_row  = {c: "value" for c in cols}
+            table_blocks.append(
+                f'    "{key}": [\n'
+                f'      {json.dumps(ex_row)}\n'
+                f'    ]  /* ALL rows from "{name}" table (cols {col_s}-{col_e}) */'
+            )
+
+        blocks_str = ",\n".join(table_blocks)
+
+        table_rules_str = []
+        for i, (tr, key) in enumerate(zip(table_regions, table_keys)):
+            name = tr.get("section_label", f"Table {i+1}")
+            cols = ", ".join(tr.get("column_names", []))
             col_s = chr(ord('A') + tr.get("start_col", 0))
             col_e = chr(ord('A') + min(tr.get("end_col", 0), 25))
-            table_summary.append(
-                f'  "{tr.get("section_label","")}" → cols {col_s}-{col_e}, '
-                f'columns: {", ".join(tr.get("column_names",[]))}'
+            table_rules_str.append(
+                f'  "{key}": rows from "{name}" section '
+                f'(columns: {cols}, template cols {col_s}-{col_e})'
             )
 
         return f"""Return ONLY valid JSON:
@@ -1240,23 +1285,23 @@ RULES:
     "doc_index": 0,
     "doc_hint": "brief description",
     "extracted_fields": {{{field_example}}},
-    "table_rows": [
-      {json.dumps(ex1)},
-      {json.dumps(ex2)}
-    ],
+{blocks_str},
     "notes": ""
   }}]
 }}
-RULES FOR {len(table_regions)} TABLES:
-Put ALL rows from ALL tables into the ONE "table_rows" array.
-Add a "Table" field to EVERY row — its value is the table name.
-Tables in this template:
-{chr(10).join(table_summary)}
+RULES FOR {len(table_regions)} SEPARATE TABLES:
+Each table gets its OWN array key. Do NOT use a single "table_rows" array.
+Do NOT merge columns from different tables into the same row.
 
-"Table" values must be EXACTLY one of: {', '.join(f'"{s}"' for s in section_names)}
-Extract EVERY row from EVERY table. Zero rows from any table is WRONG.
-Blank rows in the template are just placeholders — extract as many rows as the document has.
-Numbers: no $ or commas. Dates: YYYY-MM-DD."""
+{chr(10).join(table_rules_str)}
+
+For each table array:
+- Extract ALL data rows from that table section in the document
+- Include rows from ALL pages (document may continue on page 2+)
+- Each row uses ONLY that table's columns — do not add columns from other tables
+- Blank rows in the template are placeholders, not row limits
+- Numbers: no $ or commas. Dates: YYYY-MM-DD
+- Do NOT include header rows or section title rows as data rows"""
 
     else:
         # Form only
@@ -1830,15 +1875,20 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     # For multi-table responses: raw_doc["earning_table_rows"], raw_doc["deduction_table_rows"] etc.
     # We collect all into a single list, adding a "table_source" key to each row
     table_rows_raw = []
+    all_doc_keys = list(raw_doc.keys())
+    print(f"[COLLECT] AI response keys: {all_doc_keys}", flush=True)
     if raw_doc.get("table_rows"):
+        print(f"[COLLECT] table_rows: {len(raw_doc['table_rows'])} rows", flush=True)
         table_rows_raw.extend(raw_doc["table_rows"])
     # Collect any additional table arrays (multi-table templates)
     for key, val in raw_doc.items():
         if key.endswith("_rows") and key != "table_rows" and isinstance(val, list):
+            print(f"[COLLECT] {key}: {len(val)} rows", flush=True)
             for row in val:
                 if isinstance(row, dict):
                     row["_table_source"] = key.replace("_rows", "")
                     table_rows_raw.append(row)
+    print(f"[COLLECT] total rows collected: {len(table_rows_raw)}", flush=True)
 
     # -- Fix page-break decimal splits -----------------------------------------
     extracted_fields_raw = _fix_split_decimals(extracted_fields_raw)
@@ -1929,6 +1979,32 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
 
     r = DocumentExtractionResult(filename=filename)
     r.document_type = doc_type
+
+    # Build per-table row maps using separate array keys
+    per_table_rows = {}
+    for tr in regions.get("table_regions", []):
+        section = tr.get("section_label", "")
+        key = re.sub(r'[^a-z0-9]', '_', section.lower()).strip('_') + "_rows"
+        # Get rows for this table from the raw response
+        raw_rows = raw_doc.get(key, [])
+        if not raw_rows:
+            # Fall back: filter table_rows_raw by Table field or _table_source
+            raw_rows = [
+                r2 for r2 in table_rows_raw
+                if isinstance(r2, dict) and (
+                    r2.get("Table", "").strip().lower() == section.strip().lower() or
+                    r2.get("_table_source", "").replace("_", " ").strip().lower() in section.lower()
+                )
+            ]
+        # Normalise these rows
+        col_names = tr.get("column_names", [])
+        normed = []
+        for row in raw_rows:
+            if isinstance(row, dict):
+                clean = {col: str(row.get(col, "") or "").strip() for col in col_names}
+                normed.append(_normalise_values(clean, doc_type))
+        per_table_rows[key] = normed
+
     r.extracted_data = {
         "document_type": doc_type,
         "overall_confidence": overall_confidence,
@@ -1948,6 +2024,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
             "flagged_fields": flagged,
             "confidence_map": validation.get("confidence_map", {}),
         },
+        **per_table_rows,   # adds earning_table_rows, deduction_table_rows etc.
     }
     r.extraction_response = extraction
     r.processing_time_ms = elapsed
@@ -3042,25 +3119,37 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
         col_names  = tbl.get("column_names", [])
         start_col  = tbl.get("start_col", 0)
         col_indices = {name: (start_col + i) for i, name in enumerate(col_names)}
+        section    = tbl.get("section_label", "")
 
-        # Filter rows belonging to this table (if Table column present)
-        section = tbl.get("section_label", "")
-        if section and any("Table" in r for r in table_rows if isinstance(r, dict)):
+        # Build key for this table's separate array
+        # e.g. "Earning Table" -> "earning_table_rows"
+        tbl_key = re.sub(r'[^a-z0-9]', '_', section.lower()).strip('_') + "_rows"
+
+        # Priority 1: use the dedicated array for this table (separate arrays approach)
+        all_extracted = doc_result.get_extracted_data()
+        rows_for_table = all_extracted.get(tbl_key, [])
+
+        # Priority 2: fall back to table_rows filtered by "Table" field
+        if not rows_for_table:
             rows_for_table = [
                 r for r in table_rows
                 if isinstance(r, dict) and (
                     r.get("Table", "").strip().lower() == section.strip().lower()
-                    or not r.get("Table")  # rows without Table field go to first table
+                    or r.get("_table_source", "").replace("_", " ").strip().lower()
+                       in section.lower()
                 )
             ]
-        else:
+
+        # Priority 3: if only one table defined and no Table field, use all rows
+        if not rows_for_table and len(tables_sorted) == 1:
             rows_for_table = [r for r in table_rows if isinstance(r, dict)]
 
+        written = 0
         for row_data in rows_for_table:
-            # Skip rows that are headers or section labels (AI sometimes includes these)
+            # Skip rows that are headers or section labels
             row_vals = [str(v).strip() for v in row_data.values() if v]
-            if all(v in col_names or v == section for v in row_vals):
-                continue  # skip header row returned by AI
+            if all(v in col_names or v == section for v in row_vals if v):
+                continue
 
             for col_name, c_idx in col_indices.items():
                 val = row_data.get(col_name, "")
@@ -3068,7 +3157,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                     val = val.get("value", "")
                 val = str(val).strip() if val is not None else ""
                 if val in col_names:
-                    val = ""  # skip if AI wrote column name as value
+                    val = ""
                 xl_cell = ws.cell(row=current_row, column=c_idx + 1)
                 try:
                     clean = val.replace(",", "").replace("$", "").replace("£", "").strip()
@@ -3076,8 +3165,9 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 except (ValueError, TypeError):
                     xl_cell.value = val
             current_row += 1
+            written += 1
 
-        return current_row, len(rows_for_table)
+        return current_row, written
 
     # ── Main write loop ───────────────────────────────────────────────────────
     current_output_row = 1
