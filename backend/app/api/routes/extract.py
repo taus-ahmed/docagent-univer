@@ -1966,18 +1966,58 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                 extracted_data[f"_label_{ref}"] = {"value": val, "confidence": "high"}
 
     # Table rows - normalise
+    # For multi-table docs, rows have _table_source set to identify which table they belong to.
+    # Each table has its own column set — we must not merge columns across tables.
     normalised_rows = []
     if table_rows_raw:
-        col_names = []
-        for tr in regions.get("table_regions", []):
-            col_names.extend(tr.get("column_names", []))
-        col_names = list(dict.fromkeys(col_names))
+        table_regions_list = regions.get("table_regions", [])
 
-        filtered = _filter_ghost_rows(table_rows_raw, col_names) if col_names else table_rows_raw
-        for row in filtered:
-            if isinstance(row, dict):
-                clean = {col: str(row.get(col,"") or "").strip() for col in col_names} if col_names else row
-                normalised_rows.append(_normalise_values(clean, doc_type))
+        # Build a map: table_source_key -> column_names for that table
+        # table_source is set to the array key minus "_rows" (e.g. "earning_table")
+        source_to_cols = {}
+        for tr in table_regions_list:
+            section = tr.get("section_label", "")
+            import re as _re
+            key = _re.sub(r'[^a-z0-9]', '_', section.lower()).strip('_')
+            source_to_cols[key] = tr.get("column_names", [])
+
+        # Also build merged col_names for single-table case
+        all_col_names = []
+        for tr in table_regions_list:
+            all_col_names.extend(tr.get("column_names", []))
+        all_col_names = list(dict.fromkeys(all_col_names))
+
+        for row in table_rows_raw:
+            if not isinstance(row, dict):
+                continue
+
+            # Determine which table this row belongs to
+            table_source = row.get("_table_source", "")
+            row_col_names = source_to_cols.get(table_source, all_col_names)
+
+            if not row_col_names:
+                row_col_names = [k for k in row.keys()
+                                if not k.startswith("_")]
+
+            # Filter ghost rows using THIS table's first column
+            first_col = row_col_names[0] if row_col_names else None
+            if first_col:
+                first_val = str(row.get(first_col, "")).strip()
+                if not first_val:
+                    continue
+                skip_kw = {"subtotal","total","shipping","tax","discount","charges","refund","paid","free","balance"}
+                if any(kw in first_val.lower() for kw in skip_kw):
+                    continue
+
+            # Build clean row with only this table's columns
+            clean = {}
+            for col in row_col_names:
+                clean[col] = str(row.get(col, "") or "").strip()
+            # Preserve table source for Excel writer
+            if table_source:
+                clean["_table_source"] = table_source
+
+            normalised_rows.append(_normalise_values(clean, doc_type))
 
     has_table = bool(normalised_rows)
     overall_confidence = raw_doc.get("overall_confidence", "medium")
@@ -3126,33 +3166,35 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
         col_indices = {name: (start_col + i) for i, name in enumerate(col_names)}
         section    = tbl.get("section_label", "")
 
-        # Build key for this table's separate array
-        # e.g. "Earning Table" -> "earning_table_rows"
-        tbl_key = re.sub(r'[^a-z0-9]', '_', section.lower()).strip('_') + "_rows"
+        # Build source key for this table (matches _table_source set during collection)
+        import re as _re
+        source_key = _re.sub(r'[^a-z0-9]', '_', section.lower()).strip('_')
 
-        # Priority 1: use the dedicated array for this table (separate arrays approach)
-        all_extracted = doc_result.get_extracted_data()
-        rows_for_table = all_extracted.get(tbl_key, [])
+        # Priority 1: rows tagged with _table_source matching this table
+        rows_with_source = [
+            r for r in table_rows
+            if isinstance(r, dict) and r.get("_table_source", "") == source_key
+        ]
 
-        # Priority 2: fall back to table_rows filtered by "Table" field
-        if not rows_for_table:
+        if rows_with_source:
+            rows_for_table = rows_with_source
+        elif len(tables_sorted) == 1:
+            # Single table — use all rows
+            rows_for_table = [r for r in table_rows if isinstance(r, dict)]
+        else:
+            # Fall back: rows that have this table's first column filled
+            first_col = col_names[0] if col_names else None
             rows_for_table = [
                 r for r in table_rows
-                if isinstance(r, dict) and (
-                    r.get("Table", "").strip().lower() == section.strip().lower()
-                    or r.get("_table_source", "").replace("_", " ").strip().lower()
-                       in section.lower()
-                )
+                if isinstance(r, dict) and first_col and r.get(first_col, "")
+                and not r.get("_table_source")
             ]
-
-        # Priority 3: if only one table defined and no Table field, use all rows
-        if not rows_for_table and len(tables_sorted) == 1:
-            rows_for_table = [r for r in table_rows if isinstance(r, dict)]
 
         written = 0
         for row_data in rows_for_table:
             # Skip rows that are headers or section labels
-            row_vals = [str(v).strip() for v in row_data.values() if v]
+            row_vals = [str(v).strip() for v in row_data.values()
+                       if v and not str(v).startswith("_")]
             if all(v in col_names or v == section for v in row_vals if v):
                 continue
 
