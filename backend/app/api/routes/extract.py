@@ -182,10 +182,31 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                     "name": tpl.name,
                 }
                 # Analyse regions once and cache in template_data
-                template_data["regions"] = _analyse_template_regions(raw)
+                try:
+                    template_data["regions"] = _analyse_template_regions(raw)
+                except Exception as region_err:
+                    import traceback
+                    print(f"[TEMPLATE] region analysis error: {region_err}", flush=True)
+                    print(f"[TEMPLATE] traceback: {traceback.format_exc()}", flush=True)
+                    # Fall back to empty regions so extraction can still proceed
+                    template_data["regions"] = {
+                        "primary_mode": "form_kv",
+                        "explicit_targets": [],
+                        "kv_pairs": [],
+                        "two_col_pairs": [],
+                        "table_regions": [],
+                        "transposed_tables": [],
+                        "section_label_rows": set(),
+                        "has_explicit_targets": False,
+                        "has_table": False,
+                        "max_row": 0,
+                        "max_col": 0,
+                    }
                 return template_data
         except Exception as e:
+            import traceback
             print(f"[TEMPLATE] description parse error: {e}", flush=True)
+            print(f"[TEMPLATE] traceback: {traceback.format_exc()}", flush=True)
 
     if not tpl.columns_json:
         return None
@@ -250,14 +271,22 @@ def _analyse_template_regions(layout: dict) -> dict:
         parts = key.split(",")
         if len(parts) != 2:
             continue
-        r, c = int(parts[0]), int(parts[1])
+        try:
+            r, c = int(parts[0]), int(parts[1])
+        except (ValueError, TypeError):
+            continue
         max_row = max(max_row, r)
         max_col = max(max_col, c)
+        # Safely get values — all fields may be None in malformed templates
+        raw_val  = cell.get("value")
+        val_str  = str(raw_val).strip() if raw_val is not None else ""
+        merge_span   = cell.get("mergeSpan")
+        merge_parent = cell.get("mergeParent")
         grid[(r, c)] = {
-            "value":         cell.get("value", "").strip(),
-            "extractTarget": cell.get("extractTarget", False),
-            "mergeParent":   cell.get("mergeParent"),   # [parent_row, parent_col] if child
-            "mergeSpan":     cell.get("mergeSpan"),     # {rows, cols} if parent
+            "value":         val_str,
+            "extractTarget": bool(cell.get("extractTarget", False)),
+            "mergeParent":   merge_parent if isinstance(merge_parent, (list, dict)) else None,
+            "mergeSpan":     merge_span   if isinstance(merge_span,   dict)         else None,
             "ref":           _cell_ref(r, c),
             "row":           r,
             "col":           c,
