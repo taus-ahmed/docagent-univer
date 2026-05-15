@@ -344,16 +344,13 @@ def _analyse_template_regions(layout: dict) -> dict:
         if cell["value"] or cell["extractTarget"]:
             rows_with_content.setdefault(r, []).append(c)
 
-    # Build a set of rows that contain extract targets — these are form rows
+    # Build a set of rows that contain extract targets — these are form rows.
+    # IMPORTANT: Only mark a row as a form row if IT ITSELF contains extract targets.
+    # Do NOT mark neighbouring rows — that was blocking nearby table headers from detection.
     form_rows_set = set()
     for (r, c), cell in grid.items():
         if cell["extractTarget"]:
             form_rows_set.add(r)
-        # Also mark the row of any cell adjacent to an extract target
-        for dc in range(-3, 4):
-            neighbor = grid.get((r, c + dc))
-            if neighbor and neighbor["extractTarget"]:
-                form_rows_set.add(r)
 
     for r, cols in sorted(rows_with_content.items()):
         # Skip rows that are form rows (have extract targets nearby)
@@ -443,6 +440,28 @@ def _analyse_template_regions(layout: dict) -> dict:
     if transposed_tables:
         print(f"[REGION] {len(transposed_tables)} transposed table(s) detected", flush=True)
 
+    # Build section_label_rows — rows that:
+    #   1. Have text content
+    #   2. No extract targets on the row
+    #   3. Are NOT table header rows themselves
+    #   4. Are directly above a table header row (within 4 rows)
+    # These rows are template structure labels, not data — never write as data rows.
+    table_header_row_set = {t["header_row"] for t in table_regions}
+    section_label_rows = set()
+    for tbl in table_regions:
+        hr = tbl["header_row"]
+        for r_above in range(max(0, hr - 4), hr):
+            if r_above in table_header_row_set:
+                continue
+            if r_above in form_rows_set:
+                continue
+            row_has_text = any(
+                grid.get((r_above, c), {}).get("value", "")
+                for c in range(max_col + 1)
+            )
+            if row_has_text:
+                section_label_rows.add(r_above)
+
     # Build summary for AI
     has_explicit_targets = len(explicit_targets) > 0
     has_kv_pairs = len(kv_pairs) > 0
@@ -468,17 +487,18 @@ def _analyse_template_regions(layout: dict) -> dict:
           f"tables={len(table_regions)} grid={max_row+1}x{max_col+1}", flush=True)
 
     return {
-        "primary_mode":       primary_mode,
-        "explicit_targets":   explicit_targets,
-        "kv_pairs":           kv_pairs,
-        "two_col_pairs":      two_col_pairs,
-        "table_regions":      table_regions,
-        "transposed_tables":  transposed_tables,
-        "grid_size":          {"rows": max_row + 1, "cols": max_col + 1},
+        "primary_mode":         primary_mode,
+        "explicit_targets":     explicit_targets,
+        "kv_pairs":             kv_pairs,
+        "two_col_pairs":        two_col_pairs,
+        "table_regions":        table_regions,
+        "transposed_tables":    transposed_tables,
+        "section_label_rows":   section_label_rows,
+        "grid_size":            {"rows": max_row + 1, "cols": max_col + 1},
         "has_explicit_targets": has_explicit_targets,
-        "has_table":          has_table,
-        "max_row":            max_row,
-        "max_col":            max_col,
+        "has_table":            has_table,
+        "max_row":              max_row,
+        "max_col":              max_col,
     }
 
 
@@ -687,12 +707,52 @@ def _preserve_currency(value: str) -> tuple:
     return s, ""
 
 
+def _build_page_anchor_map(doc_text: str, table_regions: list) -> dict:
+    """
+    Scan document text to find which page each table's content appears on.
+    Uses column header names as search terms — zero hardcoding.
+
+    Returns: {section_label: page_number} e.g. {"Earning Table": 1, "Deduction Table": 2}
+    """
+    if not doc_text or not table_regions:
+        return {}
+
+    # Split by page break marker
+    pages = doc_text.split("--- PAGE BREAK ---")
+    if len(pages) <= 1:
+        return {}  # Single page — no anchoring needed
+
+    page_map = {}
+    for tbl in table_regions:
+        section  = tbl.get("section_label", "")
+        col_names = tbl.get("column_names", [])
+        if not col_names:
+            continue
+
+        # Search for each column header name across pages
+        # The page where the MOST column headers appear = the page for this table
+        best_page = 0
+        best_score = 0
+        for page_num, page_text in enumerate(pages, 1):
+            page_lower = page_text.lower()
+            score = sum(1 for col in col_names
+                       if col.lower() in page_lower)
+            if score > best_score:
+                best_score = score
+                best_page  = page_num
+
+        if best_page > 0 and best_score > 0:
+            page_map[section] = best_page
+
+    return page_map
+
+
 def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     """
     Build extraction prompt split into (system_instruction, user_prompt).
 
     system_instruction = registry expert persona (stable, doc-type specific).
-    user_prompt = template structure + self-verification rules + document text.
+    user_prompt = template structure + page anchors + self-verification + doc text.
     """
     doc_type      = template_data.get("doc_type", "other")
     regions       = template_data.get("regions", {})
@@ -706,17 +766,44 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     if table_rules and primary_mode in ("table", "mixed"):
         system_instruction += f"\n\nTABLE RULES:\n{table_rules}"
 
-    # Smart text truncation — not a hard cutoff
-    # For long documents (50+ pages) we extract the most relevant sections
-    # rather than blindly taking the first N chars
+    # Smart text truncation
     doc_text_use = _smart_truncate(doc_text, primary_mode, regions)
 
     fields_description      = _build_fields_description(regions, layout)
     extraction_instructions = _build_extraction_instructions(regions, primary_mode, "")
     output_format           = _build_output_format(regions, primary_mode)
+    verify_block            = _build_verification_block(primary_mode, table_regions)
 
-    # Build self-verification block — generic, works for any template/document
-    verify_block = _build_verification_block(primary_mode, table_regions)
+    # Build page anchor map — tells AI which page each table lives on
+    # Derived purely from scanning the document text for column header names
+    # Zero hardcoding — works for any table with any column names
+    page_anchor_block = ""
+    if table_regions and doc_text and "--- PAGE BREAK ---" in doc_text:
+        page_map = _build_page_anchor_map(doc_text, table_regions)
+        if page_map:
+            anchor_lines = ["=== PAGE LOCATION OF EACH TABLE ==="]
+            anchor_lines.append(
+                "The document has multiple pages. Each table's data is on a specific page."
+            )
+            anchor_lines.append(
+                "This is determined by where the column headers appear in the text."
+            )
+            for section, page_num in page_map.items():
+                tbl = next((t for t in table_regions
+                           if t.get("section_label") == section), None)
+                cols = tbl.get("column_names", []) if tbl else []
+                col_str = f"({', '.join(cols[:3])})" if cols else ""
+                anchor_lines.append(
+                    f"  Table \"{section}\" {col_str}: "
+                    f"data is on PAGE {page_num} of the document"
+                )
+            anchor_lines.append(
+                "Extract rows for EACH table from its indicated page."
+            )
+            anchor_lines.append(
+                "Do not stop at page 1 if a table is indicated on page 2 or later."
+            )
+            page_anchor_block = "\n".join(anchor_lines)
 
     user_prompt = f"""=== EXTRACTION TASK ===
 
@@ -725,7 +812,7 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
 === INSTRUCTIONS ===
 {extraction_instructions}
 
-=== SELF-VERIFICATION (run this before returning) ===
+{page_anchor_block + chr(10) if page_anchor_block else ""}=== SELF-VERIFICATION (run this before returning) ===
 {verify_block}
 
 === RULES ===
@@ -739,7 +826,9 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
 3. NUMBERS: Remove $ £ € ₹ and commas. "(2.85)" means -2.85.
 4. DATES: Always YYYY-MM-DD format.
 5. MISSING VALUES: Use "" — never "N/A", "null", or "not found".
-6. ALL PAGES: The document may span multiple pages. Extract from every page.
+6. ALL PAGES: Extract from every page. Never stop at page 1.
+7. HEADERS ARE NOT DATA: Section label rows and column header rows are
+   template structure only. Never include them as data rows in table_rows.
 
 === DOCUMENT TEXT ===
 {doc_text_use if doc_text_use else "(See document image)"}
@@ -978,23 +1067,34 @@ PART 1 - FORM FIELDS: Fill each labelled extraction cell with its value.
 PART 2 - TABLE: Extract every data row from the table section.
 Both parts are equally important. Do not skip either.""")
         else:
-            # Multiple tables — this is the payslip/complex case
+            # Multiple tables — generic, no hardcoded domain assumptions
             table_names = [tr.get("section_label", f"Table {i+1}")
                           for i, tr in enumerate(table_regions)]
-            instructions.append(f"""=== MIXED MODE: FORM FIELDS + {n_tables} SEPARATE TABLES ===
-PART 1 - FORM FIELDS: Fill each labelled extraction cell with its value.
-PART 2 - ALL TABLES COMBINED: This template has {n_tables} distinct tables:
-  {', '.join(f'"{n}"' for n in table_names)}
-
-CRITICAL MULTI-TABLE RULES:
-- Put ALL rows from ALL tables into ONE single "table_rows" array
-- Add a "Table" field to EVERY row showing which section it belongs to
-- "Table" value must be EXACTLY one of: {', '.join(f'"{n}"' for n in table_names)}
-- Extract EVERY row from EVERY table - zero rows from any table is WRONG
-- "{table_names[0]}" rows = earnings/income items
-- "{table_names[-1]}" rows = deductions/withholdings
-- Tables may span multiple pages - extract from ALL pages
-- Do NOT return separate arrays per table - use ONE table_rows array""")
+            # Describe each table using only its actual column names
+            table_descs = []
+            for i, tr in enumerate(table_regions):
+                col_s = chr(ord('A') + tr.get("start_col", 0))
+                col_e = chr(ord('A') + min(tr.get("end_col", 0), 25))
+                name  = tr.get("section_label", f"Table {i+1}")
+                cols  = ", ".join(tr.get("column_names", []))
+                table_descs.append(
+                    f'  "{name}" — columns: {cols} (template cols {col_s}-{col_e})'
+                )
+            instructions.append(
+                f"=== MIXED MODE: FORM FIELDS + {n_tables} TABLES ===\n"
+                f"PART 1 - FORM FIELDS: Fill each labelled extraction cell.\n"
+                f"PART 2 - {n_tables} TABLES: Extract ALL rows from ALL tables.\n\n"
+                f"Tables in this template:\n"
+                + "\n".join(table_descs) + "\n\n"
+                f"RULES:\n"
+                f"- Put ALL rows from ALL tables into ONE 'table_rows' array\n"
+                f"- Add a \"Table\" field to EVERY row — value = exact table name\n"
+                f"  Valid values: {', '.join(repr(n) for n in table_names)}\n"
+                f"- Extract EVERY row from EVERY table — zero rows from any table is WRONG\n"
+                f"- Blank rows in the template are placeholders, not row limits\n"
+                f"- See PAGE LOCATION section for which page each table is on\n"
+                f"- Do NOT include column header rows as data rows"
+            )
         if table_rules:
             instructions.append(f"Document-specific rules:\n{table_rules}")
 
@@ -2769,40 +2869,177 @@ def _adjust_formula_for_block(formula: str, row_offset: int) -> str:
 def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                         template_regions, openpyxl_mod):
     """
-    Mixed mode: template has BOTH form fields AND a table.
-    Structure per block:
-      - Form fields written first (rows 1..max_r of the template)
-      - Table header row from the template
-      - Table data rows appended directly below
+    Mixed mode Excel writer.
+    Handles: single table, multiple tables, tables anywhere in template.
 
-    The block height is dynamic per document because each document
-    may have a different number of table rows.
+    For each document block:
+    1. Write form field rows (rows above the first table header)
+    2. For each table region:
+       a. Write the table header row from template
+       b. Write all extracted data rows for that table
+    3. Write any form rows that appear AFTER the last table (summary rows)
+    4. Blank separator between document blocks
     """
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
 
-    merges_tpl = sheet_data.get("merges", {})
-
-    # Get table region info
+    merges_tpl   = sheet_data.get("merges", {})
     table_regions = (template_regions or {}).get("table_regions", [])
-    col_names = []
-    start_col_idx = 0
-    header_row_idx = max_r  # default: table header at last row of template
 
-    if table_regions:
-        header_row_idx = table_regions[0]["header_row"]
-        start_col_idx  = table_regions[0]["start_col"]
-        for tr in table_regions:
-            col_names.extend(tr.get("column_names", []))
-        col_names = list(dict.fromkeys(col_names))
+    # Get section_label_rows from region analyser (authoritative source)
+    # These are rows identified during template analysis as structural labels
+    region_section_label_rows = set(
+        (template_regions or {}).get("section_label_rows", set())
+    )
 
-    # Calculate how many form rows are above the table header
-    form_rows = header_row_idx  # rows 0..header_row_idx-1 are form rows
+    # Sort tables by position
+    tables_sorted = sorted(table_regions, key=lambda t: (t["header_row"], t["start_col"]))
 
-    current_output_row = 1  # 1-based Excel row counter
+    # Build set of table header rows
+    table_header_rows = set(t["header_row"] for t in tables_sorted)
+
+    # Section label rows — use region analyser result, fall back to heuristic
+    if region_section_label_rows:
+        section_label_rows = region_section_label_rows
+    else:
+        # Fallback: rows directly above table headers with text but no extract targets
+        section_label_rows = set()
+        for tbl in tables_sorted:
+            hr = tbl["header_row"]
+            for r_above in range(max(0, hr - 4), hr):
+                has_label = any(
+                    cells_tpl.get(f"{r_above},{c}", {}).get("value", "")
+                    for c in range(max_c + 1)
+                )
+                has_extract = any(
+                    cells_tpl.get(f"{r_above},{c}", {}).get("extractTarget", False)
+                    for c in range(max_c + 1)
+                )
+                if has_label and not has_extract:
+                    section_label_rows.add(r_above)
+
+    # Blank rows in the template between sections — skip in output
+    blank_between_tables = set()
+    if tables_sorted:
+        first_table_row = tables_sorted[0]["header_row"]
+        last_table_row  = tables_sorted[-1]["header_row"]
+        for r in range(first_table_row, last_table_row + 1):
+            if r in table_header_rows or r in section_label_rows:
+                continue
+            row_has_content = any(
+                cells_tpl.get(f"{r},{c}", {}).get("value", "") or
+                cells_tpl.get(f"{r},{c}", {}).get("extractTarget", False)
+                for c in range(max_c + 1)
+            )
+            if not row_has_content:
+                blank_between_tables.add(r)
+
+    # Determine which template rows are "form rows" (above first table)
+    first_table_row = tables_sorted[0]["header_row"] if tables_sorted else max_r + 1
+    last_table_row  = tables_sorted[-1]["header_row"] if tables_sorted else -1
+
+    # Sort all template cells by row
+    sorted_cells = sorted(
+        [(key, cell_def) for key, cell_def in cells_tpl.items()
+         if isinstance(cell_def, dict) and not cell_def.get("mergeParent")],
+        key=lambda x: (int(x[0].split(",")[0]), int(x[0].split(",")[1]))
+    )
+
+    def write_template_row(tr, current_row, extracted_fields, label_to_value,
+                           confidence_map):
+        """Write one template row at the given output row."""
+        for key, cell_def in sorted_cells:
+            parts = key.split(",")
+            if int(parts[0]) != tr:
+                continue
+            tc = int(parts[1])
+            tpl_value = cell_def.get("value", "").strip()
+            xl_cell = ws.cell(row=current_row, column=tc + 1)
+
+            if cell_def.get("extractTarget"):
+                ref    = f"{_col_letter(tc)}{tr + 1}"
+                filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
+                if isinstance(filled, dict):
+                    filled = filled.get("value", "")
+                try:
+                    num = float(str(filled).replace(",", "")) if filled else None
+                    xl_cell.value = num if num is not None else (filled or "")
+                except (ValueError, TypeError):
+                    xl_cell.value = filled or ""
+                conf = confidence_map.get(ref, "high")
+                if conf == "low":
+                    try:
+                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
+                    except Exception:
+                        pass
+            elif tpl_value.startswith("="):
+                xl_cell.value = tpl_value
+            else:
+                xl_cell.value = tpl_value
+
+            if cell_def.get("style"):
+                _apply_cell_style(xl_cell, cell_def["style"], openpyxl_mod)
+
+            merge_span = cell_def.get("mergeSpan") or merges_tpl.get(key)
+            if merge_span:
+                sr = merge_span.get("rows", 1)
+                sc = merge_span.get("cols", 1)
+                if sr > 1 or sc > 1:
+                    try:
+                        ws.merge_cells(
+                            start_row=current_row, start_column=tc + 1,
+                            end_row=current_row + sr - 1, end_column=tc + sc,
+                        )
+                    except Exception:
+                        pass
+
+    def write_table_data_rows(table_rows, tbl, current_row):
+        """Write extracted data rows for one table."""
+        col_names  = tbl.get("column_names", [])
+        start_col  = tbl.get("start_col", 0)
+        col_indices = {name: (start_col + i) for i, name in enumerate(col_names)}
+
+        # Filter rows belonging to this table (if Table column present)
+        section = tbl.get("section_label", "")
+        if section and any("Table" in r for r in table_rows if isinstance(r, dict)):
+            rows_for_table = [
+                r for r in table_rows
+                if isinstance(r, dict) and (
+                    r.get("Table", "").strip().lower() == section.strip().lower()
+                    or not r.get("Table")  # rows without Table field go to first table
+                )
+            ]
+        else:
+            rows_for_table = [r for r in table_rows if isinstance(r, dict)]
+
+        for row_data in rows_for_table:
+            # Skip rows that are headers or section labels (AI sometimes includes these)
+            row_vals = [str(v).strip() for v in row_data.values() if v]
+            if all(v in col_names or v == section for v in row_vals):
+                continue  # skip header row returned by AI
+
+            for col_name, c_idx in col_indices.items():
+                val = row_data.get(col_name, "")
+                if isinstance(val, dict):
+                    val = val.get("value", "")
+                val = str(val).strip() if val is not None else ""
+                if val in col_names:
+                    val = ""  # skip if AI wrote column name as value
+                xl_cell = ws.cell(row=current_row, column=c_idx + 1)
+                try:
+                    clean = val.replace(",", "").replace("$", "").replace("£", "").strip()
+                    xl_cell.value = float(clean) if clean and clean not in ("", "-") else (val or "")
+                except (ValueError, TypeError):
+                    xl_cell.value = val
+            current_row += 1
+
+        return current_row, len(rows_for_table)
+
+    # ── Main write loop ───────────────────────────────────────────────────────
+    current_output_row = 1
 
     for block_idx, doc_result in enumerate(doc_results):
-        extracted_data  = doc_result.get_extracted_data()
+        extracted_data   = doc_result.get_extracted_data()
         extracted_fields = extracted_data.get("extracted_fields", {})
         validation       = extracted_data.get("validation", {})
         confidence_map   = validation.get("confidence_map", {})
@@ -2816,95 +3053,57 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
 
         block_start_row = current_output_row
 
-        # ── Write filename separator (except first block) ─────────────────
+        # Filename separator for multi-doc jobs
         if block_idx > 0:
             lc = ws.cell(row=current_output_row, column=1)
             lc.value = f">  {doc_result.filename}"
             lc.font = Font(bold=True, color="FF4F46E5", size=10)
             current_output_row += 1
 
-        # ── Write all template cells (form + table header) ────────────────
-        for key, cell_def in sorted(cells_tpl.items(),
-                                     key=lambda x: (int(x[0].split(",")[0]),
-                                                    int(x[0].split(",")[1]))):
-            if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
-                continue
-            parts = key.split(",")
-            if len(parts) != 2:
-                continue
-            tr, tc = int(parts[0]), int(parts[1])
-            tpl_value = cell_def.get("value", "").strip()
+        # Track which output row each template row maps to
+        template_row_to_output = {}
 
-            # Map template row to output row
-            out_row = current_output_row + tr
-
-            xl_cell = ws.cell(row=out_row, column=tc + 1)
-
-            if cell_def.get("extractTarget"):
-                ref   = f"{_col_letter(tc)}{tr + 1}"
-                filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
-                if isinstance(filled, dict):
-                    filled = filled.get("value", "")
-                # Write as number if possible
-                try:
-                    num = float(str(filled).replace(",", "")) if filled else None
-                    xl_cell.value = num if num is not None else (filled or "")
-                except (ValueError, TypeError):
-                    xl_cell.value = filled or ""
-
-                confidence = confidence_map.get(ref, "high")
-                if confidence == "low":
-                    try:
-                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
-                    except Exception:
-                        pass
-
-            elif tpl_value.startswith("="):
-                # Formula — write as-is (relative refs will be correct since
-                # we're writing at the right output row)
-                xl_cell.value = tpl_value
+        # Step 1: Write form rows ABOVE first table
+        for tr in range(min(first_table_row, max_r + 1)):
+            if tr in section_label_rows or tr in blank_between_tables:
+                # Write section label rows as-is (they are template structure)
+                write_template_row(tr, current_output_row, extracted_fields,
+                                   label_to_value, confidence_map)
             else:
-                xl_cell.value = tpl_value
+                write_template_row(tr, current_output_row, extracted_fields,
+                                   label_to_value, confidence_map)
+            template_row_to_output[tr] = current_output_row
+            current_output_row += 1
 
-            if cell_def.get("style"):
-                _apply_cell_style(xl_cell, cell_def["style"], openpyxl_mod)
+        # Step 2: For each table — write header then data rows
+        for tbl in tables_sorted:
+            hr = tbl["header_row"]
 
-            # Merges
-            merge_span = cell_def.get("mergeSpan") or merges_tpl.get(key)
-            if merge_span:
-                sr, sc = merge_span.get("rows", 1), merge_span.get("cols", 1)
-                if sr > 1 or sc > 1:
-                    try:
-                        ws.merge_cells(
-                            start_row=out_row, start_column=tc + 1,
-                            end_row=out_row + sr - 1, end_column=tc + sc,
-                        )
-                    except Exception:
-                        pass
+            # Write table header row from template (column labels row)
+            write_template_row(hr, current_output_row, extracted_fields,
+                               label_to_value, confidence_map)
+            current_output_row += 1
 
-        # After writing the template (max_r+1 rows), advance past it
-        current_output_row += max_r + 1  # +1 to land on the row after the header
+            # Write data rows for this table
+            current_output_row, n_rows = write_table_data_rows(
+                table_rows, tbl, current_output_row
+            )
 
-        # ── Write table data rows ─────────────────────────────────────────
-        if table_rows and col_names:
-            col_indices = {name: (start_col_idx + i) for i, name in enumerate(col_names)}
-
-            for row_data in table_rows:
-                for col_name, c_idx in col_indices.items():
-                    val = row_data.get(col_name, "")
-                    if isinstance(val, dict):
-                        val = val.get("value", "")
-                    val = str(val).strip() if val is not None else ""
-                    xl_cell = ws.cell(row=current_output_row, column=c_idx + 1)
-                    try:
-                        # Numeric — strip currency symbols
-                        clean = val.replace(",", "").replace("$", "").replace("£", "").strip()
-                        xl_cell.value = float(clean) if clean and clean not in ("", "-") else val
-                    except (ValueError, TypeError):
-                        xl_cell.value = val
+            # If no rows extracted — write one blank placeholder row
+            if n_rows == 0:
                 current_output_row += 1
 
-        # Flag count indicator
+        # Step 3: Write form rows AFTER the last table (summary/totals)
+        for tr in range(last_table_row + 1, max_r + 1):
+            if tr in blank_between_tables:
+                current_output_row += 1
+                continue
+            write_template_row(tr, current_output_row, extracted_fields,
+                               label_to_value, confidence_map)
+            template_row_to_output[tr] = current_output_row
+            current_output_row += 1
+
+        # Flag indicator
         flag_count = validation.get("flagged_count", 0)
         if flag_count > 0:
             nc = ws.cell(row=block_start_row, column=max_c + 2)
