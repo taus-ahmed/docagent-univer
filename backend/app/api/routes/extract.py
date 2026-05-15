@@ -564,21 +564,20 @@ def _col_letter(c: int) -> str:
 def _smart_truncate(doc_text: str, primary_mode: str, regions: dict) -> str:
     """
     Smart text truncation for long documents.
-    Instead of blindly cutting at N chars, extracts the most relevant sections.
-
-    Strategy:
-    1. For form-only docs: take first 3000 chars (header data is always at top)
-    2. For table/mixed docs:
-       a. Take first 1500 chars (header fields)
-       b. Find each table section in the text and extract its rows
-       c. Join them — total stays under 8000 chars
-    3. If doc is short enough — return as-is (no truncation needed)
+    Also replaces the PAGE BREAK marker with an explicit label the AI understands.
     """
     if not doc_text:
         return ""
 
-    MAX_FORM   = 3000
-    MAX_TABLE  = 8000
+    MAX_FORM  = 3000
+    MAX_TABLE = 8000
+
+    # Replace page break marker with explicit AI-readable label
+    # This is critical — the AI must know content continues on next page
+    doc_text = doc_text.replace(
+        "--- PAGE BREAK ---",
+        "\n\n=== DOCUMENT CONTINUES ON NEXT PAGE — ALL CONTENT BELOW IS PART OF THE SAME DOCUMENT ===\n\n"
+    )
 
     # Short doc — no truncation needed
     if len(doc_text) <= MAX_TABLE:
@@ -597,14 +596,12 @@ def _smart_truncate(doc_text: str, primary_mode: str, regions: dict) -> str:
     used_chars  = len(header_text)
 
     if table_regions:
-        # For each table, find its section in the document text and extract rows
         for tr in table_regions:
-            col_names  = tr.get("column_names", [])
+            col_names   = tr.get("column_names", [])
             section_lbl = tr.get("section_label", "")
             if not col_names:
                 continue
 
-            # Find where this table section starts in the text
             section_start = -1
             search_terms  = col_names[:2] + ([section_lbl] if section_lbl else [])
 
@@ -616,7 +613,6 @@ def _smart_truncate(doc_text: str, primary_mode: str, regions: dict) -> str:
             if section_start == -1:
                 continue
 
-            # Extract up to 100 lines from this section
             section_lines = lines[section_start:section_start + 100]
             section_text  = '\n'.join(section_lines)
 
@@ -630,7 +626,6 @@ def _smart_truncate(doc_text: str, primary_mode: str, regions: dict) -> str:
 
     result = '\n'.join(collected)
 
-    # If we still have budget, add more of the original text
     if used_chars < MAX_TABLE:
         remaining = doc_text[1500:MAX_TABLE - used_chars + 1500]
         result += '\n' + remaining
@@ -710,39 +705,88 @@ def _preserve_currency(value: str) -> tuple:
 def _build_page_anchor_map(doc_text: str, table_regions: list) -> dict:
     """
     Scan document text to find which page each table's content appears on.
-    Uses column header names as search terms — zero hardcoding.
+    Searches for: section label name, column header names, and common synonyms.
+    Zero hardcoding — purely derived from template structure vs document text.
 
-    Returns: {section_label: page_number} e.g. {"Earning Table": 1, "Deduction Table": 2}
+    Returns: {section_label: page_number}
     """
     if not doc_text or not table_regions:
         return {}
 
-    # Split by page break marker
     pages = doc_text.split("--- PAGE BREAK ---")
     if len(pages) <= 1:
-        return {}  # Single page — no anchoring needed
+        return {}
 
     page_map = {}
     for tbl in table_regions:
-        section  = tbl.get("section_label", "")
+        section   = tbl.get("section_label", "")
         col_names = tbl.get("column_names", [])
-        if not col_names:
+        if not col_names and not section:
             continue
 
-        # Search for each column header name across pages
-        # The page where the MOST column headers appear = the page for this table
-        best_page = 0
+        # Build search terms:
+        # 1. Section label words (e.g. "Earning Table" -> ["earning", "table"])
+        # 2. Column header names
+        # 3. First word of each column name (catches "Earning Type" -> "earning")
+        search_terms = set()
+        if section:
+            for word in section.lower().split():
+                if len(word) > 3:  # skip short words like "and", "the"
+                    search_terms.add(word)
+        for col in col_names:
+            search_terms.add(col.lower())
+            first_word = col.lower().split()[0] if col else ""
+            if len(first_word) > 3:
+                search_terms.add(first_word)
+
+        # Score each page by how many search terms appear
+        best_page  = 0
         best_score = 0
         for page_num, page_text in enumerate(pages, 1):
             page_lower = page_text.lower()
-            score = sum(1 for col in col_names
-                       if col.lower() in page_lower)
+            score = sum(1 for term in search_terms if term in page_lower)
             if score > best_score:
                 best_score = score
                 best_page  = page_num
 
+        # Only anchor if we found a meaningful match
         if best_page > 0 and best_score > 0:
             page_map[section] = best_page
+
+    # If all tables map to the same page, anchoring adds no value — skip it
+    unique_pages = set(page_map.values())
+    if len(unique_pages) <= 1:
+        # Try to differentiate by finding where the MOST table-specific content is
+        # Use the LAST significant keyword from each table's columns
+        page_map_refined = {}
+        for tbl in table_regions:
+            section   = tbl.get("section_label", "")
+            col_names = tbl.get("column_names", [])
+            if not section or not col_names:
+                continue
+            # Use the last column name as a differentiator
+            # (first col is often shared, e.g. "Amount" appears in both tables)
+            differentiator = col_names[-1].lower() if len(col_names) > 1 else col_names[0].lower()
+            # Also try section label first word
+            sec_word = section.lower().split()[0] if section else ""
+
+            best_page  = 0
+            best_score = 0
+            for page_num, page_text in enumerate(pages, 1):
+                page_lower = page_text.lower()
+                score = (
+                    (2 if sec_word and sec_word in page_lower else 0) +
+                    (1 if differentiator in page_lower else 0)
+                )
+                if score > best_score:
+                    best_score = score
+                    best_page  = page_num
+            if best_page > 0:
+                page_map_refined[section] = best_page
+
+        # Use refined map if it produces different pages
+        if len(set(page_map_refined.values())) > 1:
+            return page_map_refined
 
     return page_map
 
@@ -3060,26 +3104,30 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             lc.font = Font(bold=True, color="FF4F46E5", size=10)
             current_output_row += 1
 
-        # Track which output row each template row maps to
-        template_row_to_output = {}
-
         # Step 1: Write form rows ABOVE first table
+        # Skip: section label rows (written in Step 2 before each table header)
+        #        blank rows between sections
         for tr in range(min(first_table_row, max_r + 1)):
             if tr in section_label_rows or tr in blank_between_tables:
-                # Write section label rows as-is (they are template structure)
-                write_template_row(tr, current_output_row, extracted_fields,
-                                   label_to_value, confidence_map)
-            else:
-                write_template_row(tr, current_output_row, extracted_fields,
-                                   label_to_value, confidence_map)
+                # Skip — section labels are written in Step 2 before their table
+                continue
+            write_template_row(tr, current_output_row, extracted_fields,
+                               label_to_value, confidence_map)
             template_row_to_output[tr] = current_output_row
             current_output_row += 1
 
-        # Step 2: For each table — write header then data rows
+        # Step 2: For each table — write section label, then header, then data rows
         for tbl in tables_sorted:
             hr = tbl["header_row"]
 
-            # Write table header row from template (column labels row)
+            # Write section label row(s) immediately before this table header
+            for r_label in range(max(0, hr - 4), hr):
+                if r_label in section_label_rows:
+                    write_template_row(r_label, current_output_row, extracted_fields,
+                                      label_to_value, confidence_map)
+                    current_output_row += 1
+
+            # Write table header row from template (column names row)
             write_template_row(hr, current_output_row, extracted_fields,
                                label_to_value, confidence_map)
             current_output_row += 1
