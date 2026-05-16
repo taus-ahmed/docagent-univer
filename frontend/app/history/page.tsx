@@ -280,15 +280,15 @@ export default function HistoryPage() {
   const selectedJob    = jobs.find(j => j.id === selectedJobId);
   const jobHasTemplate = Boolean(selectedJob?.schema_id);
 
-  async function handleExport(jobId: number, mode: "template" | "combined" | "perfile") {
+  async function handleExport(jobId: number, mode: "template" | "combined" | "perfile" | "zip") {
     try {
       let blob: Blob; let filename: string;
-      if (mode === "template") {
+      if (mode === "template" || mode === "combined") {
         blob = await exportApi.templateExport(jobId);
         filename = `job_${jobId}_results.xlsx`;
-      } else if (mode === "combined") {
-        blob = await exportApi.combined({ job_id: jobId });
-        filename = `job_${jobId}_combined.xlsx`;
+      } else if (mode === "zip") {
+        blob = await exportApi.zipExport(jobId);
+        filename = `job_${jobId}_documents.zip`;
       } else {
         blob = await exportApi.perFile({ job_id: jobId });
         filename = `job_${jobId}_perfile.xlsx`;
@@ -416,18 +416,39 @@ export default function HistoryPage() {
                 <div className="detail-header">
                   <span className="detail-title">Job #{selectedJob.id}</span>
                   <StatusBadge status={selectedJob.status} />
-                  {selectedJob.status === "completed" && (
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => handleExport(selectedJob.id, jobHasTemplate ? "template" : "combined")}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                      </svg>
-                      Download Excel
-                    </button>
+                  {selectedJob.status === "completed" && jobHasTemplate && (
+                    <>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleExport(selectedJob.id, "template")}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="7 10 12 15 17 10"/>
+                          <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download Excel
+                      </button>
+                      {(selectedJob.total_docs ?? 0) > 1 && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleExport(selectedJob.id, "zip")}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                            <line x1="8" y1="11" x2="16" y2="11"/>
+                          </svg>
+                          Download ZIP
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {selectedJob.status === "completed" && !jobHasTemplate && (
+                    <span style={{ fontSize: 11, color: "var(--text3)" }}>
+                      No template used
+                    </span>
                   )}
                   {selectedJob.status === "failed" && (
                     <span style={{ fontSize: 12, color: "var(--red,#ef4444)" }}>
