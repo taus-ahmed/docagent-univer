@@ -114,8 +114,22 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       if (!cell) return;
       const [r, col] = key.split(",").map(Number);
       if (cell.repeatRow) repeatRowsSet.add(r);
-      if (cell.extractTarget && cell.value.trim()) {
-        extractTargets.push({ r, c: col, label: cell.value.trim(), isRepeat: !!cell.repeatRow });
+      if (cell.extractTarget) {
+        // Find the nearest label for this cell (look left, then above)
+        let label = cell.value?.trim() ?? "";
+        if (!label) {
+          // Look left for a label
+          for (let dc = 1; dc <= 3; dc++) {
+            const left = c[`${r},${col - dc}`];
+            if (left?.value?.trim()) { label = left.value.trim(); break; }
+          }
+        }
+        if (!label) {
+          // Look above for a label
+          const above = c[`${r - 1},${col}`];
+          if (above?.value?.trim()) label = above.value.trim();
+        }
+        extractTargets.push({ r, c: col, label, isRepeat: !!cell.repeatRow });
       }
     });
     return { cells: c, colWidths: cw, merges: m, extractTargets, repeatRows: [...repeatRowsSet].sort((a, b) => a - b) };
@@ -425,7 +439,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   };
 
   // All currently selected cell keys (range + ctrl-selected)
-  const extractCount = useMemo(() => Object.values(cells).filter(c => c?.extractTarget && !c?.repeatRow && c?.value?.trim()).length, [cells]);
+  const extractCount = useMemo(() => Object.values(cells).filter(c => c?.extractTarget && !c?.repeatRow).length, [cells]);
   const repeatRowCount = useMemo(() => new Set(Object.entries(cells).filter(([, c]) => c?.repeatRow).map(([k]) => k.split(",")[0])).size, [cells]);
 
   const tb = (active = false): React.CSSProperties => ({
