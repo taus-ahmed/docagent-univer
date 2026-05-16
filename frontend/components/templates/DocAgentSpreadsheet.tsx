@@ -95,6 +95,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const [selR, setSelR] = useState(0);
   const [selC, setSelC] = useState(0);
   const [rng, setRng] = useState({ r1: 0, c1: 0, r2: 0, c2: 0 });
+  const [ctrlSel, setCtrlSel] = useState<Set<string>>(new Set()); // Ctrl+click multi-select
   const [editR, setEditR] = useState<number | null>(null);
   const [editC, setEditC] = useState<number | null>(null);
   const [editVal, setEditVal] = useState("");
@@ -150,31 +151,47 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
 
   const markExtract = useCallback(() => {
     ph();
-    const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
-    const c1 = Math.min(selC, rng.c2), c2 = Math.max(selC, rng.c2);
     const next = { ...cells };
-    const alreadyMarked = next[ck(r1, c1)]?.extractTarget && !next[ck(r1, c1)]?.repeatRow;
-    for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
-      const k = ck(r, c);
+    // Check if first selected cell is already marked — toggle all
+    const firstKey = allSelectedKeys.values().next().value ?? ck(selR, selC);
+    const alreadyMarked = next[firstKey]?.extractTarget && !next[firstKey]?.repeatRow;
+    for (const k of allSelectedKeys) {
       next[k] = { ...(next[k] ?? { value: "", style: {} }), extractTarget: !alreadyMarked, repeatRow: false };
     }
     upd(next);
-  }, [cells, selR, selC, rng, ph, upd]);
+    // Clear ctrl selection after applying
+    setCtrlSel(new Set());
+  }, [cells, allSelectedKeys, selR, selC, ph, upd]);
 
   const markRepeat = useCallback(() => {
     ph();
-    const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
+    const r1 = Math.min(rng.r1, rng.r2);
+    const r2 = Math.max(rng.r1, rng.r2);
+    // Also include rows from ctrl-selected cells
+    const ctrlRows = new Set<number>();
+    ctrlSel.forEach(k => { const [r] = k.split(",").map(Number); ctrlRows.add(r); });
     const next = { ...cells };
     const alreadyRepeat = Object.entries(next).some(([k, cell]) => {
       const [r] = k.split(",").map(Number);
-      return r >= r1 && r <= r2 && cell.repeatRow;
+      return (r >= r1 && r <= r2 || ctrlRows.has(r)) && cell.repeatRow;
     });
+    // Apply to range rows
     for (let r = r1; r <= r2; r++) for (let c = 0; c < COLS; c++) {
       const k = ck(r, c);
       next[k] = { ...(next[k] ?? { value: "", style: {} }), repeatRow: !alreadyRepeat, extractTarget: !alreadyRepeat };
     }
+    // Apply to ctrl-selected rows
+    ctrlRows.forEach(r => {
+      if (r < r1 || r > r2) {
+        for (let c = 0; c < COLS; c++) {
+          const k = ck(r, c);
+          next[k] = { ...(next[k] ?? { value: "", style: {} }), repeatRow: !alreadyRepeat, extractTarget: !alreadyRepeat };
+        }
+      }
+    });
     upd(next);
-  }, [cells, selR, selC, rng, ph, upd]);
+    setCtrlSel(new Set());
+  }, [cells, selR, selC, rng, ctrlSel, ph, upd]);
 
   const doUndo = useCallback(() => {
     if (!hist.length) return;
@@ -280,11 +297,49 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         return;
       }
 
-      if (e.key === "ArrowUp") { e.preventDefault(); nav(-1, 0); }
-      else if (e.key === "ArrowDown") { e.preventDefault(); nav(1, 0); }
-      else if (e.key === "ArrowLeft") { e.preventDefault(); nav(0, -1); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); nav(0, 1); }
-      else if (e.key === "Tab") { e.preventDefault(); nav(0, 1); }
+      // Arrow navigation — with Ctrl and Shift modifiers
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        const dr = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
+        const dc = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0;
+
+        if (e.ctrlKey || e.metaKey) {
+          // Ctrl+Arrow — jump to edge of data (like Excel)
+          let r = selR + dr, c = selC + dc;
+          // Find last cell with content in this direction
+          while (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+            if (cells[ck(r, c)]?.value) {
+              // Continue while there's content
+              const nextR = r + dr, nextC = c + dc;
+              if (nextR < 0 || nextR >= ROWS || nextC < 0 || nextC >= COLS || !cells[ck(nextR, nextC)]?.value) break;
+              r = nextR; c = nextC;
+            } else break;
+          }
+          r = Math.max(0, Math.min(ROWS - 1, r));
+          c = Math.max(0, Math.min(COLS - 1, c));
+          if (e.shiftKey) {
+            // Ctrl+Shift+Arrow — extend selection to edge
+            setRng(p => ({ ...p, r2: r, c2: c }));
+          } else {
+            setSelR(r); setSelC(c);
+            setRng({ r1: r, c1: c, r2: r, c2: c });
+            setCtrlSel(new Set());
+          }
+        } else if (e.shiftKey) {
+          // Shift+Arrow — extend selection by one cell
+          setRng(p => ({
+            ...p,
+            r2: Math.max(0, Math.min(ROWS - 1, p.r2 + dr)),
+            c2: Math.max(0, Math.min(COLS - 1, p.c2 + dc)),
+          }));
+        } else {
+          // Normal arrow — move selection
+          nav(dr, dc);
+          setCtrlSel(new Set());
+        }
+        return;
+      }
+
       else if (e.key === "Enter") { e.preventDefault(); nav(1, 0); }
       else if (e.key === "F2") { e.preventDefault(); startEdit(selR, selC); }
       else if (e.key === "Delete" || e.key === "Backspace") {
@@ -352,10 +407,22 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   }, [colWidths, cells, merges, notify]);
 
   const inRange = (r: number, c: number) => {
+    if (ctrlSel.size > 0 && ctrlSel.has(ck(r, c))) return true;
     const r1 = Math.min(selR, rng.r2), r2 = Math.max(selR, rng.r2);
     const c1 = Math.min(selC, rng.c2), c2 = Math.max(selC, rng.c2);
     return r >= r1 && r <= r2 && c >= c1 && c <= c2;
   };
+
+  // All currently selected cell keys (range + ctrl-selected)
+  const allSelectedKeys = useMemo(() => {
+    const keys = new Set<string>(ctrlSel);
+    const r1 = Math.min(rng.r1, rng.r2), r2 = Math.max(rng.r1, rng.r2);
+    const c1 = Math.min(rng.c1, rng.c2), c2 = Math.max(rng.c1, rng.c2);
+    for (let r = r1; r <= r2; r++)
+      for (let c = c1; c <= c2; c++)
+        keys.add(ck(r, c));
+    return keys;
+  }, [rng, ctrlSel]);
 
   const extractCount = useMemo(() => Object.values(cells).filter(c => c?.extractTarget && !c?.repeatRow && c?.value?.trim()).length, [cells]);
   const repeatRowCount = useMemo(() => new Set(Object.entries(cells).filter(([, c]) => c?.repeatRow).map(([k]) => k.split(",")[0])).size, [cells]);
@@ -548,11 +615,12 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                     const isEdit = editR === r && editC === c;
                     const isSel = selR === r && selC === c;
                     const ir = inRange(r, c);
+                    const isCtrlSel = ctrlSel.has(ck(r, c));
                     const isExtract = cell?.extractTarget && !cell?.repeatRow;
                     const isRepeat = cell?.repeatRow;
                     const tw = Array.from({ length: cs2 }, (_, i) => colWidths[c + i] ?? DCW).reduce((a, b) => a + b, 0);
-                    const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.06)" : isExtract ? "rgba(22,163,74,0.06)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
-                    const bd = isSel ? "2px solid #4f46e5" : isRepeat ? "1px solid #93c5fd" : isExtract ? "1px solid #86efac" : ir ? "1px solid #a5b4fc" : "1px solid #e5e7eb";
+                    const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.06)" : isExtract ? "rgba(22,163,74,0.06)" : isCtrlSel ? "rgba(79,70,229,0.12)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
+                    const bd = isSel ? "2px solid #4f46e5" : isCtrlSel ? "2px solid #7c3aed" : isRepeat ? "1px solid #93c5fd" : isExtract ? "1px solid #86efac" : ir ? "1px solid #a5b4fc" : "1px solid #e5e7eb";
                     const finalBd = s.borderAll ? "1px solid #374151" : s.borderOuter && isSel ? "2px solid #374151" : bd;
                     const ff = s.fontFamily ?? "Segoe UI,system-ui,sans-serif";
                     const fs = s.fontSize ?? 11;
@@ -563,7 +631,23 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                     return (
                       <td key={c} colSpan={cs2} rowSpan={rs2}
                         style={{ width: tw, minWidth: tw, height: DRH, maxHeight: DRH, overflow: "hidden", background: bg, border: finalBd, padding: 0, cursor: "cell", position: "relative", verticalAlign: "middle" }}
-                        onClick={e => { if (e.shiftKey) { setRng(p => ({ ...p, r2: r, c2: c })); } else { setSelR(r); setSelC(c); setRng({ r1: r, c1: c, r2: r, c2: c }); } }}
+                        onClick={e => {
+                          if (e.ctrlKey || e.metaKey) {
+                            // Ctrl/Cmd+click — toggle cell in multi-select
+                            setCtrlSel(prev => {
+                              const next = new Set(prev);
+                              const k = ck(r, c);
+                              if (next.has(k)) next.delete(k); else next.add(k);
+                              return next;
+                            });
+                          } else if (e.shiftKey) {
+                            setRng(p => ({ ...p, r2: r, c2: c }));
+                          } else {
+                            setSelR(r); setSelC(c);
+                            setRng({ r1: r, c1: c, r2: r, c2: c });
+                            setCtrlSel(new Set()); // clear ctrl selection on normal click
+                          }
+                        }}
                         onDoubleClick={() => startEdit(r, c)}
                         onMouseDown={e => { if (e.button !== 0) return; mouseDown.current = true; setSelR(r); setSelC(c); setRng({ r1: r, c1: c, r2: r, c2: c }); }}
                         onMouseEnter={() => { if (mouseDown.current) setRng(p => ({ ...p, r2: r, c2: c })); }}
@@ -604,6 +688,11 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       {/* STATUS BAR */}
       <div style={{ flexShrink: 0, height: 26, background: "#f8f9fb", borderTop: "1px solid #e5e7eb", display: "flex", alignItems: "center", padding: "0 12px", fontSize: 11, color: "#9ca3af", gap: 16 }}>
         <span style={{ color: "#6b7280", fontWeight: 500 }}>{cl(selC)}{selR + 1}</span>
+        {ctrlSel.size > 0 && (
+          <span style={{ color: "#7c3aed", fontWeight: 600, fontSize: 10 }}>
+            +{ctrlSel.size} Ctrl-selected
+          </span>
+        )}
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
           <span style={{ color: extractCount > 0 ? "#15803d" : "#9ca3af", fontWeight: extractCount > 0 ? 600 : 400 }}>
@@ -617,7 +706,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           </span>
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#d1d5db" }}>
-          Select cells then click Extract here or Repeat row
+          Ctrl+click multi-select · Shift+click/arrow range · Ctrl+arrow jump
         </span>
       </div>
     </div>
