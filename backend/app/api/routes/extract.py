@@ -412,7 +412,14 @@ def _analyse_template_regions(layout: dict) -> dict:
                                 and grid[(r_candidate, c)]["value"]
                                 and not grid[(r_candidate, c)]["extractTarget"]]
         if len(value_cols_candidate) >= 2:
-            # This row looks like a table header — mark rows above it as section labels
+            # Only count as table header if row below is empty (no values)
+            below_with_value = [c for c in rows_with_content.get(r_candidate + 1, [])
+                               if grid.get((r_candidate + 1, c))
+                               and grid[(r_candidate + 1, c)]["value"]
+                               and not grid[(r_candidate + 1, c)]["extractTarget"]]
+            if below_with_value:
+                continue  # row below has content → not a table header
+            # This row is a real table header — mark rows above it as section labels
             for r_above in range(max(0, r_candidate - 4), r_candidate):
                 if r_above not in form_rows_set:
                     pre_table_header_rows.add(r_above)
@@ -432,12 +439,24 @@ def _analyse_template_regions(layout: dict) -> dict:
         if len(value_cols) < 2:
             continue
 
-        row_labels = [grid[(r, c)]["value"] for c in sorted(value_cols)]
+        # A valid table header MUST have an empty row immediately below it.
+        # Form section headers (like "Summary", "Opening Bal | Closing Bal")
+        # have content below them — they are NOT table headers.
+        # The transactions table header ("Txn DT | Type | Description") has
+        # blank placeholder rows below it — that IS a table header.
+        below_cols_with_value = [c for c in rows_with_content.get(r + 1, [])
+                                 if grid.get((r + 1, c)) and grid[(r + 1, c)]["value"]
+                                 and not grid[(r + 1, c)]["extractTarget"]]
 
-        # The row below should be empty (table body placeholder)
-        below_cols = [c for c in rows_with_content.get(r + 1, [])
-                      if grid.get((r + 1, c)) and grid[(r + 1, c)]["value"]]
-        is_header_only = len(below_cols) == 0
+        # If the next row has content — this is a form section, not a table header
+        if below_cols_with_value:
+            continue
+
+        # Also skip if this row is a merged section header
+        if r in merged_section_header_rows:
+            continue
+
+        row_labels = [grid[(r, c)]["value"] for c in sorted(value_cols)]
 
         min_col = min(value_cols)
         max_col = max(value_cols)
@@ -448,7 +467,7 @@ def _analyse_template_regions(layout: dict) -> dict:
             "start_ref": _cell_ref(r, min_col),
             "end_ref": _cell_ref(r, max_col),
             "column_names": row_labels,
-            "is_header_only": is_header_only,
+            "is_header_only": True,
         })
 
     # Keep ALL valid table regions — sorted by row then by column position
@@ -2806,6 +2825,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
 
 @router.get("/jobs/{job_id}/export")
 def export_job_excel(
+
     job_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -2847,6 +2867,8 @@ def export_job_excel(
     if sheet_data:
         _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl)
     else:
+        # No template saved — write a basic structured export
+        # This should rarely happen as jobs are always run with templates
         _write_flat_table(ws, doc_results, openpyxl)
 
     buf = io.BytesIO()
@@ -2856,6 +2878,73 @@ def export_job_excel(
     return StreamingResponse(buf, headers={
         "Content-Disposition": f'attachment; filename="job_{job_id}_results.xlsx"',
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    })
+
+
+@router.get("/jobs/{job_id}/export/zip")
+def export_job_zip(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export each document as a separate Excel file, bundled into a ZIP."""
+    try:
+        import openpyxl
+    except ImportError:
+        raise HTTPException(status_code=500, detail="openpyxl not installed.")
+
+    import zipfile
+
+    job = _get_job_or_404(job_id, current_user, db)
+    doc_results = (
+        db.query(DocumentResult)
+        .filter(DocumentResult.job_id == job_id)
+        .order_by(DocumentResult.id)
+        .all()
+    )
+    if not doc_results:
+        raise HTTPException(status_code=404, detail="No results found.")
+
+    sheet_data = None
+    template_regions = None
+    if job.schema_id:
+        try:
+            tpl = db.query(ColumnTemplate).filter(
+                ColumnTemplate.id == int(job.schema_id)
+            ).first()
+            if tpl and tpl.description:
+                raw = json.loads(tpl.description)
+                if isinstance(raw, dict) and "cells" in raw:
+                    sheet_data = raw
+                    template_regions = _analyse_template_regions(raw)
+        except Exception as e:
+            print(f"[EXPORT] Template load error: {e}", flush=True)
+
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for doc in doc_results:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Results"
+
+            if sheet_data:
+                _write_excel(ws, [doc], sheet_data, template_regions, openpyxl)
+            else:
+                _write_flat_table(ws, [doc], openpyxl)
+
+            # Use the original filename without extension as the Excel filename
+            base = doc.filename.rsplit(".", 1)[0] if "." in doc.filename else doc.filename
+            excel_name = f"{base}_extracted.xlsx"
+
+            excel_buf = io.BytesIO()
+            wb.save(excel_buf)
+            zf.writestr(excel_name, excel_buf.getvalue())
+
+    zip_buf.seek(0)
+    safe_name = f"job_{job_id}_documents.zip"
+    return StreamingResponse(zip_buf, headers={
+        "Content-Disposition": f'attachment; filename="{safe_name}"',
+        "Content-Type": "application/zip",
     })
 
 
