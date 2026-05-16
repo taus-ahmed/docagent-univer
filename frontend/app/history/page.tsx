@@ -417,19 +417,17 @@ export default function HistoryPage() {
                   <span className="detail-title">Job #{selectedJob.id}</span>
                   <StatusBadge status={selectedJob.status} />
                   {selectedJob.status === "completed" && (
-                    <>
-                      {jobHasTemplate && (
-                        <button className="btn btn-primary btn-sm" onClick={() => handleExport(selectedJob.id, "template")}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          Template Excel
-                        </button>
-                      )}
-                      <button className="btn btn-secondary btn-sm" onClick={() => handleExport(selectedJob.id, "combined")}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Flat Excel
-                      </button>
-                      <button className="btn btn-secondary btn-sm" onClick={() => handleExport(selectedJob.id, "perfile")}>Per-file</button>
-                    </>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleExport(selectedJob.id, jobHasTemplate ? "template" : "combined")}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Download Excel
+                    </button>
                   )}
                   {selectedJob.status === "failed" && (
                     <span style={{ fontSize: 12, color: "var(--red,#ef4444)" }}>
