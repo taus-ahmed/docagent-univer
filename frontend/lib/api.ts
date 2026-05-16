@@ -349,6 +349,10 @@ export const exportApi = {
     const res = await api.get(`/api/jobs/${jobId}/export`, { responseType: "blob" });
     return res.data;
   },
+  zipExport: async (jobId: number): Promise<Blob> => {
+    const res = await api.get(`/api/jobs/${jobId}/export/zip`, { responseType: "blob" });
+    return res.data;
+  },
   downloadBlob: (blob: Blob, filename: string): void => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
