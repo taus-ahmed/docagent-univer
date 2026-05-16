@@ -792,6 +792,45 @@ export default function ExtractPage() {
                     </div>
                   )}
                 </div>
+              ) : isFailed ? (
+                /* ── Job failed — clear error panel ── */
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 380, padding: 40, gap: 16 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: "#ef444418", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--red,#ef4444)" strokeWidth="1.5">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text1)", marginBottom: 6 }}>Extraction failed</p>
+                    <p style={{ fontSize: 12, color: "var(--text3)", maxWidth: 300 }}>
+                      {jobStatus?.failed > 0
+                        ? `${jobStatus.failed} of ${jobStatus.total_docs} document${jobStatus.total_docs !== 1 ? "s" : ""} could not be processed.`
+                        : "The job encountered an error and could not complete."}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 320 }}>
+                    <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 11, color: "var(--text3)" }}>
+                      <p style={{ fontWeight: 600, color: "var(--text2)", marginBottom: 4 }}>Common causes:</p>
+                      <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 3 }}>
+                        <li>Template not found or corrupted — try re-saving it</li>
+                        <li>PDF is password-protected or image-only (scanned)</li>
+                        <li>File type not supported</li>
+                        <li>AI service temporarily unavailable — retry in a moment</li>
+                      </ul>
+                    </div>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ width: "100%" }}
+                      onClick={() => {
+                        setActiveJobId(null);
+                        setResults([]);
+                      }}
+                    >
+                      Try again
+                    </button>
+                  </div>
+                </div>
               ) : selectedTemplate ? (
                 /* Template selected — show preview */
                 <div style={{ padding: 28 }}>
