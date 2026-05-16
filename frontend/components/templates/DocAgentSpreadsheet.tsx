@@ -149,6 +149,17 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     upd(next);
   }, [cells, selR, selC, rng, ph, upd]);
 
+  // All currently selected cell keys — range union ctrl-clicked cells
+  const allSelectedKeys = useMemo(() => {
+    const keys = new Set<string>(ctrlSel);
+    const r1 = Math.min(rng.r1, rng.r2), r2 = Math.max(rng.r1, rng.r2);
+    const c1 = Math.min(rng.c1, rng.c2), c2 = Math.max(rng.c1, rng.c2);
+    for (let r = r1; r <= r2; r++)
+      for (let c = c1; c <= c2; c++)
+        keys.add(ck(r, c));
+    return keys;
+  }, [rng, ctrlSel]);
+
   const markExtract = useCallback(() => {
     ph();
     const next = { ...cells };
@@ -414,16 +425,6 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   };
 
   // All currently selected cell keys (range + ctrl-selected)
-  const allSelectedKeys = useMemo(() => {
-    const keys = new Set<string>(ctrlSel);
-    const r1 = Math.min(rng.r1, rng.r2), r2 = Math.max(rng.r1, rng.r2);
-    const c1 = Math.min(rng.c1, rng.c2), c2 = Math.max(rng.c1, rng.c2);
-    for (let r = r1; r <= r2; r++)
-      for (let c = c1; c <= c2; c++)
-        keys.add(ck(r, c));
-    return keys;
-  }, [rng, ctrlSel]);
-
   const extractCount = useMemo(() => Object.values(cells).filter(c => c?.extractTarget && !c?.repeatRow && c?.value?.trim()).length, [cells]);
   const repeatRowCount = useMemo(() => new Set(Object.entries(cells).filter(([, c]) => c?.repeatRow).map(([k]) => k.split(",")[0])).size, [cells]);
 
