@@ -47,21 +47,32 @@ function TableRowsSection({ rows }: { rows: Record<string, any>[] }) {
         onClick={() => setOpen(p => !p)}
         style={{
           display: "flex", alignItems: "center", gap: 6,
-          background: "none", border: "none", cursor: "pointer",
-          fontSize: 12, fontWeight: 600, color: "var(--accent)", padding: 0,
+          background: open ? "var(--surface2)" : "transparent",
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          cursor: "pointer",
+          fontSize: 11, fontWeight: 500, color: "var(--text2)",
+          padding: "4px 10px",
+          marginTop: 4,
         }}
       >
-        <svg
-          width="12" height="12" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2"
-          style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
-        >
-          <polyline points="9 18 15 12 9 6"/>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="3" y1="15" x2="21" y2="15"/>
+          <line x1="9" y1="9" x2="9" y2="21"/>
         </svg>
         {rows.length} line item{rows.length !== 1 ? "s" : ""}
         <span style={{ fontSize: 10, color: "var(--text3)", fontWeight: 400 }}>
           ({cols.slice(0,3).join(", ")}{cols.length > 3 ? "…" : ""})
         </span>
+        <svg
+          width="10" height="10" viewBox="0 0 24 24" fill="none"
+          stroke="var(--text4)" strokeWidth="2"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s", marginLeft: 2 }}
+        >
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
       </button>
 
       {open && (
@@ -392,7 +403,7 @@ export default function HistoryPage() {
                       {job.total_time_sec > 0 && <span className="job-count" style={{ color: "var(--text3)" }}>{job.total_time_sec.toFixed(1)}s</span>}
                     </div>
                   </div>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text4)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--border2)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>
               ))}
             </div>

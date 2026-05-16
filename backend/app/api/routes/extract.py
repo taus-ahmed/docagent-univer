@@ -3032,11 +3032,18 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                     except Exception:
                         pass
 
-        # Filename label between blocks
+        # Document separator between blocks — clean grey divider, no ugly chevron
         if block_idx > 0:
+            # 2 blank rows before the divider
+            row_offset += 2
+            # Grey shaded divider row with document name
+            for col_i in range(1, max_c + 3):
+                ws.cell(row=row_offset, column=col_i).fill = \
+                    PatternFill(fill_type="solid", fgColor="FFF3F4F6")
             lc = ws.cell(row=row_offset, column=1)
-            lc.value = f">  {doc_result.filename}"
-            lc.font = Font(bold=True, color="FF4F46E5", size=10)
+            lc.value = f"Document {block_idx + 1}  ·  {doc_result.filename}"
+            lc.font = Font(bold=True, color="FF374151", size=10)
+            row_offset += 2  # 1 divider + 1 blank before content
 
         # Flag count indicator
         flag_count = validation.get("flagged_count", 0)
@@ -3198,8 +3205,18 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 if isinstance(filled, dict):
                     filled = filled.get("value", "")
                 try:
-                    num = float(str(filled).replace(",", "")) if filled else None
-                    xl_cell.value = num if num is not None else (filled or "")
+                    clean_filled = str(filled).replace(",", "").strip() if filled else ""
+                    # Only convert to float for financial amount fields
+                    # Never convert IDs, codes, reference numbers, routing numbers
+                    amount_labels = {"amount","total","subtotal","balance","price",
+                                    "cost","tax","freight","fee","charge","payment",
+                                    "salary","gross","net","deduction","rate"}
+                    label_lower = tpl_value.lower() if tpl_value else ""
+                    is_amount = any(kw in label_lower for kw in amount_labels)
+                    if filled and is_amount and re.match(r'^-?[0-9]+\.?[0-9]*$', clean_filled):
+                        xl_cell.value = float(clean_filled)
+                    else:
+                        xl_cell.value = filled or ""
                 except (ValueError, TypeError):
                     xl_cell.value = filled or ""
                 conf = confidence_map.get(ref, "high")
@@ -3278,7 +3295,15 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 xl_cell = ws.cell(row=current_row, column=c_idx + 1)
                 try:
                     clean = val.replace(",", "").replace("$", "").replace("£", "").strip()
-                    xl_cell.value = float(clean) if clean and clean not in ("", "-") else (val or "")
+                    amount_labels = {"amount","total","subtotal","balance","price",
+                                    "cost","tax","freight","fee","charge","payment",
+                                    "salary","gross","net","deduction","rate","qty","quantity"}
+                    col_lower = col_name.lower()
+                    is_amount = any(kw in col_lower for kw in amount_labels)
+                    if clean and clean not in ("", "-") and is_amount and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
+                        xl_cell.value = float(clean)
+                    else:
+                        xl_cell.value = val or ""
                 except (ValueError, TypeError):
                     xl_cell.value = val
             current_row += 1
@@ -3304,11 +3329,21 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
 
         block_start_row = current_output_row
 
-        # Filename separator for multi-doc jobs
+        # Document separator for multi-doc jobs
+        # 3 blank rows + a clear divider line so document boundaries are obvious
         if block_idx > 0:
+            # 3 blank rows to separate documents (vs 1 row between tables)
+            current_output_row += 3
+
+            # Divider row with filename — styled distinctly from table separators
+            for col_i in range(1, max_c + 3):
+                div_cell = ws.cell(row=current_output_row, column=col_i)
+                div_cell.fill = PatternFill(fill_type="solid", fgColor="FFE5E7EB")
             lc = ws.cell(row=current_output_row, column=1)
-            lc.value = f">  {doc_result.filename}"
-            lc.font = Font(bold=True, color="FF4F46E5", size=10)
+            lc.value = f"Document: {doc_result.filename}"
+            lc.font = Font(bold=True, color="FF1F2937", size=10)
+            current_output_row += 1
+            # 1 more blank row after the divider before content starts
             current_output_row += 1
 
         # Track which output row each template row maps to
@@ -3327,8 +3362,14 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             current_output_row += 1
 
         # Step 2: For each table — write section label, then header, then data rows
-        for tbl in tables_sorted:
+        for tbl_idx, tbl in enumerate(tables_sorted):
             hr = tbl["header_row"]
+
+            # Fixed 1-row gap before each table (not the template's variable gap)
+            # This ensures consistent spacing regardless of how many blank rows
+            # the user left in the template between tables
+            if tbl_idx > 0:
+                current_output_row += 1  # exactly 1 blank row between tables
 
             # Write section label row(s) immediately before this table header
             for r_label in range(max(0, hr - 4), hr):
@@ -3368,8 +3409,8 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             nc.value = f"! {flag_count} low-confidence"
             nc.font = Font(color="FFDC2626", size=9, italic=True)
 
-        # Blank row between blocks
-        current_output_row += 1
+        # No trailing blank row here — spacing is added at the START of the next block
+        # (3 blank rows for new document, 1 blank row between tables within same doc)
 
     print(f"[EXPORT] mixed: {len(doc_results)} blocks, "
           f"{current_output_row} total rows written", flush=True)
