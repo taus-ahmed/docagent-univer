@@ -2938,21 +2938,27 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
 def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod):
     """
     Form mode: one filled template block per document result.
-    Handles formulas: =SUM() and other Excel formulas are written and
-    also pre-calculated where possible so values show without needing
-    manual recalculation in Excel.
+    Multi-doc: 3 blank rows + grey divider between documents.
     """
-    from openpyxl.styles import Font
+    from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
-    merges_tpl = sheet_data.get("merges", {})
+    merges_tpl   = sheet_data.get("merges", {})
+    # Extra rows per block for separator (only applied from block 2 onwards)
+    SEPARATOR_HEIGHT = 5  # 3 blank + 1 divider + 1 blank
     block_height = max_r + 2
 
+    def get_row_offset(block_idx):
+        """Calculate row offset for a block, accounting for separators."""
+        if block_idx == 0:
+            return 0
+        return block_idx * block_height + block_idx * SEPARATOR_HEIGHT
+
     for block_idx, doc_result in enumerate(doc_results):
-        row_offset = block_idx * block_height
-        extracted_data = doc_result.get_extracted_data()
+        row_offset = get_row_offset(block_idx)
+        extracted_data   = doc_result.get_extracted_data()
         extracted_fields = extracted_data.get("extracted_fields", {})
-        validation = extracted_data.get("validation", {})
-        confidence_map = validation.get("confidence_map", {})
+        validation       = extracted_data.get("validation", {})
+        confidence_map   = validation.get("confidence_map", {})
 
         label_to_value = {
             k: (v.get("value","") if isinstance(v,dict) else str(v or ""))
@@ -3032,18 +3038,23 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                     except Exception:
                         pass
 
-        # Document separator between blocks — clean grey divider, no ugly chevron
+        # Document separator between blocks — grey divider row
         if block_idx > 0:
-            # 2 blank rows before the divider
-            row_offset += 2
-            # Grey shaded divider row with document name
+            sep_base = row_offset - SEPARATOR_HEIGHT + 1  # 1-based
+            # Grey shaded divider row
             for col_i in range(1, max_c + 3):
-                ws.cell(row=row_offset, column=col_i).fill = \
+                ws.cell(row=sep_base + 3, column=col_i).fill = \
                     PatternFill(fill_type="solid", fgColor="FFF3F4F6")
-            lc = ws.cell(row=row_offset, column=1)
+            lc = ws.cell(row=sep_base + 3, column=1)
             lc.value = f"Document {block_idx + 1}  ·  {doc_result.filename}"
             lc.font = Font(bold=True, color="FF374151", size=10)
-            row_offset += 2  # 1 divider + 1 blank before content
+
+        # Document separator between blocks — placed AFTER writing this block
+        # Use a separate counter so we don't corrupt row_offset for current block
+        separator_row = row_offset + max_r + 2
+        if block_idx > 0:
+            # This separator was written at the start — skip (handled below)
+            pass
 
         # Flag count indicator
         flag_count = validation.get("flagged_count", 0)
