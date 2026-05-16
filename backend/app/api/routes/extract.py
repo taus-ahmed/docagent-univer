@@ -3202,6 +3202,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
     def write_template_row(tr, current_row, extracted_fields, label_to_value,
                            confidence_map):
         """Write one template row at the given output row."""
+        from openpyxl.cell import MergedCell
         for key, cell_def in sorted_cells:
             parts = key.split(",")
             if int(parts[0]) != tr:
@@ -3209,6 +3210,10 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             tc = int(parts[1])
             tpl_value = cell_def.get("value", "").strip()
             xl_cell = ws.cell(row=current_row, column=tc + 1)
+
+            # Skip cells that are already merged children — read-only in openpyxl
+            if isinstance(xl_cell, MergedCell):
+                continue
 
             if cell_def.get("extractTarget"):
                 ref    = f"{_col_letter(tc)}{tr + 1}"
@@ -3237,9 +3242,15 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                     except Exception:
                         pass
             elif tpl_value.startswith("="):
-                xl_cell.value = tpl_value
+                try:
+                    xl_cell.value = tpl_value
+                except AttributeError:
+                    pass
             else:
-                xl_cell.value = tpl_value
+                try:
+                    xl_cell.value = tpl_value
+                except AttributeError:
+                    pass
 
             if cell_def.get("style"):
                 _apply_cell_style(xl_cell, cell_def["style"], openpyxl_mod)
