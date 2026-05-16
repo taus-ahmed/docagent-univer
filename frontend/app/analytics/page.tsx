@@ -30,12 +30,19 @@ function MiniBar({ data, color = "var(--accent)" }: {
   if (!data.length) return null;
   const max = Math.max(...data.map(d => d.value), 1);
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60 }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80 }}>
       {data.map((d, i) => (
         <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          {d.value > 0 && (
+            <span style={{ fontSize: 9, color: "var(--text2)", fontWeight: 600, lineHeight: 1 }}>
+              {d.value}
+            </span>
+          )}
           <div style={{
-            width: "100%", height: Math.max(2, (d.value / max) * 52),
-            background: color, borderRadius: "3px 3px 0 0", opacity: 0.85,
+            width: "100%",
+            height: Math.max(d.value > 0 ? 4 : 2, (d.value / max) * 52),
+            background: d.value > 0 ? color : "var(--border)",
+            borderRadius: "3px 3px 0 0", opacity: 0.85,
             transition: "height 0.3s",
           }} />
           <span style={{ fontSize: 9, color: "var(--text4)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
