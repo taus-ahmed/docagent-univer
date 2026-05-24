@@ -2,12 +2,15 @@
 DocAgent v2 — Auth Routes
 POST /api/auth/login
 GET  /api/auth/me
-POST /api/auth/logout  (client-side token discard)
+POST /api/auth/logout
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
+from collections import defaultdict
+from threading import Lock
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -22,23 +25,85 @@ from app.schemas.schemas import (
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# ── Login rate limiter ────────────────────────────────────────────────────────
+# In-memory: per IP address, max 5 failed attempts → 15 minute lockout
+# Resets on successful login. No Redis needed — works on single instance.
+_lock            = Lock()
+_fail_counts:  dict = defaultdict(int)
+_lockout_until: dict = {}
+
+MAX_ATTEMPTS    = 5
+LOCKOUT_MINUTES = 15
+
+
+def _check_rate_limit(ip: str):
+    """Raise 429 if IP is locked out."""
+    with _lock:
+        locked_until = _lockout_until.get(ip)
+        if locked_until and datetime.utcnow() < locked_until:
+            wait = int((locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed attempts. Try again in {wait} minute(s).",
+            )
+        # Clear expired lockout
+        if locked_until and datetime.utcnow() >= locked_until:
+            del _lockout_until[ip]
+            _fail_counts[ip] = 0
+
+
+def _record_failure(ip: str):
+    """Increment failure count and lock out if threshold reached."""
+    with _lock:
+        _fail_counts[ip] += 1
+        if _fail_counts[ip] >= MAX_ATTEMPTS:
+            _lockout_until[ip] = datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+            print(f"[AUTH] IP {ip} locked out for {LOCKOUT_MINUTES}m "
+                  f"after {MAX_ATTEMPTS} failed attempts", flush=True)
+
+
+def _record_success(ip: str):
+    """Clear failure count on successful login."""
+    with _lock:
+        _fail_counts.pop(ip, None)
+        _lockout_until.pop(ip, None)
+
+
+def _get_client_ip(request: Request) -> str:
+    """Get real client IP, respecting X-Forwarded-For from Railway proxy."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
     """Authenticate user and return JWT token."""
+    ip = _get_client_ip(request)
+
+    # Check rate limit before touching the database
+    _check_rate_limit(ip)
+
     user = db.query(User).filter(
         User.username == payload.username,
         User.is_active == True,
     ).first()
 
     if not user or not verify_password(payload.password, user.password_hash):
+        _record_failure(ip)
+        # Same message for both cases — don't reveal whether username exists
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
 
-    # Update last login
-    from datetime import datetime
+    # Successful login — clear failure count
+    _record_success(ip)
+
+    # Update last login timestamp
     user.last_login = datetime.utcnow()
     db.commit()
 
