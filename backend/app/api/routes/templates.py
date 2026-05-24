@@ -26,11 +26,23 @@ def list_templates(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    q = db.query(ColumnTemplate).filter(
-        (ColumnTemplate.user_id == current_user.id)
-        | (ColumnTemplate.is_default == True)
-        | (ColumnTemplate.is_shared == True)
-    )
+    # Admin with no client_id sees everything
+    if current_user.role == "admin" and not current_user.client_id:
+        q = db.query(ColumnTemplate)
+    else:
+        # User sees:
+        # 1. Their own templates
+        # 2. Default system templates (is_default=True)
+        # 3. Shared templates from THEIR OWN company only
+        q = db.query(ColumnTemplate).filter(
+            (ColumnTemplate.user_id == current_user.id)
+            | (ColumnTemplate.is_default == True)
+            | (
+                (ColumnTemplate.is_shared == True)
+                & (ColumnTemplate.client_id == current_user.client_id)
+            )
+        )
+
     if document_type:
         q = q.filter(ColumnTemplate.document_type == document_type)
     return [_to_response(t) for t in q.order_by(ColumnTemplate.created_at.desc()).all()]
@@ -45,9 +57,24 @@ def get_template(
     tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id).first()
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
-    if tpl.user_id != current_user.id and current_user.role != "admin" and not tpl.is_shared:
-        raise HTTPException(status_code=403, detail="Access denied")
-    return _to_response(tpl)
+
+    # Admin with no client_id can see all
+    if current_user.role == "admin" and not current_user.client_id:
+        return _to_response(tpl)
+
+    # Owner can always see their own
+    if tpl.user_id == current_user.id:
+        return _to_response(tpl)
+
+    # Shared templates only visible within same company
+    if tpl.is_shared and tpl.client_id == current_user.client_id:
+        return _to_response(tpl)
+
+    # Default templates visible to all
+    if tpl.is_default:
+        return _to_response(tpl)
+
+    raise HTTPException(status_code=403, detail="Access denied")
 
 
 @router.post("", response_model=TemplateResponse, status_code=201)
@@ -56,7 +83,6 @@ def create_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Check duplicate name
     existing = db.query(ColumnTemplate).filter(
         ColumnTemplate.user_id == current_user.id,
         ColumnTemplate.name == payload.name,
@@ -68,20 +94,20 @@ def create_template(
             detail=f"Template '{payload.name}' already exists for {payload.document_type}",
         )
 
-    # Ensure order is set correctly
-    columns_with_order = []
-    for i, col in enumerate(payload.columns):
-        columns_with_order.append({"name": col.name, "type": col.type, "order": i})
+    columns_with_order = [
+        {"name": col.name, "type": col.type, "order": i}
+        for i, col in enumerate(payload.columns)
+    ]
 
     tpl = ColumnTemplate(
         user_id=current_user.id,
+        client_id=current_user.client_id,      # Tag template with creator's company
         name=payload.name,
         document_type=payload.document_type,
         description=payload.description,
-        # Store full column objects (name + type + order) as JSON
         columns_json=json.dumps(columns_with_order),
-        column_order_json=None,  # deprecated - order now in columns_json
-        is_shared=payload.is_shared and current_user.role == "admin",
+        column_order_json=None,
+        is_shared=payload.is_shared and current_user.role in ("admin", "company_admin"),
     )
     db.add(tpl)
     db.commit()
@@ -102,7 +128,7 @@ def update_template(
         tpl.name = payload.name
     if payload.document_type is not None:
         tpl.document_type = payload.document_type
-    if payload.description is not None:          # FIX: was missing — grid layout never saved on update
+    if payload.description is not None:
         tpl.description = payload.description
     if payload.columns is not None:
         columns_with_order = [
@@ -111,7 +137,7 @@ def update_template(
         ]
         tpl.columns_json = json.dumps(columns_with_order)
     if payload.is_shared is not None:
-        tpl.is_shared = payload.is_shared and current_user.role == "admin"
+        tpl.is_shared = payload.is_shared and current_user.role in ("admin", "company_admin")
 
     tpl.updated_at = datetime.utcnow()
     db.commit()
@@ -131,19 +157,25 @@ def delete_template(
     return {"message": "Template deleted", "id": template_id}
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get_template_or_403(template_id: int, current_user: User, db: Session) -> ColumnTemplate:
     tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id).first()
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
-    if tpl.user_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your template")
-    return tpl
+    # Super admin can edit anything
+    if current_user.role == "admin" and not current_user.client_id:
+        return tpl
+    # Owner can edit their own
+    if tpl.user_id == current_user.id:
+        return tpl
+    # Company admin can edit templates within their company
+    if current_user.role in ("admin", "company_admin") and tpl.client_id == current_user.client_id:
+        return tpl
+    raise HTTPException(status_code=403, detail="Not your template")
 
 
 def _parse_columns(tpl: ColumnTemplate) -> list[TemplateColumn]:
-    """Parse columns_json — handles both old format (list of strings) and new format (list of objects)."""
     try:
         raw = json.loads(tpl.columns_json) if tpl.columns_json else []
     except Exception:
@@ -152,10 +184,8 @@ def _parse_columns(tpl: ColumnTemplate) -> list[TemplateColumn]:
     columns = []
     for i, item in enumerate(raw):
         if isinstance(item, str):
-            # Old format: plain string column names
             columns.append(TemplateColumn(name=item, type="Text", order=i))
         elif isinstance(item, dict):
-            # New format: {name, type, order}
             columns.append(TemplateColumn(
                 name=item.get("name", ""),
                 type=item.get("type", "Text"),

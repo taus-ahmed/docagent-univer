@@ -552,7 +552,10 @@ def _analyse_template_regions(layout: dict) -> dict:
     section_label_rows = set()
     for tbl in table_regions:
         hr = tbl["header_row"]
-        for r_above in range(max(0, hr - 4), hr):
+        # Only look 2 rows above the table header for section labels.
+        # Looking further up risks capturing form section headers (like "Summary")
+        # that belong to the form fields above, not to this table.
+        for r_above in range(max(0, hr - 2), hr):
             if r_above in table_header_row_set:
                 continue
             if r_above in form_rows_set:
@@ -3249,7 +3252,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
         section_label_rows = set()
         for tbl in tables_sorted:
             hr = tbl["header_row"]
-            for r_above in range(max(0, hr - 4), hr):
+            for r_above in range(max(0, hr - 2), hr):
                 has_label = any(
                     cells_tpl.get(f"{r_above},{c}", {}).get("value", "")
                     for c in range(max_c + 1)
@@ -3483,7 +3486,8 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 current_output_row += 1  # exactly 1 blank row between tables
 
             # Write section label row(s) immediately before this table header
-            for r_label in range(max(0, hr - 4), hr):
+            # Only look 2 rows above — matching the detection window above
+            for r_label in range(max(0, hr - 2), hr):
                 if r_label in section_label_rows:
                     write_template_row(r_label, current_output_row, extracted_fields,
                                       label_to_value, confidence_map)
@@ -3621,8 +3625,17 @@ def _get_table_headers(layout):
 def list_jobs(limit: int=50, offset: int=0, status_filter: Optional[str]=None,
               db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     q = db.query(ExtractionJob).order_by(ExtractionJob.created_at.desc())
-    if current_user.role != "admin": q = q.filter(ExtractionJob.user_id==current_user.id)
-    if status_filter: q = q.filter(ExtractionJob.status==status_filter)
+    # Super admin sees all jobs
+    if current_user.role == "admin" and not current_user.client_id:
+        pass
+    # Company admin sees all jobs within their company
+    elif current_user.role in ("admin", "company_admin") and current_user.client_id:
+        q = q.filter(ExtractionJob.client_id == current_user.client_id)
+    # Regular user sees only their own jobs
+    else:
+        q = q.filter(ExtractionJob.user_id == current_user.id)
+    if status_filter:
+        q = q.filter(ExtractionJob.status == status_filter)
     return q.offset(offset).limit(limit).all()
 
 @router.get("/jobs/{job_id}", response_model=JobStatus)
@@ -3677,8 +3690,17 @@ def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depe
     return {"message": "Cancelled", "job_id": job_id}
 
 def _get_job_or_404(job_id, current_user, db):
-    job = db.query(ExtractionJob).filter(ExtractionJob.id==job_id).first()
-    if not job: raise HTTPException(status_code=404, detail="Job not found")
-    if current_user.role != "admin" and job.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    return job
+    job = db.query(ExtractionJob).filter(ExtractionJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    # Super admin (no client_id) sees everything
+    if current_user.role == "admin" and not current_user.client_id:
+        return job
+    # Company admin sees all jobs within their company
+    if current_user.role in ("admin", "company_admin") and current_user.client_id:
+        if job.client_id == current_user.client_id:
+            return job
+    # Regular user sees only their own jobs
+    if job.user_id == current_user.id:
+        return job
+    raise HTTPException(status_code=403, detail="Access denied")
