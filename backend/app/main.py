@@ -1,5 +1,5 @@
 """
-DocAgent v2 â€” FastAPI Application Entry Point
+DocAgent v2 — FastAPI Application Entry Point
 """
 
 import logging
@@ -14,7 +14,6 @@ from app.config import settings
 from app.models import init_db
 from app.core.auth import hash_password
 
-# Configure logging
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -22,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger("docagent")
 
 
-# â”€â”€â”€ Lifespan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Lifespan ──────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +31,9 @@ async def lifespan(app: FastAPI):
     # Initialize database + create tables
     init_db()
     logger.info("Database initialized")
+
+    # Run safe column migrations (ADD COLUMN IF NOT EXISTS)
+    _run_migrations()
 
     # Ensure storage directories exist
     settings.ensure_storage_dirs()
@@ -47,6 +49,60 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("DocAgent shutting down.")
+
+
+def _run_migrations():
+    """
+    Safe startup migrations — adds missing columns without breaking existing data.
+    Uses ADD COLUMN IF NOT EXISTS so it's idempotent — safe to run every boot.
+    """
+    from app.models import SessionLocal
+    from sqlalchemy import text
+
+    db = SessionLocal()
+    try:
+        migrations = [
+            # Add client_id to column_templates (for multi-tenant template isolation)
+            """ALTER TABLE column_templates
+               ADD COLUMN IF NOT EXISTS client_id VARCHAR(100)""",
+
+            # Add updated_at to column_templates if missing
+            """ALTER TABLE column_templates
+               ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP""",
+
+            # Add last_login to users if missing
+            """ALTER TABLE users
+               ADD COLUMN IF NOT EXISTS last_login TIMESTAMP""",
+
+            # Add schema_id to extraction_jobs if missing
+            """ALTER TABLE extraction_jobs
+               ADD COLUMN IF NOT EXISTS schema_id VARCHAR(100)""",
+
+            # Add total_tokens to extraction_jobs for analytics
+            """ALTER TABLE extraction_jobs
+               ADD COLUMN IF NOT EXISTS total_tokens INTEGER DEFAULT 0""",
+
+            # Add total_cost to extraction_jobs for analytics
+            """ALTER TABLE extraction_jobs
+               ADD COLUMN IF NOT EXISTS total_cost FLOAT DEFAULT 0.0""",
+        ]
+
+        for sql in migrations:
+            try:
+                db.execute(text(sql))
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                # Log but don't crash — column may already exist in some DB flavours
+                # that don't support IF NOT EXISTS syntax
+                logger.debug(f"Migration skipped (likely already applied): {e}")
+
+        logger.info("Database migrations applied")
+
+    except Exception as e:
+        logger.warning(f"Migration error: {e}")
+    finally:
+        db.close()
 
 
 def _seed_admin():
@@ -67,7 +123,7 @@ def _seed_admin():
             ))
             db.commit()
             logger.info("Default admin user created (username: admin, password: admin123)")
-            logger.warning("âš  CHANGE THE DEFAULT ADMIN PASSWORD BEFORE PRODUCTION DEPLOY!")
+            logger.warning("⚠  CHANGE THE DEFAULT ADMIN PASSWORD BEFORE PRODUCTION DEPLOY!")
     finally:
         db.close()
 
@@ -91,12 +147,10 @@ def _seed_demo_schema():
         yaml_text = demo_yaml.read_text()
         parsed = yaml.safe_load(yaml_text)
 
-        # Save to filesystem
         from app.core.storage import get_storage
         storage = get_storage()
         storage.save_schema(yaml_text, parsed["client_id"])
 
-        # Save to DB
         doc_types = list(parsed.get("document_types", {}).keys())
         db.add(ClientSchema(
             client_id=parsed["client_id"],
@@ -112,7 +166,7 @@ def _seed_demo_schema():
         db.close()
 
 
-# â”€â”€â”€ App Factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── App Factory ───────────────────────────────────────────────────────────────
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -124,7 +178,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -133,7 +187,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # â”€â”€ Global Exception Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # Global Exception Handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
@@ -142,7 +196,7 @@ def create_app() -> FastAPI:
             content={"detail": "Internal server error"},
         )
 
-    # â”€â”€ Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # Routes
     from app.api.routes.auth import router as auth_router
     from app.api.routes.extract import router as extract_router
     from app.api.routes.export import router as export_router
@@ -159,7 +213,7 @@ def create_app() -> FastAPI:
     app.include_router(drive_router)
     app.include_router(admin_router)
 
-    # â”€â”€ Health Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # Health Check
     @app.get("/health")
     def health():
         return {"status": "ok", "version": settings.APP_VERSION, "env": settings.ENVIRONMENT}
