@@ -264,6 +264,8 @@ function DocCard({ doc }: { doc: DocumentResult }) {
 
 export default function HistoryPage() {
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [jobSearch, setJobSearch] = useState("");
+  const [docSearch, setDocSearch] = useState("");
 
   const { data: jobs = [], isLoading } = useQuery<JobStatus[]>({
     queryKey: ["jobs"],
@@ -302,6 +304,27 @@ export default function HistoryPage() {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
+
+  const filteredJobs = jobSearch.trim()
+    ? jobs.filter(j => {
+        const q = jobSearch.toLowerCase();
+        return (
+          String(j.id).includes(q) ||
+          j.status.includes(q) ||
+          fmt(j.created_at).toLowerCase().includes(q)
+        );
+      })
+    : jobs;
+
+  const filteredResults = docSearch.trim()
+    ? results.filter(d => {
+        const q = docSearch.toLowerCase();
+        return (
+          d.filename.toLowerCase().includes(q) ||
+          (d.document_type ?? "").toLowerCase().includes(q)
+        );
+      })
+    : results;
 
   // Summary stats for selected job
   const totalRows   = results.reduce((s, d) => s + (d.extracted_data?.table_rows?.length ?? 0), 0);
@@ -373,13 +396,44 @@ export default function HistoryPage() {
         <div className="hist-layout">
           {/* ── Job list ── */}
           <div className="job-list-col">
-            <p className="label" style={{ marginBottom: 10 }}>{jobs.length} jobs</p>
+            <div style={{ position: "relative", marginBottom: 10 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
+                style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search jobs…"
+                value={jobSearch}
+                onChange={e => setJobSearch(e.target.value)}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "7px 10px 7px 28px",
+                  border: "1px solid var(--border)", borderRadius: 7,
+                  background: "var(--surface)", color: "var(--text1)",
+                  fontSize: 12, outline: "none",
+                }}
+              />
+              {jobSearch && (
+                <button
+                  onClick={() => setJobSearch("")}
+                  style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              )}
+            </div>
+            <p className="label" style={{ marginBottom: 10 }}>
+              {filteredJobs.length}{jobSearch ? ` of ${jobs.length}` : ""} job{filteredJobs.length !== 1 ? "s" : ""}
+            </p>
             <div className="job-list">
-              {jobs.map(job => (
+              {filteredJobs.length === 0 ? (
+                <p style={{ fontSize: 12, color: "var(--text3)", textAlign: "center", padding: "24px 0" }}>No jobs match "{jobSearch}"</p>
+              ) : filteredJobs.map(job => (
                 <div
                   key={job.id}
                   className={`job-card ${selectedJobId === job.id ? "sel" : ""} ${job.status === "failed" ? "failed" : ""}`}
-                  onClick={() => setSelectedJobId(job.id)}
+                  onClick={() => { setSelectedJobId(job.id); setDocSearch(""); }}
                 >
                   <StatusIcon status={job.status} />
                   <div className="job-meta">
@@ -507,7 +561,40 @@ export default function HistoryPage() {
                     </p>
                   </div>
                 ) : (
-                  results.map(doc => <DocCard key={doc.id} doc={doc} />)
+                  <>
+                    {results.length > 1 && (
+                      <div style={{ position: "relative", marginBottom: 12 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
+                          style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Search documents…"
+                          value={docSearch}
+                          onChange={e => setDocSearch(e.target.value)}
+                          style={{
+                            width: "100%", boxSizing: "border-box",
+                            padding: "7px 10px 7px 28px",
+                            border: "1px solid var(--border)", borderRadius: 7,
+                            background: "var(--surface)", color: "var(--text1)",
+                            fontSize: 12, outline: "none",
+                          }}
+                        />
+                        {docSearch && (
+                          <button
+                            onClick={() => setDocSearch("")}
+                            style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {filteredResults.length === 0 ? (
+                      <p style={{ fontSize: 12, color: "var(--text3)", textAlign: "center", padding: "24px 0" }}>No documents match "{docSearch}"</p>
+                    ) : filteredResults.map(doc => <DocCard key={doc.id} doc={doc} />)}
+                  </>
                 )}
               </>
             ) : (
