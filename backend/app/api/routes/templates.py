@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
@@ -23,18 +24,19 @@ router = APIRouter(prefix="/api/templates", tags=["templates"])
 @router.get("", response_model=list[TemplateResponse])
 def list_templates(
     document_type: str = None,
+    q: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     # Admin with no client_id sees everything
     if current_user.role == "admin" and not current_user.client_id:
-        q = db.query(ColumnTemplate)
+        query = db.query(ColumnTemplate)
     else:
         # User sees:
         # 1. Their own templates
         # 2. Default system templates (is_default=True)
         # 3. Shared templates from THEIR OWN company only
-        q = db.query(ColumnTemplate).filter(
+        query = db.query(ColumnTemplate).filter(
             (ColumnTemplate.user_id == current_user.id)
             | (ColumnTemplate.is_default == True)
             | (
@@ -44,8 +46,10 @@ def list_templates(
         )
 
     if document_type:
-        q = q.filter(ColumnTemplate.document_type == document_type)
-    return [_to_response(t) for t in q.order_by(ColumnTemplate.created_at.desc()).all()]
+        query = query.filter(ColumnTemplate.document_type == document_type)
+    if q:
+        query = query.filter(func.lower(ColumnTemplate.name).contains(q.lower()))
+    return [_to_response(t) for t in query.order_by(ColumnTemplate.created_at.desc()).all()]
 
 
 @router.get("/{template_id}", response_model=TemplateResponse)

@@ -224,9 +224,12 @@ export const schemasApi = {
 // --- Templates API ---
 
 export const templatesApi = {
-  list: async (documentType?: string): Promise<ColumnTemplate[]> => {
+  list: async (documentType?: string, q?: string): Promise<ColumnTemplate[]> => {
+    const params: Record<string, string> = {};
+    if (documentType) params.document_type = documentType;
+    if (q) params.q = q;
     const res = await api.get<ColumnTemplate[]>("/api/templates", {
-      params: documentType ? { document_type: documentType } : undefined,
+      params: Object.keys(params).length ? params : undefined,
     });
     return res.data;
   },

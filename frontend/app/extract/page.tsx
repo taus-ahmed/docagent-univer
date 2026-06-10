@@ -393,6 +393,7 @@ function InsightsPanel({
 
 export default function ExtractPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<ColumnTemplate | null>(null);
+  const [templateSearch, setTemplateSearch] = useState("");
   const [activeTab, setActiveTab] = useState<SourceTab>("upload");
   const [files, setFiles] = useState<File[]>([]);
   const [folderPath, setFolderPath] = useState("");
@@ -405,6 +406,8 @@ export default function ExtractPage() {
   const { data: templates = [] } = useQuery<ColumnTemplate[]>({
     queryKey: ["templates"],
     queryFn: () => templatesApi.list(),
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: schemas = [] } = useQuery({
@@ -477,6 +480,13 @@ export default function ExtractPage() {
   const isDone = jobStatus?.status === "completed";
   const isFailed = jobStatus?.status === "failed";
   const hasResults = results.length > 0;
+
+  const filteredTemplates = templateSearch.trim()
+    ? templates.filter(t =>
+        t.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
+        t.document_type.toLowerCase().includes(templateSearch.toLowerCase())
+      )
+    : templates;
 
   return (
     <AppLayout>
@@ -577,16 +587,51 @@ export default function ExtractPage() {
             {templates.length === 0 ? (
               <div className="tpl-none">No templates — <Link href="/templates/new" style={{ color: "var(--accent)" }}>create one</Link></div>
             ) : (
-              <div className="tpl-list">
-                {templates.map(t => (
-                  <div key={t.id} className={`tpl-row ${selectedTemplate?.id === t.id ? "sel" : ""}`}
-                    onClick={() => setSelectedTemplate(selectedTemplate?.id === t.id ? null : t)}>
-                    <div className="tpl-dot"/>
-                    <span className="tpl-name">{t.name}</span>
-                    <span className="tpl-type">{t.document_type}</span>
+              <>
+                {templates.length > 4 && (
+                  <div style={{ position: "relative", marginBottom: 8 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
+                      style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Search templates…"
+                      value={templateSearch}
+                      onChange={e => setTemplateSearch(e.target.value)}
+                      style={{
+                        width: "100%", boxSizing: "border-box",
+                        padding: "6px 26px 6px 26px",
+                        border: "1px solid var(--border)", borderRadius: 6,
+                        background: "var(--surface2)", color: "var(--text1)",
+                        fontSize: 11.5, outline: "none",
+                      }}
+                    />
+                    {templateSearch && (
+                      <button
+                        onClick={() => setTemplateSearch("")}
+                        style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
+                )}
+                <div className="tpl-list">
+                  {filteredTemplates.length === 0 ? (
+                    <div style={{ padding: "12px 0", textAlign: "center", fontSize: 11.5, color: "var(--text4)" }}>
+                      No templates match "{templateSearch}"
+                    </div>
+                  ) : filteredTemplates.map(t => (
+                    <div key={t.id} className={`tpl-row ${selectedTemplate?.id === t.id ? "sel" : ""}`}
+                      onClick={() => setSelectedTemplate(selectedTemplate?.id === t.id ? null : t)}>
+                      <div className="tpl-dot"/>
+                      <span className="tpl-name">{t.name}</span>
+                      <span className="tpl-type">{t.document_type}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
             {selectedTemplate && (
               <div style={{ marginTop: 10, padding: "7px 10px", background: "var(--surface2)", borderRadius: 6, fontSize: 11, color: "var(--text3)" }}>

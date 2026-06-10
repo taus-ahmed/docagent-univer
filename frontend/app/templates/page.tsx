@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
 import { templatesApi, type ColumnTemplate } from "@/lib/api";
@@ -18,6 +19,7 @@ const DOC_TYPE_COLORS: Record<string, string> = {
 export default function TemplatesPage() {
   const router = useRouter();
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
 
   const { data: templates = [], isLoading } = useQuery<ColumnTemplate[]>({
     queryKey: ["templates"],
@@ -33,7 +35,14 @@ export default function TemplatesPage() {
     onError: () => toast.error("Delete failed"),
   });
 
-  const grouped = templates.reduce<Record<string, ColumnTemplate[]>>((acc, t) => {
+  const filtered = search.trim()
+    ? templates.filter(t =>
+        t.name.toLowerCase().includes(search.toLowerCase()) ||
+        t.document_type.toLowerCase().includes(search.toLowerCase())
+      )
+    : templates;
+
+  const grouped = filtered.reduce<Record<string, ColumnTemplate[]>>((acc, t) => {
     if (!acc[t.document_type]) acc[t.document_type] = [];
     acc[t.document_type].push(t);
     return acc;
@@ -73,8 +82,38 @@ export default function TemplatesPage() {
         </button>
       </div>
 
+      {templates.length > 0 && (
+        <div style={{ position: "relative", marginBottom: 22, maxWidth: 360 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
+            style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search templates by name or type…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: "100%", boxSizing: "border-box",
+              padding: "8px 32px 8px 32px",
+              border: "1px solid var(--border)", borderRadius: 8,
+              background: "var(--surface)", color: "var(--text1)",
+              fontSize: 13, outline: "none",
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          )}
+        </div>
+      )}
+
       {isLoading ? (
-        <p style={{ color: "var(--text3)", fontSize: 13 }}>Loadingâ€¦</p>
+        <p style={{ color: "var(--text3)", fontSize: 13 }}>Loading…</p>
       ) : templates.length === 0 ? (
         <div className="card tpl-empty">
           <div style={{ width: 44, height: 44, borderRadius: 11, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
@@ -83,6 +122,11 @@ export default function TemplatesPage() {
           <p style={{ fontWeight: 600, color: "var(--text1)", marginBottom: 6 }}>No templates yet</p>
           <p style={{ fontSize: 12, color: "var(--text3)", marginBottom: 16 }}>Templates define which columns appear in extraction results</p>
           <button className="btn btn-primary" onClick={() => router.push("/templates/new")}>Create your first template</button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ padding: "40px 0", textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: "var(--text3)" }}>No templates match <strong>"{search}"</strong></p>
+          <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setSearch("")}>Clear search</button>
         </div>
       ) : (
         Object.entries(grouped).map(([docType, items]) => {
