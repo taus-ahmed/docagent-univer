@@ -202,7 +202,51 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                         "max_row": 0,
                         "max_col": 0,
                     }
+                # Bug 5a: detect section-context risk for financial templates
+                template_data["regions"]["needs_section_context"] = (
+                    _detect_section_context_risk(
+                        template_data["regions"], tpl.document_type or "other"
+                    )
+                )
                 return template_data
+            else:
+                # Bug 4 case 1: JSON without a "cells" key — not a valid grid
+                print(
+                    f"[TEMPLATE] WARNING (Bug4): description is JSON but lacks 'cells' "
+                    f"key — falling through to columns_json",
+                    flush=True,
+                )
+        except json.JSONDecodeError:
+            # Bug 4 case 2: plain text description — use it as unguided extraction context
+            plain_text = tpl.description.strip() if tpl.description else ""
+            if plain_text:
+                print(
+                    f"[TEMPLATE] WARNING (Bug4): description is plain text — "
+                    f"routing to unguided extraction with context: {plain_text[:80]}",
+                    flush=True,
+                )
+                return {
+                    "mode": "layout",
+                    "layout": {"cells": {}, "extractTargets": []},
+                    "doc_type": tpl.document_type or "other",
+                    "name": tpl.name,
+                    "plain_text_description": plain_text,
+                    "regions": {
+                        "primary_mode": "unguided",
+                        "explicit_targets": [],
+                        "kv_pairs": [],
+                        "two_col_pairs": [],
+                        "table_regions": [],
+                        "transposed_tables": [],
+                        "section_label_rows": set(),
+                        "has_explicit_targets": False,
+                        "has_table": False,
+                        "max_row": 0,
+                        "max_col": 0,
+                        "plain_text_description": plain_text,
+                        "needs_section_context": False,
+                    },
+                }
         except Exception as e:
             import traceback
             print(f"[TEMPLATE] description parse error: {e}", flush=True)
@@ -412,13 +456,18 @@ def _analyse_template_regions(layout: dict) -> dict:
                                 and grid[(r_candidate, c)]["value"]
                                 and not grid[(r_candidate, c)]["extractTarget"]]
         if len(value_cols_candidate) >= 2:
-            # Only count as table header if row below is empty (no values)
-            below_with_value = [c for c in rows_with_content.get(r_candidate + 1, [])
-                               if grid.get((r_candidate + 1, c))
-                               and grid[(r_candidate + 1, c)]["value"]
-                               and not grid[(r_candidate + 1, c)]["extractTarget"]]
-            if below_with_value:
-                continue  # row below has content → not a table header
+            # Bug 2: look 2 rows below — a single row of example values is still
+            # a valid table header. Only skip if BOTH r+1 AND r+2 have content.
+            below1 = [c for c in rows_with_content.get(r_candidate + 1, [])
+                      if grid.get((r_candidate + 1, c))
+                      and grid[(r_candidate + 1, c)]["value"]
+                      and not grid[(r_candidate + 1, c)]["extractTarget"]]
+            below2 = [c for c in rows_with_content.get(r_candidate + 2, [])
+                      if grid.get((r_candidate + 2, c))
+                      and grid[(r_candidate + 2, c)]["value"]
+                      and not grid[(r_candidate + 2, c)]["extractTarget"]]
+            if below1 and below2:
+                continue  # two consecutive content rows below → not a table header
             # This row is a real table header — mark rows above it as section labels
             for r_above in range(max(0, r_candidate - 4), r_candidate):
                 if r_above not in form_rows_set:
@@ -439,17 +488,21 @@ def _analyse_template_regions(layout: dict) -> dict:
         if len(value_cols) < 2:
             continue
 
-        # A valid table header MUST have an empty row immediately below it.
+        # A valid table header MUST NOT have two consecutive content rows below it.
         # Form section headers (like "Summary", "Opening Bal | Closing Bal")
         # have content below them — they are NOT table headers.
-        # The transactions table header ("Txn DT | Type | Description") has
-        # blank placeholder rows below it — that IS a table header.
-        below_cols_with_value = [c for c in rows_with_content.get(r + 1, [])
-                                 if grid.get((r + 1, c)) and grid[(r + 1, c)]["value"]
-                                 and not grid[(r + 1, c)]["extractTarget"]]
+        # A table header with one example row below (Bug 2: client puts sample data)
+        # is still a valid table header.
+        # Bug 2: check r+1 AND r+2 — only skip when BOTH rows have content.
+        below1_cols = [c for c in rows_with_content.get(r + 1, [])
+                       if grid.get((r + 1, c)) and grid[(r + 1, c)]["value"]
+                       and not grid[(r + 1, c)]["extractTarget"]]
+        below2_cols = [c for c in rows_with_content.get(r + 2, [])
+                       if grid.get((r + 2, c)) and grid[(r + 2, c)]["value"]
+                       and not grid[(r + 2, c)]["extractTarget"]]
 
-        # If the next row has content — this is a form section, not a table header
-        if below_cols_with_value:
+        # Two consecutive content rows below → this is a form section, not a table header
+        if below1_cols and below2_cols:
             continue
 
         # Also skip if this row is a merged section header
@@ -584,8 +637,18 @@ def _analyse_template_regions(layout: dict) -> dict:
         primary_mode = "form_kv"
     elif has_table and not has_explicit_targets and not has_kv_pairs:
         primary_mode = "table"
+    elif has_two_col:
+        # Two-column form detected but no explicit targets or kv_pairs
+        primary_mode = "form_kv"
     else:
-        primary_mode = "mixed"
+        # Bug 1: all region lists empty — fall back to unguided extraction
+        # using only the doc_type system prompt
+        primary_mode = "unguided"
+        print(
+            "[TEMPLATE] WARNING (Bug1): no regions detected in template grid "
+            "— switching to unguided extraction (doc_type system prompt only)",
+            flush=True,
+        )
 
     print(f"[REGION] mode={primary_mode} targets={len(explicit_targets)} "
           f"kv={len(kv_pairs)} two_col={len(two_col_pairs)} "
@@ -635,6 +698,63 @@ def _get_table_rules(doc_type): r=_load_registry(); return (r.get_table_rules(do
 def _get_numeric_fields(doc_type): r=_load_registry(); return r.get_numeric_fields(doc_type) if r else []
 def _get_date_fields(doc_type): r=_load_registry(); return r.get_date_fields(doc_type) if r else []
 def _classify_by_hints(text): r=_load_registry(); return r.classify_by_hints(text) if r else None
+
+
+# ==============================================================================
+# FINANCIAL SECTION CONTEXT RISK DETECTION  (Bug 5)
+# ==============================================================================
+
+_FINANCIAL_SECTIONED_TYPES = frozenset({
+    "balance_sheet", "income_statement", "audit_report", "payslip",
+})
+
+_GENERIC_FINANCIAL_COL_WORDS = frozenset({
+    "total", "amount", "value", "balance", "net", "gross", "subtotal",
+    "debit", "credit", "description",
+})
+
+
+def _detect_section_context_risk(regions: dict, doc_type: str) -> bool:
+    """
+    Return True when the template has generic repeated column headers (e.g. Total,
+    Amount, Value) in a financial document type that contains section-level totals.
+    These templates create ambiguity: the AI may pick the wrong section's total
+    without explicit positional guidance.
+    """
+    if doc_type not in _FINANCIAL_SECTIONED_TYPES:
+        return False
+    table_regions = regions.get("table_regions", [])
+    kv_pairs = regions.get("kv_pairs", [])
+    explicit_targets = regions.get("explicit_targets", [])
+
+    # Collect all column names from tables
+    all_col_names_lower = [
+        cn.lower().strip()
+        for tr in table_regions
+        for cn in tr.get("column_names", [])
+    ]
+    # Count how many generic financial words appear in column names
+    generic_col_count = sum(
+        1 for cn in all_col_names_lower
+        if any(g in cn for g in _GENERIC_FINANCIAL_COL_WORDS)
+    )
+    # Also flag if kv_pairs or targets have multiple generic labels
+    generic_field_count = sum(
+        1 for kv in kv_pairs
+        if any(g in kv.get("label", "").lower() for g in _GENERIC_FINANCIAL_COL_WORDS)
+    ) + sum(
+        1 for t in explicit_targets
+        if any(g in t.get("label", "").lower() for g in _GENERIC_FINANCIAL_COL_WORDS)
+    )
+
+    risk = generic_col_count >= 2 or generic_field_count >= 3
+    if risk:
+        print(
+            f"[BUG5] Section-context risk detected: doc_type={doc_type} "
+            f"generic_cols={generic_col_count} generic_fields={generic_field_count}",
+            flush=True,
+        )
+    return risk
 
 
 # ==============================================================================
@@ -915,6 +1035,29 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     if table_rules and primary_mode in ("table", "mixed"):
         system_instruction += f"\n\nTABLE RULES:\n{table_rules}"
 
+    # Bug 5b: inject critical financial accuracy rule when section-context risk is present
+    if regions.get("needs_section_context"):
+        system_instruction += (
+            "\n\nCRITICAL FINANCIAL ACCURACY RULE:\n"
+            "This document has MULTIPLE SECTIONS, each with its own subtotal row. "
+            "Generic column headers like 'Total' or 'Amount' appear in EVERY section.\n"
+            "You MUST match each value to its CORRECT section — do NOT use the wrong "
+            "section's total.\n"
+            "Rules:\n"
+            "1. Read the SECTION HEADER (e.g. 'Current Assets', 'Non-Current Assets', "
+            "'Operating Expenses') to identify which section each row belongs to.\n"
+            "2. The 'Total Current Assets' row belongs ONLY to the Current Assets section.\n"
+            "   Do NOT use that value for 'Total Non-Current Assets' or 'Total Assets'.\n"
+            "3. Extract every row in POSITIONAL ORDER — the section header is the "
+            "   primary key for resolving ambiguity.\n"
+            "4. If you are unsure which section a value belongs to, use the row's "
+            "   position in the document as a tiebreaker.\n"
+            "FINANCIAL ERROR WARNING: Mixing up section totals (e.g. Total Current "
+            "Assets vs Total Assets) is a critical error with legal and financial "
+            "consequences. Verify EACH total against its section header before writing it."
+        )
+        print(f"[BUG5] CRITICAL FINANCIAL ACCURACY RULE injected for {doc_type}", flush=True)
+
     # Smart text truncation
     doc_text_use = _smart_truncate(doc_text, primary_mode, regions)
 
@@ -1121,6 +1264,9 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
                 )
             lines.append("")
 
+        # Bug 5c: detect generic column headers that repeat across sections
+        needs_section_ctx = regions.get("needs_section_context", False)
+
         for i, tr in enumerate(table_regions):
             section   = tr.get("section_label", f"Table {i+1}")
             col_start = chr(ord('A') + tr.get("start_col", 0))
@@ -1140,12 +1286,29 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
                     f"  NOTE: Data for this table is in {col_range} of the document.\n"
                     f"        Do not mix it with data from other tables."
                 )
+            if needs_section_ctx:
+                lines.append(
+                    f"  SECTION ACCURACY: This table has generic column names. "
+                    f"Each row belongs to a specific SECTION of the document "
+                    f"(identified by a section header above it). "
+                    f"Match every value to its CORRECT section — positional order matters."
+                )
             lines.append("")
 
     if not lines:
-        lines.append("=== AUTO-EXTRACT MODE ===")
-        lines.append("The template has labelled fields. Match each label to its value in the document.")
-        lines.append("Use cell references as keys.")
+        plain_text_desc = regions.get("plain_text_description", "")
+        if plain_text_desc:
+            # Bug 4 + Bug 1: template has plain-text description only
+            lines.append("=== UNGUIDED EXTRACTION (template description provided) ===")
+            lines.append(f"Template description: {plain_text_desc}")
+            lines.append("Extract all fields relevant to this document based on the description above.")
+        elif primary_mode == "unguided":
+            lines.append("=== UNGUIDED EXTRACTION ===")
+            lines.append("No template structure was detected. Extract all fields from the document.")
+        else:
+            lines.append("=== AUTO-EXTRACT MODE ===")
+            lines.append("The template has labelled fields. Match each label to its value in the document.")
+            lines.append("Use cell references as keys.")
 
     # ── TRANSPOSED TABLES ──────────────────────────────────────────────────────
     transposed = regions.get("transposed_tables", [])
@@ -1205,7 +1368,19 @@ def _build_extraction_instructions(regions: dict, primary_mode: str,
 8. FORMULA CELLS: If the template shows =SUM(...), calculate and return the number.""")
 
     # ── MODE-SPECIFIC INSTRUCTIONS ─────────────────────────────────────────────
-    if primary_mode in ("form_with_targets", "form_kv"):
+    if primary_mode == "unguided":
+        # Bug 1: no regions found — use doc_type persona only
+        instructions.append(
+            "=== UNGUIDED EXTRACTION ===\n"
+            "No template layout could be parsed for this document. "
+            "Extract ALL fields and values present in the document based on "
+            "your domain expertise for this document type.\n"
+            "Return every label-value pair you can identify. "
+            "Use the label text as the key in extracted_fields.\n"
+            "For any tables, extract all rows into table_rows."
+        )
+
+    elif primary_mode in ("form_with_targets", "form_kv"):
         instructions.append("""=== FORM EXTRACTION ===
 Fill each marked field with exactly ONE value from the document.
 Blank rows between sections are visual spacers — skip them.
@@ -1229,29 +1404,29 @@ PART 1 - FORM FIELDS: Fill each labelled extraction cell with its value.
 PART 2 - TABLE: Extract every data row from the table section.
 Both parts are equally important. Do not skip either.""")
         else:
-            # Multiple tables — generic, no hardcoded domain assumptions
-            table_names = [tr.get("section_label", f"Table {i+1}")
-                          for i, tr in enumerate(table_regions)]
-            # Describe each table using only its actual column names
-            table_descs = []
+            # Bug 3: multiple tables — use SEPARATE array keys matching _build_output_format
+            # The old code used a single table_rows array + "Table" field, which
+            # contradicted the output format and caused AI to misroute rows.
+            table_key_map = []
             for i, tr in enumerate(table_regions):
+                name  = tr.get("section_label", f"Table {i+1}")
+                key   = re.sub(r'[^a-z0-9]', '_', name.lower()).strip('_') + "_rows"
                 col_s = chr(ord('A') + tr.get("start_col", 0))
                 col_e = chr(ord('A') + min(tr.get("end_col", 0), 25))
-                name  = tr.get("section_label", f"Table {i+1}")
                 cols  = ", ".join(tr.get("column_names", []))
-                table_descs.append(
-                    f'  "{name}" — columns: {cols} (template cols {col_s}-{col_e})'
+                table_key_map.append(
+                    f'  JSON key "{key}" → table "{name}" '
+                    f'(columns: {cols}, template cols {col_s}–{col_e})'
                 )
             instructions.append(
-                f"=== MIXED MODE: FORM FIELDS + {n_tables} TABLES ===\n"
+                f"=== MIXED MODE: FORM FIELDS + {n_tables} SEPARATE TABLES ===\n"
                 f"PART 1 - FORM FIELDS: Fill each labelled extraction cell.\n"
-                f"PART 2 - {n_tables} TABLES: Extract ALL rows from ALL tables.\n\n"
-                f"Tables in this template:\n"
-                + "\n".join(table_descs) + "\n\n"
+                f"PART 2 - {n_tables} TABLES: Each table gets its OWN JSON array key.\n\n"
+                f"CRITICAL — use these EXACT JSON array key names:\n"
+                + "\n".join(table_key_map) + "\n\n"
                 f"RULES:\n"
-                f"- Put ALL rows from ALL tables into ONE 'table_rows' array\n"
-                f"- Add a \"Table\" field to EVERY row — value = exact table name\n"
-                f"  Valid values: {', '.join(repr(n) for n in table_names)}\n"
+                f"- DO NOT use a single 'table_rows' key — use the separate keys above\n"
+                f"- Each row goes into its table's OWN array key only\n"
                 f"- Extract EVERY row from EVERY table — zero rows from any table is WRONG\n"
                 f"- Blank rows in the template are placeholders, not row limits\n"
                 f"- See PAGE LOCATION section for which page each table is on\n"
@@ -1287,7 +1462,30 @@ def _build_output_format(regions: dict, primary_mode: str) -> str:
         cols = tr.get("column_names", ["Col1", "Col2"])[:4]
         return "{" + ", ".join(f'"{c}": "value"' for c in cols) + "}"
 
-    if primary_mode == "table" and n_tables == 1:
+    if primary_mode == "unguided":
+        # Bug 1: no template regions — generic free-form output
+        return f"""Return ONLY valid JSON:
+{{
+  "document_type": "detected type",
+  "overall_confidence": "medium",
+  "document_count": 1,
+  "documents": [{{
+    "doc_index": 0,
+    "doc_hint": "brief description",
+    "extracted_fields": {{
+      "Field Name 1": {{"value": "extracted value", "confidence": "high"}},
+      "Field Name 2": {{"value": "extracted value", "confidence": "medium"}}
+    }},
+    "table_rows": [],
+    "notes": ""
+  }}]
+}}
+RULES:
+- extracted_fields keys = the label/field name from the document
+- Include every field you can identify
+- Numbers: no $ or commas. Dates: YYYY-MM-DD."""
+
+    elif primary_mode == "table" and n_tables == 1:
         ex = table_example(table_regions[0])
         return f"""Return ONLY valid JSON:
 {{
@@ -1941,6 +2139,95 @@ def _fix_split_decimals_row(row: dict) -> dict:
     return _fix_split_decimals(row) if row else row
 
 
+def _validate_row_alignment(
+    table_rows: list, table_regions: list
+) -> tuple:
+    """
+    Bug 6: Check that all columns in each table have consistent row presence.
+    When the AI returns rows where some columns are systematically absent for
+    the first N rows, the data is misaligned (column 2 started at row 13 instead of 1).
+
+    Returns (rows, is_misaligned, warning_msg).
+    If misalignment is detected, attempt re-alignment by removing leading empty rows.
+    """
+    if not table_rows or not table_regions:
+        return table_rows, False, ""
+
+    # Collect expected columns per table_source
+    expected_cols: dict = {}
+    for tr in table_regions:
+        name = tr.get("section_label", "")
+        key = re.sub(r'[^a-z0-9]', '_', name.lower()).strip('_')
+        expected_cols[key] = tr.get("column_names", [])
+    # Also accept "table_rows" as the default source
+    if table_regions:
+        expected_cols["table"] = table_regions[0].get("column_names", [])
+
+    # Group rows by _table_source (or use the single table case)
+    groups: dict = {}
+    for row in table_rows:
+        src = row.get("_table_source", "table")
+        groups.setdefault(src, []).append(row)
+
+    warnings = []
+    final_rows = []
+    is_misaligned = False
+
+    for src, rows in groups.items():
+        cols = expected_cols.get(src, [])
+        if not cols or len(rows) < 3:
+            final_rows.extend(rows)
+            continue
+
+        # For each expected column, count how many rows have a non-empty value
+        col_fill = {}
+        for col in cols:
+            col_fill[col] = sum(1 for r in rows if r.get(col, "") not in ("", None))
+
+        if not col_fill:
+            final_rows.extend(rows)
+            continue
+
+        max_fill = max(col_fill.values())
+        min_fill = min(col_fill.values())
+
+        # If the fill counts differ by more than 25% across columns → misalignment
+        if max_fill > 0 and (max_fill - min_fill) / max_fill > 0.25:
+            is_misaligned = True
+            # Find columns with low fill
+            sparse_cols = [c for c, f in col_fill.items() if f < max_fill * 0.75]
+            warn = (
+                f"[BUG6] Row-column misalignment in source='{src}': "
+                f"max_fill={max_fill}, min_fill={min_fill}, "
+                f"sparse_cols={sparse_cols} — flagging for review"
+            )
+            print(warn, flush=True)
+            warnings.append(warn)
+            # Attempt repair: strip leading rows that are empty in ALL sparse columns
+            repaired = []
+            leading_empty_stripped = 0
+            for row in rows:
+                if not repaired and all(
+                    row.get(c, "") in ("", None) for c in sparse_cols
+                ):
+                    leading_empty_stripped += 1
+                    continue
+                repaired.append(row)
+            if repaired and leading_empty_stripped > 0:
+                print(
+                    f"[BUG6] Stripped {leading_empty_stripped} leading-empty rows "
+                    f"to repair alignment for '{src}'",
+                    flush=True,
+                )
+                final_rows.extend(repaired)
+            else:
+                final_rows.extend(rows)
+        else:
+            final_rows.extend(rows)
+
+    return final_rows, is_misaligned, "; ".join(warnings)
+
+
 def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                             doc_type: str, elapsed: float, extraction,
                             doc_text: str, seg_hint: str = "",
@@ -1980,6 +2267,19 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                     row["_table_source"] = key.replace("_rows", "")
                     table_rows_raw.append(row)
     print(f"[COLLECT] total rows collected: {len(table_rows_raw)}", flush=True)
+
+    # -- Bug 6: validate row/column alignment -----------------------------------
+    alignment_warning = ""
+    if table_rows_raw:
+        table_rows_raw, alignment_misaligned, alignment_warning = _validate_row_alignment(
+            table_rows_raw, regions.get("table_regions", [])
+        )
+        if alignment_misaligned:
+            print(
+                f"[BUG6] Alignment issue detected in {filename} — "
+                f"document will be flagged for review",
+                flush=True,
+            )
 
     # -- Fix page-break decimal splits -----------------------------------------
     extracted_fields_raw = _fix_split_decimals(extracted_fields_raw)
@@ -2160,6 +2460,8 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
             "flagged_count": len(flagged),
             "flagged_fields": flagged,
             "confidence_map": validation.get("confidence_map", {}),
+            "alignment_misaligned": alignment_misaligned,
+            "alignment_warning": alignment_warning,
         },
         **per_table_rows,   # adds earning_table_rows, deduction_table_rows etc.
     }
@@ -2251,6 +2553,9 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
     regions = template_data.get("regions", {})
     start = t.time()
     results = []
+
+    # H4: log a diagnostic of the template before extraction begins
+    _diagnose_template(template_data)
 
     try:
         doc = preprocess_file(file_path)
@@ -2389,7 +2694,15 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         # Retry up to 3 times with exponential backoff to handle 429 rate limits
         extraction = None
         last_error = ""
+        _base_prompt = prompt
         for attempt in range(3):
+            # H3: on retry, prepend a JSON correction instruction to the prompt
+            if attempt > 0:
+                prompt = (
+                    "IMPORTANT: Your previous response could not be parsed as JSON. "
+                    "Return ONLY valid JSON with no markdown fences, no explanation, "
+                    "no text before or after the JSON object.\n\n"
+                ) + _base_prompt
             try:
                 if page_img:
                     print(f"[EXTRACT] {file_path.name}: sending image to AI "
@@ -2647,6 +2960,107 @@ def _post_anomaly(extracted: dict, orchestrator, doc_type: str) -> dict:
     return extracted
 
 
+_FINANCIAL_CRITICAL_TYPES = frozenset({
+    "balance_sheet", "income_statement", "payslip", "sales_invoice",
+})
+
+
+def _cross_validate_section_totals(extracted_data: dict, doc_type: str) -> Optional[str]:
+    """
+    H2: For balance sheets and income statements, cross-check whether the sum of
+    line-item amounts roughly matches any declared section total.
+    Returns a human-readable warning string if a mismatch > 1% is found, else None.
+    """
+    if doc_type not in ("balance_sheet", "income_statement"):
+        return None
+
+    table_rows = extracted_data.get("table_rows", [])
+    if len(table_rows) < 2:
+        return None
+
+    inner = extracted_data.get("extracted_data", {})
+
+    # Collect declared totals from extracted_data (form fields)
+    declared_totals = {}
+    for label, field in inner.items():
+        label_lower = label.lower().strip()
+        if label_lower.startswith("_label_"):
+            continue
+        if any(t in label_lower for t in ("total", "grand total", "net total")):
+            raw_val = field.get("value", "") if isinstance(field, dict) else str(field)
+            try:
+                declared_totals[label] = abs(float(
+                    re.sub(r'[,$£€₹()\s]', '', str(raw_val)).replace(")", "")
+                ))
+            except (ValueError, TypeError):
+                pass
+
+    if not declared_totals:
+        return None
+
+    # Sum numeric columns across table rows
+    numeric_cols = set()
+    for row in table_rows[:5]:
+        for k, v in row.items():
+            if k.startswith("_"):
+                continue
+            try:
+                float(re.sub(r'[,$£€₹()\s]', '', str(v)))
+                numeric_cols.add(k)
+            except (ValueError, TypeError):
+                pass
+
+    for col in numeric_cols:
+        row_sum = 0.0
+        for row in table_rows:
+            try:
+                row_sum += abs(float(
+                    re.sub(r'[,$£€₹()\s]', '', str(row.get(col, "") or ""))
+                ))
+            except (ValueError, TypeError):
+                pass
+
+        for label, declared in declared_totals.items():
+            if declared > 0 and abs(row_sum - declared) / declared > 0.01:
+                return (
+                    f"H2 section-total mismatch: sum of '{col}' column = {row_sum:.2f}, "
+                    f"declared '{label}' = {declared:.2f} "
+                    f"(diff {abs(row_sum - declared) / declared * 100:.1f}%)"
+                )
+    return None
+
+
+def _diagnose_template(template_data: dict) -> None:
+    """H4: Log a diagnostic summary of the parsed template so we can verify detection."""
+    if not template_data:
+        print("[DIAG] template_data is None — no template in use", flush=True)
+        return
+    regions = template_data.get("regions", {})
+    mode = regions.get("primary_mode", "?")
+    targets = len(regions.get("explicit_targets", []))
+    kv = len(regions.get("kv_pairs", []))
+    two_col = len(regions.get("two_col_pairs", []))
+    tables = regions.get("table_regions", [])
+    transposed = len(regions.get("transposed_tables", []))
+    sec_ctx = regions.get("needs_section_context", False)
+    has_plain = bool(regions.get("plain_text_description"))
+    print(
+        f"[DIAG] template='{template_data.get('name','?')}' "
+        f"doc_type={template_data.get('doc_type','?')} "
+        f"mode={mode} targets={targets} kv={kv} two_col={two_col} "
+        f"tables={len(tables)} transposed={transposed} "
+        f"section_ctx={sec_ctx} plain_text={has_plain}",
+        flush=True,
+    )
+    for i, tr in enumerate(tables):
+        print(
+            f"[DIAG]   table[{i}]: '{tr.get('section_label','?')}' "
+            f"cols={tr.get('column_names',[])} "
+            f"header_row={tr.get('header_row','?')}",
+            flush=True,
+        )
+
+
 def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None):
     import os
@@ -2699,6 +3113,34 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                         validation_data = (result.extracted_data or {}).get("validation", {})
                         has_flags      = validation_data.get("flagged_count", 0) > 0
                         error_msg      = result.error if hasattr(result, 'error') and result.error else ""
+
+                        # H1: for financial doc types, any low-confidence numeric field
+                        #     escalates the entire document to needs_review=True
+                        doc_type_str = (result.document_type or "").lower()
+                        if not has_flags and doc_type_str in _FINANCIAL_CRITICAL_TYPES:
+                            conf_map = validation_data.get("confidence_map", {})
+                            if "low" in conf_map.values():
+                                has_flags = True
+                                print(
+                                    f"[H1] {result.filename}: financial doc "
+                                    f"({doc_type_str}) has low-confidence field "
+                                    f"— needs_review escalated",
+                                    flush=True,
+                                )
+
+                        # Bug 6: misaligned rows also escalate to needs_review
+                        if not has_flags and validation_data.get("alignment_misaligned"):
+                            has_flags = True
+
+                        # H2: section-total cross-validation for balance sheets / income statements
+                        if result.success and doc_type_str in ("balance_sheet", "income_statement"):
+                            section_warn = _cross_validate_section_totals(
+                                result.extracted_data or {}, doc_type_str
+                            )
+                            if section_warn:
+                                print(f"[H2] {result.filename}: {section_warn}", flush=True)
+                                has_flags = True
+                                error_msg = (error_msg + "; " if error_msg else "") + section_warn
 
                         # ── Post-extraction processing based on selected options ──
                         extracted = result.extracted_data or {}
