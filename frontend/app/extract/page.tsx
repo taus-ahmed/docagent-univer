@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
 import DriveTab from "@/components/extract/DriveTab";
+import TemplatePreview from "@/components/extract/TemplatePreview";
 import {
   extractApi, exportApi, templatesApi, schemasApi,
   type ColumnTemplate, type JobStatus, type DocumentResult,
@@ -897,25 +898,9 @@ export default function ExtractPage() {
                     </div>
                   </div>
 
-                  <div className="welcome-grid" style={{ marginBottom: selectedOptions.length ? 20 : 0 }}>
-                    <div className="welcome-stat">
-                      <div className="welcome-stat-val">{selectedTemplate.columns.length}</div>
-                      <div className="welcome-stat-lbl">Columns to extract</div>
-                    </div>
-                    <div className="welcome-stat">
-                      <div className="welcome-stat-val">{files.length || "—"}</div>
-                      <div className="welcome-stat-lbl">Files selected</div>
-                    </div>
-                    <div className="welcome-stat">
-                      <div className="welcome-stat-val" style={{ color: selectedOptions.length ? "var(--accent)" : "var(--text3)" }}>
-                        {selectedOptions.length || "0"}
-                      </div>
-                      <div className="welcome-stat-lbl">Extra analyses</div>
-                    </div>
-                    <div className="welcome-stat">
-                      <div className="welcome-stat-val" style={{ fontSize: 13 }}>{selectedTemplate.document_type}</div>
-                      <div className="welcome-stat-lbl">Document type</div>
-                    </div>
+                  <div style={{ marginBottom: selectedOptions.length ? 20 : 12 }}>
+                    <p style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text3)", marginBottom: 8 }}>Template layout</p>
+                    <TemplatePreview template={selectedTemplate} />
                   </div>
 
                   {selectedOptions.length > 0 && (
