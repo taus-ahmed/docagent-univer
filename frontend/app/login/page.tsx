@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
 import toast from "react-hot-toast";
+import BirdAnimation from "@/components/BirdAnimation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,12 +12,18 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [showBird, setShowBird] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
       await login(username, password);
-      router.replace("/extract");
+      const loggedInUser = useAuthStore.getState().user;
+      if (loggedInUser?.role === "admin") {
+        setShowBird(true);
+      } else {
+        router.replace("/extract");
+      }
     } catch {
       toast.error("Invalid username or password");
     }
@@ -110,6 +117,7 @@ export default function LoginPage() {
         </form>
         <p className="login-hint">DocAgent v2.0</p>
       </div>
+      {showBird && <BirdAnimation onDone={() => router.replace("/extract")} />}
     </div>
   );
 }
