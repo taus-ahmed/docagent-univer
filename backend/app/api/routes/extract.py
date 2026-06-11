@@ -85,6 +85,12 @@ _backend_dir = Path(__file__).resolve().parent.parent.parent.parent
 _project_dir = _backend_dir.parent
 _engine_dir  = _backend_dir / "engine"
 
+_IMAGE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp"})
+
+
+def _is_image_file(file_path: Path) -> bool:
+    return file_path.suffix.lower() in _IMAGE_EXTENSIONS
+
 
 # ==============================================================================
 # UPLOAD ENDPOINT
@@ -654,20 +660,131 @@ def _analyse_template_regions(layout: dict) -> dict:
           f"kv={len(kv_pairs)} two_col={len(two_col_pairs)} "
           f"tables={len(table_regions)} grid={max_row+1}x{max_col+1}", flush=True)
 
+    # ── PARALLEL COLUMN GROUPS DETECTION ──────────────────────────────────────────
+    # Detect when template has two or more side-by-side label/value column bands
+    # (e.g. balance sheet: Current Assets in A-B, Non-Current Assets in C-D).
+    # Only run when no table regions were detected to avoid false positives.
+    parallel_column_groups = []
+    if not table_regions:
+        parallel_column_groups = _detect_parallel_column_groups(
+            kv_pairs, grid, max_row, max_col
+        )
+        if parallel_column_groups:
+            primary_mode = "parallel_groups"
+
     return {
-        "primary_mode":         primary_mode,
-        "explicit_targets":     explicit_targets,
-        "kv_pairs":             kv_pairs,
-        "two_col_pairs":        two_col_pairs,
-        "table_regions":        table_regions,
-        "transposed_tables":    transposed_tables,
-        "section_label_rows":   section_label_rows,
-        "grid_size":            {"rows": max_row + 1, "cols": max_col + 1},
-        "has_explicit_targets": has_explicit_targets,
-        "has_table":            has_table,
-        "max_row":              max_row,
-        "max_col":              max_col,
+        "primary_mode":            primary_mode,
+        "explicit_targets":        explicit_targets,
+        "kv_pairs":                kv_pairs,
+        "two_col_pairs":           two_col_pairs,
+        "table_regions":           table_regions,
+        "transposed_tables":       transposed_tables,
+        "section_label_rows":      section_label_rows,
+        "parallel_column_groups":  parallel_column_groups,
+        "grid_size":               {"rows": max_row + 1, "cols": max_col + 1},
+        "has_explicit_targets":    has_explicit_targets,
+        "has_table":               has_table,
+        "max_row":                 max_row,
+        "max_col":                 max_col,
     }
+
+
+def _detect_parallel_column_groups(kv_pairs: list, grid: dict,
+                                    max_row: int, max_col: int) -> list:
+    """
+    Detect parallel column groups: two or more independent label/value column bands
+    that occupy the same row range in the template.
+
+    Example balance sheet layout (rows 0-N):
+      col A = Current assets labels  | col B = empty (extract) |
+      col C = Non-current labels     | col D = empty (extract)
+
+    Returns [] when not detected, or a list of group dicts:
+      [{group_id, label_col, value_col, label_col_letter, value_col_letter,
+        section_label, items:[{label, label_ref, value_ref, row}]}]
+    """
+    if len(kv_pairs) < 4:
+        return []
+
+    # Group kv_pairs by their label column index
+    col_groups: dict = {}
+    for kv in kv_pairs:
+        label_ref = kv.get("label_ref", "")
+        if not label_ref:
+            continue
+        col_letters = "".join(ch for ch in label_ref if ch.isalpha()).upper()
+        if not col_letters:
+            continue
+        col_idx = sum(
+            (ord(ch) - 64) * (26 ** i)
+            for i, ch in enumerate(reversed(col_letters))
+        ) - 1
+        col_groups.setdefault(col_idx, []).append(kv)
+
+    # Need 2+ bands with at least 3 items each
+    bands = sorted(
+        [(col, kvs) for col, kvs in col_groups.items() if len(kvs) >= 3],
+        key=lambda x: x[0],
+    )
+    if len(bands) < 2:
+        return []
+
+    # Verify that bands share significant row overlap (>= 40% of their union)
+    band_row_sets = [set(kv["row"] for kv in kvs) for _, kvs in bands]
+    has_overlap = False
+    for i in range(len(band_row_sets)):
+        for j in range(i + 1, len(band_row_sets)):
+            union = band_row_sets[i] | band_row_sets[j]
+            intersect = band_row_sets[i] & band_row_sets[j]
+            if union and len(intersect) / len(union) >= 0.40:
+                has_overlap = True
+                break
+        if has_overlap:
+            break
+
+    if not has_overlap:
+        return []
+
+    parallel_groups = []
+    for i, (label_col, items) in enumerate(bands):
+        value_col = label_col + 1
+        l_letter = chr(ord('A') + min(label_col, 25))
+        v_letter = chr(ord('A') + min(value_col, 25))
+
+        # Section label: the last non-item row at-or-above the first item row
+        # at this column (i.e. the heading row that names the group).
+        item_rows = {kv["row"] for kv in items}
+        first_item_row = min(item_rows)
+        section_label = ""
+        for r in range(0, first_item_row + 1):
+            if r in item_rows:
+                continue
+            cell = grid.get((r, label_col))
+            if cell and cell["value"] and not cell["extractTarget"]:
+                section_label = cell["value"]  # keep updating — take last found
+
+        if not section_label:
+            section_label = f"Group {i + 1} (columns {l_letter}-{v_letter})"
+
+        parallel_groups.append({
+            "group_id":         i + 1,
+            "label_col":        label_col,
+            "value_col":        value_col,
+            "label_col_letter": l_letter,
+            "value_col_letter": v_letter,
+            "section_label":    section_label,
+            "items":            sorted(items, key=lambda x: x["row"]),
+        })
+
+    print(
+        "[REGION] parallel_column_groups detected: "
+        + ", ".join(
+            f'"{g["section_label"]}" ({g["label_col_letter"]}-{g["value_col_letter"]})'
+            for g in parallel_groups
+        ),
+        flush=True,
+    )
+    return parallel_groups
 
 
 # ==============================================================================
@@ -1058,6 +1175,37 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
         )
         print(f"[BUG5] CRITICAL FINANCIAL ACCURACY RULE injected for {doc_type}", flush=True)
 
+    # Issue 1: inject PARALLEL COLUMN GROUPS RULE when the template has multiple
+    # independent label/value column bands on the same row range.
+    parallel_groups = regions.get("parallel_column_groups", [])
+    if parallel_groups:
+        group_lines = [
+            f"  GROUP {pg['group_id']} \"{pg['section_label']}\": "
+            f"labels in column {pg['label_col_letter']}, "
+            f"amounts into column {pg['value_col_letter']}"
+            for pg in parallel_groups
+        ]
+        system_instruction += (
+            "\n\nPARALLEL COLUMN GROUPS RULE:\n"
+            "This template has SIDE-BY-SIDE independent column groups. "
+            "Each group occupies the SAME rows but DIFFERENT columns.\n"
+            + "\n".join(group_lines) + "\n"
+            "CRITICAL RULES:\n"
+            "1. Fill ALL groups. Never leave any group empty.\n"
+            "2. Each group's amounts go ONLY into that group's designated value column.\n"
+            "3. Read the document's LEFT section for GROUP 1 "
+            "and RIGHT/NEXT section for GROUP 2.\n"
+            "4. Total rows: match EACH total to its OWN group's value column.\n"
+            "   'Total Current Assets' → GROUP 1 value column.\n"
+            "   'Total Non-Current Assets' → GROUP 2 value column.\n"
+            "5. Do NOT copy the same value into multiple groups."
+        )
+        print(
+            f"[PROMPT] PARALLEL COLUMN GROUPS RULE injected "
+            f"({len(parallel_groups)} groups)",
+            flush=True,
+        )
+
     # Smart text truncation
     doc_text_use = _smart_truncate(doc_text, primary_mode, regions)
 
@@ -1217,8 +1365,38 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
     kv_pairs = regions.get("kv_pairs", [])
     two_col_pairs = regions.get("two_col_pairs", [])
 
+    # ── PARALLEL COLUMN GROUPS (takes priority over flat kv_pairs) ───────────────
+    parallel_groups = regions.get("parallel_column_groups", [])
+    if parallel_groups:
+        lines.append(f"=== {len(parallel_groups)} PARALLEL COLUMN GROUPS ===")
+        lines.append(
+            "This template has INDEPENDENT side-by-side column groups.\n"
+            "Each group has its OWN section with separate labels and values.\n"
+            "You MUST fill values for ALL groups — leaving any group empty is WRONG."
+        )
+        lines.append("")
+        for pg in parallel_groups:
+            gid  = pg["group_id"]
+            slbl = pg["section_label"]
+            l_c  = pg["label_col_letter"]
+            v_c  = pg["value_col_letter"]
+            lines.append(
+                f"GROUP {gid} — \"{slbl}\" "
+                f"(labels in col {l_c}, amounts into col {v_c}):"
+            )
+            lines.append(
+                f"  Fill column {v_c} cells ONLY with values "
+                f"from the \"{slbl}\" section of the document."
+            )
+            lines.append(
+                f"  Do NOT put values from any other section into this group."
+            )
+            for item in pg["items"][:30]:
+                lines.append(f"  [{item['value_ref']}] = \"{item['label']}\"")
+            lines.append("")
+
     # ── FORM FIELDS ────────────────────────────────────────────────────────────
-    if explicit_targets:
+    elif explicit_targets:
         lines.append("=== FORM FIELDS (marked Extract here) ===")
         lines.append("Fill each cell reference with the matching value from the document.")
         lines.append("Use the cell reference as the key in extracted_fields.")
@@ -1368,7 +1546,30 @@ def _build_extraction_instructions(regions: dict, primary_mode: str,
 8. FORMULA CELLS: If the template shows =SUM(...), calculate and return the number.""")
 
     # ── MODE-SPECIFIC INSTRUCTIONS ─────────────────────────────────────────────
-    if primary_mode == "unguided":
+    if primary_mode == "parallel_groups":
+        parallel_groups = regions.get("parallel_column_groups", [])
+        gmap = "\n".join(
+            f'  GROUP {pg["group_id"]} "{pg["section_label"]}": '
+            f'value column = {pg["value_col_letter"]}'
+            for pg in parallel_groups
+        )
+        instructions.append(
+            "=== PARALLEL COLUMN GROUP EXTRACTION ===\n"
+            "This template has multiple INDEPENDENT column groups side by side.\n"
+            "You MUST extract values for EVERY group listed below.\n\n"
+            + gmap + "\n\n"
+            "RULES:\n"
+            "1. Scan the document for EACH group's section independently.\n"
+            "2. Put each group's amounts into its designated value column ONLY.\n"
+            "3. Zero filled cells in any group = extraction failure.\n"
+            "4. Match totals to their group:\n"
+            "   'Total Current Assets' → GROUP 1 value column.\n"
+            "   'Total Non-Current Assets' → GROUP 2 value column.\n"
+            "5. If the document has content in two side-by-side columns, "
+            "read BOTH columns independently."
+        )
+
+    elif primary_mode == "unguided":
         # Bug 1: no regions found — use doc_type persona only
         instructions.append(
             "=== UNGUIDED EXTRACTION ===\n"
@@ -1985,9 +2186,77 @@ If there is only ONE document: document_count = 1."""
         return [{"index": 0, "page_indices": [0], "hint": "full document"}]
 
     else:
-        # Multi-page - assume one document per page unless detection says otherwise
-        # For now: each page is one document (standard case for multi-page PDFs)
-        print(f"[DETECT] {filename}: {total_pages} pages -> treating as {total_pages} separate docs", flush=True)
+        # Multi-page: ask Gemini whether this is ONE multi-page document or
+        # MULTIPLE separate documents merged into one PDF.
+        boundary_prompt = f"""Look at page 1 of a {total_pages}-page PDF.
+
+Determine if this PDF contains MULTIPLE SEPARATE {doc_type} documents,
+or if it is ONE document that spans multiple pages.
+
+Examples of MULTIPLE documents: 40 invoices combined into one PDF,
+12 monthly bank statements, 50 receipts in one file.
+
+Examples of ONE document: a 10-page contract, a 3-page invoice,
+a multi-page financial report.
+
+Return ONLY this JSON (no markdown, no explanation):
+{{
+  "is_multi_document": true_or_false,
+  "document_count": <integer>,
+  "documents": [
+    {{"doc_number": 1, "start_page": 1, "end_page": 2, "hint": "brief description"}},
+    {{"doc_number": 2, "start_page": 3, "end_page": 3, "hint": "brief description"}}
+  ]
+}}
+
+Total pages in this PDF: {total_pages}
+If is_multi_document is false, return document_count: 1 with one entry covering all pages."""
+
+        try:
+            detection = orchestrator.llm.extract(
+                image_b64=doc_images_b64[0],
+                prompt=boundary_prompt,
+            )
+            if detection.success and detection.parsed_json:
+                raw = detection.parsed_json
+                is_multi = raw.get("is_multi_document", False)
+                count    = raw.get("document_count", 1)
+                docs     = raw.get("documents", [])
+
+                if is_multi and count > 1 and docs:
+                    result_segs = []
+                    for d in docs:
+                        sp = max(0, int(d.get("start_page", 1)) - 1)       # 0-indexed
+                        ep = min(total_pages - 1, int(d.get("end_page", sp + 1)) - 1)
+                        result_segs.append({
+                            "index":        int(d.get("doc_number", len(result_segs) + 1)) - 1,
+                            "page_indices": list(range(sp, ep + 1)),
+                            "hint":         d.get("hint", f"document {len(result_segs)+1}"),
+                        })
+                    print(
+                        f"[DETECT] {filename}: {len(result_segs)} documents detected "
+                        f"across {total_pages} pages",
+                        flush=True,
+                    )
+                    return result_segs
+                else:
+                    # Single multi-page document
+                    print(
+                        f"[DETECT] {filename}: {total_pages} pages -> single document",
+                        flush=True,
+                    )
+                    return [{"index": 0,
+                             "page_indices": list(range(total_pages)),
+                             "hint": "full document"}]
+
+        except Exception as e:
+            print(f"[DETECT] multi-page boundary detection error: {e}", flush=True)
+
+        # Fallback: one page per document
+        print(
+            f"[DETECT] {filename}: {total_pages} pages -> falling back to one-per-page",
+            flush=True,
+        )
         return [
             {"index": i, "page_indices": [i], "hint": f"page {i+1}"}
             for i in range(total_pages)
@@ -2540,6 +2809,117 @@ def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
         traceback.print_exc()
         r = _fail(file_path.name, f"Fatal extraction error: {str(e)[:200]}")
         r.processing_time_ms = 0
+        return [r]
+
+
+def _extract_image_with_template(orchestrator, file_path: Path,
+                                  template_data: Optional[dict]) -> list:
+    """
+    Extract from a single image file (JPG/PNG/WEBP/TIFF/BMP).
+    Sends the image directly to Gemini Vision — no pdfplumber layer.
+    All field confidences are forced to 'medium'.
+    Always sets needs_review=True with a note about manual verification.
+    """
+    import base64 as _b64
+    import time as t
+
+    start = t.time()
+    doc_type = (template_data or {}).get("doc_type", "other")
+
+    try:
+        image_data = file_path.read_bytes()
+        image_b64  = _b64.b64encode(image_data).decode("utf-8")
+
+        if template_data:
+            system_instruction, prompt = _build_vision_prompt(template_data, "")
+        else:
+            system_instruction = _get_system_prompt(doc_type)
+            prompt = (
+                "Extract all fields and values from this document image.\n"
+                "Return ONLY JSON:\n"
+                '{"document_type": "...", "overall_confidence": "medium", '
+                '"extracted_fields": {"field_name": "value"}, "table_rows": []}'
+            )
+
+        extraction = orchestrator.llm.extract(
+            image_b64=image_b64,
+            prompt=prompt,
+            system_instruction=system_instruction,
+        )
+        elapsed = (t.time() - start) * 1000
+
+        if not extraction.success or not extraction.parsed_json:
+            r = _fail(file_path.name,
+                      f"Image extraction failed: {extraction.error}")
+            r.processing_time_ms = elapsed
+            return [r]
+
+        raw = extraction.parsed_json
+
+        if template_data:
+            result = _process_vision_result(
+                raw, template_data, file_path.name, doc_type,
+                elapsed, extraction,
+                "",          # no doc_text — image has no text layer
+                "image upload", 0,
+            )
+        else:
+            from orchestrator import DocumentExtractionResult
+            result = DocumentExtractionResult(filename=file_path.name)
+            result.document_type = raw.get("document_type", doc_type)
+            result.extracted_data = {
+                "document_type":    raw.get("document_type", doc_type),
+                "overall_confidence": "medium",
+                "extraction_method": "image_upload",
+                "extracted_data": {
+                    k: {"value": str(v) if v is not None else "", "confidence": "medium"}
+                    for k, v in raw.get("extracted_fields", {}).items()
+                },
+                "table_rows": raw.get("table_rows", []),
+                "validation": {
+                    "flagged_count": 1,
+                    "flagged_fields": [],
+                    "confidence_map": {},
+                    "alignment_misaligned": False,
+                    "alignment_warning": "",
+                },
+            }
+            result.extraction_response = extraction
+            result.processing_time_ms  = elapsed
+            result.success             = True
+
+        # Force medium confidence + needs_review for ALL image uploads
+        if result.success and result.extracted_data:
+            result.extracted_data["overall_confidence"] = "medium"
+            result.extracted_data["image_upload"] = True
+            inner = result.extracted_data.get("extracted_data", {})
+            for key in inner:
+                if isinstance(inner[key], dict):
+                    inner[key]["confidence"] = "medium"
+            # Inject a validation flag so _run_extraction_sync sets needs_review=True
+            val = result.extracted_data.setdefault("validation", {})
+            val["flagged_count"] = max(1, val.get("flagged_count", 0))
+            val.setdefault("flagged_fields", []).append({
+                "ref": "image_upload",
+                "value": "",
+                "issue": (
+                    "Image upload — no text validation available, "
+                    "please verify extracted values manually"
+                ),
+            })
+
+        print(
+            f"[IMAGE] {file_path.name}: extracted "
+            f"{len(result.extracted_data.get('extracted_data', {}))} fields",
+            flush=True,
+        )
+        return [result]
+
+    except Exception as e:
+        print(f"[IMAGE] Error {file_path.name}: {e}", flush=True)
+        traceback.print_exc()
+        r = _fail(file_path.name, str(e))
+        r.processing_time_ms = (t.time() - start) * 1000
         return [r]
 
 
@@ -3100,13 +3480,36 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
 
         for i, fp in enumerate(file_paths):
             print(f"[THREAD] processing file {i+1}/{len(file_paths)}: {fp}", flush=True)
+
+            # Issue 2: update job progress so the UI can poll live status
+            try:
+                job.progress_message = (
+                    f"Processing document {i+1} of {len(file_paths)}..."
+                )
+                session.commit()
+            except Exception:
+                pass
+
             try:
                 file_path = Path(fp)
+                is_img = _is_image_file(file_path)  # Issue 3: route image files
                 if template_data:
-                    results = _extract_with_template(orchestrator, file_path, template_data)
+                    if is_img:
+                        results = _extract_image_with_template(
+                            orchestrator, file_path, template_data
+                        )
+                    else:
+                        results = _extract_with_template(
+                            orchestrator, file_path, template_data
+                        )
                 else:
-                    result = orchestrator._process_single_document(file_path)
-                    results = [result]
+                    if is_img:
+                        results = _extract_image_with_template(
+                            orchestrator, file_path, None
+                        )
+                    else:
+                        result = orchestrator._process_single_document(file_path)
+                        results = [result]
 
                 for result in results:
                     try:

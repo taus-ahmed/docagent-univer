@@ -77,6 +77,7 @@ class ExtractionJob(Base):
     llm_provider = Column(String(20), nullable=True)     # groq | gemini
     notes = Column(Text, default="")
     error_message = Column(Text, nullable=True)
+    progress_message = Column(Text, nullable=True)       # live progress e.g. "Processing 3 of 40"
 
     # Relationships
     user = relationship("User", back_populates="jobs")

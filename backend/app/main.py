@@ -85,6 +85,10 @@ def _run_migrations():
             # Add total_cost to extraction_jobs for analytics
             """ALTER TABLE extraction_jobs
                ADD COLUMN IF NOT EXISTS total_cost FLOAT DEFAULT 0.0""",
+
+            # Add progress_message for live job progress updates (Issue 2)
+            """ALTER TABLE extraction_jobs
+               ADD COLUMN IF NOT EXISTS progress_message TEXT""",
         ]
 
         for sql in migrations:
