@@ -402,6 +402,7 @@ export default function ExtractPage() {
   const [activeJobId, setActiveJobId] = useState<number | null>(null);
   const [results, setResults] = useState<DocumentResult[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<OptionId[]>([]);
+  const [showNoTemplateModal, setShowNoTemplateModal] = useState(false);
   const prevStatus = useRef("");
 
   const { data: templates = [] } = useQuery<ColumnTemplate[]>({
@@ -456,20 +457,27 @@ export default function ExtractPage() {
     setSelectedOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
   }
 
-  async function handleExtract() {
-    if (activeTab === "upload" && !files.length) return toast.error("Add files first");
-    if (!selectedTemplate) return toast.error("Select a template first");
+  async function startExtract(templateId?: number) {
     setIsExtracting(true);
     setResults([]);
     prevStatus.current = "";
     try {
-      const res = await extractApi.upload(files, clientId, selectedTemplate.id, selectedOptions);
+      const res = await extractApi.upload(files, clientId, templateId, selectedOptions);
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
       toast.error(e?.response?.data?.detail ?? "Upload failed");
       setIsExtracting(false);
     }
+  }
+
+  async function handleExtract() {
+    if (activeTab === "upload" && !files.length) return toast.error("Add files first");
+    if (!selectedTemplate) {
+      setShowNoTemplateModal(true);
+      return;
+    }
+    await startExtract(selectedTemplate.id);
   }
 
   function reset() {
@@ -956,6 +964,65 @@ export default function ExtractPage() {
           )}
         </div>
       </div>
+      {/* No-template confirmation modal */}
+      {showNoTemplateModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 1000,
+        }} onClick={() => setShowNoTemplateModal(false)}>
+          <div style={{
+            background: "var(--surface)", borderRadius: 12, padding: "28px 28px 24px",
+            maxWidth: 420, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 9, background: "#f59e0b18",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text1)", marginBottom: 6 }}>
+                  No template selected
+                </div>
+                <p style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.6, margin: 0 }}>
+                  Extraction will be based on AI understanding of this document.
+                  All key fields will be extracted automatically.
+                </p>
+              </div>
+            </div>
+            <p style={{ fontSize: 12.5, color: "var(--text3)", marginBottom: 20, paddingLeft: 48 }}>
+              For best results, select a template that matches your document type.
+              Continue without one?
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowNoTemplateModal(false)}
+                style={{
+                  padding: "7px 16px", borderRadius: 7, border: "1px solid var(--border)",
+                  background: "transparent", color: "var(--text2)", fontSize: 13,
+                  cursor: "pointer", fontWeight: 500,
+                }}>
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowNoTemplateModal(false); startExtract(undefined); }}
+                style={{
+                  padding: "7px 18px", borderRadius: 7, border: "none",
+                  background: "var(--accent)", color: "#fff", fontSize: 13,
+                  cursor: "pointer", fontWeight: 600,
+                }}>
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
