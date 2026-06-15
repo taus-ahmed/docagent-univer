@@ -2190,23 +2190,29 @@ If there is only ONE document: document_count = 1."""
         return [{"index": 0, "page_indices": [0], "hint": "full document"}]
 
     else:
-        # Multi-page: ask Gemini whether this is ONE multi-page document or
-        # MULTIPLE separate documents merged into one PDF.
-        boundary_prompt = f"""Look at page 1 of a {total_pages}-page PDF.
+        # Multi-page: ask vision model whether this is ONE multi-page document
+        # or MULTIPLE separate documents merged into one PDF.
+        doc_type_label = doc_type if doc_type and doc_type != "other" else "document"
+        boundary_prompt = f"""You are analyzing page 1 of a {total_pages}-page PDF.
 
-Determine if this PDF contains MULTIPLE SEPARATE {doc_type} documents,
-or if it is ONE document that spans multiple pages.
+Your task: decide if this PDF is ONE document that spans multiple pages,
+OR multiple SEPARATE {doc_type_label} documents merged into a single file.
 
-Examples of MULTIPLE documents: 40 invoices combined into one PDF,
-12 monthly bank statements, 50 receipts in one file.
+KEY DISTINCTION:
+- ONE multi-page document: contract, report, multi-page invoice, bank statement
+  with months on separate pages, financial report — all clearly one document.
+- MULTIPLE separate documents: 40 individual invoices in one PDF, 12 separate
+  receipts scanned together, batch of cheques, individual monthly statements
+  combined into one file — each is a complete, independent document.
 
-Examples of ONE document: a 10-page contract, a 3-page invoice,
-a multi-page financial report.
+If you see page numbers like "Page 1 of 5" or "Page 2/10", this is ONE document.
+If you see each page has its own header/footer/date/number, it may be MULTIPLE docs.
 
 Return ONLY this JSON (no markdown, no explanation):
 {{
   "is_multi_document": true_or_false,
-  "document_count": <integer>,
+  "document_count": <integer, 1 if single>,
+  "reasoning": "one sentence why",
   "documents": [
     {{"doc_number": 1, "start_page": 1, "end_page": 2, "hint": "brief description"}},
     {{"doc_number": 2, "start_page": 3, "end_page": 3, "hint": "brief description"}}
@@ -2214,7 +2220,8 @@ Return ONLY this JSON (no markdown, no explanation):
 }}
 
 Total pages in this PDF: {total_pages}
-If is_multi_document is false, return document_count: 1 with one entry covering all pages."""
+If is_multi_document is false, set document_count to 1 and documents to
+[{{"doc_number": 1, "start_page": 1, "end_page": {total_pages}, "hint": "full document"}}]"""
 
         try:
             detection = orchestrator.llm.extract(
@@ -2226,6 +2233,7 @@ If is_multi_document is false, return document_count: 1 with one entry covering 
                 is_multi = raw.get("is_multi_document", False)
                 count    = raw.get("document_count", 1)
                 docs     = raw.get("documents", [])
+                reasoning = raw.get("reasoning", "")
 
                 if is_multi and count > 1 and docs:
                     result_segs = []
@@ -2239,14 +2247,14 @@ If is_multi_document is false, return document_count: 1 with one entry covering 
                         })
                     print(
                         f"[DETECT] {filename}: {len(result_segs)} documents detected "
-                        f"across {total_pages} pages",
+                        f"across {total_pages} pages — {reasoning}",
                         flush=True,
                     )
                     return result_segs
                 else:
                     # Single multi-page document
                     print(
-                        f"[DETECT] {filename}: {total_pages} pages -> single document",
+                        f"[DETECT] {filename}: {total_pages} pages -> single document — {reasoning}",
                         flush=True,
                     )
                     return [{"index": 0,
@@ -2256,15 +2264,12 @@ If is_multi_document is false, return document_count: 1 with one entry covering 
         except Exception as e:
             print(f"[DETECT] multi-page boundary detection error: {e}", flush=True)
 
-        # Fallback: one page per document
+        # Safe fallback: treat as single document (not one-per-page, which fragments long docs)
         print(
-            f"[DETECT] {filename}: {total_pages} pages -> falling back to one-per-page",
+            f"[DETECT] {filename}: {total_pages} pages -> single-document fallback (detection unavailable)",
             flush=True,
         )
-        return [
-            {"index": i, "page_indices": [i], "hint": f"page {i+1}"}
-            for i in range(total_pages)
-        ]
+        return [{"index": 0, "page_indices": list(range(total_pages)), "hint": "full document"}]
 
 
 # ==============================================================================
