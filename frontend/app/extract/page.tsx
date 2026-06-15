@@ -403,6 +403,9 @@ export default function ExtractPage() {
   const [results, setResults] = useState<DocumentResult[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<OptionId[]>([]);
   const [showNoTemplateModal, setShowNoTemplateModal] = useState(false);
+  const [pageSelectModal, setPageSelectModal] = useState<{
+    pageCount: number; selected: number[];
+  } | null>(null);
   const prevStatus = useRef("");
 
   const { data: templates = [] } = useQuery<ColumnTemplate[]>({
@@ -457,12 +460,12 @@ export default function ExtractPage() {
     setSelectedOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
   }
 
-  async function startExtract(templateId?: number) {
+  async function startExtract(templateId?: number, selectedPages?: number[]) {
     setIsExtracting(true);
     setResults([]);
     prevStatus.current = "";
     try {
-      const res = await extractApi.upload(files, clientId, templateId, selectedOptions);
+      const res = await extractApi.upload(files, clientId, templateId, selectedOptions, selectedPages);
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
@@ -476,6 +479,20 @@ export default function ExtractPage() {
     if (!selectedTemplate) {
       setShowNoTemplateModal(true);
       return;
+    }
+    // Check if single PDF has >1 page — show page selection modal
+    const pdfs = files.filter(f => f.name.toLowerCase().endsWith(".pdf"));
+    if (pdfs.length === 1) {
+      try {
+        const info = await extractApi.getPageCount([pdfs[0]]);
+        const pageCount = info[0]?.page_count ?? 1;
+        if (pageCount > 1) {
+          setPageSelectModal({ pageCount, selected: Array.from({ length: pageCount }, (_, i) => i + 1) });
+          return;
+        }
+      } catch {
+        // ignore — proceed without page selection
+      }
     }
     await startExtract(selectedTemplate.id);
   }
@@ -964,6 +981,98 @@ export default function ExtractPage() {
           )}
         </div>
       </div>
+      {/* Page selection modal (single PDF with >1 page) */}
+      {pageSelectModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+        }} onClick={() => setPageSelectModal(null)}>
+          <div style={{
+            background: "var(--surface)", borderRadius: 12, padding: "24px",
+            maxWidth: 460, width: "92%", maxHeight: "80vh", display: "flex",
+            flexDirection: "column", gap: 16,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#4f46e518",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="9" y1="13" x2="15" y2="13"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text1)" }}>Select pages to extract</div>
+                <div style={{ fontSize: 12, color: "var(--text3)" }}>
+                  {pageSelectModal.pageCount} pages detected — choose which to process
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setPageSelectModal(m => m && ({ ...m, selected: Array.from({ length: m.pageCount }, (_, i) => i + 1) }))}
+                style={{ fontSize: 11.5, padding: "4px 10px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text2)", cursor: "pointer" }}>
+                Select All
+              </button>
+              <button onClick={() => setPageSelectModal(m => m && ({ ...m, selected: [] }))}
+                style={{ fontSize: 11.5, padding: "4px 10px", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", color: "var(--text2)", cursor: "pointer" }}>
+                Clear All
+              </button>
+            </div>
+
+            <div style={{ overflowY: "auto", maxHeight: 300, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 6 }}>
+              {Array.from({ length: pageSelectModal.pageCount }, (_, i) => i + 1).map(pg => {
+                const checked = pageSelectModal.selected.includes(pg);
+                return (
+                  <label key={pg} style={{
+                    display: "flex", alignItems: "center", gap: 6, padding: "6px 10px",
+                    borderRadius: 6, border: `1px solid ${checked ? "var(--accent)" : "var(--border)"}`,
+                    background: checked ? "rgba(79,70,229,0.06)" : "transparent",
+                    cursor: "pointer", fontSize: 12.5, color: checked ? "var(--accent)" : "var(--text2)",
+                    fontWeight: checked ? 600 : 400,
+                  }}>
+                    <input type="checkbox" checked={checked} style={{ display: "none" }}
+                      onChange={() => setPageSelectModal(m => {
+                        if (!m) return m;
+                        const next = m.selected.includes(pg)
+                          ? m.selected.filter(p => p !== pg)
+                          : [...m.selected, pg].sort((a, b) => a - b);
+                        return { ...m, selected: next };
+                      })} />
+                    <div style={{ width: 12, height: 12, borderRadius: 3, border: `2px solid ${checked ? "var(--accent)" : "#d1d5db"}`, background: checked ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {checked && <svg width="8" height="8" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
+                    </div>
+                    Page {pg}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div style={{ fontSize: 12, color: "var(--text3)" }}>
+              {pageSelectModal.selected.length} of {pageSelectModal.pageCount} pages selected
+            </div>
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setPageSelectModal(null)}
+                style={{ padding: "7px 16px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", color: "var(--text2)", fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
+                Cancel
+              </button>
+              <button
+                disabled={pageSelectModal.selected.length === 0}
+                onClick={() => {
+                  const pages = pageSelectModal.selected;
+                  setPageSelectModal(null);
+                  startExtract(selectedTemplate?.id, pages.length < pageSelectModal.pageCount ? pages : undefined);
+                }}
+                style={{ padding: "7px 18px", borderRadius: 7, border: "none", background: pageSelectModal.selected.length === 0 ? "#e5e7eb" : "var(--accent)", color: pageSelectModal.selected.length === 0 ? "#9ca3af" : "#fff", fontSize: 13, cursor: pageSelectModal.selected.length === 0 ? "not-allowed" : "pointer", fontWeight: 600 }}>
+                Extract {pageSelectModal.selected.length > 0 ? `(${pageSelectModal.selected.length} pages)` : ""}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* No-template confirmation modal */}
       {showNoTemplateModal && (
         <div style={{
