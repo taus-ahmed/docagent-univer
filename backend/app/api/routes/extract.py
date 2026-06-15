@@ -811,6 +811,7 @@ def _load_registry():
 
 
 def _get_system_prompt(doc_type): r=_load_registry(); return r.get_system_prompt(doc_type) if r else f"You are an expert {doc_type} extraction specialist."
+def _get_unguided_prompt(): r=_load_registry(); return r.get_unguided_prompt() if r else "You are an expert document data extraction AI. Extract all visible fields as JSON."
 def _get_table_rules(doc_type): r=_load_registry(); return (r.get_table_rules(doc_type) or "") if r else ""
 def _get_numeric_fields(doc_type): r=_load_registry(); return r.get_numeric_fields(doc_type) if r else []
 def _get_date_fields(doc_type): r=_load_registry(); return r.get_date_fields(doc_type) if r else []
@@ -1146,8 +1147,11 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     primary_mode  = regions.get("primary_mode", "form_kv")
     table_regions = regions.get("table_regions", [])
 
-    # System instruction — expert persona from registry
-    system_instruction = _get_system_prompt(doc_type)
+    # System instruction — expert persona from registry (or unguided when type is unknown)
+    if primary_mode == "unguided" and doc_type in ("other", "", None):
+        system_instruction = _get_unguided_prompt()
+    else:
+        system_instruction = _get_system_prompt(doc_type)
     table_rules = _get_table_rules(doc_type)
     if table_rules and primary_mode in ("table", "mixed"):
         system_instruction += f"\n\nTABLE RULES:\n{table_rules}"
@@ -2833,9 +2837,9 @@ def _extract_image_with_template(orchestrator, file_path: Path,
         if template_data:
             system_instruction, prompt = _build_vision_prompt(template_data, "")
         else:
-            system_instruction = _get_system_prompt(doc_type)
+            system_instruction = _get_unguided_prompt()
             prompt = (
-                "Extract all fields and values from this document image.\n"
+                "Extract every key data field visible in this document image.\n"
                 "Return ONLY JSON:\n"
                 '{"document_type": "...", "overall_confidence": "medium", '
                 '"extracted_fields": {"field_name": "value"}, "table_rows": []}'
