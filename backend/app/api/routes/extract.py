@@ -3917,8 +3917,8 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             xl_cell = ws.cell(row=row_offset + tr + 1, column=tc + 1)
             tpl_value = cell_def.get("value","").strip()
 
+            ref = f"{_col_letter(tc)}{tr+1}"
             if cell_def.get("extractTarget"):
-                ref = f"{_col_letter(tc)}{tr+1}"
                 filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
                 if isinstance(filled, dict):
                     filled = filled.get("value", "")
@@ -3943,6 +3943,20 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                         xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
                     except Exception:
                         pass
+
+            elif not tpl_value and ref in extracted_fields:
+                # kv_pair value cell: empty in template but AI extracted a value
+                kv_filled = extracted_fields.get(ref)
+                if isinstance(kv_filled, dict):
+                    kv_filled = kv_filled.get("value", "")
+                kv_filled = kv_filled or ""
+                try:
+                    num_val = float(str(kv_filled).replace(",", "")) if kv_filled else None
+                    xl_cell.value = num_val if num_val is not None else kv_filled
+                    if num_val is not None:
+                        cell_values[ref] = num_val
+                except (ValueError, AttributeError):
+                    xl_cell.value = kv_filled
 
             elif tpl_value.startswith("="):
                 # It's a formula — calculate it if possible
@@ -4152,8 +4166,8 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             if isinstance(xl_cell, MergedCell):
                 continue
 
+            ref = f"{_col_letter(tc)}{tr + 1}"
             if cell_def.get("extractTarget"):
-                ref    = f"{_col_letter(tc)}{tr + 1}"
                 filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
                 if isinstance(filled, dict):
                     filled = filled.get("value", "")
@@ -4172,6 +4186,26 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                         xl_cell.value = filled or ""
                 except (ValueError, TypeError):
                     xl_cell.value = filled or ""
+                conf = confidence_map.get(ref, "high")
+                if conf == "low":
+                    try:
+                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
+                    except Exception:
+                        pass
+            elif not tpl_value and ref in extracted_fields:
+                # kv_pair value cell: empty in template but AI extracted a value
+                kv_filled = extracted_fields.get(ref)
+                if isinstance(kv_filled, dict):
+                    kv_filled = kv_filled.get("value", "")
+                kv_filled = kv_filled or ""
+                try:
+                    clean_kv = str(kv_filled).replace(",", "").strip() if kv_filled else ""
+                    if clean_kv and re.match(r'^-?[0-9]+\.?[0-9]*$', clean_kv):
+                        xl_cell.value = float(clean_kv)
+                    else:
+                        xl_cell.value = kv_filled
+                except (ValueError, TypeError):
+                    xl_cell.value = kv_filled
                 conf = confidence_map.get(ref, "high")
                 if conf == "low":
                     try:
