@@ -219,6 +219,9 @@ select.input { appearance: none; cursor: pointer; }
 }
 .sb-signout:hover { background: rgba(220,38,38,0.15); color: #f87171; }
 
+.sb-resize-handle { transition: background 120ms; }
+.sb-resize-handle:hover { background: rgba(129,140,248,0.45); }
+
 /* ── Page shell ── */
 .page-shell { display:flex; min-height:100vh; background:var(--bg); }
 .page-content { flex:1; margin-left:var(--sidebar-w); padding:24px 28px; }

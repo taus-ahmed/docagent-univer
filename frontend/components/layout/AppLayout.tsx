@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -14,6 +14,10 @@ const ADMIN_NAV = [
   { href: "/analytics", label: "Analytics", icon: "analytics" },
   { href: "/admin",     label: "Admin",     icon: "admin"     },
 ];
+
+const SIDEBAR_MIN = 180;
+const SIDEBAR_MAX = 400;
+const SIDEBAR_DEFAULT = 220;
 
 function Icon({ type }: { type: string }) {
   const p = { viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2",
@@ -29,12 +33,38 @@ function Icon({ type }: { type: string }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, refreshUser, initializeFromStorage } = useAuthStore();
+  const { user, isAuthenticated, logout, initializeFromStorage } = useAuthStore();
+
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const dragStartX    = useRef<number | null>(null);
+  const dragStartW    = useRef(SIDEBAR_DEFAULT);
+  const isDragging    = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) { router.replace("/login"); return; }
     initializeFromStorage();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!isDragging.current || dragStartX.current === null) return;
+      const delta = e.clientX - dragStartX.current;
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, dragStartW.current + delta));
+      setSidebarWidth(next);
+    }
+    function onMouseUp() {
+      isDragging.current = false;
+      dragStartX.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
 
   if (!isAuthenticated) return null;
 
@@ -42,7 +72,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="page-shell">
-      <aside className="sidebar">
+      <aside className="sidebar" style={{ width: sidebarWidth }}>
         <div className="sb-brand">
           <div className="sb-brand-icon">D</div>
           <span className="sb-brand-name">DocAgent</span>
@@ -76,8 +106,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Sign out
           </button>
         </div>
+
+        {/* Drag handle — right edge of sidebar */}
+        <div
+          onMouseDown={(e) => {
+            dragStartX.current = e.clientX;
+            dragStartW.current = sidebarWidth;
+            isDragging.current = true;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+            e.preventDefault();
+          }}
+          style={{
+            position: "absolute", top: 0, right: 0,
+            width: 5, height: "100%",
+            cursor: "col-resize",
+            zIndex: 20,
+          }}
+          className="sb-resize-handle"
+        />
       </aside>
-      <main className="page-content">{children}</main>
+      <main className="page-content" style={{ marginLeft: sidebarWidth }}>{children}</main>
     </div>
   );
 }
