@@ -659,7 +659,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                     const isExtract = cell?.extractTarget && !cell?.repeatRow;
                     const isRepeat = cell?.repeatRow;
                     const tw = Array.from({ length: cs2 }, (_, i) => colWidths[c + i] ?? DCW).reduce((a, b) => a + b, 0);
-                    const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.06)" : isExtract ? "rgba(22,163,74,0.06)" : isCtrlSel ? "rgba(79,70,229,0.12)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
+                    const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.06)" : isCtrlSel ? "rgba(79,70,229,0.12)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
                     const bd = isSel ? "2px solid #4f46e5" : isCtrlSel ? "2px solid #7c3aed" : isRepeat ? "1px solid #93c5fd" : isExtract ? "1px solid #86efac" : ir ? "1px solid #a5b4fc" : "1px solid #e5e7eb";
                     const finalBd = s.borderAll ? "1px solid #374151" : s.borderOuter && isSel ? "2px solid #374151" : bd;
                     const ff = s.fontFamily ?? "Segoe UI,system-ui,sans-serif";
