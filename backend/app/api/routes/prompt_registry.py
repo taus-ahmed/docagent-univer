@@ -1421,11 +1421,91 @@ Preserve all column values exactly as written.
 }
 
 
+# ─── Universal rule blocks appended to every system prompt ───────────────────
+
+_UNIVERSAL_RULES = """
+━━━ DOCUMENT ISOLATION ━━━
+Extract ONLY from the current document in view. If multiple documents or
+watermarks appear on the same page, extract exclusively from the document
+matching this document type. Never mix or blend fields from separate documents.
+
+━━━ HALLUCINATION PREVENTION ━━━
+- Return "" for any field that is not clearly and explicitly present.
+- Never guess, infer, or generate plausible-looking values not in the document.
+- Never default numeric fields to 0 when absent — use "" instead.
+- If a label is visible but its value cell is blank, return "".
+- Copy numbers and codes exactly; do not reformat identifiers."""
+
+_SECTION_CONTEXT_RULE = """
+━━━ SECTION CONTEXT ━━━
+This document is divided into named sections (e.g. Assets/Liabilities,
+Revenue/Expenses, Earnings/Deductions). Extract each value from its own section
+only — never cross-attribute. Signs matter: (1,200) is negative → "-1200"."""
+
+_LINE_ITEM_RULE = """
+━━━ LINE-ITEM COMPLETENESS ━━━
+Extract ALL rows from every table — never truncate, summarise, or merge rows.
+One source row = exactly one output object. Exclude header, total and subtotal
+rows from the items array. If a table spans multiple pages, merge into one flat
+array in document order."""
+
+_FINANCIAL_TYPES = frozenset({
+    "bank_statement", "income_statement", "balance_sheet",
+    "audit_report", "tax_form", "payslip",
+})
+_TABLE_HEAVY_TYPES = frozenset({
+    "bank_statement", "payslip", "expense_report",
+    "sales_invoice", "purchase_order",
+})
+
+
 # ─── Public API ───────────────────────────────────────────────────────────────
 
 def get_system_prompt(doc_type: str) -> str:
-    entry = PROMPT_REGISTRY.get(_norm(doc_type)) or PROMPT_REGISTRY["other"]
-    return entry["system"].strip()
+    norm = _norm(doc_type)
+    entry = PROMPT_REGISTRY.get(norm) or PROMPT_REGISTRY["other"]
+    base = entry["system"].strip()
+    parts = [base, _UNIVERSAL_RULES]
+    if norm in _FINANCIAL_TYPES:
+        parts.append(_SECTION_CONTEXT_RULE)
+    if norm in _TABLE_HEAVY_TYPES:
+        parts.append(_LINE_ITEM_RULE)
+    return "\n".join(parts)
+
+
+def get_unguided_prompt() -> str:
+    """System prompt used when no template is selected (AI-only extraction)."""
+    return """You are an expert document data extraction AI with deep knowledge of
+financial, commercial and administrative documents across all industries.
+
+━━━ TASK ━━━
+Extract every key data field visible in this document. You have no template —
+use your expert knowledge of this document type to determine what fields matter
+and extract them all comprehensively.
+
+━━━ OUTPUT FORMAT ━━━
+Return a single flat JSON object with descriptive snake_case keys, for example:
+{
+  "vendor_name": "Acme Corp",
+  "invoice_number": "INV-2025-001",
+  "invoice_date": "2025-07-26",
+  "total_amount": 1250.00,
+  "line_items": [
+    {"description": "Widget A", "qty": 2, "unit_price": 500.00, "total": 1000.00}
+  ]
+}
+
+━━━ FIELD RULES ━━━
+- Dates → YYYY-MM-DD
+- Numbers → strip currency symbols and commas; use negative sign not parentheses
+- Table data → array of objects under a descriptive key (e.g. "line_items",
+  "transactions", "deductions")
+- Missing / blank fields → omit the key entirely (do not include empty strings)
+- Identifiers (invoice no, routing no, account no) → preserve EXACTLY as printed
+
+━━━ DOCUMENT ISOLATION ━━━
+Extract ONLY from this document. Ignore watermarks, stamps, and content from
+adjacent documents. Never guess or fabricate values not explicitly visible."""
 
 def get_table_rules(doc_type: str) -> Optional[str]:
     entry = PROMPT_REGISTRY.get(_norm(doc_type)) or PROMPT_REGISTRY["other"]
