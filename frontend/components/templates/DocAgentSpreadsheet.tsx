@@ -106,6 +106,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const inputRef = useRef<HTMLInputElement>(null);
   const mouseDown = useRef(false);
   const clipboard = useRef<Record<string, Cell> | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const buildSaveData = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[]): SheetSaveData => {
     const extractTargets: Array<{ r: number; c: number; label: string; isRepeat: boolean }> = [];
@@ -260,6 +261,30 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     const nc = Math.max(0, Math.min(COLS - 1, selC + dc));
     setSelR(nr); setSelC(nc); setRng({ r1: nr, c1: nc, r2: nr, c2: nc });
   }, [selR, selC]);
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const cw = el.clientWidth;
+    const ch = el.clientHeight;
+    // Pixel offset of selected cell from container top-left (before scroll)
+    const cellTop    = CHH + selR * DRH;
+    const cellLeft   = RHW + colWidths.slice(0, selC).reduce((a, b) => a + b, 0);
+    const cellBottom = cellTop + DRH;
+    const cellRight  = cellLeft + (colWidths[selC] ?? DCW);
+    // Scroll vertically — account for sticky column header (CHH)
+    if (cellTop - CHH < el.scrollTop) {
+      el.scrollTop = cellTop - CHH;
+    } else if (cellBottom > el.scrollTop + ch) {
+      el.scrollTop = cellBottom - ch;
+    }
+    // Scroll horizontally — account for sticky row header (RHW)
+    if (cellLeft - RHW < el.scrollLeft) {
+      el.scrollLeft = cellLeft - RHW;
+    } else if (cellRight > el.scrollLeft + cw) {
+      el.scrollLeft = cellRight - cw;
+    }
+  }, [selR, selC, colWidths]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -590,7 +615,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       </div>
 
       {/* GRID */}
-      <div style={{ flex: 1, overflow: "auto" }} onMouseUp={() => { mouseDown.current = false; }}>
+      <div ref={gridRef} style={{ flex: 1, overflow: "auto" }} onMouseUp={() => { mouseDown.current = false; }}>
         <table style={{ borderCollapse: "collapse", tableLayout: "fixed", minWidth: "max-content" }}>
           <thead>
             <tr>
