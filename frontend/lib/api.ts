@@ -277,6 +277,7 @@ export const extractApi = {
     clientId: string,
     templateId?: number,
     options: ExtractionOption[] = [],
+    selectedPages?: number[],
   ): Promise<{ job_id: number; message: string; total_files: number; status: string }> => {
     const fd = new FormData();
     files.forEach(f => fd.append("files", f));
@@ -285,7 +286,17 @@ export const extractApi = {
     // Backend-processed options only (not "graphs" which is frontend-only)
     const backendOptions = options.filter(o => o !== "graphs");
     if (backendOptions.length > 0) fd.append("options", JSON.stringify(backendOptions));
+    if (selectedPages && selectedPages.length > 0) fd.append("selected_pages", JSON.stringify(selectedPages));
     const res = await api.post("/api/extract/upload", fd);
+    return res.data;
+  },
+
+  getPageCount: async (
+    files: File[],
+  ): Promise<Array<{ filename: string; page_count: number }>> => {
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f));
+    const res = await api.post("/api/extract/page-count", fd);
     return res.data;
   },
 

@@ -93,6 +93,33 @@ def _is_image_file(file_path: Path) -> bool:
 
 
 # ==============================================================================
+# PAGE COUNT ENDPOINT
+# ==============================================================================
+
+@router.post("/extract/page-count")
+async def get_pdf_page_count(
+    files: list[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Return page count for each uploaded file (PDFs only). Used by frontend
+    to decide whether to show the page-selection modal before extraction."""
+    import io
+    results = []
+    for f in files:
+        content = await f.read()
+        if f.filename and f.filename.lower().endswith(".pdf"):
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(content)) as pdf:
+                    results.append({"filename": f.filename, "page_count": len(pdf.pages)})
+            except Exception:
+                results.append({"filename": f.filename, "page_count": 1})
+        else:
+            results.append({"filename": f.filename, "page_count": 1})
+    return results
+
+
+# ==============================================================================
 # UPLOAD ENDPOINT
 # ==============================================================================
 
@@ -102,6 +129,7 @@ async def upload_and_extract(
     client_id: str = Form(...),
     template_id: Optional[int] = Form(None),
     options: Optional[str] = Form(None),  # JSON array: ["categorize","summary","anomaly","graphs"]
+    selected_pages: Optional[str] = Form(None),  # JSON array of 1-based page numbers e.g. "[1,2,5]"
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     storage=Depends(get_storage),
@@ -134,6 +162,16 @@ async def upload_and_extract(
         except Exception:
             selected_options = [o.strip() for o in options.split(",") if o.strip()]
 
+    # Parse selected_pages (1-based list of page numbers to process)
+    selected_pages_list: Optional[list] = None
+    if selected_pages:
+        try:
+            parsed = json.loads(selected_pages)
+            if isinstance(parsed, list) and parsed:
+                selected_pages_list = [int(p) for p in parsed]
+        except Exception:
+            pass
+
     job = ExtractionJob(
         user_id=current_user.id,
         client_id=client_id,
@@ -158,7 +196,7 @@ async def upload_and_extract(
         target=_run_extraction_sync,
         args=(job_id, saved_paths, str(schema_path), settings.DATABASE_URL,
               template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
-        kwargs={"options": selected_options},
+        kwargs={"options": selected_options, "selected_pages": selected_pages_list},
         daemon=True,
     )
     thread.start()
@@ -2805,14 +2843,16 @@ def _fail(filename, error):
 # MAIN EXTRACTION ENGINE - VISION FIRST
 # ==============================================================================
 
-def _extract_with_template(orchestrator, file_path: Path, template_data: dict):
+def _extract_with_template(orchestrator, file_path: Path, template_data: dict,
+                            selected_pages: Optional[list] = None):
     """
     Vision-First extraction engine - safety-wrapped version.
     All errors are caught and returned as failed DocumentResult objects
     so the job always completes with meaningful error messages.
     """
     try:
-        return _extract_with_template_inner(orchestrator, file_path, template_data)
+        return _extract_with_template_inner(orchestrator, file_path, template_data,
+                                            selected_pages=selected_pages)
     except Exception as e:
         print(f"[EXTRACT] FATAL {file_path.name}: {e}", flush=True)
         traceback.print_exc()
@@ -2932,7 +2972,8 @@ def _extract_image_with_template(orchestrator, file_path: Path,
         return [r]
 
 
-def _extract_with_template_inner(orchestrator, file_path: Path, template_data: dict):
+def _extract_with_template_inner(orchestrator, file_path: Path, template_data: dict,
+                                  selected_pages: Optional[list] = None):
     """Inner extraction logic - called by the safety wrapper."""
     import time as t
     from core.preprocessor import preprocess_file
@@ -2950,6 +2991,14 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
         doc = preprocess_file(file_path)
         doc_text = doc.extracted_text or ""
         page_images = doc.page_images_b64 or []
+
+        # Filter to user-selected pages (1-based indices)
+        if selected_pages and page_images:
+            filtered = [page_images[i - 1] for i in selected_pages if 0 < i <= len(page_images)]
+            if filtered:
+                page_images = filtered
+                print(f"[EXTRACT] {file_path.name}: page filter applied → "
+                      f"{selected_pages} of {len(doc.page_images_b64)} pages", flush=True)
 
         print(f"[EXTRACT] {file_path.name}: text_len={len(doc_text)} "
               f"pages={len(page_images)} has_vision={bool(page_images)}", flush=True)
@@ -3451,7 +3500,8 @@ def _diagnose_template(template_data: dict) -> None:
 
 
 def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
-                          project_dir, backend_dir, engine_dir, options=None):
+                          project_dir, backend_dir, engine_dir, options=None,
+                          selected_pages=None):
     import os
     os.environ["PYTHONUTF8"] = "1"
     for p in [engine_dir, backend_dir, project_dir]:
@@ -3509,7 +3559,8 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                         )
                     else:
                         results = _extract_with_template(
-                            orchestrator, file_path, template_data
+                            orchestrator, file_path, template_data,
+                            selected_pages=selected_pages,
                         )
                 else:
                     if is_img:
