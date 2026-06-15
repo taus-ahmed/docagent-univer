@@ -3074,6 +3074,209 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
     return results if results else [_fail(file_path.name, "No data extracted")]
 
 
+# ==============================================================================
+# SECTIONED MULTI-PASS EXTRACTION (parallel column templates)
+# ==============================================================================
+
+def _detect_vertical_sections(items: list) -> list:
+    """
+    Split a parallel group's items into vertical sections by detecting row gaps.
+    A gap of more than 2 rows between consecutive items means a section header row
+    sits between them (e.g. "Current Assets" rows 2-9, gap at rows 10-13,
+    "Current Liabilities" rows 14-19).
+    Returns: list of sections, each a list of items.
+    """
+    if not items:
+        return []
+    sorted_items = sorted(items, key=lambda x: x["row"])
+    sections: list = [[sorted_items[0]]]
+    for i in range(1, len(sorted_items)):
+        gap = sorted_items[i]["row"] - sorted_items[i - 1]["row"]
+        if gap > 2:
+            sections.append([sorted_items[i]])
+        else:
+            sections[-1].append(sorted_items[i])
+    return sections
+
+
+def _find_section_header_in_gap(layout_cells: dict, label_col: int,
+                                 row_start: int, row_end: int) -> str:
+    """
+    Find a section header label in label_col between row_start (inclusive) and
+    row_end (exclusive). Returns the last non-empty, non-extract label found.
+    """
+    found = ""
+    for r in range(row_start, row_end):
+        cell = layout_cells.get(f"{r},{label_col}")
+        if not cell or not isinstance(cell, dict):
+            continue
+        val = str(cell.get("value") or "").strip()
+        if val and not cell.get("extractTarget"):
+            found = val
+    return found
+
+
+def _extract_parallel_groups_sectioned(
+    orchestrator, template_data: dict, page_img, doc_text: str,
+    filename: str, doc_type: str, start_time: float,
+):
+    """
+    Multi-pass extraction for parallel column templates that have multiple vertical
+    sections within the same column band (e.g. a balance sheet where col B is the
+    value column for BOTH Current Assets rows 2-9 AND Current Liabilities rows 14-19).
+
+    A single LLM call conflates both sections; this function makes one call per
+    vertical section so each pass only sees the cells it should fill.
+
+    Merged extracted_fields are written back via the existing T1 FieldBinding system
+    (_write_form_excel / write_template_row both read from extracted_fields).
+
+    Returns a DocumentExtractionResult on success, or None to fall back to single-pass.
+    """
+    regions = template_data.get("regions", {})
+    layout_cells = template_data.get("layout", {}).get("cells", {})
+    parallel_groups = regions.get("parallel_column_groups", [])
+
+    if not parallel_groups:
+        return None
+
+    # Split each group's items into vertical sections
+    group_sections = [_detect_vertical_sections(pg["items"]) for pg in parallel_groups]
+    n_sections = max(len(s) for s in group_sections)
+
+    if n_sections <= 1:
+        return None  # single vertical section — single-pass is fine
+
+    print(
+        f"[SECTIONED] {filename}: {n_sections} vertical sections across "
+        f"{len(parallel_groups)} parallel groups — using multi-pass extraction",
+        flush=True,
+    )
+
+    merged_extracted_fields: dict = {}
+    last_extraction = None
+
+    for sec_idx in range(n_sections):
+        # Build modified parallel groups containing only this section's items
+        sectioned_groups = []
+        section_name_parts = []
+
+        for gi, pg in enumerate(parallel_groups):
+            sec_list = group_sections[gi]
+            sec_items = sec_list[sec_idx] if sec_idx < len(sec_list) else []
+            if not sec_items:
+                continue
+
+            if sec_idx == 0:
+                sec_label = pg["section_label"]
+            else:
+                # Find section header label in the gap rows above this section
+                prev_end_row = sec_list[sec_idx - 1][-1]["row"] if (sec_idx - 1) < len(sec_list) and sec_list[sec_idx - 1] else -1
+                this_start_row = sec_items[0]["row"]
+                sec_label = _find_section_header_in_gap(
+                    layout_cells, pg["label_col"],
+                    prev_end_row + 1, this_start_row,
+                )
+                if not sec_label:
+                    sec_label = (
+                        f"Section {sec_idx + 1} "
+                        f"(col {pg['label_col_letter']}-{pg['value_col_letter']})"
+                    )
+
+            sectioned_groups.append({**pg, "items": sec_items, "section_label": sec_label})
+            section_name_parts.append(sec_label)
+
+        if not sectioned_groups:
+            continue
+
+        section_display = " / ".join(section_name_parts)
+        print(f"[SECTIONED] Pass {sec_idx + 1}/{n_sections}: {section_display}", flush=True)
+
+        modified_regions = {**regions, "parallel_column_groups": sectioned_groups}
+        modified_template = {**template_data, "regions": modified_regions}
+        system_instruction, prompt = _build_vision_prompt(modified_template, doc_text)
+
+        # Prepend a scope fence to prevent cross-section bleeding
+        scope_prefix = (
+            f"=== SECTION SCOPE (Pass {sec_idx + 1} of {n_sections}) ===\n"
+            f"Extract ONLY the values for: {section_display}\n"
+            f"Ignore all other sections of this document in this pass.\n"
+            f"Only fill the cell references listed below — nothing else.\n\n"
+        )
+        prompt = scope_prefix + prompt
+
+        extraction = None
+        _base_prompt = prompt
+        for attempt in range(3):
+            if attempt > 0:
+                prompt = (
+                    "IMPORTANT: Return ONLY valid JSON with no markdown fences.\n\n"
+                ) + _base_prompt
+            try:
+                if page_img:
+                    extraction = orchestrator.llm.extract(
+                        image_b64=page_img, prompt=prompt,
+                        system_instruction=system_instruction,
+                    )
+                    if not extraction.success and doc_text:
+                        extraction = orchestrator.llm.extract(
+                            text=doc_text, prompt=prompt,
+                            system_instruction=system_instruction,
+                        )
+                elif doc_text:
+                    extraction = orchestrator.llm.extract(
+                        text=doc_text, prompt=prompt,
+                        system_instruction=system_instruction,
+                    )
+                else:
+                    break
+                if extraction and extraction.success and extraction.parsed_json:
+                    break
+                if attempt < 2:
+                    time.sleep(5 * (3 ** attempt))
+            except Exception as e:
+                print(f"[SECTIONED] Pass {sec_idx + 1} attempt {attempt + 1}: {e}", flush=True)
+                if attempt < 2:
+                    time.sleep(5 * (3 ** attempt))
+
+        if extraction and extraction.success and extraction.parsed_json:
+            raw = extraction.parsed_json
+            # Handle documents[] wrapper (LLM wraps output in documents array)
+            docs = raw.get("documents", [raw])
+            doc_raw = docs[0] if docs else raw
+            ef = doc_raw.get("extracted_fields", {})
+            merged_extracted_fields.update(ef)
+            last_extraction = extraction
+            print(
+                f"[SECTIONED] Pass {sec_idx + 1} OK: {len(ef)} fields "
+                f"(sample: {list(ef.keys())[:4]})",
+                flush=True,
+            )
+        else:
+            err = (extraction.error if extraction else "no response")[:80]
+            print(f"[SECTIONED] Pass {sec_idx + 1} FAILED: {err}", flush=True)
+
+        if sec_idx < n_sections - 1:
+            time.sleep(2.0)
+
+    if not merged_extracted_fields:
+        print(f"[SECTIONED] {filename}: all passes failed — falling back to single-pass", flush=True)
+        return None
+
+    import time as _t
+    elapsed = (_t.time() - start_time) * 1000
+    merged_raw = {
+        "extracted_fields": merged_extracted_fields,
+        "overall_confidence": "high",
+        "document_type": doc_type,
+        "table_rows": [],
+    }
+    return _process_vision_result(
+        merged_raw, template_data, filename, doc_type,
+        elapsed, last_extraction, doc_text, "sectioned_parallel", 0,
+    )
+
+
 def _vision_extract_all_documents(orchestrator, file_path, template_data,
                                    doc_type, doc_text, page_images, start):
     """
@@ -3113,6 +3316,23 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
             page_img = page_images[idx]
         elif has_images and page_images:
             page_img = page_images[0]
+
+        # Sectioned multi-pass extraction for parallel column templates with multiple
+        # vertical sections (e.g. balance sheet where col B covers both Current Assets
+        # rows 2-9 AND Current Liabilities rows 14-19 in one column band).
+        # Each vertical section gets its own LLM call to prevent cross-section misrouting.
+        primary_mode = regions.get("primary_mode", "form_kv")
+        if primary_mode == "parallel_groups":
+            sectioned = _extract_parallel_groups_sectioned(
+                orchestrator, template_data, page_img, doc_text,
+                file_path.name, doc_type, start,
+            )
+            if sectioned is not None:
+                seg_fn = (file_path.name if total_docs == 1
+                          else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
+                sectioned.filename = seg_fn
+                results.append(sectioned)
+                continue  # skip the single-pass extraction for this segment
 
         # Build extraction prompt — returns (system_instruction, user_prompt)
         # system_instruction = registry expert persona (stable, cached by Gemini)
