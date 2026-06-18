@@ -455,13 +455,13 @@ def _analyse_template_regions(layout: dict) -> dict:
                 # Check there is also a label at c+1 or c+2 area
                 mid = grid.get((r, c + 1))
                 if mid and mid["value"] and not mid["extractTarget"]:
-                    # Pattern: LabelA | ValueA | LabelB | ValueB
+                    # Pattern: LabelA | LabelB | ValueA | ValueB
                     far_right = grid.get((r, c + 3))
                     if far_right and (far_right["extractTarget"] or not far_right["value"]):
                         two_col_pairs.append({
                             "left_label": cell["value"],
                             "left_label_ref": cell["ref"],
-                            "left_value_ref": _cell_ref(r, c + 1),
+                            "left_value_ref": _cell_ref(r, c + 2),
                             "right_label": mid["value"],
                             "right_label_ref": mid["ref"],
                             "right_value_ref": _cell_ref(r, c + 3),
@@ -3304,11 +3304,18 @@ def _pdfplumber_extract_form_fields(doc_text: str, regions: dict) -> dict:
                 ref = item.get("value_ref", "")
                 if lbl and ref:
                     tpl_items.append((lbl, ref))
-    else:
+    elif kv_pairs:
         for kv in kv_pairs:
             lbl = kv.get("label", "").strip()
             ref = kv.get("value_ref", "")
             if lbl and ref:
+                tpl_items.append((lbl, ref))
+    else:
+        # form_with_targets: cells marked "Extract here" with no adjacent label column
+        for et in regions.get("explicit_targets", []):
+            lbl = et.get("label", "").strip()
+            ref = et.get("ref", "")
+            if lbl and ref and not lbl.startswith("field at "):
                 tpl_items.append((lbl, ref))
 
     if not tpl_items:
@@ -3486,6 +3493,8 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
                     for pg in regions["parallel_column_groups"]
                     for item in pg.get("items", [])
                 ]
+            if not _all_items:
+                _all_items = regions.get("explicit_targets", [])
             n_tpl = len(_all_items)
             coverage = n_plumber / n_tpl if n_tpl else 0
             print(
