@@ -3277,6 +3277,158 @@ def _extract_parallel_groups_sectioned(
     )
 
 
+def _pdfplumber_extract_form_fields(doc_text: str, regions: dict) -> dict:
+    """
+    Directly extract form field values from pdfplumber text using label matching.
+
+    For text-based PDFs (not scanned) with kv_pair or parallel_group templates,
+    this avoids calling the LLM entirely:
+      1. Parse the document text into (label, value) pairs via regex.
+      2. Match each template kv_pair label to a document label (fuzzy).
+      3. Return {cell_ref: {"value": str, "confidence": str}} for every matched field.
+
+    Returns {} if extraction fails or doc_text is empty.
+    """
+    if not doc_text or not doc_text.strip():
+        return {}
+
+    kv_pairs    = regions.get("kv_pairs", [])
+    para_groups = regions.get("parallel_column_groups", [])
+
+    # Collect all template (label → value_ref) mappings
+    tpl_items = []  # list of (label_str, value_ref)
+    if para_groups:
+        for pg in para_groups:
+            for item in pg.get("items", []):
+                lbl = item.get("label", "").strip()
+                ref = item.get("value_ref", "")
+                if lbl and ref:
+                    tpl_items.append((lbl, ref))
+    else:
+        for kv in kv_pairs:
+            lbl = kv.get("label", "").strip()
+            ref = kv.get("value_ref", "")
+            if lbl and ref:
+                tpl_items.append((lbl, ref))
+
+    if not tpl_items:
+        return {}
+
+    # --- Parse document text into {normalized_label: numeric_string} ---
+    # Matches lines like:
+    #   "Cash & Cash Equivalents $184,320"
+    #   "Less: Accum. Depreciation $139,800"
+    #   "Total Non-Current Assets $248,800"
+    doc_pairs: dict = {}
+    val_re = re.compile(
+        r'^(.*?)\s+\(?\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)\)?$'
+    )
+    tab_re = re.compile(
+        r'^(.*?)\t\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)$'
+    )
+
+    for raw_line in doc_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("---"):
+            continue
+        m = tab_re.match(line) or val_re.match(line)
+        if not m:
+            continue
+        label_raw = m.group(1).strip().rstrip(":").strip()
+        value_raw = m.group(2).strip().lstrip("$").strip()
+        if not label_raw or not value_raw:
+            continue
+        # Normalize whitespace and lowercase for matching
+        norm = re.sub(r'[^\w\s&.()/]', ' ', label_raw)
+        norm = re.sub(r'\s+', ' ', norm).lower().strip()
+        # Handle accounting negatives in original line: "(139,800)" → negate
+        stripped = value_raw.replace(",", "")
+        if re.search(r'\(\$?' + re.escape(stripped) + r'\)', line):
+            value_raw = '-' + value_raw
+        # Remove commas so downstream numeric conversion is simple
+        value_raw = value_raw.replace(",", "")
+        doc_pairs[norm] = value_raw
+
+    if not doc_pairs:
+        return {}
+
+    def _norm_label(s: str) -> str:
+        n = re.sub(r'[^\w\s&.()/]', ' ', s)
+        return re.sub(r'\s+', ' ', n).lower().strip()
+
+    def _should_negate(label: str) -> bool:
+        """Labels that represent deductions from a total should be stored negative."""
+        ln = label.lower().strip()
+        return ln.startswith(("less:", "less ", "less-"))
+
+    extracted_fields: dict = {}
+    matched_refs: set = set()
+
+    for tpl_label, value_ref in tpl_items:
+        if value_ref in matched_refs:
+            continue
+        norm_tpl = _norm_label(tpl_label)
+
+        matched_val  = None
+        matched_conf = None
+
+        # Generic single-word labels like "Total" are ambiguous: skip fuzzy matching
+        # so they only fill via exact match (prevents "Total" → "Total Current Assets").
+        tpl_words_list = norm_tpl.split()
+        is_generic = len(tpl_words_list) <= 1
+
+        # 1. Exact match
+        if norm_tpl in doc_pairs:
+            matched_val  = doc_pairs[norm_tpl]
+            matched_conf = "high"
+        elif not is_generic:
+            # 2. Substring containment (template label ⊂ doc label or vice versa)
+            # Guard: only when the template label is specific enough (>= 2 meaningful words)
+            best_label = None
+            for doc_label in doc_pairs:
+                if norm_tpl in doc_label or doc_label in norm_tpl:
+                    if best_label is None or len(doc_label) > len(best_label):
+                        best_label = doc_label
+            if best_label:
+                matched_val  = doc_pairs[best_label]
+                matched_conf = "high"
+            else:
+                # 3. Word-overlap match (>= 75% of template words found in doc label)
+                tpl_words   = set(tpl_words_list)
+                best_score  = 0.0
+                best_label  = None
+                for doc_label in doc_pairs:
+                    doc_words = set(doc_label.split())
+                    if not tpl_words:
+                        continue
+                    overlap = len(tpl_words & doc_words) / len(tpl_words)
+                    if overlap > best_score:
+                        best_score = overlap
+                        best_label = doc_label
+                if best_score >= 0.75 and best_label:
+                    matched_val  = doc_pairs[best_label]
+                    matched_conf = "medium"
+
+        if matched_val is not None:
+            # Apply "Less: ..." negation rule (deduction line items stored as negative)
+            if _should_negate(tpl_label) and matched_val and not matched_val.startswith("-"):
+                matched_val = "-" + matched_val
+            extracted_fields[value_ref] = {
+                "value":      matched_val,
+                "confidence": matched_conf,
+            }
+            matched_refs.add(value_ref)
+
+    n_filled = sum(1 for v in extracted_fields.values()
+                   if isinstance(v, dict) and v.get("value"))
+    n_total  = len(tpl_items)
+    print(
+        f"[PLUMBER] pdfplumber form extraction: {n_filled}/{n_total} fields matched",
+        flush=True,
+    )
+    return extracted_fields
+
+
 def _vision_extract_all_documents(orchestrator, file_path, template_data,
                                    doc_type, doc_text, page_images, start):
     """
@@ -3317,11 +3469,54 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         elif has_images and page_images:
             page_img = page_images[0]
 
+        # ── pdfplumber-first path for text-based documents ───────────────────────
+        # For form/parallel_groups templates where the PDF has extractable text,
+        # match template labels directly to document values without any LLM call.
+        # Falls through to LLM only when coverage is insufficient.
+        primary_mode = regions.get("primary_mode", "form_kv")
+        if doc_text and primary_mode in ("form_kv", "form_with_targets", "parallel_groups"):
+            _plumber_ef = _pdfplumber_extract_form_fields(doc_text, regions)
+            n_plumber   = sum(1 for v in _plumber_ef.values()
+                              if isinstance(v, dict) and v.get("value"))
+            # Count total template fields to compute coverage ratio
+            _all_items  = regions.get("kv_pairs", [])
+            if regions.get("parallel_column_groups"):
+                _all_items = [
+                    item
+                    for pg in regions["parallel_column_groups"]
+                    for item in pg.get("items", [])
+                ]
+            n_tpl = len(_all_items)
+            coverage = n_plumber / n_tpl if n_tpl else 0
+            print(
+                f"[PLUMBER] {file_path.name}: coverage {n_plumber}/{n_tpl} "
+                f"({coverage:.0%}) — "
+                + ("using pdfplumber result" if coverage >= 0.5 else "falling back to LLM"),
+                flush=True,
+            )
+            if coverage >= 0.5:
+                import time as _t2
+                elapsed = (_t2.time() - start) * 1000
+                raw_plumber = {
+                    "extracted_fields": _plumber_ef,
+                    "overall_confidence": "high",
+                    "document_type":     doc_type,
+                    "table_rows":        [],
+                }
+                result = _process_vision_result(
+                    raw_plumber, template_data, file_path.name, doc_type,
+                    elapsed, None, doc_text, "pdfplumber_form", seg_index,
+                )
+                seg_fn = (file_path.name if total_docs == 1
+                          else f"{file_path.stem}_doc{seg_index+1}{file_path.suffix}")
+                result.filename = seg_fn
+                results.append(result)
+                continue  # no LLM call needed
+
         # Sectioned multi-pass extraction for parallel column templates with multiple
         # vertical sections (e.g. balance sheet where col B covers both Current Assets
         # rows 2-9 AND Current Liabilities rows 14-19 in one column band).
         # Each vertical section gets its own LLM call to prevent cross-section misrouting.
-        primary_mode = regions.get("primary_mode", "form_kv")
         if primary_mode == "parallel_groups":
             sectioned = _extract_parallel_groups_sectioned(
                 orchestrator, template_data, page_img, doc_text,
