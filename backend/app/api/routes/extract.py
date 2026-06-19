@@ -85,11 +85,52 @@ _backend_dir = Path(__file__).resolve().parent.parent.parent.parent
 _project_dir = _backend_dir.parent
 _engine_dir  = _backend_dir / "engine"
 
-_IMAGE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp"})
+_IMAGE_EXTENSIONS = frozenset({
+    ".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp",
+    ".heic", ".heif", ".gif", ".avif",
+})
 
 
 def _is_image_file(file_path: Path) -> bool:
     return file_path.suffix.lower() in _IMAGE_EXTENSIONS
+
+
+def _is_text_pdf(file_path: Path, min_chars: int = 80) -> bool:
+    """Return True if the PDF has machine-readable text (not scanned/image-only).
+    Checks first 3 pages — if any yields >= min_chars the PDF is text-based."""
+    try:
+        import pdfplumber
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages[:3]:
+                if len((page.extract_text() or "").strip()) >= min_chars:
+                    return True
+        return False
+    except Exception:
+        return False
+
+
+def _load_image_as_png_bytes(file_path: Path) -> bytes:
+    """Load any supported image (including HEIC) as PNG bytes for vision LLM.
+    Falls back to raw bytes if Pillow unavailable."""
+    suffix = file_path.suffix.lower().lstrip(".")
+    if suffix in {"heic", "heif"}:
+        try:
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+        except ImportError:
+            print("[IMAGE] pillow-heif not installed — run: pip install pillow-heif", flush=True)
+    try:
+        from PIL import Image
+        import io as _io
+        with Image.open(file_path) as img:
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGB")
+            buf = _io.BytesIO()
+            img.save(buf, format="PNG")
+            return buf.getvalue()
+    except Exception as exc:
+        print(f"[IMAGE] Pillow failed ({exc}), reading raw bytes", flush=True)
+        return file_path.read_bytes()
 
 
 # ==============================================================================
@@ -2620,10 +2661,29 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     table_rows_raw = [_normalize_row_values(r) for r in table_rows_raw]
 
     # -- pdfplumber validation -------------------------------------------------
-    validation = _validate_with_pdfplumber(extracted_fields_raw, doc_text, table_rows_raw)
-    validated_fields = validation["validated_fields"]
-    validated_rows = validation["validated_rows"]
-    flagged = validation["flagged"]
+    # Skip cross-validation for scanned/image PDFs — pdfplumber returns empty text
+    # for scanned docs, causing every correctly-extracted field to be flagged as
+    # low confidence / needs_review even when the LLM was right.
+    _skip_plumber_validation = not doc_text or len(doc_text.strip()) < 80
+    if _skip_plumber_validation:
+        validated_fields = {
+            k: {"value": (v.get("value", "") if isinstance(v, dict) else str(v or "")),
+                "confidence": "medium", "validated": True}
+            for k, v in extracted_fields_raw.items()
+        }
+        validated_rows = [
+            {col: {"value": str(val or ""), "confidence": "medium"}
+             for col, val in row.items()}
+            for row in table_rows_raw
+        ]
+        flagged = []
+        validation = {"validated_fields": validated_fields, "validated_rows": validated_rows,
+                      "flagged": [], "confidence_map": {}, "flag_count": 0}
+    else:
+        validation = _validate_with_pdfplumber(extracted_fields_raw, doc_text, table_rows_raw)
+        validated_fields = validation["validated_fields"]
+        validated_rows = validation["validated_rows"]
+        flagged = validation["flagged"]
 
     # -- Build human-readable extracted_data -----------------------------------
     ref_to_label = {}
@@ -2890,7 +2950,7 @@ def _extract_image_with_template(orchestrator, file_path: Path,
     doc_type = (template_data or {}).get("doc_type", "other")
 
     try:
-        image_data = file_path.read_bytes()
+        image_data = _load_image_as_png_bytes(file_path)
         image_b64  = _b64.b64encode(image_data).decode("utf-8")
 
         if template_data:
@@ -3290,6 +3350,238 @@ def _extract_parallel_groups_sectioned(
         elapsed, last_extraction, doc_text, "sectioned_parallel", 0,
     )
 
+
+
+def _pdfplumber_spatial_extract(file_path: Path, regions: dict, layout: dict,
+                                 page_num: int = 0) -> dict:
+    """
+    Spatial parallel-column extraction using pdfplumber.extract_words() instead of
+    extract_text(). extract_words() preserves 2D x/y word positions; extract_text()
+    linearises multi-column layouts and interleaves columns.
+
+    Algorithm:
+      1. Get every word on the page with its (x0, top, x1, bottom) coordinates.
+      2. Group words into rows by y-coordinate (4-pt buckets).
+      3. For each parallel column group, compute the template column's x-band
+         from the layout's colWidths array.
+      4. For each PDF row: collect label words (label x-band) + value words (value x-band).
+      5. Match label text against template items using exact + partial Jaccard matching.
+      6. Write matched value to the correct template cell ref.
+      7. Write section total (row starting with "Total …") to the next_label_row cell.
+      8. Clear section header value cells (they should not contain data).
+
+    Returns {cell_ref: {"value": str, "confidence": "high"}} or {} on failure.
+    """
+    import re as _re
+    from collections import defaultdict
+
+    para_groups = regions.get("parallel_column_groups", [])
+    if not para_groups:
+        return {}
+
+    cells      = layout.get("cells", {})
+    col_widths = layout.get("colWidths", [])
+
+    try:
+        import pdfplumber
+        with pdfplumber.open(file_path) as pdf:
+            if page_num >= len(pdf.pages):
+                page_num = 0
+            page   = pdf.pages[page_num]
+            pw     = float(page.width)
+            words  = page.extract_words(x_tolerance=3, y_tolerance=3,
+                                         keep_blank_chars=False) or []
+    except Exception as exc:
+        print(f"[SPATIAL] extract_words failed: {exc}", flush=True)
+        return {}
+
+    if not words:
+        print(f"[SPATIAL] {file_path.name}: no words on page {page_num}", flush=True)
+        return {}
+
+    print(f"[SPATIAL] {file_path.name}: {len(words)} words, page_w={pw:.0f}", flush=True)
+
+    # ── Row grouping ─────────────────────────────────────────────────────────
+    row_map: dict = defaultdict(list)
+    for w in words:
+        y_key = round(float(w.get("top", 0)) / 4) * 4
+        row_map[y_key].append(w)
+
+    pdf_rows = []
+    for y in sorted(row_map.keys()):
+        ws = sorted(row_map[y], key=lambda w: float(w.get("x0", 0)))
+        pdf_rows.append({"y": y, "words": ws, "text": " ".join(ww["text"] for ww in ws)})
+
+    # ── Template column → PDF x-band ─────────────────────────────────────────
+    def col_x_band(col_idx: int):
+        """Return (x_start, x_end) for a template column index."""
+        if col_widths and col_idx < len(col_widths):
+            total = sum(col_widths) or 1
+            x0 = sum(col_widths[:col_idx]) / total * pw
+            x1 = sum(col_widths[:col_idx + 1]) / total * pw
+            return x0, x1
+        # Fallback: divide page equally by number of columns in template
+        n_cols = max((c for (r, c) in
+                      (tuple(map(int, k.split(","))) for k in cells
+                       if "," in k)), default=3) + 1
+        w_each = pw / max(n_cols, 1)
+        return col_idx * w_each, (col_idx + 1) * w_each
+
+    def words_in_band(row_words, x0, x1, expand: float = 12.0):
+        return [w for w in row_words
+                if float(w.get("x0", 0)) >= x0 - expand
+                and float(w.get("x1", pw)) <= x1 + expand]
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+    _NUM_RE = _re.compile(r"^[\$\-\(\)]?[\d,]+(?:\.\d{1,2})?[\)]?$")
+
+    def is_num(text: str) -> bool:
+        return bool(_NUM_RE.match(text.replace(" ", "")))
+
+    def to_signed(text: str) -> str:
+        t = text.strip()
+        if t.startswith("(") and t.endswith(")"):
+            inner = t[1:-1].replace(",", "").replace("$", "").strip()
+            return f"-{inner}"
+        return t.replace(",", "").replace("$", "").strip()
+
+    def norm(s: str) -> str:
+        return " ".join(s.upper().split())
+
+    def jaccard(a: str, b: str) -> float:
+        sa, sb = set(a.split()), set(b.split())
+        if not sa or not sb:
+            return 0.0
+        return len(sa & sb) / len(sa | sb)
+
+    # ── Build compact grid for section-header lookup ─────────────────────────
+    compact_grid: dict = {}
+    max_r = 0
+    for key, cell in cells.items():
+        if not isinstance(cell, dict) or "," not in key:
+            continue
+        try:
+            r, c = map(int, key.split(","))
+        except ValueError:
+            continue
+        max_r = max(max_r, r)
+        v = (cell.get("value") or "")
+        if str(v).strip():
+            compact_grid[(r, c)] = str(v).strip()
+
+    extracted_fields: dict = {}
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Per-group extraction
+    # ══════════════════════════════════════════════════════════════════════════
+    for pg in para_groups:
+        label_col = pg["label_col"]
+        value_col = pg["value_col"]
+        pg_items  = pg.get("items", [])
+
+        if not pg_items:
+            continue
+
+        lx0, lx1 = col_x_band(label_col)
+        vx0, vx1 = col_x_band(value_col)
+
+        print(f"[SPATIAL] group '{pg.get('section_label','')}'"
+              f"  label_col={label_col} x={lx0:.0f}-{lx1:.0f}"
+              f"  value_col={value_col} x={vx0:.0f}-{vx1:.0f}", flush=True)
+
+        # Build expected-label map: norm(label_text) → (row, col, value_ref)
+        expected: dict = {}
+        for item in pg_items:
+            r   = item.get("row")
+            col = item.get("col")
+            if r is None:
+                continue
+            # label text is in the template cell at (r, label_col)
+            lbl = compact_grid.get((r, label_col), "")
+            if not lbl:
+                # also try item.label if available
+                lbl = item.get("label", "")
+            if lbl:
+                expected[norm(lbl)] = (r, label_col)
+
+        # Identify the Total row for this group (next non-item row below items)
+        item_rows = sorted({item["row"] for item in pg_items if item.get("row") is not None})
+        last_item_row = max(item_rows) if item_rows else 0
+        total_template_row = None
+        for r in range(last_item_row + 1, max_r + 1):
+            v = compact_grid.get((r, label_col), "")
+            if v and "total" in v.lower():
+                total_template_row = r
+                break
+            if v:  # non-empty non-total row — stop looking
+                break
+
+        # Clear the section-header value cell (it's a header, not data)
+        section_header_row = None
+        for r in range(0, (item_rows[0] if item_rows else 0)):
+            v = compact_grid.get((r, label_col), "")
+            if v:
+                section_header_row = r
+        if section_header_row is not None:
+            hdr_ref = _cell_ref(section_header_row, value_col)
+            extracted_fields[hdr_ref] = {"value": "", "confidence": "high"}
+
+        # ── Per-row matching ──────────────────────────────────────────────────
+        total_found = None
+        items_filled = 0
+
+        for pdf_row in pdf_rows:
+            l_words = words_in_band(pdf_row["words"], lx0, lx1)
+            v_words = words_in_band(pdf_row["words"], vx0, vx1)
+
+            # Label: non-numeric words in label band
+            lbl_parts = [w["text"] for w in l_words if not is_num(w["text"])]
+            if not lbl_parts:
+                continue
+            lbl_text = " ".join(lbl_parts).strip()
+            lbl_norm = norm(lbl_text)
+
+            # Value: numeric words in value band (take rightmost = the actual value)
+            num_parts = [w["text"] for w in v_words if is_num(w["text"])]
+            if not num_parts:
+                continue
+            raw_val = num_parts[-1]
+            signed_val = to_signed(raw_val)
+
+            # Check if this is the Total row
+            if lbl_norm.startswith("TOTAL") and total_template_row is not None:
+                total_ref = _cell_ref(total_template_row, value_col)
+                extracted_fields[total_ref] = {"value": signed_val, "confidence": "high"}
+                total_found = signed_val
+                print(f"[SPATIAL]   total → {total_ref} = {signed_val}", flush=True)
+                continue
+
+            # Match label to template
+            matched_row = None
+
+            # 1. Exact match
+            if lbl_norm in expected:
+                matched_row = expected[lbl_norm][0]
+            else:
+                # 2. Jaccard similarity ≥ 0.5
+                best_score = 0.0
+                for exp_norm, (r, _) in expected.items():
+                    score = jaccard(lbl_norm, exp_norm)
+                    if score >= 0.5 and score > best_score:
+                        best_score = score
+                        matched_row = r
+
+            if matched_row is not None:
+                cell_ref = _cell_ref(matched_row, value_col)
+                extracted_fields[cell_ref] = {"value": signed_val, "confidence": "high"}
+                items_filled += 1
+                print(f"[SPATIAL]   '{lbl_text}' → {cell_ref} = {signed_val}", flush=True)
+
+        print(f"[SPATIAL] group '{pg.get('section_label','')}': "
+              f"{items_filled} items, total={'found' if total_found else 'not found'}", flush=True)
+
+    print(f"[SPATIAL] total extracted: {len(extracted_fields)} fields", flush=True)
+    return extracted_fields
 
 def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: dict) -> dict:
     """
@@ -3885,8 +4177,29 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
     regions = template_data.get("regions", {})
     has_images = bool(page_images)
 
-    # Only attempt vision-based boundary detection if we actually have images
-    if has_images:
+    # ── Document boundary detection ──────────────────────────────────────────────
+    # Multi-page PDFs: each page IS one document (one invoice per page, one statement
+    # per page, etc.) — no LLM detection needed. Skip the vision call and build N
+    # segments directly, one per page. This saves one expensive LLM call per batch.
+    #
+    # Single-page PDFs: may contain multiple documents on one page (e.g. two cheques
+    # on one sheet). Use LLM vision to detect boundaries in that case only.
+    #
+    # Exception: financial docs that naturally span multiple pages (audit_report,
+    # balance_sheet, income_statement) are kept as ONE segment even if multi-page.
+    _MULTI_PAGE_DOCS = {"audit_report", "balance_sheet", "income_statement", "tax_form"}
+    _is_multi_page = has_images and len(page_images) > 1
+    _is_spanning_doc = (doc_type or "").lower() in _MULTI_PAGE_DOCS
+
+    if _is_multi_page and not _is_spanning_doc:
+        # One segment per page — no LLM boundary detection needed
+        doc_segments = [
+            {"index": i, "page_indices": [i], "hint": f"page {i+1}", "sub_index": None, "total_on_page": 1}
+            for i in range(len(page_images))
+        ]
+        print(f"[EXTRACT] {file_path.name}: {len(doc_segments)} pages → {len(doc_segments)} doc segments (no LLM detection)", flush=True)
+    elif has_images:
+        # Single page OR spanning doc type: use LLM to detect boundaries
         doc_segments = _detect_document_boundaries_vision(
             page_images, orchestrator, file_path.name, doc_type
         )
@@ -3917,8 +4230,14 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         # For form/parallel_groups templates where the PDF has extractable text,
         # match template labels directly to document values without any LLM call.
         # Falls through to LLM only when coverage is insufficient.
+        # IMPORTANT: Skip pdfplumber entirely for scanned/image-only PDFs.
+        # pdfplumber returns empty/garbage for scanned docs, which causes all
+        # correctly LLM-extracted fields to be flagged as low confidence.
         primary_mode = regions.get("primary_mode", "form_kv")
-        if doc_text and primary_mode in ("form_kv", "form_with_targets", "parallel_groups", "mixed"):
+        _pdf_has_text = bool(doc_text) and _is_text_pdf(file_path)
+        if not _pdf_has_text and doc_text:
+            print(f"[PLUMBER] {file_path.name}: no extractable text — skipping pdfplumber, LLM only", flush=True)
+        if _pdf_has_text and primary_mode in ("form_kv", "form_with_targets", "parallel_groups", "mixed"):
             _plumber_ef = _pdfplumber_extract_form_fields(doc_text, regions)
 
             # For parallel_groups AND mixed-mode templates that have parallel column groups
@@ -3926,9 +4245,18 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
             # also extract dynamic fill zones — empty row spans between section headers.
             _dyn_ef: dict = {}
             if primary_mode in ("parallel_groups", "mixed") and regions.get("parallel_column_groups"):
-                _dyn_ef = _pdfplumber_extract_dynamic_parallel(
-                    doc_text, regions, template_data.get("layout", {})
+                # Try spatial extraction first (uses extract_words() + x/y coordinates —
+                # much more accurate for multi-column layouts like balance sheets).
+                # Falls back to regex text-based extraction if spatial returns nothing.
+                _dyn_ef = _pdfplumber_spatial_extract(
+                    file_path, regions, template_data.get("layout", {}),
+                    page_num=(seg.get("page_indices", [0]) or [0])[0],
                 )
+                if not _dyn_ef:
+                    print(f"[SPATIAL] {file_path.name}: no spatial results, falling back to text-based", flush=True)
+                    _dyn_ef = _pdfplumber_extract_dynamic_parallel(
+                        doc_text, regions, template_data.get("layout", {})
+                    )
                 if _dyn_ef:
                     # Merge: dynamic fill wins for any cell it covers (more specific)
                     _plumber_ef = {**_plumber_ef, **_dyn_ef}

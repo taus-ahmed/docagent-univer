@@ -450,7 +450,7 @@ export default function ExtractPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "application/pdf": [".pdf"], "image/*": [".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".webp"] },
+    accept: { "application/pdf": [".pdf"], "image/*": [".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".webp", ".heic", ".heif", ".gif", ".avif"] },
     multiple: true,
   });
 
@@ -726,7 +726,7 @@ export default function ExtractPage() {
                     <p style={{ fontSize: 12.5, fontWeight: 500, color: "var(--text2)", marginBottom: 2 }}>
                       {isDragActive ? "Drop files here" : "Drop files or click to browse"}
                     </p>
-                    <p style={{ fontSize: 11, color: "var(--text4)" }}>PDF, PNG, JPG, TIFF — 50MB max</p>
+                    <p style={{ fontSize: 11, color: "var(--text4)" }}>PDF · PNG · JPG · TIFF · WEBP · HEIC · BMP · GIF — 50MB max</p>
                   </div>
                   {files.map(f => (
                     <div key={f.name} className="file-item">

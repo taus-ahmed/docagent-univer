@@ -42,11 +42,27 @@ class GroqClient:
         self._min_interval = settings.RATE_LIMIT_DELAY
 
     def _rate_limit(self):
-        """Simple rate limiter to stay within Groq's free tier."""
+        """Minimum interval between requests to stay within Groq's rate limits."""
         elapsed = time.time() - self._last_request_time
         if elapsed < self._min_interval:
             time.sleep(self._min_interval - elapsed)
         self._last_request_time = time.time()
+
+    @staticmethod
+    def _backoff_delay(attempt: int, error_str: str) -> float:
+        """
+        Compute retry delay.
+        - 429 rate limit: exponential backoff 2s, 4s, 8s, 16s (capped at 30s)
+        - Other errors: linear 3s per attempt
+        """
+        is_rate_limit = (
+            "429" in error_str
+            or "rate_limit" in error_str.lower()
+            or "rate limit" in error_str.lower()
+        )
+        if is_rate_limit:
+            return min(2 ** (attempt + 1), 30)
+        return (attempt + 1) * 3
 
     def classify_document(self, text: str, prompt: str) -> LLMResponse:
         """Pass 1: Classify a document using text content.
@@ -129,13 +145,15 @@ class GroqClient:
                 )
 
             except Exception as e:
-                logger.warning(f"Text API attempt {attempt+1}/{settings.MAX_RETRIES} with {model}: {e}")
+                err_str = str(e)
+                delay = self._backoff_delay(attempt, err_str)
+                logger.warning(f"Text API attempt {attempt+1}/{settings.MAX_RETRIES} with {model}: {e} — retry in {delay:.0f}s")
                 if attempt < settings.MAX_RETRIES - 1:
-                    time.sleep((attempt + 1) * 3)
+                    time.sleep(delay)
                     continue
                 return LLMResponse(
                     raw_text="", success=False,
-                    error=f"API error after {settings.MAX_RETRIES} retries: {str(e)}",
+                    error=f"API error after {settings.MAX_RETRIES} retries: {err_str}",
                     model_used=model, latency_ms=(time.time() - start) * 1000,
                 )
 
@@ -180,13 +198,15 @@ class GroqClient:
                 )
 
             except Exception as e:
-                logger.warning(f"Vision API attempt {attempt+1}/{settings.MAX_RETRIES} with {model}: {e}")
+                err_str = str(e)
+                delay = self._backoff_delay(attempt, err_str)
+                logger.warning(f"Vision API attempt {attempt+1}/{settings.MAX_RETRIES} with {model}: {e} — retry in {delay:.0f}s")
                 if attempt < settings.MAX_RETRIES - 1:
-                    time.sleep((attempt + 1) * 3)
+                    time.sleep(delay)
                     continue
                 return LLMResponse(
                     raw_text="", success=False,
-                    error=f"Vision API error after {settings.MAX_RETRIES} retries: {str(e)}",
+                    error=f"Vision API error after {settings.MAX_RETRIES} retries: {err_str}",
                     model_used=model, latency_ms=(time.time() - start) * 1000,
                 )
 

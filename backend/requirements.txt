@@ -19,6 +19,7 @@ python-dotenv==1.0.1
 boto3==1.34.144
 aiofiles==23.2.1
 Pillow==10.4.0
+pillow-heif==0.16.0
 pdf2image==1.17.0
 pytesseract==0.3.10
 

@@ -39,12 +39,12 @@ def export_combined(
 ):
     from app.api.routes.extract import _get_job_or_404
     job = _get_job_or_404(payload.job_id, current_user, db)
-    if job.status != "completed":
-        raise HTTPException(status_code=400, detail="Job must be completed before exporting")
+    if job.status in ("pending", "processing"):
+        raise HTTPException(status_code=400, detail="Job is still running — wait for it to finish before exporting")
 
     docs = db.query(DocumentResult).filter(DocumentResult.job_id == payload.job_id).order_by(DocumentResult.id).all()
     if not docs:
-        raise HTTPException(status_code=404, detail="No documents found")
+        raise HTTPException(status_code=404, detail="No extracted documents found for this job")
 
     # Load template if provided
     template_columns = None
@@ -80,8 +80,8 @@ def export_perfile(
 ):
     from app.api.routes.extract import _get_job_or_404
     job = _get_job_or_404(payload.job_id, current_user, db)
-    if job.status != "completed":
-        raise HTTPException(status_code=400, detail="Job must be completed before exporting")
+    if job.status in ("pending", "processing"):
+        raise HTTPException(status_code=400, detail="Job is still running — wait for it to finish before exporting")
 
     q = db.query(DocumentResult).filter(DocumentResult.job_id == payload.job_id)
     if payload.doc_ids:
