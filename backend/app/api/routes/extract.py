@@ -3370,17 +3370,21 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
                 if next_lc in ("total", "grand total", "subtotal", "final total"):
                     continue
                 zone_label = next_val
+                zone_header_row = next_r   # the section label IS next_r
             else:
                 # curr_val is a section header; the empty span is its data zone.
                 zone_label = curr_val
+                zone_header_row = curr_r   # section label is curr_r
 
             fill_rows = list(range(curr_r + 1, next_r))
             dynamic_zones.append({
-                "group":     pg,
-                "zone_label": zone_label,
-                "label_col": label_col,
-                "value_col": value_col,
-                "fill_rows": fill_rows,
+                "group":           pg,
+                "zone_label":      zone_label,
+                "label_col":       label_col,
+                "value_col":       value_col,
+                "fill_rows":       fill_rows,
+                "zone_header_row": zone_header_row,  # row of section header in template
+                "next_label_row":  next_r,           # Total row that terminates this zone
             })
 
     if not dynamic_zones:
@@ -3405,9 +3409,6 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
 
     norm_zone_map = {_norm(lbl): lbl for lbl in zone_labels if lbl}
 
-    # DEBUG: dump doc_text so we can see exactly what pdfplumber extracted
-    print("[PLUMBER-DYN-DEBUG] zone_labels:", list(norm_zone_map.keys()), flush=True)
-    print("[PLUMBER-DYN-DEBUG] doc_text repr:\n" + repr(doc_text[:2000]), flush=True)
 
     val_re_dyn = re.compile(
         r'^(.*?)\s+\(?\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)\)?$'
