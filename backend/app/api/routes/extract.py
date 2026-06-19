@@ -701,14 +701,15 @@ def _analyse_template_regions(layout: dict) -> dict:
     # ── PARALLEL COLUMN GROUPS DETECTION ──────────────────────────────────────────
     # Detect when template has two or more side-by-side label/value column bands
     # (e.g. balance sheet: Current Assets in A-B, Non-Current Assets in C-D).
-    # Only run when no table regions were detected to avoid false positives.
-    parallel_column_groups = []
-    if not table_regions:
-        parallel_column_groups = _detect_parallel_column_groups(
-            kv_pairs, grid, max_row, max_col
-        )
-        if parallel_column_groups:
-            primary_mode = "parallel_groups"
+    # Always run so parallel_column_groups is populated in regions dict even when
+    # table_regions exist (mixed mode). This allows _pdfplumber_extract_dynamic_parallel
+    # to handle balance-sheet-style templates that get classified as mixed because
+    # their section-header rows look like table headers.
+    parallel_column_groups = _detect_parallel_column_groups(
+        kv_pairs, grid, max_row, max_col
+    )
+    if parallel_column_groups and not table_regions:
+        primary_mode = "parallel_groups"
 
     return {
         "primary_mode":            primary_mode,
@@ -3768,15 +3769,14 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         # match template labels directly to document values without any LLM call.
         # Falls through to LLM only when coverage is insufficient.
         primary_mode = regions.get("primary_mode", "form_kv")
-        if doc_text and primary_mode in ("form_kv", "form_with_targets", "parallel_groups"):
+        if doc_text and primary_mode in ("form_kv", "form_with_targets", "parallel_groups", "mixed"):
             _plumber_ef = _pdfplumber_extract_form_fields(doc_text, regions)
 
-            # For parallel_groups, also extract dynamic fill zones.
-            # Dynamic fill zones are empty row spans (≥2 rows) in the template
-            # between labeled rows — the balance sheet uses this pattern for
-            # individual asset/liability line items that have no fixed labels.
+            # For parallel_groups AND mixed-mode templates that have parallel column groups
+            # (e.g. balance sheet classified as mixed because header rows look like table headers),
+            # also extract dynamic fill zones — empty row spans between section headers.
             _dyn_ef: dict = {}
-            if primary_mode == "parallel_groups":
+            if primary_mode in ("parallel_groups", "mixed") and regions.get("parallel_column_groups"):
                 _dyn_ef = _pdfplumber_extract_dynamic_parallel(
                     doc_text, regions, template_data.get("layout", {})
                 )
