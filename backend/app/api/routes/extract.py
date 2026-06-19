@@ -517,7 +517,15 @@ def _analyse_template_regions(layout: dict) -> dict:
                 if r_above not in form_rows_set:
                     pre_table_header_rows.add(r_above)
 
-    # Filter kv_pairs to exclude section label rows
+    # Save unfiltered kv_pairs for parallel-column group detection.
+    # The filter below removes rows that are section labels above table headers
+    # (e.g. "Total" rows at row 9 that sit above the liabilities header at row 10).
+    # Those rows ARE valid kv_pairs for structural detection — if we filter them out
+    # before parallel detection, the band item count drops below the ≥3 threshold
+    # and the balance sheet parallel groups are never found.
+    kv_pairs_for_parallel = kv_pairs[:]   # snapshot BEFORE section-label filter
+
+    # Filter kv_pairs to exclude section label rows (for AI prompts / mode logic)
     kv_pairs = [kv for kv in kv_pairs if kv["row"] not in pre_table_header_rows]
 
     for r, cols in sorted(rows_with_content.items()):
@@ -706,8 +714,11 @@ def _analyse_template_regions(layout: dict) -> dict:
     # headers (e.g. row 0: "Current assets | Amount | Non-current assets | Amount"),
     # not real repeating-row tables. Using parallel_groups routes to _write_form_excel
     # which iterates every template row including dynamic fill rows.
+    # Use the unfiltered snapshot so Total/header rows (which may have been
+    # excluded from kv_pairs by the section-label filter above) still contribute
+    # to band item counts — preventing false-negative parallel group detection.
     parallel_column_groups = _detect_parallel_column_groups(
-        kv_pairs, grid, max_row, max_col
+        kv_pairs_for_parallel, grid, max_row, max_col
     )
     if parallel_column_groups:
         primary_mode = "parallel_groups"
