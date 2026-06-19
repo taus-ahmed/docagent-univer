@@ -3436,9 +3436,10 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
         if not line or line.startswith("---"):
             continue
 
-        # Check if this line is one of our section headers.
-        # Use word-level Jaccard similarity with a word-count-ratio guard so that
-        # "current liabilities" does not accidentally match "non current liabilities".
+        # --- Section header detection (primary + type-stem fallback) ---
+        # MUST run before the `current_section is None` guard so that headings
+        # like "LONG-TERM LIABILITIES" can open a zone even when current_section
+        # was just closed by a preceding Total line.
         norm_line = _norm(line)
         norm_line_words = set(norm_line.split())
         matched = None
@@ -3452,7 +3453,7 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
             wc_ratio = (min(len(norm_lbl_words), len(norm_line_words)) /
                         max(len(norm_lbl_words), len(norm_line_words)))
             if wc_ratio < 0.7:
-                continue  # word counts too different → substring subset, skip
+                continue  # word counts too different → skip
             intersection = norm_lbl_words & norm_line_words
             union = norm_lbl_words | norm_line_words
             score = len(intersection) / len(union) if union else 0.0
@@ -3460,38 +3461,40 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
                 best_score = score
                 matched = orig_lbl
 
+        # Type-stem fallback: ALL-CAPS headings that fail primary Jaccard
+        # (e.g. "LONG-TERM LIABILITIES" → "Non current liabilities")
+        if not matched:
+            alpha_chars = [ch for ch in line if ch.isalpha()]
+            if alpha_chars and (sum(1 for ch in alpha_chars if ch.isupper()) /
+                                len(alpha_chars)) > 0.5:
+                line_stem = _type_stem(norm_line)
+                if line_stem:
+                    for norm_lbl, orig_lbl in norm_zone_map.items():
+                        if orig_lbl in pdf_sections:
+                            continue  # already opened
+                        if line_stem in _norm(orig_lbl):
+                            matched = orig_lbl
+                            print(f"[PLUMBER-DYN] type-open: '{line}' → '{orig_lbl}'",
+                                  flush=True)
+                            break
+
         if matched:
             current_section = matched
             pdf_sections.setdefault(current_section, [])
             continue
 
+        # Skip non-header lines when no section is open
         if current_section is None:
             continue
 
         m = tab_re_dyn.match(line) or val_re_dyn.match(line)
         if not m:
-            # No numeric value on this line.
+            # Non-numeric line inside an open section — if it looks like another
+            # all-caps heading that wasn't matched, close the current section.
             alpha_chars = [ch for ch in line if ch.isalpha()]
             if alpha_chars and (sum(1 for ch in alpha_chars if ch.isupper()) /
                                 len(alpha_chars)) > 0.5:
-                # All-caps heading that didn't match strictly — try semantic type match.
-                # "LONG-TERM LIABILITIES" shares "liabilit" with "Non current liabilities"
-                # so we open that zone's section instead of silently discarding those items.
-                line_stem = _type_stem(norm_line)
-                type_matched = None
-                if line_stem:
-                    for norm_lbl, orig_lbl in norm_zone_map.items():
-                        if orig_lbl in pdf_sections:
-                            continue  # already opened this zone
-                        if line_stem in _norm(orig_lbl):
-                            type_matched = orig_lbl
-                            break
-                if type_matched:
-                    print(f"[PLUMBER-DYN] type-open: '{line}' → '{type_matched}'", flush=True)
-                    current_section = type_matched
-                    pdf_sections.setdefault(current_section, [])
-                else:
-                    current_section = None  # unrecognised heading — close section
+                current_section = None
             continue
 
         lbl_raw = m.group(1).strip().rstrip(":").strip()
