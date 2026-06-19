@@ -470,7 +470,8 @@ export default function HistoryPage() {
                 <div className="detail-header">
                   <span className="detail-title">Job #{selectedJob.id}</span>
                   <StatusBadge status={selectedJob.status} />
-                  {selectedJob.status === "completed" && jobHasTemplate && (
+                  {/* Show download buttons for any finished job that has extracted docs */}
+                  {!["pending","processing"].includes(selectedJob.status) && jobHasTemplate && (selectedJob.successful ?? 0) > 0 && (
                     <>
                       <button
                         className="btn btn-primary btn-sm"
@@ -482,8 +483,11 @@ export default function HistoryPage() {
                           <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
                         Download Excel
+                        {selectedJob.status === "failed" && (
+                          <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.8 }}>(partial)</span>
+                        )}
                       </button>
-                      {(selectedJob.total_docs ?? 0) > 1 && (
+                      {results.length > 1 && (
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleExport(selectedJob.id, "zip")}
@@ -499,14 +503,14 @@ export default function HistoryPage() {
                       )}
                     </>
                   )}
-                  {selectedJob.status === "completed" && !jobHasTemplate && (
+                  {!["pending","processing"].includes(selectedJob.status) && !jobHasTemplate && (selectedJob.successful ?? 0) > 0 && (
                     <span style={{ fontSize: 11, color: "var(--text3)" }}>
                       No template used
                     </span>
                   )}
-                  {selectedJob.status === "failed" && (
+                  {selectedJob.status === "failed" && (selectedJob.successful ?? 0) === 0 && (
                     <span style={{ fontSize: 12, color: "var(--red,#ef4444)" }}>
-                      This job failed — no output available
+                      All documents failed — no output available
                     </span>
                   )}
                 </div>

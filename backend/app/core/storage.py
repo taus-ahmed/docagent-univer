@@ -14,7 +14,10 @@ from typing import Optional, BinaryIO
 from app.config import settings
 
 ALLOWED_EXTENSIONS = {
-    "pdf", "png", "jpg", "jpeg", "tiff", "tif", "bmp", "webp", "heic", "yml", "yaml"
+    "pdf",
+    "png", "jpg", "jpeg", "tiff", "tif", "bmp", "webp",
+    "heic", "heif", "gif", "avif",
+    "yml", "yaml",
 }
 
 

@@ -120,16 +120,21 @@ class GeminiClient:
 
     def _build_body(self, prompt: str, system_instruction: str = "",
                     temperature: float = 0.1,
-                    max_tokens: int = 8192) -> dict:
+                    max_tokens: int = 8192,
+                    force_json: bool = True) -> dict:
         """Build the request body."""
+        gen_config: dict = {
+            "temperature":     temperature,
+            "maxOutputTokens": max_tokens,
+        }
+        # Force JSON output — supported by gemini-2.5-flash-lite and all 2.x models.
+        # This guarantees valid JSON back with no markdown fences or prose.
+        if force_json:
+            gen_config["responseMimeType"] = "application/json"
+
         body: dict = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature":     temperature,
-                "maxOutputTokens": max_tokens,
-                # NOTE: responseMimeType removed — not supported on all models
-                # JSON is enforced via the prompt instruction instead
-            },
+            "generationConfig": gen_config,
         }
         if system_instruction:
             body["systemInstruction"] = {
@@ -195,6 +200,7 @@ class GeminiClient:
             "generationConfig": {
                 "temperature":     0.1,
                 "maxOutputTokens": 8192,
+                "responseMimeType": "application/json",
             },
         }
         if system_instruction:
