@@ -3277,6 +3277,273 @@ def _extract_parallel_groups_sectioned(
     )
 
 
+def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: dict) -> dict:
+    """
+    Extract values for dynamic-fill rows in parallel-column templates.
+
+    When a parallel-column template has empty data rows between section headers and
+    Total rows (e.g. a balance sheet where rows 1-8 are blank placeholders for
+    Current Assets line items), this function:
+      1. Scans each group's label column for contiguous empty-row spans (≥ 2 rows).
+      2. Splits the pdfplumber text into named sections using those header labels.
+      3. Maps extracted (item_label, amount) pairs into the template cells.
+
+    Returns {cell_ref: {"value": str, "confidence": "high"}} for all filled cells,
+    or {} when no dynamic zones can be matched.
+    """
+    para_groups = regions.get("parallel_column_groups", [])
+    if not para_groups:
+        return {}
+
+    cells = layout.get("cells", {})
+    if not cells:
+        return {}
+
+    # Build compact grid (row, col) -> value_str from layout cells
+    compact_grid: dict = {}
+    max_row = 0
+    for key, cell in cells.items():
+        if not isinstance(cell, dict):
+            continue
+        parts = key.split(",")
+        if len(parts) != 2:
+            continue
+        try:
+            r, c = int(parts[0]), int(parts[1])
+        except (ValueError, TypeError):
+            continue
+        max_row = max(max_row, r)
+        raw_val = cell.get("value")
+        val_str = str(raw_val).strip() if raw_val is not None else ""
+        if val_str:
+            compact_grid[(r, c)] = val_str
+
+    # Find dynamic fill zones for each group.
+    # A dynamic fill zone = ≥2 consecutive empty rows in the label column
+    # sandwiched between two non-empty rows.
+    dynamic_zones = []  # list of zone dicts
+
+    for pg in para_groups:
+        label_col = pg["label_col"]
+        value_col = pg["value_col"]
+
+        # All non-empty rows in this group's label column, sorted ascending
+        label_rows = [
+            (r, compact_grid[(r, label_col)])
+            for r in range(max_row + 1)
+            if compact_grid.get((r, label_col), "")
+        ]
+
+        if len(label_rows) < 2:
+            continue
+
+        for i in range(len(label_rows) - 1):
+            curr_r, curr_val = label_rows[i]
+            next_r, next_val = label_rows[i + 1]
+
+            empty_span = next_r - curr_r - 1
+            if empty_span < 2:
+                continue  # no meaningful dynamic zone here
+
+            curr_lc = curr_val.lower().strip()
+            is_total = curr_lc in ("total", "grand total", "subtotal", "final total")
+
+            if is_total:
+                # curr_r is a Total row (end of previous section).
+                # The empty span that follows belongs to the next section whose
+                # header is next_val — but only if next_val is itself non-Total.
+                next_lc = next_val.lower().strip()
+                if next_lc in ("total", "grand total", "subtotal", "final total"):
+                    continue
+                zone_label = next_val
+            else:
+                # curr_val is a section header; the empty span is its data zone.
+                zone_label = curr_val
+
+            fill_rows = list(range(curr_r + 1, next_r))
+            dynamic_zones.append({
+                "group":     pg,
+                "zone_label": zone_label,
+                "label_col": label_col,
+                "value_col": value_col,
+                "fill_rows": fill_rows,
+            })
+
+    if not dynamic_zones:
+        return {}
+
+    print(
+        f"[PLUMBER-DYN] {len(dynamic_zones)} dynamic fill zones: "
+        + ", ".join(
+            f"'{z['zone_label']}' col {chr(65+z['label_col'])}-{chr(65+z['value_col'])} "
+            f"({len(z['fill_rows'])} slots)"
+            for z in dynamic_zones
+        ),
+        flush=True,
+    )
+
+    # --- Parse pdfplumber text into named sections ----------------------------
+    zone_labels = list({z["zone_label"] for z in dynamic_zones})
+
+    def _norm(s: str) -> str:
+        n = re.sub(r'[^\w\s]', ' ', s)
+        return re.sub(r'\s+', ' ', n).lower().strip()
+
+    norm_zone_map = {_norm(lbl): lbl for lbl in zone_labels if lbl}
+
+    val_re_dyn = re.compile(
+        r'^(.*?)\s+\(?\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)\)?$'
+    )
+    tab_re_dyn = re.compile(
+        r'^(.*?)\t\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)$'
+    )
+
+    current_section: str = None
+    pdf_sections: dict = {}  # zone_label → [(item_label, cleaned_value)]
+
+    for raw_line in doc_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("---"):
+            continue
+
+        # Check if this line is one of our section headers.
+        # Use word-level Jaccard similarity with a word-count-ratio guard so that
+        # "current liabilities" does not accidentally match "non current liabilities".
+        norm_line = _norm(line)
+        norm_line_words = set(norm_line.split())
+        matched = None
+        best_score = 0.0
+        for norm_lbl, orig_lbl in norm_zone_map.items():
+            if not norm_lbl:
+                continue
+            norm_lbl_words = set(norm_lbl.split())
+            if not norm_lbl_words or not norm_line_words:
+                continue
+            wc_ratio = min(len(norm_lbl_words), len(norm_line_words)) / max(len(norm_lbl_words), len(norm_line_words))
+            if wc_ratio < 0.7:
+                continue  # word counts too different → substring subset, skip
+            intersection = norm_lbl_words & norm_line_words
+            union = norm_lbl_words | norm_line_words
+            score = len(intersection) / len(union) if union else 0.0
+            if score >= 0.5 and score > best_score:
+                best_score = score
+                matched = orig_lbl
+
+        if matched:
+            current_section = matched
+            pdf_sections.setdefault(current_section, [])
+            continue
+
+        if current_section is None:
+            continue
+
+        m = tab_re_dyn.match(line) or val_re_dyn.match(line)
+        if not m:
+            # Line has no numeric value. If it looks like a section heading
+            # (>50 % uppercase alpha chars) but did not match any zone label,
+            # treat it as an unrecognised section boundary and close the
+            # current section so subsequent lines aren't mis-attributed.
+            # e.g. "LONG-TERM LIABILITIES" when the template says "Non current liabilities"
+            alpha_chars = [ch for ch in line if ch.isalpha()]
+            if alpha_chars and sum(1 for ch in alpha_chars if ch.isupper()) / len(alpha_chars) > 0.5:
+                current_section = None
+            continue
+
+        lbl_raw = m.group(1).strip().rstrip(":").strip()
+        val_raw = m.group(2).strip().lstrip("$").strip()
+        if not lbl_raw or not val_raw:
+            continue
+
+        # Total/subtotal lines mark the end of their section — close it so that
+        # items in the next (unrecognised) section don't bleed in.
+        norm_item = _norm(lbl_raw)
+        if (norm_item in ("total", "grand total", "subtotal")
+                or norm_item.startswith("total ")
+                or "subtotal" in norm_item):
+            current_section = None  # close section after its total row
+            continue
+
+        # Detect accounting-negative parentheses in the original line
+        val_clean = val_raw.replace(",", "")
+        if re.search(r'\(\$?[\d,]+(?:\.\d{1,2})?\)', line) and not val_clean.startswith("-"):
+            val_clean = "-" + val_clean
+
+        # "Less: ..." items represent deductions — store as negative
+        if lbl_raw.lower().startswith(("less:", "less ", "less-")):
+            if not val_clean.startswith("-"):
+                val_clean = "-" + val_clean
+
+        pdf_sections[current_section].append((lbl_raw, val_clean))
+
+    if not pdf_sections:
+        print("[PLUMBER-DYN] no PDF sections parsed — skipping dynamic fill", flush=True)
+        return {}
+
+    print(
+        "[PLUMBER-DYN] PDF sections: "
+        + ", ".join(f"'{k}': {len(v)} items" for k, v in pdf_sections.items()),
+        flush=True,
+    )
+
+    # --- Map PDF sections to dynamic zones and fill cells --------------------
+    extracted_fields: dict = {}
+
+    for zone in dynamic_zones:
+        zone_label = zone["zone_label"]
+        label_col  = zone["label_col"]
+        value_col  = zone["value_col"]
+        fill_rows  = zone["fill_rows"]
+
+        # Find the best-matching PDF section for this zone.
+        # Use word-level Jaccard with a word-count-ratio guard (same as section-header
+        # detection above) to prevent "current liabilities" from matching
+        # "non current liabilities".
+        norm_zone = _norm(zone_label)
+        norm_zone_words = set(norm_zone.split())
+        pdf_items = None
+        best_score = 0.0
+        for pdf_sec_name, items in pdf_sections.items():
+            norm_pdf = _norm(pdf_sec_name)
+            norm_pdf_words = set(norm_pdf.split())
+            if not norm_zone_words or not norm_pdf_words:
+                continue
+            wc_ratio = min(len(norm_zone_words), len(norm_pdf_words)) / max(len(norm_zone_words), len(norm_pdf_words))
+            if wc_ratio < 0.7:
+                continue
+            intersection = norm_zone_words & norm_pdf_words
+            union = norm_zone_words | norm_pdf_words
+            score = len(intersection) / len(union) if union else 0.0
+            if score >= 0.6 and score > best_score:
+                best_score = score
+                pdf_items = items
+
+        if not pdf_items:
+            print(f"[PLUMBER-DYN] no PDF match for zone '{zone_label}'", flush=True)
+            continue
+
+        print(
+            f"[PLUMBER-DYN] zone '{zone_label}': "
+            f"{len(pdf_items)} PDF items → {len(fill_rows)} template slots",
+            flush=True,
+        )
+
+        for slot_idx, (item_label, item_value) in enumerate(pdf_items):
+            if slot_idx >= len(fill_rows):
+                break
+
+            row = fill_rows[slot_idx]
+            label_ref = _cell_ref(row, label_col)
+            value_ref = _cell_ref(row, value_col)
+
+            extracted_fields[label_ref] = {"value": item_label,  "confidence": "high"}
+            extracted_fields[value_ref] = {"value": item_value,  "confidence": "high"}
+
+    n_filled = sum(1 for v in extracted_fields.values()
+                   if isinstance(v, dict) and v.get("value"))
+    print(f"[PLUMBER-DYN] filled {n_filled} cells across {len(dynamic_zones)} zones", flush=True)
+    return extracted_fields
+
+
 def _pdfplumber_extract_form_fields(doc_text: str, regions: dict) -> dict:
     """
     Directly extract form field values from pdfplumber text using label matching.
@@ -3502,6 +3769,20 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         primary_mode = regions.get("primary_mode", "form_kv")
         if doc_text and primary_mode in ("form_kv", "form_with_targets", "parallel_groups"):
             _plumber_ef = _pdfplumber_extract_form_fields(doc_text, regions)
+
+            # For parallel_groups, also extract dynamic fill zones.
+            # Dynamic fill zones are empty row spans (≥2 rows) in the template
+            # between labeled rows — the balance sheet uses this pattern for
+            # individual asset/liability line items that have no fixed labels.
+            _dyn_ef: dict = {}
+            if primary_mode == "parallel_groups":
+                _dyn_ef = _pdfplumber_extract_dynamic_parallel(
+                    doc_text, regions, template_data.get("layout", {})
+                )
+                if _dyn_ef:
+                    # Merge: dynamic fill wins for any cell it covers (more specific)
+                    _plumber_ef = {**_plumber_ef, **_dyn_ef}
+
             n_plumber   = sum(1 for v in _plumber_ef.values()
                               if isinstance(v, dict) and v.get("value"))
             # Count total template fields to compute coverage ratio
@@ -3516,13 +3797,16 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
                 _all_items = regions.get("explicit_targets", [])
             n_tpl = len(_all_items)
             coverage = n_plumber / n_tpl if n_tpl else 0
+            # Use pdfplumber result when label-matched coverage is high enough
+            # OR when dynamic fill found items (dynamic items are not counted in n_tpl).
+            use_plumber = coverage >= 0.5 or bool(_dyn_ef)
             print(
                 f"[PLUMBER] {file_path.name}: coverage {n_plumber}/{n_tpl} "
-                f"({coverage:.0%}) — "
-                + ("using pdfplumber result" if coverage >= 0.5 else "falling back to LLM"),
+                f"({coverage:.0%}) dyn={len(_dyn_ef)} — "
+                + ("using pdfplumber result" if use_plumber else "falling back to LLM"),
                 flush=True,
             )
-            if coverage >= 0.5:
+            if use_plumber:
                 import time as _t2
                 elapsed = (_t2.time() - start) * 1000
                 raw_plumber = {
