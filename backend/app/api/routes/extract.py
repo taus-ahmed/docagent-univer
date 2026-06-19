@@ -3616,6 +3616,79 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
             print(f"[PLUMBER-DYN] total '{zone_label}': {section_total} → {total_val_ref}",
                   flush=True)
 
+    # --- Grand totals: read from PDF, map semantically to Final Total cells -----
+    # Scan doc_text for ALL-CAPS lines that carry a total-type value
+    # (e.g. "TOTAL ASSETS $1,608,600", "TOTAL LIABILITIES $557,400").
+    # These are explicitly in the PDF — we don't compute them.
+    grand_total_lines = []   # [(norm_label, raw_value_str), ...]
+    for raw_line in doc_text.splitlines():
+        line = raw_line.strip()
+        gm = tab_re_dyn.match(line) or val_re_dyn.match(line)
+        if not gm:
+            continue
+        lbl_raw_g = gm.group(1).strip()
+        val_raw_g = gm.group(2).strip().lstrip("$").replace(",", "")
+        alpha_g = [c for c in lbl_raw_g if c.isalpha()]
+        if not alpha_g:
+            continue
+        # Must be predominantly uppercase (grand-total headers are ALL-CAPS)
+        if sum(1 for c in alpha_g if c.isupper()) / len(alpha_g) < 0.6:
+            continue
+        norm_g = _norm(lbl_raw_g)
+        # Skip lines already captured as zone section headers or items
+        if norm_g in norm_zone_map:
+            continue
+        # Must look like a total (contains "total", "sum", or similar)
+        if not any(w in norm_g for w in ("total", "sum", "aggregate")):
+            continue
+        grand_total_lines.append((norm_g, val_raw_g))
+
+    # Find "Final Total" / "Grand Total" label cells in the template.
+    # The value cell sits one column to the right of the label cell.
+    ft_cells = []    # [(row_0idx, label_col, value_col), ...]
+    for (r, c), v in compact_grid.items():
+        if _norm(str(v)) in ("final total", "grand total"):
+            ft_cells.append((r, c, c + 1))
+    ft_cells.sort(key=lambda x: x[0])   # ascending row order
+
+    if ft_cells and grand_total_lines:
+        # Semantic matching: for each grand total line, determine its semantic type
+        # ("asset", "liabilit", "equity", …) using the same _type_stem helper.
+        # Then find the unique next_label_row among zones that share that type,
+        # and write the value to the Final Total cell at that row.
+        written_ft = set()   # prevent double-writing the same cell
+
+        for norm_g, val_g in grand_total_lines:
+            gt_stem = _type_stem(norm_g)
+            target_nlr = None
+
+            if gt_stem:
+                # Collect all next_label_rows for zones whose label contains this stem
+                candidate_nlrs = {
+                    z["next_label_row"]
+                    for z in dynamic_zones
+                    if gt_stem in _norm(z["zone_label"])
+                    and z.get("next_label_row") is not None
+                }
+                if len(candidate_nlrs) == 1:
+                    target_nlr = next(iter(candidate_nlrs))
+
+            if target_nlr is None:
+                continue
+
+            for (r, lc, vc) in ft_cells:
+                if r == target_nlr:
+                    ft_ref = _cell_ref(r, vc)
+                    if ft_ref not in written_ft:   # first match wins
+                        extracted_fields[ft_ref] = {"value": val_g, "confidence": "high"}
+                        written_ft.add(ft_ref)
+                        print(
+                            f"[PLUMBER-DYN] grand_total '{norm_g}' "
+                            f"(stem={gt_stem}) → {ft_ref}: {val_g}",
+                            flush=True,
+                        )
+                    break
+
     n_filled = sum(1 for v in extracted_fields.values()
                    if isinstance(v, dict) and v.get("value"))
     print(f"[PLUMBER-DYN] filled {n_filled} cells across {len(dynamic_zones)} zones", flush=True)
