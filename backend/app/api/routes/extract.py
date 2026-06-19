@@ -3463,15 +3463,19 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
 
         # Type-stem fallback: ALL-CAPS headings that fail primary Jaccard
         # (e.g. "LONG-TERM LIABILITIES" → "Non current liabilities")
-        if not matched:
+        # Guard: compound titles like "LIABILITIES & EQUITY" are section dividers,
+        # not zone headers — skip them.
+        if not matched and "&" not in line:
             alpha_chars = [ch for ch in line if ch.isalpha()]
             if alpha_chars and (sum(1 for ch in alpha_chars if ch.isupper()) /
                                 len(alpha_chars)) > 0.5:
                 line_stem = _type_stem(norm_line)
                 if line_stem:
                     for norm_lbl, orig_lbl in norm_zone_map.items():
-                        if orig_lbl in pdf_sections:
-                            continue  # already opened
+                        # Only skip a zone that's already been opened AND has items.
+                        # An empty section (0 items) can be re-opened by a better match.
+                        if orig_lbl in pdf_sections and pdf_sections[orig_lbl]:
+                            continue
                         if line_stem in _norm(orig_lbl):
                             matched = orig_lbl
                             print(f"[PLUMBER-DYN] type-open: '{line}' → '{orig_lbl}'",
