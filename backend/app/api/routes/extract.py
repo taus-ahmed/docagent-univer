@@ -3325,20 +3325,27 @@ def _pdfplumber_extract_form_fields(doc_text: str, regions: dict) -> dict:
     # Matches lines like:
     #   "Cash & Cash Equivalents $184,320"
     #   "Less: Accum. Depreciation $139,800"
-    #   "Total Non-Current Assets $248,800"
+    #   "Total Non-Current Assets 248,800"   (no $ sign)
     doc_pairs: dict = {}
-    val_re = re.compile(
-        r'^(.*?)\s+\(?\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)\)?$'
-    )
+    # tab-separated (pdfplumber tables)
     tab_re = re.compile(
         r'^(.*?)\t\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)$'
+    )
+    # space-separated with $, optional accounting parens
+    dollar_re = re.compile(
+        r'^(.*?)\s+\$\(?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)\)?$'
+    )
+    # fallback: any whitespace separator, optional $, optional parens
+    # tried last so dollar_re takes priority for the $ case
+    val_re = re.compile(
+        r'^(.*?)\s+\(?\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)\)?$'
     )
 
     for raw_line in doc_text.splitlines():
         line = raw_line.strip()
         if not line or line.startswith("---"):
             continue
-        m = tab_re.match(line) or val_re.match(line)
+        m = tab_re.match(line) or dollar_re.match(line) or val_re.match(line)
         if not m:
             continue
         label_raw = m.group(1).strip().rstrip(":").strip()
@@ -3354,7 +3361,8 @@ def _pdfplumber_extract_form_fields(doc_text: str, regions: dict) -> dict:
             value_raw = '-' + value_raw
         # Remove commas so downstream numeric conversion is simple
         value_raw = value_raw.replace(",", "")
-        doc_pairs[norm] = value_raw
+        if norm and value_raw:
+            doc_pairs[norm] = value_raw
 
     if not doc_pairs:
         return {}
@@ -3368,6 +3376,16 @@ def _pdfplumber_extract_form_fields(doc_text: str, regions: dict) -> dict:
         ln = label.lower().strip()
         return ln.startswith(("less:", "less ", "less-"))
 
+    # Terms that are too generic to fuzzy-match — they appear in many labels
+    # (e.g. "Total" would match "Total Current Assets", "Total Liabilities", etc.)
+    # Short labels NOT in this set (like "Cash", "Inventory") get fuzzy matching.
+    _GENERIC_NO_FUZZY = frozenset({
+        "total", "amount", "balance", "net", "gross", "subtotal", "value",
+        "debit", "credit", "description", "item", "quantity", "rate",
+        "date", "name", "number", "ref", "other", "summary", "remarks",
+        "assets", "liabilities", "equity",
+    })
+
     extracted_fields: dict = {}
     matched_refs: set = set()
 
@@ -3379,18 +3397,19 @@ def _pdfplumber_extract_form_fields(doc_text: str, regions: dict) -> dict:
         matched_val  = None
         matched_conf = None
 
-        # Generic single-word labels like "Total" are ambiguous: skip fuzzy matching
-        # so they only fill via exact match (prevents "Total" → "Total Current Assets").
         tpl_words_list = norm_tpl.split()
-        is_generic = len(tpl_words_list) <= 1
+        # Only skip fuzzy matching for known-ambiguous generic financial terms.
+        # Short but specific labels (Cash, Inventory, Depreciation) get fuzzy matching.
+        is_generic = norm_tpl in _GENERIC_NO_FUZZY
 
-        # 1. Exact match
+        # 1. Exact match (always tried, even for generic labels)
         if norm_tpl in doc_pairs:
             matched_val  = doc_pairs[norm_tpl]
             matched_conf = "high"
         elif not is_generic:
-            # 2. Substring containment (template label ⊂ doc label or vice versa)
-            # Guard: only when the template label is specific enough (>= 2 meaningful words)
+            # 2. Substring containment — template label is a substring of doc label
+            #    or doc label is a substring of template label.
+            #    Length-biased: prefer longer doc labels (more specific).
             best_label = None
             for doc_label in doc_pairs:
                 if norm_tpl in doc_label or doc_label in norm_tpl:
