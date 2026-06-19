@@ -3502,26 +3502,38 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
     # --- Map PDF sections to dynamic zones and fill cells --------------------
     extracted_fields: dict = {}
 
+    matched_pdf_sections: set = set()  # track which PDF sections already used
+
     for zone in dynamic_zones:
-        zone_label = zone["zone_label"]
-        label_col  = zone["label_col"]
-        value_col  = zone["value_col"]
-        fill_rows  = zone["fill_rows"]
+        zone_label      = zone["zone_label"]
+        label_col       = zone["label_col"]
+        value_col       = zone["value_col"]
+        fill_rows       = zone["fill_rows"]
+        zone_header_row = zone.get("zone_header_row")
+        next_label_row  = zone.get("next_label_row")
+
+        # Clear the zone header's value cell so form-extraction's wrong guess
+        # (e.g. total amount sitting next to the section header label) is overridden.
+        if zone_header_row is not None:
+            hdr_val_ref = _cell_ref(zone_header_row, value_col)
+            extracted_fields[hdr_val_ref] = {"value": "", "confidence": "high"}
 
         # Find the best-matching PDF section for this zone.
-        # Use word-level Jaccard with a word-count-ratio guard (same as section-header
-        # detection above) to prevent "current liabilities" from matching
-        # "non current liabilities".
+        # Primary: word-level Jaccard with word-count-ratio guard.
         norm_zone = _norm(zone_label)
         norm_zone_words = set(norm_zone.split())
         pdf_items = None
+        matched_pdf_key = None
         best_score = 0.0
         for pdf_sec_name, items in pdf_sections.items():
+            if pdf_sec_name in matched_pdf_sections:
+                continue
             norm_pdf = _norm(pdf_sec_name)
             norm_pdf_words = set(norm_pdf.split())
             if not norm_zone_words or not norm_pdf_words:
                 continue
-            wc_ratio = min(len(norm_zone_words), len(norm_pdf_words)) / max(len(norm_zone_words), len(norm_pdf_words))
+            wc_ratio = (min(len(norm_zone_words), len(norm_pdf_words)) /
+                        max(len(norm_zone_words), len(norm_pdf_words)))
             if wc_ratio < 0.7:
                 continue
             intersection = norm_zone_words & norm_pdf_words
@@ -3530,27 +3542,36 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
             if score >= 0.6 and score > best_score:
                 best_score = score
                 pdf_items = items
+                matched_pdf_key = pdf_sec_name
 
         if not pdf_items:
             print(f"[PLUMBER-DYN] no PDF match for zone '{zone_label}'", flush=True)
-            continue
+        else:
+            matched_pdf_sections.add(matched_pdf_key)
+            print(
+                f"[PLUMBER-DYN] zone '{zone_label}': "
+                f"{len(pdf_items)} PDF items → {len(fill_rows)} template slots",
+                flush=True,
+            )
 
-        print(
-            f"[PLUMBER-DYN] zone '{zone_label}': "
-            f"{len(pdf_items)} PDF items → {len(fill_rows)} template slots",
-            flush=True,
-        )
+            for slot_idx, (item_label, item_value) in enumerate(pdf_items):
+                if slot_idx >= len(fill_rows):
+                    break
+                row = fill_rows[slot_idx]
+                label_ref = _cell_ref(row, label_col)
+                value_ref = _cell_ref(row, value_col)
+                extracted_fields[label_ref] = {"value": item_label,  "confidence": "high"}
+                extracted_fields[value_ref] = {"value": item_value,  "confidence": "high"}
 
-        for slot_idx, (item_label, item_value) in enumerate(pdf_items):
-            if slot_idx >= len(fill_rows):
-                break
-
-            row = fill_rows[slot_idx]
-            label_ref = _cell_ref(row, label_col)
-            value_ref = _cell_ref(row, value_col)
-
-            extracted_fields[label_ref] = {"value": item_label,  "confidence": "high"}
-            extracted_fields[value_ref] = {"value": item_value,  "confidence": "high"}
+        # Write the section total to the template's Total row value cell.
+        # This fills B10, D10, B21, D21 (empty cells next to "Total" labels).
+        section_total = (pdf_section_totals.get(zone_label)
+                         or pdf_section_totals.get(matched_pdf_key))
+        if section_total and next_label_row is not None:
+            total_val_ref = _cell_ref(next_label_row, value_col)
+            extracted_fields[total_val_ref] = {"value": section_total, "confidence": "high"}
+            print(f"[PLUMBER-DYN] total '{zone_label}': {section_total} → {total_val_ref}",
+                  flush=True)
 
     n_filled = sum(1 for v in extracted_fields.values()
                    if isinstance(v, dict) and v.get("value"))
