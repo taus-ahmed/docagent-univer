@@ -3412,8 +3412,20 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
         r'^(.*?)\t\$?([-]?[0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{0,2})?)$'
     )
 
+    # Semantic type-keywords: used so "LONG-TERM LIABILITIES" maps to the
+    # "Non current liabilities" zone even though Jaccard is too low for a strict match.
+    _TYPE_STEMS = ["asset", "liabilit", "equity", "stockholder", "shareholder"]
+
+    def _type_stem(label: str):
+        n = _norm(label)
+        for stem in _TYPE_STEMS:
+            if stem in n:
+                return stem
+        return None
+
     current_section: str = None
-    pdf_sections: dict = {}  # zone_label → [(item_label, cleaned_value)]
+    pdf_sections: dict = {}        # zone_label → [(item_label, cleaned_value)]
+    pdf_section_totals: dict = {}  # zone_label → total_value_string
 
     for raw_line in doc_text.splitlines():
         line = raw_line.strip()
@@ -3433,7 +3445,8 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
             norm_lbl_words = set(norm_lbl.split())
             if not norm_lbl_words or not norm_line_words:
                 continue
-            wc_ratio = min(len(norm_lbl_words), len(norm_line_words)) / max(len(norm_lbl_words), len(norm_line_words))
+            wc_ratio = (min(len(norm_lbl_words), len(norm_line_words)) /
+                        max(len(norm_lbl_words), len(norm_line_words)))
             if wc_ratio < 0.7:
                 continue  # word counts too different → substring subset, skip
             intersection = norm_lbl_words & norm_line_words
@@ -3453,14 +3466,28 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
 
         m = tab_re_dyn.match(line) or val_re_dyn.match(line)
         if not m:
-            # Line has no numeric value. If it looks like a section heading
-            # (>50 % uppercase alpha chars) but did not match any zone label,
-            # treat it as an unrecognised section boundary and close the
-            # current section so subsequent lines aren't mis-attributed.
-            # e.g. "LONG-TERM LIABILITIES" when the template says "Non current liabilities"
+            # No numeric value on this line.
             alpha_chars = [ch for ch in line if ch.isalpha()]
-            if alpha_chars and sum(1 for ch in alpha_chars if ch.isupper()) / len(alpha_chars) > 0.5:
-                current_section = None
+            if alpha_chars and (sum(1 for ch in alpha_chars if ch.isupper()) /
+                                len(alpha_chars)) > 0.5:
+                # All-caps heading that didn't match strictly — try semantic type match.
+                # "LONG-TERM LIABILITIES" shares "liabilit" with "Non current liabilities"
+                # so we open that zone's section instead of silently discarding those items.
+                line_stem = _type_stem(norm_line)
+                type_matched = None
+                if line_stem:
+                    for norm_lbl, orig_lbl in norm_zone_map.items():
+                        if orig_lbl in pdf_sections:
+                            continue  # already opened this zone
+                        if line_stem in _norm(orig_lbl):
+                            type_matched = orig_lbl
+                            break
+                if type_matched:
+                    print(f"[PLUMBER-DYN] type-open: '{line}' → '{type_matched}'", flush=True)
+                    current_section = type_matched
+                    pdf_sections.setdefault(current_section, [])
+                else:
+                    current_section = None  # unrecognised heading — close section
             continue
 
         lbl_raw = m.group(1).strip().rstrip(":").strip()
@@ -3468,12 +3495,16 @@ def _pdfplumber_extract_dynamic_parallel(doc_text: str, regions: dict, layout: d
         if not lbl_raw or not val_raw:
             continue
 
-        # Total/subtotal lines mark the end of their section — close it so that
-        # items in the next (unrecognised) section don't bleed in.
+        # Total/subtotal lines — CAPTURE value and close section.
+        # This lets us write the total to the template's Total row (B10, D10, etc.).
         norm_item = _norm(lbl_raw)
         if (norm_item in ("total", "grand total", "subtotal")
                 or norm_item.startswith("total ")
                 or "subtotal" in norm_item):
+            val_clean_tot = val_raw.replace(",", "")
+            if re.search(r'\(\$?[\d,]+(?:\.\d{1,2})?\)', line) and not val_clean_tot.startswith("-"):
+                val_clean_tot = "-" + val_clean_tot
+            pdf_section_totals[current_section] = val_clean_tot
             current_section = None  # close section after its total row
             continue
 
