@@ -701,14 +701,15 @@ def _analyse_template_regions(layout: dict) -> dict:
     # ── PARALLEL COLUMN GROUPS DETECTION ──────────────────────────────────────────
     # Detect when template has two or more side-by-side label/value column bands
     # (e.g. balance sheet: Current Assets in A-B, Non-Current Assets in C-D).
-    # Always run so parallel_column_groups is populated in regions dict even when
-    # table_regions exist (mixed mode). This allows _pdfplumber_extract_dynamic_parallel
-    # to handle balance-sheet-style templates that get classified as mixed because
-    # their section-header rows look like table headers.
+    # When parallel groups ARE detected, ALWAYS override mode to parallel_groups.
+    # The "table regions" on balance-sheet templates are the parallel group section
+    # headers (e.g. row 0: "Current assets | Amount | Non-current assets | Amount"),
+    # not real repeating-row tables. Using parallel_groups routes to _write_form_excel
+    # which iterates every template row including dynamic fill rows.
     parallel_column_groups = _detect_parallel_column_groups(
         kv_pairs, grid, max_row, max_col
     )
-    if parallel_column_groups and not table_regions:
+    if parallel_column_groups:
         primary_mode = "parallel_groups"
 
     return {
@@ -4795,6 +4796,58 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             # This separator was written at the start — skip (handled below)
             pass
 
+        # ── Dynamic cells pass ────────────────────────────────────────────────────
+        # Write any extracted_fields cells NOT already covered by cells_tpl entries.
+        # This handles dynamic fill rows (e.g. balance sheet rows 1-8) where the
+        # template has no cell definition but pdfplumber filled the values.
+        written_refs = set()
+        for key, cell_def in cells_tpl.items():
+            if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
+                continue
+            parts = key.split(",")
+            if len(parts) != 2:
+                continue
+            try:
+                _tr2, _tc2 = int(parts[0]), int(parts[1])
+            except ValueError:
+                continue
+            written_refs.add(f"{_col_letter(_tc2)}{_tr2 + 1}")
+
+        _dyn_written = 0
+        for ef_ref, ef_val in extracted_fields.items():
+            if not ef_ref or ef_ref in written_refs:
+                continue
+            _col_str = "".join(ch for ch in ef_ref if ch.isalpha()).upper()
+            _row_str = "".join(ch for ch in ef_ref if ch.isdigit())
+            if not _col_str or not _row_str:
+                continue
+            try:
+                _tr2 = int(_row_str) - 1
+                _tc2 = sum(
+                    (ord(ch) - 64) * (26 ** i)
+                    for i, ch in enumerate(reversed(_col_str))
+                ) - 1
+                if _tr2 < 0 or _tc2 < 0:
+                    continue
+            except (ValueError, IndexError):
+                continue
+            _xl = ws.cell(row=row_offset + _tr2 + 1, column=_tc2 + 1)
+            _val = ef_val.get("value", "") if isinstance(ef_val, dict) else str(ef_val or "")
+            _val = _val if _val is not None else ""
+            try:
+                _clean = str(_val).replace(",", "").replace("$", "").strip() if _val else ""
+                if _clean and re.match(r'^-?[0-9]+\.?[0-9]*$', _clean):
+                    _xl.value = float(_clean)
+                    cell_values[ef_ref] = float(_clean)
+                else:
+                    _xl.value = _val or ""
+            except (ValueError, AttributeError):
+                _xl.value = _val or ""
+            _dyn_written += 1
+
+        if _dyn_written:
+            print(f"[EXPORT] form dynamic pass: {_dyn_written} extra cells written", flush=True)
+
         # Flag count indicator
         flag_count = validation.get("flagged_count", 0)
         if flag_count > 0:
@@ -5183,6 +5236,63 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                                label_to_value, confidence_map)
             template_row_to_output[tr] = current_output_row
             current_output_row += 1
+
+        # ── Dynamic cells pass (mixed mode) ──────────────────────────────────────
+        # Write extracted_fields cells that fell in blank_between_tables rows
+        # and were therefore skipped by the main write loop.
+        _written_m = set()
+        for key, cell_def in cells_tpl.items():
+            if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
+                continue
+            parts = key.split(",")
+            if len(parts) != 2:
+                continue
+            try:
+                _tr2, _tc2 = int(parts[0]), int(parts[1])
+            except ValueError:
+                continue
+            _written_m.add(f"{_col_letter(_tc2)}{_tr2 + 1}")
+
+        _dyn_written_m = 0
+        for ef_ref, ef_val in extracted_fields.items():
+            if not ef_ref or ef_ref in _written_m:
+                continue
+            _col_str = "".join(ch for ch in ef_ref if ch.isalpha()).upper()
+            _row_str = "".join(ch for ch in ef_ref if ch.isdigit())
+            if not _col_str or not _row_str:
+                continue
+            try:
+                _tr2 = int(_row_str) - 1
+                _tc2 = sum(
+                    (ord(ch) - 64) * (26 ** i)
+                    for i, ch in enumerate(reversed(_col_str))
+                ) - 1
+                if _tr2 < 0 or _tc2 < 0:
+                    continue
+            except (ValueError, IndexError):
+                continue
+            # Find nearest written template row above to anchor output position
+            _preceding = [r for r in template_row_to_output if r < _tr2]
+            if not _preceding:
+                continue
+            _anchor_tpl = max(_preceding)
+            _anchor_out = template_row_to_output[_anchor_tpl]
+            _out_row2 = _anchor_out + (_tr2 - _anchor_tpl)
+            _xl = ws.cell(row=_out_row2, column=_tc2 + 1)
+            _val = ef_val.get("value", "") if isinstance(ef_val, dict) else str(ef_val or "")
+            _val = _val if _val is not None else ""
+            try:
+                _clean = str(_val).replace(",", "").replace("$", "").strip() if _val else ""
+                if _clean and re.match(r'^-?[0-9]+\.?[0-9]*$', _clean):
+                    _xl.value = float(_clean)
+                else:
+                    _xl.value = _val or ""
+            except (ValueError, AttributeError):
+                _xl.value = _val or ""
+            _dyn_written_m += 1
+
+        if _dyn_written_m:
+            print(f"[EXPORT] mixed dynamic pass: {_dyn_written_m} extra cells written", flush=True)
 
         # Flag indicator
         flag_count = validation.get("flagged_count", 0)
