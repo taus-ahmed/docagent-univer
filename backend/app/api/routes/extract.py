@@ -2586,6 +2586,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
 
     # -- Bug 6: validate row/column alignment -----------------------------------
     alignment_warning = ""
+    alignment_misaligned = False
     if table_rows_raw:
         table_rows_raw, alignment_misaligned, alignment_warning = _validate_row_alignment(
             table_rows_raw, regions.get("table_regions", [])
