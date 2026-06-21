@@ -142,7 +142,7 @@ Pydantic `BaseSettings` reading from `.env`. Key settings:
 | `GROQ_CLASSIFICATION_MODEL` | `llama-3.2-11b-vision-preview` | |
 | `GROQ_EXTRACTION_MODEL` | `llama-3.3-70b-versatile` | |
 | `GROQ_VISION_MODEL` | `llama-3.2-90b-vision-preview` | |
-| `GEMINI_MODEL` | `gemini-2.0-flash` | engine default |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | engine default (2.0-flash retired → 404) |
 | `BATCH_SIZE` | 5 | docs per batch |
 | `RATE_LIMIT_DELAY` | 2.0s | delay between LLM calls |
 | `MAX_RETRIES` | 3 | per LLM call |
@@ -272,6 +272,10 @@ Each entry has: `system` (expert persona prompt), `table_rules`, `auto_classify_
 - For Gemini: system_instruction is sent as **separate body field** (billed at reduced rate by Gemini)
 
 ### Gemini Client (`engine/connectors/gemini_client.py`)
+
+**Production bug fixed (2026-06-21):** `extract_data(text, prompt, system_instruction)` previously called `self._call(prompt, ...)` and **dropped the `text` argument entirely**. Callers that pass the document via `text=` — specifically the **no-template / orchestrator path** (`orchestrator._extract_data` → `llm.extract(text=doc.extracted_text, ...)`) — sent only generic instructions and **no document** to Gemini, so it returned all-null with *"No document content was provided."* `GroqClient.extract_data` always folded the text in (`user_content=f"Document content:\n\n{text}"`), which is why the bug was invisible while Groq was primary and only surfaced once production switched to `PRIMARY_LLM=gemini`. Fix: `extract_data` now builds `user_prompt = f"{prompt}\n\nDocument content:\n\n{text}"` when `text` is present, mirroring Groq. The **templated web path was never affected** — `_build_vision_prompt` embeds the doc text/image directly into the prompt, and vision uses `extract_data_vision` (image always sent).
+
+Also retired the dead `gemini-2.0-flash` default → `gemini-2.5-flash` (2.0-flash returns HTTP 404 "no longer available"; auto-discovery masked it but wasted a probe per fresh worker).
 
 Pure `urllib.request` — **no Google SDK dependency**. Auto-discovers working model from `CANDIDATES = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]`, caches in `_good_model`. On JSON parse failure: retries with temperature=0. Cost logging at $0.075/1M input + $0.30/1M output.
 
@@ -471,3 +475,49 @@ Cloud services (Railway for backend, Vercel for frontend) are connected to the G
 - **`company_admin` role**: Exists in the DB and RBAC logic but `UserCreate` schema only allows `admin|client`. Must be set via `UserUpdate` or direct SQL — it cannot be assigned at user creation through the API.
 - **`FortuneSheetEditor` / `UniverSheet` components**: Present in `components/templates/` but not used by any current page. `DocAgentSpreadsheet.tsx` is the active editor.
 - **Doc type name mismatch**: Frontend `TemplateEditor` uses `"invoice"` but the prompt registry expects `"sales_invoice"`. Map frontend display values to registry keys carefully when adding new doc types.
+
+---
+
+## Extraction Pipeline — Deep-Dive Findings (investigation 2026-06-21)
+
+### 1. How content leaves the PDF (`engine/core/preprocessor.py`)
+
+`preprocess_file()` → `_process_pdf()` always produces BOTH representations when possible:
+- **Text**: pdfplumber `page.extract_text()` per page, joined with `\n\n--- PAGE BREAK ---\n\n`. Decimal-split repair runs here (`_fix_within_page_decimals` per page, `_fix_cross_page_decimals` after join). `has_meaningful_text = len(text) > 50`.
+- **Images**: `pdf2image.convert_from_path(dpi=200, fmt="jpeg")`, capped at **20 pages**, each resized to max 2048px and base64-JPEG encoded (`page_images_b64`).
+
+So pdfplumber text is used for **three** things, not just validation: (a) the pdfplumber-first/spatial extraction path that can skip the LLM entirely, (b) cross-validation/confidence scoring of LLM output, (c) embedded as `=== DOCUMENT TEXT ===` inside the vision prompt as extra context. The page **image** is the primary signal sent to the LLM for vision extraction.
+
+### 2. The vision call path (`extract.py`)
+
+`_extract_with_template` → `_extract_with_template_inner` (preprocess + auto-classify + mode routing) → `_vision_extract_all_documents`. Per document segment, before any LLM call it tries:
+1. **pdfplumber-first** (`_pdfplumber_extract_form_fields`, plus `_pdfplumber_spatial_extract` / `_pdfplumber_extract_dynamic_parallel` for parallel/mixed) — if label-match coverage ≥ 50% (or dynamic fill found anything), it builds the result with **no LLM call** (`method="pdfplumber_form"`).
+2. **Sectioned multi-pass** for `parallel_groups` mode (`_extract_parallel_groups_sectioned`, one LLM call per vertical section).
+3. **Single vision call**: `_build_vision_prompt()` → `orchestrator.llm.extract(image_b64=..., prompt=..., system_instruction=...)` with up to 3 retries (5s/15s backoff) and a text-fallback if vision fails. `system_instruction` = registry persona; `prompt` = fields + instructions + output-format + doc text.
+
+### 3. No-template / AI fallback path
+
+When `template_id` is omitted, `_run_extraction_sync` calls **`orchestrator._process_single_document()`** (the engine, schema-driven) for PDFs — NOT the inline `extract.py` pipeline. That does classify→extract→validate against the YAML `client_schema` and returns `extraction.parsed_json` directly as `extracted_data`. Export then uses `_write_flat_table` (no grid). Images with no template go through `_extract_image_with_template(..., None)` → unguided prompt (`_get_unguided_prompt()`), output shape `{document_type, extracted_fields, table_rows}`, forced `medium` confidence + `needs_review`. Note: an empty/plain-text template `description` routes to `primary_mode="unguided"` inside the templated path instead.
+
+### 4. Where the raw LLM JSON is received
+
+`GeminiClient._post()` reads `candidates[0].content.parts[0].text`; `_make_response()` runs `_parse_json_robust()` → `LLMResponse(raw_text=..., parsed_json=...)`. Gemini is called with `responseMimeType=application/json`, so `raw_text` is already clean JSON. The single provider-agnostic chokepoint is **`LLMRouter.extract()`** — every extraction (Gemini or Groq) returns through it.
+
+**Active provider gotcha**: local `.env` sets `PRIMARY_LLM=groq`, so Groq is primary and **Gemini is only the fallback** locally despite the Gemini-centric code comments. Verify the deployment env var before assuming Gemini is in use.
+
+### 5. Post-processing chain (raw JSON → Excel cells), in order
+
+`_process_vision_result()`: collect `table_rows` + any `*_rows` arrays → `_validate_row_alignment` → `_fix_split_decimals(_row)` → `_normalize_field_values` / `_normalize_row_values` (strip `$£€₹`, `(x)`→`-x`, dates→ISO, K/M expand) → `_validate_with_pdfplumber` (assigns high/medium/low; **skipped** for scanned PDFs <80 chars, all forced medium) → build `ref_to_label` map (cell-ref → human label) → assemble `extracted_data` dict (per-label + `_label_*` statics + per-table `*_rows`). Then `_run_extraction_sync` may run `_post_categorize/_summarize/_anomaly`, escalate `needs_review` (H1 financial low-conf, Bug6 misalignment, H2 section-total cross-check), and persist `extraction_json`. **Excel cell values are produced later, at export time** (`_write_excel` → `_write_form/table/mixed_excel`), not during extraction.
+
+### Debug instrumentation (temporary)
+
+- `engine/connectors/llm_router.py` — `_dump_raw_extraction()` writes `backend/debug_output/last_extraction_raw.json` on every successful `extract()` (raw_text + parsed_json + provider/model/tokens). Marked TEMP DEBUG; remove after the investigation.
+- `backend/scripts/test_extraction_debug.py` — runs the full pipeline on `backend/data/test_uploads/` without HTTP/threads; emits `extraction_result.json`, `cell_mapping.csv` (cell | value | source field), and `test_result.xlsx`. Flags: `--pdf`, `--template-id N` (DB), `--template-file P`, `--provider gemini|groq|env` (default gemini).
+
+### Part 3 assessment — precompute an 8-neighbour cell binding map at template save
+
+**Verdict: architecturally sound and a natural fit, but a moderate (not trivial) refactor; it would reduce — not fully eliminate — the failure classes.**
+- The current design already computes `_analyse_template_regions()` (label/value adjacency, kv_pairs, parallel groups, section labels) — just at *extraction* time, freshly per run. Moving it to save time is mostly relocation + persistence, and `regions` is already a cached, serializable dict. Add a `cell_binding_map` JSON column to `ColumnTemplate` (additive — fits the `_run_migrations()` `ADD COLUMN IF NOT EXISTS` pattern).
+- **Save endpoint** (`templates.py` create/update): after parsing `description`, call the region analyzer + a new 8-neighbour role classifier, store the result. **Extraction** (`_parse_template`): read the stored map instead of re-analysing (keep on-the-fly analysis as fallback for legacy templates with no stored map).
+- **Why it helps**: the "5 labels, values pasted 10–15 cells away" and "wrong section" errors come from *ambiguity in the prompt*, not from re-analysis being non-deterministic — re-analysis is already deterministic. The real win is a richer, reviewable binding (`{label_cell, value_cell, section}`) that lets the prompt give the LLM one explicit slot per value and lets the writer place values by binding rather than by fuzzy ref→label matching.
+- **Why it won't fully solve it**: the value still comes from the LLM reading the *document* (whose layout the template can't constrain), and the pdfplumber-first/spatial paths bypass the LLM entirely. Section mis-assignment is ultimately a document-reading problem; explicit bindings tighten the prompt and the write-back but cannot guarantee the model reads the right document region. Pairing the binding map with the existing sectioned multi-pass (one call per section) is what closes most of the gap.

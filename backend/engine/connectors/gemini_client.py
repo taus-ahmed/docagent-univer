@@ -293,8 +293,15 @@ class GeminiClient:
                      system_instruction: str = "") -> LLMResponse:
         t0 = time.time()
         try:
+            # Fold the document text into the prompt — mirrors GroqClient.extract_data.
+            # Without this, callers that pass the document via `text=` (e.g. the
+            # no-template orchestrator path) send only instructions and no content,
+            # and Gemini returns "No document content was provided".
+            user_prompt = (
+                f"{prompt}\n\nDocument content:\n\n{text}" if text else prompt
+            )
             raw, tok, model = self._call(
-                prompt, system_instruction, label="extract"
+                user_prompt, system_instruction, label="extract"
             )
             return self._make_response(raw, tok, model, t0, "extract")
         except Exception as e:
