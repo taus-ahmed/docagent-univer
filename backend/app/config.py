@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     GROQ_CLASSIFICATION_MODEL: str = "llama-3.2-11b-vision-preview"
     GROQ_EXTRACTION_MODEL: str = "llama-3.3-70b-versatile"
     GROQ_VISION_MODEL: str = "llama-3.2-90b-vision-preview"
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"  # 2.0-flash retired (404); use a live model
 
     BATCH_SIZE: int = 5
     RATE_LIMIT_DELAY: float = 2.0
