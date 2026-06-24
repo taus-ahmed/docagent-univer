@@ -89,6 +89,10 @@ def _run_migrations():
             # Add progress_message for live job progress updates (Issue 2)
             """ALTER TABLE extraction_jobs
                ADD COLUMN IF NOT EXISTS progress_message TEXT""",
+
+            # FIX 5: persist the raw LLM (Gemini) response for audit / re-export / debug
+            """ALTER TABLE document_results
+               ADD COLUMN IF NOT EXISTS raw_llm_response TEXT""",
         ]
 
         for sql in migrations:
