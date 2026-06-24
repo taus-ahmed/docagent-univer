@@ -2609,6 +2609,101 @@ def _validate_row_alignment(
     return final_rows, is_misaligned, "; ".join(warnings)
 
 
+def _coerce_extracted_fields(raw_doc: dict, regions: dict) -> tuple:
+    """
+    FIX 3: enforce the extracted_fields (cell-ref keyed) schema on the AI response
+    for form / parallel-group templates.
+
+    Returns (extracted_fields_dict, warning_str). warning_str is non-empty when the
+    response had to be remapped/flattened or could not be reconciled — the caller
+    uses it to flag the document for review instead of silently writing nothing.
+    """
+    import re as _re
+    primary_mode = regions.get("primary_mode", "form_kv")
+    ef = raw_doc.get("extracted_fields", {})
+    ref_re = _re.compile(r'^[A-Z]+[0-9]+$')
+
+    form_modes = ("parallel_groups", "form_kv", "form_with_targets", "mixed")
+    if primary_mode not in form_modes:
+        return (ef if isinstance(ef, dict) else {}), ""
+
+    # Ordered (ref, label) bindings exactly as presented to the AI in the prompt.
+    ordered = []
+    for pg in regions.get("parallel_column_groups", []):
+        for it in pg.get("items", []):
+            if it.get("value_ref"):
+                ordered.append((it["value_ref"], (it.get("label") or "")))
+    for kv in regions.get("kv_pairs", []):
+        if kv.get("value_ref"):
+            ordered.append((kv["value_ref"], (kv.get("label") or "")))
+    for t in regions.get("explicit_targets", []):
+        if t.get("ref"):
+            ordered.append((t["ref"], (t.get("label") or "")))
+    label_to_ref = {(lbl or "").strip().lower(): ref
+                    for ref, lbl in ordered if (lbl or "").strip()}
+
+    # Case 1: already a cell-ref-keyed dict → accept as-is.
+    if isinstance(ef, dict) and ef:
+        ref_keys = [k for k in ef if ref_re.match(str(k))]
+        if len(ref_keys) >= max(1, len(ef) // 2):
+            return ef, ""
+        # Case 2: label-keyed dict → remap labels back to cell refs.
+        remapped = {}
+        for k, v in ef.items():
+            if ref_re.match(str(k)):
+                remapped[str(k)] = v
+            else:
+                ref = label_to_ref.get(str(k).strip().lower())
+                if ref:
+                    remapped[ref] = v
+        if remapped:
+            return remapped, (f"AI returned label-keyed fields; remapped "
+                              f"{len(remapped)} to cell refs (verify)")
+
+    # Case 3: no usable extracted_fields but table_rows present → flatten by label match.
+    table_rows = list(raw_doc.get("table_rows", []) or [])
+    for key, val in raw_doc.items():
+        if key.endswith("_rows") and key != "table_rows" and isinstance(val, list):
+            table_rows.extend(val)
+    if table_rows and ordered:
+        _num_re = _re.compile(r'^[\$\-\(\)]?[\d,]+(?:\.\d+)?\)?$')
+        flat = {}
+        for row in table_rows:
+            if not isinstance(row, dict):
+                continue
+            row_label, row_value = "", ""
+            for k, v in row.items():
+                if str(k).startswith("_"):
+                    continue
+                sv = str(v).strip()
+                if not sv:
+                    continue
+                if any(ch.isalpha() for ch in sv) and not row_label:
+                    row_label = sv
+                elif _num_re.match(sv.replace(" ", "")) and not row_value:
+                    row_value = sv
+            if not row_label:
+                continue
+            ref = label_to_ref.get(row_label.strip().lower())
+            if not ref:
+                rl = row_label.strip().lower()
+                for lbl, r in label_to_ref.items():
+                    if lbl and (lbl in rl or rl in lbl):
+                        ref = r
+                        break
+            if ref and row_value:
+                flat[ref] = {"value": row_value, "confidence": "medium"}
+        if flat:
+            return flat, (f"AI returned table_rows instead of extracted_fields; "
+                          f"flattened {len(flat)} values to cell refs (verify)")
+
+    # Case 4: cannot reconcile → keep whatever we had, flag for review.
+    if isinstance(ef, dict) and ef:
+        return ef, ""
+    return {}, ("AI response had no usable extracted_fields for a form/parallel "
+                "template — flagged for review")
+
+
 def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
                             doc_type: str, elapsed: float, extraction,
                             doc_text: str, seg_hint: str = "",
@@ -2624,7 +2719,9 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     cells = layout.get("cells", {})
     primary_mode = regions.get("primary_mode", "form_kv")
 
-    extracted_fields_raw = raw_doc.get("extracted_fields", {})
+    # FIX 3: coerce/validate the AI response into the cell-ref extracted_fields
+    # schema the writer expects; _schema_warn is set when reconciliation was needed.
+    extracted_fields_raw, _schema_warn = _coerce_extracted_fields(raw_doc, regions)
     confidence_raw = raw_doc.get("confidence", "medium")
     if isinstance(confidence_raw, dict):
         confidence_raw = "medium"
@@ -2695,6 +2792,12 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
         validated_fields = validation["validated_fields"]
         validated_rows = validation["validated_rows"]
         flagged = validation["flagged"]
+
+    # FIX 3: a schema-coercion warning escalates the document to needs_review
+    # so a silently-unwritable AI response never passes as clean.
+    if _schema_warn:
+        flagged = list(flagged) + [{"ref": "_schema", "value": "", "issue": _schema_warn}]
+        print(f"[SCHEMA] {filename}: {_schema_warn}", flush=True)
 
     # -- Build human-readable extracted_data -----------------------------------
     ref_to_label = {}
