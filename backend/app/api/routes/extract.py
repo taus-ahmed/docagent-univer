@@ -1547,6 +1547,77 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
     return si, user_prompt
 
 
+def _convert_extracted_fields_to_layout(extracted_fields: dict, binding_map: dict) -> dict:
+    """
+    ISSUE 1 fallback — when a weaker model returns extracted_fields instead of the
+    required layout_sections format, reconstruct layout_sections from the flat cell
+    map using the binding map's column groups (pairing each value-column cell with
+    the label-column cell on the same row).
+    """
+    import re as _re
+    if (not isinstance(extracted_fields, dict) or not extracted_fields
+            or not isinstance(binding_map, dict)):
+        return {}
+    col_headers = binding_map.get("_meta", {}).get("column_headers", {})
+
+    def hdr(c):
+        return str(col_headers.get(c, col_headers.get(str(c), "")) or "")
+
+    VALUE_KW = {"amount", "amt", "value", "total", "balance", "price", "cost",
+                "qty", "quantity", "debit", "credit", "$", "net", "gross", "sum"}
+    td_cols = sorted({b["col_index"] for b in binding_map.values()
+                      if isinstance(b, dict) and b.get("role") == "table_data"
+                      and isinstance(b.get("col_index"), int)})
+
+    def is_val(c):
+        return any(kw in hdr(c).lower() for kw in VALUE_KW)
+
+    used, groups = set(), []
+    for c in td_cols:
+        if c in used or not is_val(c):
+            continue
+        lc = next((x for x in range(c - 1, -1, -1) if x in td_cols and x not in used), None)
+        groups.append((lc, c)); used.add(c)
+        if lc is not None:
+            used.add(lc)
+    for c in td_cols:
+        if c in used:
+            continue
+        rc = next((x for x in td_cols if x > c and x not in used), None)
+        if rc is not None:
+            groups.append((c, rc)); used.add(c); used.add(rc)
+
+    def _v(x):
+        return str((x.get("value", "") if isinstance(x, dict) else x) or "").strip()
+
+    parsed = {}
+    for ref, raw_v in extracted_fields.items():
+        m = _re.match(r'^([A-Za-z]+)(\d+)$', str(ref).strip())
+        if not m:
+            continue
+        col = 0
+        for ch in m.group(1).upper():
+            col = col * 26 + (ord(ch) - 64)
+        parsed[(int(m.group(2)) - 1, col - 1)] = _v(raw_v)
+
+    out = {}
+    for lc, vc in groups:
+        if vc is None:
+            continue
+        slug = _re.sub(r'[^a-z0-9]+', '_', (hdr(lc) or hdr(vc) or "section").lower()).strip('_') or "section"
+        rows = []
+        for (row0, col0), v in sorted(parsed.items()):
+            if col0 != vc or not v:
+                continue
+            label = parsed.get((row0, lc), "") if lc is not None else ""
+            rows.append({"label_col": _col_letter(lc) if lc is not None else "",
+                         "value_col": _col_letter(vc), "row": row0 + 1,
+                         "label": label, "value": v})
+        if rows:
+            out[slug] = {"rows": rows}
+    return out
+
+
 def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     """
     Build extraction prompt split into (system_instruction, user_prompt).
@@ -5104,6 +5175,54 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
 
         raw = extraction.parsed_json
         elapsed = (t.time() - start) * 1000
+
+        # ── ISSUE 1: layout-mode format enforcement ──────────────────────────────
+        # A weaker fallback model (e.g. gemini-flash-lite-latest after 503s) may
+        # return extracted_fields instead of the required layout_sections format.
+        # Retry once with a stronger directive, then fall back to converting the
+        # extracted_fields into layout_sections via the binding map.
+        if _is_layout_mode:
+            def _unwrap_doc(_r):
+                if (isinstance(_r, dict) and isinstance(_r.get("documents"), list)
+                        and _r["documents"] and isinstance(_r["documents"][0], dict)):
+                    return _r["documents"][0]
+                return _r if isinstance(_r, dict) else {}
+            _d0 = _unwrap_doc(raw)
+            if not _d0.get("layout_sections"):
+                print(f"[LAYOUT] {file_path.name}: response missing layout_sections "
+                      f"— retrying with stronger format enforcement", flush=True)
+                _enforce = (
+                    "YOU MUST respond using the layout_sections format specified. "
+                    "Do NOT use extracted_fields format. The layout_sections key is "
+                    "REQUIRED in your response.\n\n"
+                )
+                try:
+                    if page_img:
+                        _re_ext = orchestrator.llm.extract(
+                            image_b64=page_img, prompt=_enforce + _base_prompt,
+                            system_instruction=system_instruction)
+                    else:
+                        _re_ext = orchestrator.llm.extract(
+                            text=doc_text, prompt=_enforce + _base_prompt,
+                            system_instruction=system_instruction)
+                    if (_re_ext and _re_ext.success and _re_ext.parsed_json
+                            and _unwrap_doc(_re_ext.parsed_json).get("layout_sections")):
+                        raw = _re_ext.parsed_json
+                        extraction = _re_ext
+                        _d0 = _unwrap_doc(raw)
+                        print(f"[LAYOUT] {file_path.name}: enforcement retry produced layout_sections", flush=True)
+                except Exception as _le:
+                    print(f"[LAYOUT] enforcement retry error: {_le}", flush=True)
+
+            if not _d0.get("layout_sections") and _d0.get("extracted_fields"):
+                _conv = _convert_extracted_fields_to_layout(
+                    _d0.get("extracted_fields", {}), template_data.get("binding_map", {})
+                )
+                if _conv:
+                    _d0["layout_sections"] = _conv     # mutates the doc inside raw
+                    print(f"[LAYOUT] {file_path.name}: converted extracted_fields -> "
+                          f"layout_sections ({sum(len(s.get('rows', [])) for s in _conv.values())} rows)",
+                          flush=True)
 
         # Handle documents array in response
         documents = raw.get("documents", [raw])
