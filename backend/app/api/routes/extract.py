@@ -3125,6 +3125,16 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     """
     from orchestrator import DocumentExtractionResult
 
+    # Unwrap the documents[] wrapper if Gemini nested the result inside it.
+    # Some call sites pass extraction.parsed_json directly (e.g. the image path),
+    # so the document fields (layout_sections, extracted_fields, table_rows) end up
+    # nested under documents[0] instead of at the top level — which silently lost
+    # layout_sections and extracted_fields. Idempotent for callers that already
+    # unwrapped (documents[0] has no "documents" key).
+    if (isinstance(raw_doc, dict) and isinstance(raw_doc.get("documents"), list)
+            and raw_doc["documents"] and isinstance(raw_doc["documents"][0], dict)):
+        raw_doc = raw_doc["documents"][0]
+
     regions = template_data.get("regions", {})
     layout = template_data.get("layout", {})
     cells = layout.get("cells", {})
