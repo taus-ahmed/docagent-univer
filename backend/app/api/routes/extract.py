@@ -1533,6 +1533,8 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
         "",
     ]
     out_sections, _seen_slugs = [], {}
+    _col_first_use = {}        # (label_col, value_col) -> first section that used it
+    _all_cols = []             # every unique column letter used, in order
     for g in column_groups:
         sec_label = g.get("section_label") or f"section_{g.get('group_id', 0)}"
         lcl = (g.get("label_col_letter") or "").upper()
@@ -1544,6 +1546,9 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
             _seen_slugs[slug] += 1; slug = f"{slug}_{_seen_slugs[slug]}"
         else:
             _seen_slugs[slug] = 1
+        for col in (lcl, vcl):
+            if col and col not in _all_cols:
+                _all_cols.append(col)
         desc.append(f'SECTION: "{sec_label}" (rows {start_ss} to {end_ss})')
         desc.append(f'  Column {lcl} = labels, Column {vcl} = values')
         desc.append(f'  MANDATORY: Extract EVERY individual line item found in the '
@@ -1551,18 +1556,29 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
                     f'own row (name into column {lcl}, amount into column {vcl}, rows '
                     f'{start_ss}-{end_ss}). The section TOTAL goes in the fixed cell '
                     f'listed below — NOT in this section\'s rows.')
+        # FIX 1: when this section reuses columns from an earlier section, say so.
+        prev = _col_first_use.get((lcl, vcl))
+        if prev:
+            desc.append(f'  NOTE: This section uses the SAME columns ({lcl}/{vcl}) as '
+                        f'"{prev}". Reuse those columns — do NOT create new columns.')
+        else:
+            _col_first_use[(lcl, vcl)] = sec_label
         desc.append(f'  This section MUST be present in your response with at least one '
                     f'row. Do not skip any section.')
         desc.append("")
         out_sections.append((slug, lcl, vcl, start_ss))
 
-    # Global completeness directive — every section is required.
+    # FIX 1 + completeness: global directives inserted at the TOP, before sections.
     if out_sections:
         _names = ", ".join(f'"{s[0]}"' for s in out_sections)
-        desc.insert(3, f'There are {len(out_sections)} sections. Your layout_sections '
+        desc.insert(3, f'COLUMN CONSTRAINT: The ONLY valid columns in your response are: '
+                       f'{", ".join(_all_cols)}. Any column not in this list is FORBIDDEN '
+                       f'— do not use any other column. Multiple sections reuse the same '
+                       f'columns; place each section\'s items in ITS specified columns.')
+        desc.insert(4, f'There are {len(out_sections)} sections. Your layout_sections '
                        f'response MUST contain ALL of them: {_names}. Each must have '
                        f'at least one row.')
-        desc.insert(4, "")
+        desc.insert(5, "")
 
     if fixed:
         desc.append("FIXED CELLS (labels already in the template — return the value only):")
@@ -6082,26 +6098,42 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         ls = ed.get("layout_sections", {}) if isinstance(ed, dict) else {}
         groups = ed.get("binding_column_groups", []) if isinstance(ed, dict) else []
 
-        def _fix_cols(rnum, lc, vc):
-            """SAFETY NET: if Gemini placed a row in a column outside the template
-            bounding box, remap to the column group that covers this row number."""
-            if not groups or (_in_bounds(lc) and _in_bounds(vc)):
+        def _nrm(s):
+            return re.sub(r'[^a-z0-9]+', '', str(s or "").lower())
+
+        def _fix_cols(rnum, lc, vc, sec_key):
+            """SAFETY NET (FIX 2/3): if a column is empty/None or outside the
+            template bounding box, remap to the column group covering this row.
+            Disambiguate side-by-side groups by fuzzy-matching the section key;
+            if no group covers the row, fall back to the last group."""
+            need_lc, need_vc = not _in_bounds(lc), not _in_bounds(vc)
+            if not groups or (not need_lc and not need_vc):
                 return lc, vc
             r0 = rnum - 1
             covering = [g for g in groups
                         if int(g.get("start_row", 0)) <= r0 <= int(g.get("end_row", -1))]
-            if not covering:
+            chosen = None
+            if covering:
+                # FIX 3: prefer the group whose section label matches the section key
+                chosen = next((g for g in covering
+                               if _nrm(g.get("section_label")) == _nrm(sec_key)), None)
+                if chosen is None:           # else the group already matching an AI column
+                    chosen = next((g for g in covering
+                                   if (g.get("label_col_letter") or "").upper() == lc
+                                   or (g.get("value_col_letter") or "").upper() == vc), covering[0])
+            elif groups:
+                chosen = groups[-1]          # no group covers this row -> last group
+            if not chosen:
                 return lc, vc
-            chosen = next((g for g in covering
-                           if (g.get("label_col_letter") or "").upper() == lc), covering[0])
-            new_lc = lc if _in_bounds(lc) else ((chosen.get("label_col_letter") or lc).upper())
-            new_vc = vc if _in_bounds(vc) else ((chosen.get("value_col_letter") or vc).upper())
+            new_lc = lc if not need_lc else (chosen.get("label_col_letter") or lc).upper()
+            new_vc = vc if not need_vc else (chosen.get("value_col_letter") or vc).upper()
             if (new_lc, new_vc) != (lc, vc):
-                print(f"[LAYOUT-FIX] row {rnum}: remapped cols {lc}/{vc} -> {new_lc}/{new_vc} "
+                print(f"[LAYOUT-FIX] row {rnum} remapped {lc or '<none>'}/{vc or '<none>'} -> "
+                      f"{new_lc}/{new_vc} via binding_column_groups "
                       f"(group '{chosen.get('section_label','')}')", flush=True)
             return new_lc, new_vc
 
-        for sec in (ls.values() if isinstance(ls, dict) else []):
+        for sec_key, sec in (ls.items() if isinstance(ls, dict) else []):
             if not isinstance(sec, dict):
                 continue
             for row in sec.get("rows", []) or []:
@@ -6113,7 +6145,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                     continue
                 lc = str(row.get("label_col") or "").strip().upper()
                 vc = str(row.get("value_col") or "").strip().upper()
-                lc, vc = _fix_cols(rnum, lc, vc)
+                lc, vc = _fix_cols(rnum, lc, vc, sec_key)
                 lbl, vval = row.get("label"), row.get("value")
                 if lc and lbl not in (None, ""):
                     try:
