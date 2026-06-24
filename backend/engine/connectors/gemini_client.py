@@ -187,16 +187,18 @@ class GeminiClient:
 
     # ── Vision call ───────────────────────────────────────────────────────────
 
-    def _call_vision(self, prompt: str, image_b64: str,
+    def _call_vision(self, prompt: str, image_b64,
                      system_instruction: str = "") -> Tuple[str, int, str]:
-        """Vision extraction — image + text prompt."""
+        """Vision extraction — text prompt + one or more page images.
+        image_b64 may be a single base64 string OR a list of them (multi-page);
+        each image becomes its own inlineData part so Gemini sees every page."""
+        imgs = image_b64 if isinstance(image_b64, (list, tuple)) else [image_b64]
+        parts = [{"text": prompt}]
+        for im in imgs:
+            if im:
+                parts.append({"inlineData": {"mimeType": "image/jpeg", "data": im}})
         body: dict = {
-            "contents": [{
-                "parts": [
-                    {"text": prompt},
-                    {"inlineData": {"mimeType": "image/jpeg", "data": image_b64}},
-                ]
-            }],
+            "contents": [{"parts": parts}],
             "generationConfig": {
                 "temperature":     0.1,
                 "maxOutputTokens": 8192,

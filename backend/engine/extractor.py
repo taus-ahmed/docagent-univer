@@ -45,6 +45,140 @@ def _unwrap_doc(parsed):
     return parsed if isinstance(parsed, dict) else {}
 
 
+def _build_narrow_section_prompt(group, doc_type, fixed_cells, doc_text):
+    """
+    FIX 3 — generic per-section "extract & place" prompt. Describes ONE section,
+    one column pair, and one row range only. fixed_cells = [{'ref','label'}] are the
+    totals whose value cell falls in this section's row range. Returns (prompt, key).
+    """
+    lcl = (group.get("label_col_letter") or "").upper()
+    vcl = (group.get("value_col_letter") or "").upper()
+    start = int(group.get("start_row", 0)) + 1     # 1-based spreadsheet rows
+    end   = int(group.get("end_row", 0)) + 1
+    sec   = group.get("section_label", "section")
+    key   = _norm_section(sec) or "section"
+    if fixed_cells:
+        fixed_block = ("\nTotal cell(s) for this section — return these in "
+                       "extracted_fields (value only, by cell reference):\n"
+                       + "\n".join(f"  {fc['ref']} = {fc['label']}" for fc in fixed_cells)
+                       + "\n")
+        ef_example = ", ".join(f'"{fc["ref"]}": "<amount>"' for fc in fixed_cells[:3])
+    else:
+        fixed_block, ef_example = "", ""
+    prompt = (
+        "Extract content for ONE section of this document.\n\n"
+        f"Section name: {sec}\n"
+        f"Label column: {lcl}\n"
+        f"Value column: {vcl}\n"
+        f"Template rows: {start} to {end}\n\n"
+        f"Find the {sec} portion of the document.\n"
+        "Extract EVERY line item from this section ONLY.\n"
+        "Place each item using ONLY these columns:\n"
+        f"  labels -> column {lcl}\n"
+        f"  values -> column {vcl}\n"
+        f"{fixed_block}\n"
+        "Return ONLY this JSON — nothing else:\n"
+        "{\n"
+        '  "layout_sections": {\n'
+        f'    "{key}": {{\n'
+        '      "rows": [\n'
+        f'        {{"label_col": "{lcl}", "value_col": "{vcl}", "row": {start}, '
+        '"label": "<item name>", "value": "<amount>"}\n'
+        "      ]\n"
+        "    }\n"
+        "  },\n"
+        f'  "extracted_fields": {{{ef_example}}}\n'
+        "}\n\n"
+        "CONSTRAINTS:\n"
+        f"- Only column {lcl} for labels\n"
+        f"- Only column {vcl} for values\n"
+        f"- Only rows {start} to {end}\n"
+        "- Do NOT include section totals in the rows (return them in extracted_fields)\n"
+        "- Do NOT include any other sections or columns\n\n"
+        "=== DOCUMENT TEXT ===\n"
+        f"{doc_text}\n"
+    )
+    return prompt, key
+
+
+def _extract_layout_per_section(orchestrator, column_groups, binding_map, doc_type,
+                                doc_text, page_imgs, system_instruction, file_path):
+    """
+    FIX 3 — one Gemini call per section group (each gets ALL page images). Merges the
+    per-section responses into a single layout result. Returns (combined_doc,
+    extraction) or (None, None) if nothing was extracted (caller falls back to the
+    single-call path).
+    """
+    from app.api.routes.extract import _cell_ref
+
+    fixed_all = []
+    for k, b in (binding_map or {}).items():
+        if isinstance(b, dict) and b.get("role") == "value_target" and b.get("label"):
+            try:
+                r, c = map(int, str(k).split(","))
+            except (ValueError, AttributeError):
+                continue
+            fixed_all.append({"ref": _cell_ref(r, c), "label": b["label"], "row": r, "col": c})
+
+    combined_ls, combined_ef, last_ext = {}, {}, None
+    print(f"[EXTRACTOR] {file_path.name}: layout per-section mode — "
+          f"{len(column_groups)} section call(s)", flush=True)
+
+    for group in column_groups:
+        g_fixed = [fc for fc in fixed_all
+                   if fc["col"] == group.get("value_col")
+                   and int(group.get("start_row", 0)) <= fc["row"]
+                   <= int(group.get("end_row", 0)) + 2]
+        nprompt, _nkey = _build_narrow_section_prompt(group, doc_type, g_fixed, doc_text)
+
+        sresp = None
+        for attempt in range(3):
+            try:
+                sresp = (orchestrator.llm.extract(
+                            image_b64=page_imgs, prompt=nprompt,
+                            system_instruction=system_instruction)
+                         if page_imgs else
+                         orchestrator.llm.extract(
+                            text=doc_text, prompt=nprompt,
+                            system_instruction=system_instruction))
+                if sresp and sresp.success and sresp.parsed_json:
+                    break
+            except Exception as e:
+                print(f"[EXTRACTOR] section '{group.get('section_label')}' error: {e}", flush=True)
+            if attempt < 2:
+                time.sleep(2)
+
+        if not sresp or not sresp.success or not sresp.parsed_json:
+            print(f"[EXTRACTOR] {file_path.name}: section "
+                  f"'{group.get('section_label')}' call failed — skipping", flush=True)
+            continue
+        last_ext = sresp
+        sd0 = _unwrap_doc(sresp.parsed_json)
+        sls = sd0.get("layout_sections", {})
+        n_rows = 0
+        if isinstance(sls, dict) and sls:
+            first = next(iter(sls))
+            block = sls.get(first) or {}
+            combined_ls[group.get("section_label", first)] = block
+            n_rows = len(block.get("rows", []) if isinstance(block, dict) else [])
+        sef = sd0.get("extracted_fields", {})
+        if isinstance(sef, dict):
+            combined_ef.update(sef)
+        print(f"[EXTRACTOR] {file_path.name}: section "
+              f"'{group.get('section_label')}' -> {n_rows} rows", flush=True)
+
+    if not combined_ls and not combined_ef:
+        return None, None
+
+    final = {
+        "layout_sections":    combined_ls,
+        "extracted_fields":   combined_ef,
+        "document_type":      doc_type,
+        "overall_confidence": "high",
+    }
+    return final, last_ext
+
+
 def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
     """
     Entry point. Returns list[DocumentExtractionResult] — same contract as the
@@ -107,21 +241,37 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
     for seg in segments:
         seg_idx = seg["doc_index"]
         pages = seg.get("pages") or [0]
-        page_img = None
-        if page_images:
-            idx = pages[0] if pages and pages[0] < len(page_images) else 0
-            page_img = page_images[idx]
+        # FIX 1: send ALL page images for this segment so multi-page documents
+        # (balance sheet / payslip page 2, etc.) are fully visible to Gemini.
+        page_imgs = [page_images[p] for p in pages if 0 <= p < len(page_images)]
+        if not page_imgs and page_images:
+            page_imgs = [page_images[0]]
 
         # STEP 4 — PROMPT (auto layout vs field via binding_map)
         system_instruction, prompt = _build_vision_prompt(template_data, doc_text)
+
+        # FIX 3 — layout mode with 2+ section groups: one Gemini call per section
+        # (each gets all page images) to stop the model losing column assignments
+        # for later sections. Falls back to the single-call path if it yields nothing.
+        _cg = (binding_map or {}).get("_meta", {}).get("column_groups", []) if is_layout else []
+        if is_layout and len(_cg) >= 2:
+            _ps_d0, _ps_ext = _extract_layout_per_section(
+                orchestrator, _cg, binding_map, doc_type, doc_text,
+                page_imgs, system_instruction, file_path)
+            if _ps_d0 is not None:
+                elapsed = (time.time() - start) * 1000
+                results.append(_process_vision_result(
+                    _ps_d0, template_data, file_path.name, doc_type,
+                    elapsed, _ps_ext, doc_text, "", seg_idx))
+                continue   # skip the single-call path for this segment
 
         # STEP 5 — GEMINI CALL (vision-first, 3 retries w/ 2s backoff on 503/err)
         extraction, last_err = None, ""
         for attempt in range(3):
             try:
-                if page_img:
+                if page_imgs:
                     extraction = orchestrator.llm.extract(
-                        image_b64=page_img, prompt=prompt,
+                        image_b64=page_imgs, prompt=prompt,
                         system_instruction=system_instruction)
                     if (not extraction.success) and doc_text:
                         extraction = orchestrator.llm.extract(
@@ -161,9 +311,9 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
                        "extracted_fields. The layout_sections key is REQUIRED.\n\n")
             try:
                 re_ext = (orchestrator.llm.extract(
-                            image_b64=page_img, prompt=enforce + prompt,
+                            image_b64=page_imgs, prompt=enforce + prompt,
                             system_instruction=system_instruction)
-                          if page_img else
+                          if page_imgs else
                           orchestrator.llm.extract(
                             text=doc_text, prompt=enforce + prompt,
                             system_instruction=system_instruction))
@@ -204,9 +354,9 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
                         "line items.\n\n")
                 try:
                     re2 = (orchestrator.llm.extract(
-                                image_b64=page_img, prompt=comp + prompt,
+                                image_b64=page_imgs, prompt=comp + prompt,
                                 system_instruction=system_instruction)
-                           if page_img else
+                           if page_imgs else
                            orchestrator.llm.extract(
                                 text=doc_text, prompt=comp + prompt,
                                 system_instruction=system_instruction))
