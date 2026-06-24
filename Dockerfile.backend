@@ -3,9 +3,13 @@
 WORKDIR /app
 
 # Install system dependencies
+# poppler-utils is REQUIRED for pdf2image (PDF -> page images for vision/layout
+# extraction); without it pages=0 / has_vision=False and balance-sheet layout
+# templates lose all spatial structure.
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
