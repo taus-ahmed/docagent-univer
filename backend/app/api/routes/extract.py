@@ -3479,9 +3479,7 @@ def _pdfplumber_spatial_extract(file_path: Path, regions: dict, layout: dict,
         value_col = pg["value_col"]
         pg_items  = pg.get("items", [])
 
-        if not pg_items:
-            continue
-
+        # Don't skip groups with no pre-defined items — dynamic fill handles blank-row templates
         lx0, lx1 = col_x_band(label_col)
         vx0, vx1 = col_x_band(value_col)
 
@@ -3579,6 +3577,93 @@ def _pdfplumber_spatial_extract(file_path: Path, regions: dict, layout: dict,
 
         print(f"[SPATIAL] group '{pg.get('section_label','')}': "
               f"{items_filled} items, total={'found' if total_found else 'not found'}", flush=True)
+
+        # ── Dynamic fill: blank-row slots between section headers and Total rows ──
+        # When template rows are intentionally blank (user expects dynamic discovery),
+        # the items list has no blank-row entries. We detect those spans here and
+        # fill them with items extracted via spatial coordinates from the PDF.
+        # Find all non-blank rows in this group's label column
+        non_blank_label_rows = sorted(
+            r for r in range(max_r + 1)
+            if compact_grid.get((r, label_col))
+        )
+        for i in range(len(non_blank_label_rows) - 1):
+            curr_r = non_blank_label_rows[i]
+            next_r = non_blank_label_rows[i + 1]
+            gap = next_r - curr_r - 1
+            if gap < 1:
+                continue
+            curr_label = compact_grid.get((curr_r, label_col), "")
+            next_label = compact_grid.get((next_r, label_col), "")
+            # Only fill blank spans that sit BELOW a section header (not below a Total)
+            if "total" in curr_label.lower():
+                continue
+            # Clear the section-header's value cell — it's a label, not data
+            hdr_val_ref = _cell_ref(curr_r, value_col)
+            extracted_fields[hdr_val_ref] = {"value": "", "confidence": "high"}
+            # Check all rows in the gap are genuinely blank in label col
+            all_blank = all(
+                not compact_grid.get((r, label_col), "")
+                for r in range(curr_r + 1, next_r)
+            )
+            if not all_blank:
+                continue
+            fill_rows = list(range(curr_r + 1, next_r))
+            # Find the section header's y-position in the PDF
+            section_header_y = None
+            for pdf_row in pdf_rows:
+                l_words = words_in_band(pdf_row["words"], lx0, lx1)
+                lbl_text_s = " ".join(w["text"] for w in l_words if not is_num(w["text"])).strip()
+                if lbl_text_s and jaccard(norm(lbl_text_s), norm(curr_label)) >= 0.45:
+                    section_header_y = pdf_row["y"]
+                    print(f"[SPATIAL-DYN] section header '{curr_label}' found at y={section_header_y:.0f}", flush=True)
+                    break
+            # Find the terminating row (Total or next section header) y-position
+            next_label_y = None
+            for pdf_row in pdf_rows:
+                l_words = words_in_band(pdf_row["words"], lx0, lx1)
+                lbl_text_s = " ".join(w["text"] for w in l_words if not is_num(w["text"])).strip()
+                if lbl_text_s and jaccard(norm(lbl_text_s), norm(next_label)) >= 0.45:
+                    next_label_y = pdf_row["y"]
+                    break
+            if section_header_y is None:
+                print(f"[SPATIAL-DYN] section header '{curr_label}' not found in PDF — skipping", flush=True)
+                continue
+            # Extract all label+value pairs between section header and total
+            dyn_items: list = []
+            for pdf_row in pdf_rows:
+                y = pdf_row["y"]
+                if y <= section_header_y:
+                    continue
+                if next_label_y is not None and y >= next_label_y:
+                    break
+                l_words = words_in_band(pdf_row["words"], lx0, lx1)
+                v_words = words_in_band(pdf_row["words"], vx0, vx1)
+                lbl_parts = [w["text"] for w in l_words if not is_num(w["text"])]
+                num_parts = [w["text"] for w in v_words if is_num(w["text"])]
+                if not lbl_parts or not num_parts:
+                    continue
+                lbl_text_d = " ".join(lbl_parts).strip()
+                val_text_d = to_signed(num_parts[-1])
+                # Skip subtotal/total lines inside the section
+                if norm(lbl_text_d).startswith("TOTAL") or norm(lbl_text_d).startswith("SUBTOTAL"):
+                    continue
+                dyn_items.append((lbl_text_d, val_text_d))
+            print(
+                f"[SPATIAL-DYN] '{curr_label}' → {len(dyn_items)} items "
+                f"for {len(fill_rows)} slots",
+                flush=True,
+            )
+            for slot_idx, (item_label, item_value) in enumerate(dyn_items):
+                if slot_idx >= len(fill_rows):
+                    print(f"[SPATIAL-DYN] '{curr_label}': overflow — {len(dyn_items)} items but only {len(fill_rows)} slots", flush=True)
+                    break
+                row = fill_rows[slot_idx]
+                label_ref = _cell_ref(row, label_col)
+                value_ref = _cell_ref(row, value_col)
+                extracted_fields[label_ref] = {"value": item_label,  "confidence": "high"}
+                extracted_fields[value_ref] = {"value": item_value,  "confidence": "high"}
+                print(f"[SPATIAL-DYN]   '{item_label}' → {value_ref} = {item_value}", flush=True)
 
     print(f"[SPATIAL] total extracted: {len(extracted_fields)} fields", flush=True)
     return extracted_fields
