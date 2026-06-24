@@ -535,3 +535,21 @@ Applied after the investigation in `backend/debug_output/pipeline_investigation_
 **Known remaining (pre-existing, out of scope of these 5):** on parallel-group balance sheets the section-header *value* cells (e.g. B1/D1) get over-filled — by `400000` from the text-based `_pdfplumber_extract_form_fields`, or by the header label text when Gemini echoes it. This is a header-row artifact, not a data-column misplacement (actual asset values stay in B, liabilities in D).
 
 **Local-test caveat:** the local DB has no "BS Luq" template and no balance-sheet PDF, and `column_templates.client_id` is missing locally (ORM template reads fail). Verification used a hand-built synthetic balance-sheet PDF + `--template-file` grid through `scripts/test_extraction_debug.py`. Production (real Gemini key, real BS Luq template) is where the fixes ultimately apply.
+
+### Neighbor-matrix binding map + layout-based extraction (2026-06-24)
+
+For templates where the user did **not** fill in row labels (only column headers + blank line-item rows — e.g. a balance sheet with `Current assets | Amount | Non current assets | Amount` and rows below empty), the field-based engine has nothing to anchor to. The binding map adds a **layout-based** extraction path. It is **additive** — labeled templates are unaffected.
+
+**`compute_binding_map(template_data, grid)`** (`extract.py`) runs at extraction time, before prompt building. It builds a merge map (child→parent), detects section boundaries top-to-bottom, then assigns every cell in the bounding box a **role** via 8-neighbour analysis:
+`merged_child | section_header | column_header | label | static_text | value_target | table_data | section_spacer | unknown`. Returns a dict keyed by `"r,c"` plus a `_meta` entry (`max_row/col`, `has_table_data`, `column_headers`); returns `None` on any failure (caller falls back to `_analyse_template_regions`). **Not persisted** — computed at runtime only (no DB schema change).
+
+- **`table_data`** = an empty cell under a column header with no row label → it inherits the column header's identity (`col_header`, `col_index`, `row_index`, `row_siblings`, `section`). The presence of any `table_data` cell flips the document into layout mode.
+- **`value_target`** = an empty cell with a label directly to its left/above → field-based binding (e.g. a labeled totals row).
+
+**Trigger (COMPONENT 6):** `_extract_with_template_inner` computes the binding map and stores it on `template_data["binding_map"]`. If `_meta.has_table_data` is true: (a) table-mode templates are forced to the vision path (skip pdfplumber table-direct), and (b) `_build_vision_prompt` early-returns `_build_layout_prompt_parts(...)` — the "extract & place" prompt. Otherwise the existing field-based prompt is used.
+
+**Two return formats:**
+- **Field-based** (labeled templates): `extracted_fields` keyed by cell reference, as before.
+- **Layout-based** (unlabeled templates): `layout_sections` = `{ "<section_slug>": { "rows": [ {label_col, value_col, row, label, value}, ... ] } }`, where `label_col`/`value_col` are column letters and `row` is the 1-based spreadsheet row number (cell = letter+row, e.g. `A`+`2`=`A2`). Fixed labeled cells (totals) still come back in `extracted_fields`. `_process_vision_result` stores `layout_sections` in `extraction_json`.
+
+**Layout-aware Excel writer:** `_write_layout_excel` runs when any document has non-empty `layout_sections` (checked first in `_write_excel`, before the `primary_mode` routing). It writes the static template cells, then places each `layout_sections` row's label/value at its `(row, column-letter)`, then writes `extracted_fields` (totals) by cell reference. Known v1 limitations: no automatic row push-down on overflow, and multi-document jobs write into the same rows.

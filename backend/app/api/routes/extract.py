@@ -1234,6 +1234,319 @@ def _build_page_anchor_map(doc_text: str, table_regions: list) -> dict:
     return page_map
 
 
+# ==============================================================================
+# NEIGHBOR-MATRIX BINDING MAP  (layout-based extraction for unlabeled templates)
+# ==============================================================================
+
+def _slug(s: str) -> str:
+    """Lowercase, underscore-joined slug for section keys."""
+    return re.sub(r'[^a-z0-9]+', '_', (s or "").lower()).strip('_')
+
+
+def compute_binding_map(template_data: dict, grid: dict):
+    """
+    COMPONENT 1/2/3 — analyse every cell in the template bounding box, examine its
+    8 neighbours (resolved through the merge map), detect section boundaries, and
+    assign each cell a role. Returns a dict keyed by "r,c" plus a "_meta" entry, or
+    None on any failure (caller falls back to _analyse_template_regions gracefully).
+
+    Roles: merged_child | section_header | column_header | label | static_text |
+           value_target | table_data | section_spacer | unknown
+    """
+    try:
+        cells  = grid.get("cells", {})  if isinstance(grid, dict) else {}
+        merges = grid.get("merges", {}) if isinstance(grid, dict) else {}
+
+        parsed = {}
+        max_r = max_c = 0
+        for key, cell in cells.items():
+            if not isinstance(cell, dict):
+                continue
+            parts = key.split(",")
+            if len(parts) != 2:
+                continue
+            try:
+                r, c = int(parts[0]), int(parts[1])
+            except (ValueError, TypeError):
+                continue
+            max_r = max(max_r, r); max_c = max(max_c, c)
+            parsed[(r, c)] = {
+                "value":   str(cell.get("value") or "").strip(),
+                "extract": bool(cell.get("extractTarget")),
+                "span":    cell.get("mergeSpan") if isinstance(cell.get("mergeSpan"), dict) else None,
+            }
+        if not parsed:
+            return None
+
+        # COMPONENT 2 — merge_map: child cell -> parent cell.
+        merge_map = {}
+        for pkey, span in (merges or {}).items():
+            pp = str(pkey).split(",")
+            if len(pp) != 2:
+                continue
+            try:
+                pr, pc = int(pp[0]), int(pp[1])
+            except (ValueError, TypeError):
+                continue
+            sr = int((span or {}).get("rows", 1) or 1)
+            sc = int((span or {}).get("cols", 1) or 1)
+            for dr in range(sr):
+                for dc in range(sc):
+                    if (dr, dc) != (0, 0):
+                        merge_map[(pr + dr, pc + dc)] = (pr, pc)
+        for (r, c), info in parsed.items():           # honour per-cell mergeSpan too
+            sp = info.get("span")
+            if sp:
+                sr = int(sp.get("rows", 1) or 1); sc = int(sp.get("cols", 1) or 1)
+                for dr in range(sr):
+                    for dc in range(sc):
+                        if (dr, dc) != (0, 0):
+                            merge_map.setdefault((r + dr, c + dc), (r, c))
+
+        def val(r, c):     return parsed.get((r, c), {}).get("value", "")
+        def is_extract(r, c):
+            cell = parsed.get((r, c)); return bool(cell and cell["extract"])
+        def empty(r, c):
+            cell = parsed.get((r, c)); return (cell is None) or (not cell["value"])
+
+        # Column headers — per column, the topmost text cell whose cell directly
+        # below is empty/extract (it heads a column of blanks = a real header).
+        col_header = {}
+        for c in range(max_c + 1):
+            for r in range(max_r + 1):
+                if val(r, c):
+                    if empty(r + 1, c) or is_extract(r + 1, c):
+                        col_header[c] = {"row": r, "text": val(r, c)}
+                    break   # only the topmost text cell of the column can be a header
+
+        # COMPONENT 3 — section boundaries (walk rows top-to-bottom).
+        row_section = {}
+        current_section = ""
+        prev_blank = True
+        for r in range(max_r + 1):
+            row_has_content = any(val(r, c) or is_extract(r, c) for c in range(max_c + 1))
+            c0 = val(r, 0)
+            if c0 and c0 != current_section and (empty(r + 1, 0) or is_extract(r + 1, 0) or prev_blank):
+                current_section = c0
+            row_section[r] = _slug(current_section) or "section"
+            prev_blank = not row_has_content
+
+        binding = {}
+        for r in range(max_r + 1):
+            for c in range(max_c + 1):
+                key = f"{r},{c}"
+                if (r, c) in merge_map:                         # 1. merged child
+                    pr, pc = merge_map[(r, c)]
+                    binding[key] = {"role": "merged_child", "parent": f"{pr},{pc}",
+                                    "extract": False, "section": row_section.get(r, "")}
+                    continue
+                v = val(r, c)
+                span = parsed.get((r, c), {}).get("span")
+                wide = isinstance(span, dict) and int(span.get("cols", 1) or 1) >= 2
+                if v:                                           # 2. text cell
+                    ch = col_header.get(c)
+                    if wide:
+                        binding[key] = {"role": "section_header", "text": v, "extract": False}
+                    elif ch and ch["row"] == r:
+                        binding[key] = {"role": "column_header", "text": v,
+                                        "col_index": c, "extract": False}
+                    elif empty(r, c + 1) or is_extract(r, c + 1):
+                        binding[key] = {"role": "label", "text": v,
+                                        "owns": f"{r},{c+1}", "extract": False}
+                    elif empty(r + 1, c) or is_extract(r + 1, c):
+                        binding[key] = {"role": "label", "text": v,
+                                        "owns": f"{r+1},{c}", "extract": False}
+                    else:
+                        binding[key] = {"role": "static_text", "text": v, "extract": False}
+                    binding[key]["section"] = row_section.get(r, "")
+                else:                                           # 3. empty cell
+                    left_lbl  = val(r, c - 1) if c > 0 else ""
+                    above_lbl = val(r - 1, c) if r > 0 else ""
+                    left_is_header = bool(c > 0 and col_header.get(c - 1, {}).get("row") == r)
+                    this_is_header_row = bool(col_header.get(c) and col_header[c]["row"] == r)
+                    if left_lbl and not left_is_header and not this_is_header_row:
+                        binding[key] = {"role": "value_target", "label": left_lbl,
+                                        "label_cell": f"{r},{c-1}", "extract": True,
+                                        "section": row_section.get(r, "")}
+                    elif above_lbl and col_header.get(c) is None:
+                        binding[key] = {"role": "value_target", "label": above_lbl,
+                                        "label_cell": f"{r-1},{c}", "extract": True,
+                                        "section": row_section.get(r, "")}
+                    else:
+                        ch = col_header.get(c)
+                        if ch and ch["row"] < r:               # b. inherit from column header above
+                            binding[key] = {
+                                "role": "table_data", "col_header": ch["text"],
+                                "col_header_cell": f"{ch['row']},{c}", "col_index": c,
+                                "row_index": r - ch["row"], "row_group": r,
+                                "section": row_section.get(r, ""),
+                                "extract": True, "inherit_from": f"{ch['row']},{c}",
+                            }
+                        else:
+                            neigh = [(r + dr, c + dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1)
+                                     if (dr, dc) != (0, 0)]
+                            if all(empty(nr, nc) for nr, nc in neigh):
+                                binding[key] = {"role": "section_spacer", "extract": False,
+                                                "section": row_section.get(r, "")}
+                            else:
+                                binding[key] = {"role": "unknown", "extract": True,
+                                                "needs_review": True,
+                                                "section": row_section.get(r, "")}
+
+        for r in range(max_r + 1):                              # row_siblings for table_data
+            sibs = [f"{r},{c}" for c in range(max_c + 1)
+                    if binding.get(f"{r},{c}", {}).get("role") == "table_data"]
+            if len(sibs) > 1:
+                for k in sibs:
+                    binding[k]["row_siblings"] = sibs
+
+        binding["_meta"] = {
+            "max_row": max_r, "max_col": max_c,
+            "has_table_data": any(b.get("role") == "table_data" for b in binding.values()),
+            "column_headers": {c: ch["text"] for c, ch in col_header.items()},
+        }
+        return binding
+    except Exception as e:
+        import traceback as _tb
+        print(f"[BINDING] compute_binding_map failed: {e}", flush=True)
+        print(_tb.format_exc(), flush=True)
+        return None
+
+
+def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
+                               system_instruction: str) -> tuple:
+    """
+    COMPONENT 4 — build the "extract & place" prompt used when the binding map shows
+    table_data cells (column headers but blank, unlabeled line-item rows).
+    """
+    import re as _re
+    meta        = binding_map.get("_meta", {})
+    col_headers = meta.get("column_headers", {})
+
+    def header_of(c):
+        return str(col_headers.get(c, col_headers.get(str(c), "")) or "")
+
+    VALUE_KW = {"amount", "amt", "value", "total", "balance", "price", "cost",
+                "qty", "quantity", "debit", "credit", "$", "net", "gross", "sum"}
+
+    td_cols = sorted({b["col_index"] for b in binding_map.values()
+                      if isinstance(b, dict) and b.get("role") == "table_data"
+                      and isinstance(b.get("col_index"), int)})
+
+    def is_value_col(c):
+        h = header_of(c).lower()
+        return any(kw in h for kw in VALUE_KW)
+
+    used, groups = set(), []
+    for c in td_cols:                       # pair value columns with the label column to their left
+        if c in used or not is_value_col(c):
+            continue
+        lc = next((x for x in range(c - 1, -1, -1) if x in td_cols and x not in used), None)
+        groups.append({"label_col": lc, "value_col": c})
+        used.add(c)
+        if lc is not None:
+            used.add(lc)
+    for c in td_cols:                       # leftovers: pair consecutively
+        if c in used:
+            continue
+        rc = next((x for x in td_cols if x > c and x not in used), None)
+        if rc is not None:
+            groups.append({"label_col": c, "value_col": rc}); used.add(c); used.add(rc)
+        else:
+            groups.append({"label_col": c, "value_col": None}); used.add(c)
+    groups.sort(key=lambda g: g["value_col"] if g["value_col"] is not None else g["label_col"])
+
+    def td_rows(col):
+        if col is None:
+            return []
+        return sorted(int(k.split(",")[0]) for k, b in binding_map.items()
+                      if isinstance(b, dict) and b.get("role") == "table_data"
+                      and b.get("col_index") == col)
+
+    fixed = sorted(
+        (_cell_ref(*map(int, k.split(","))), b["label"])
+        for k, b in binding_map.items()
+        if isinstance(b, dict) and b.get("role") == "value_target" and b.get("label")
+    )
+
+    desc = [
+        "=== EXTRACTION TASK (LAYOUT MODE) ===",
+        "This template provides a LAYOUT, not a fixed field list. The line-item rows "
+        "are BLANK. Read the document, extract ALL line items (both the item NAME and "
+        "its AMOUNT) for each section below, and place them into the grid.",
+        "",
+    ]
+    out_sections = []
+    for i, g in enumerate(groups, 1):
+        lc, vc = g["label_col"], g["value_col"]
+        lhdr = header_of(lc) if lc is not None else ""
+        vhdr = header_of(vc) if vc is not None else ""
+        slug = _re.sub(r'[^a-z0-9]+', '_', (lhdr or vhdr or f"section_{i}").lower()).strip('_') or f"section_{i}"
+        ss_rows = [r + 1 for r in (td_rows(vc) or td_rows(lc))]   # 1-based spreadsheet rows
+        lcl = _col_letter(lc) if lc is not None else ""
+        vcl = _col_letter(vc) if vc is not None else ""
+        desc.append(f'SECTION {i} — "{lhdr or vhdr}" '
+                    f'(labels -> column {lcl or "(none)"}, values -> column {vcl or "(none)"}):')
+        if ss_rows:
+            desc.append(f"  Available rows (spreadsheet row numbers): {', '.join(map(str, ss_rows))}")
+        desc.append(f"  Extract EVERY line item in this section. Put the item name in "
+                    f"column {lcl or '?'} and its amount in column {vcl or '?'}, one row per item, "
+                    f"starting at the first available row.")
+        desc.append("")
+        out_sections.append((slug, lcl, vcl, ss_rows[0] if ss_rows else 2))
+
+    if fixed:
+        desc.append("FIXED CELLS (labels already in the template — return the value only):")
+        desc += [f"  {ref} = {lbl}" for ref, lbl in fixed]
+        desc.append("")
+
+    seclines = [
+        f'      "{slug}": {{ "rows": [\n'
+        f'        {{"label_col": "{lcl}", "value_col": "{vcl}", "row": {first_row}, '
+        f'"label": "<item name from document>", "value": "<amount>"}}\n'
+        f'      ] }}'
+        for slug, lcl, vcl, first_row in out_sections
+    ]
+    fixed_example = ", ".join(f'"{ref}": {{"value": "<amount>", "confidence": "high"}}'
+                              for ref, _ in fixed[:4])
+
+    output_format = (
+        "Return ONLY valid JSON:\n{\n"
+        '  "document_type": "detected type",\n'
+        '  "overall_confidence": "high",\n'
+        '  "documents": [{\n'
+        '    "doc_index": 0,\n'
+        '    "layout_sections": {\n' + ",\n".join(seclines) + "\n    },\n"
+        '    "extracted_fields": {' + fixed_example + "}\n"
+        "  }]\n}\n"
+        "RULES:\n"
+        "- label_col/value_col are column LETTERS; row is the spreadsheet row NUMBER.\n"
+        "- Target a cell by combining them: column letter + row number (e.g. A + 2 = A2).\n"
+        "- Extract EVERY line item present in the document — do not stop at the number\n"
+        "  of available rows; add as many row objects as the document actually has.\n"
+        "- Numbers: strip $ and commas. Dates: YYYY-MM-DD. Missing: \"\".\n"
+        "- Put each section's items ONLY into that section's columns."
+    )
+
+    si = system_instruction + (
+        "\n\nLAYOUT EXTRACTION MODE:\n"
+        "The template's line-item rows are intentionally blank. Read the document and "
+        "reconstruct each section's line items (name + amount), then place them into "
+        "the designated label/value columns. Extract the document's ACTUAL content — "
+        "do not invent rows and do not omit any line item."
+    )
+    doc_text_use = _smart_truncate(doc_text, "table", {})
+    user_prompt = (
+        "\n".join(desc)
+        + "\n=== DOCUMENT TEXT ===\n"
+        + (doc_text_use if doc_text_use else "(See document image)")
+        + "\n\n=== OUTPUT FORMAT ===\n" + output_format + "\n"
+    )
+    print(f"[LAYOUT] prompt built: {len(groups)} section group(s), "
+          f"{len(fixed)} fixed cell(s)", flush=True)
+    return si, user_prompt
+
+
 def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     """
     Build extraction prompt split into (system_instruction, user_prompt).
@@ -1309,6 +1622,18 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
             f"({len(parallel_groups)} groups)",
             flush=True,
         )
+
+    # ── COMPONENT 6: layout-based extraction trigger ─────────────────────────
+    # When the binding map shows table_data cells (column headers but blank,
+    # unlabeled line-item rows), switch to the "extract & place" layout prompt.
+    # Field-based templates (explicit label→value pairs) keep the logic below.
+    binding_map = template_data.get("binding_map")
+    if isinstance(binding_map, dict) and binding_map.get("_meta", {}).get("has_table_data"):
+        try:
+            print("[PROMPT] layout-based extraction selected (table_data present)", flush=True)
+            return _build_layout_prompt_parts(binding_map, layout, doc_text, system_instruction)
+        except Exception as _lp_e:
+            print(f"[LAYOUT] prompt build failed ({_lp_e}) — using field-based prompt", flush=True)
 
     # Smart text truncation
     doc_text_use = _smart_truncate(doc_text, primary_mode, regions)
@@ -3038,6 +3363,9 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
         "extraction_method": "vision_primary",
         # FIX 4: persist the region analysis so export reuses it (no re-analysis)
         "template_regions": _regions_to_jsonable(regions),
+        # COMPONENT 5: layout-mode "extract & place" output (empty for field-based)
+        "layout_sections": (raw_doc.get("layout_sections")
+                            if isinstance(raw_doc.get("layout_sections"), dict) else {}),
         "table_mode": has_table and primary_mode == "table",
         "mixed_mode": has_table and primary_mode == "mixed",
         "table_rows": normalised_rows,
@@ -3287,6 +3615,21 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
                 template_data = {**template_data, "doc_type": doc_type}
                 print(f"[EXTRACT] {file_path.name}: auto-classified -> {doc_type}", flush=True)
 
+        # -- BINDING MAP (additive) -------------------------------------------
+        # Compute the neighbor-matrix binding map BEFORE prompt building. If it
+        # detects unlabeled table_data cells, extraction switches to layout mode
+        # inside _build_vision_prompt. Falls back silently to region analysis.
+        _use_layout = False
+        try:
+            _bm = compute_binding_map(template_data, template_data.get("layout", {}))
+            if _bm:
+                template_data = {**template_data, "binding_map": _bm}
+                _use_layout = bool(_bm.get("_meta", {}).get("has_table_data"))
+                print(f"[BINDING] {file_path.name}: binding map computed "
+                      f"(layout_mode={_use_layout})", flush=True)
+        except Exception as _bm_e:
+            print(f"[BINDING] {file_path.name}: skipped ({_bm_e})", flush=True)
+
         # -- LAYOUT MODE ------------------------------------------------------
         if mode == "layout":
             primary_mode = regions.get("primary_mode", "form_kv")
@@ -3295,7 +3638,9 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
                   f"pages={len(page_images)}", flush=True)
 
             # -- TABLE-ONLY MODE ----------------------------------------------
-            if primary_mode == "table":
+            # Layout-mode templates (unlabeled rows) must go to vision so the AI
+            # reads and places content — skip the pdfplumber table-direct path.
+            if primary_mode == "table" and not _use_layout:
                 # Try pdfplumber direct first
                 direct_rows = _extract_pdf_table_direct(file_path, template_data)
                 elapsed = (t.time() - start) * 1000
@@ -5434,6 +5779,18 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
         if width_px and c_idx <= max_c:
             ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(8, round(width_px / 7))
 
+    # COMPONENT 5: layout-mode output (extract & place) takes priority when present
+    def _has_layout(d):
+        ed = d.get_extracted_data()
+        ls = ed.get("layout_sections") if isinstance(ed, dict) else None
+        return isinstance(ls, dict) and any(
+            isinstance(s, dict) and s.get("rows") for s in ls.values()
+        )
+    if any(_has_layout(d) for d in doc_results):
+        print("[EXPORT] routing: layout-mode writer", flush=True)
+        _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        return
+
     # Route based on template structure — authoritative, never stale
     primary_mode = (template_regions or {}).get("primary_mode", "form_kv")
 
@@ -5446,6 +5803,83 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
     else:
         # form_with_targets, form_kv, two_column — all use form writer
         _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
+
+
+def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
+    """
+    COMPONENT 5 — layout-aware writer. Writes the static template cells (headers,
+    totals labels), then places each layout_sections row's label/value into the
+    designated columns at the AI-specified spreadsheet row, then writes fixed
+    extracted_fields (e.g. totals) by cell reference.
+    """
+    from openpyxl.utils import column_index_from_string, coordinate_from_string
+
+    # 1. Static template cells (column headers, section/total labels, etc.)
+    for key, cell_def in cells_tpl.items():
+        if not isinstance(cell_def, dict):
+            continue
+        parts = key.split(",")
+        if len(parts) != 2:
+            continue
+        try:
+            tr, tc = int(parts[0]), int(parts[1])
+        except ValueError:
+            continue
+        v = str(cell_def.get("value") or "").strip()
+        xl = ws.cell(row=tr + 1, column=tc + 1)
+        if v:
+            xl.value = v
+        if cell_def.get("style"):
+            _apply_cell_style(xl, cell_def["style"], openpyxl_mod)
+
+    def _set_num(cell, raw):
+        s = str(raw).replace(",", "").replace("$", "").strip()
+        try:
+            if s and re.match(r'^-?[0-9]+\.?[0-9]*$', s):
+                cell.value = float(s) if "." in s else int(s)
+                return
+        except (ValueError, TypeError):
+            pass
+        cell.value = str(raw)
+
+    # 2. Dynamic content + 3. fixed cells, per document
+    for doc in doc_results:
+        ed = doc.get_extracted_data()
+        ls = ed.get("layout_sections", {}) if isinstance(ed, dict) else {}
+        for sec in (ls.values() if isinstance(ls, dict) else []):
+            if not isinstance(sec, dict):
+                continue
+            for row in sec.get("rows", []) or []:
+                if not isinstance(row, dict):
+                    continue
+                try:
+                    rnum = int(row.get("row"))
+                except (TypeError, ValueError):
+                    continue
+                lc = str(row.get("label_col") or "").strip().upper()
+                vc = str(row.get("value_col") or "").strip().upper()
+                lbl, vval = row.get("label"), row.get("value")
+                if lc and lbl not in (None, ""):
+                    try:
+                        ws.cell(row=rnum, column=column_index_from_string(lc)).value = str(lbl)
+                    except Exception:
+                        pass
+                if vc and vval not in (None, ""):
+                    try:
+                        _set_num(ws.cell(row=rnum, column=column_index_from_string(vc)), vval)
+                    except Exception:
+                        pass
+        for ref, v in (ed.get("extracted_fields", {}) or {}).items():
+            value = v.get("value", "") if isinstance(v, dict) else v
+            if value in (None, ""):
+                continue
+            try:
+                col_letter, rownum = coordinate_from_string(str(ref))
+                _set_num(ws.cell(row=rownum, column=column_index_from_string(col_letter)), value)
+            except Exception:
+                continue
+
+    print(f"[EXPORT] layout: wrote {len(doc_results)} document block(s)", flush=True)
 
 
 def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod):
