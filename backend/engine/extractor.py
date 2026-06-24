@@ -27,8 +27,14 @@ Heavy primitives are imported lazily from app.api.routes.extract to avoid code
 duplication and import cycles.
 """
 
+import re
 import time
 from pathlib import Path
+
+
+def _norm_section(s) -> str:
+    """Fuzzy section-key normalisation: lowercase, strip non-alphanumerics."""
+    return re.sub(r'[^a-z0-9]+', '', str(s or "").lower())
 
 
 def _unwrap_doc(parsed):
@@ -175,6 +181,56 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
                     d0["layout_sections"] = conv
                     print(f"[EXTRACTOR] {file_path.name}: converted extracted_fields "
                           f"-> layout_sections", flush=True)
+
+        # STEP 5c — SECTION COMPLETENESS (layout mode). Compare the sections Gemini
+        # returned against the sections described in the prompt (fuzzy match). If any
+        # are missing: retry once with an INCOMPLETE-RESPONSE directive, then
+        # reconstruct any still-missing section from extracted_fields.
+        if is_layout and isinstance(d0, dict):
+            expected = [g.get("section_label", "")
+                        for g in (binding_map or {}).get("_meta", {}).get("column_groups", [])]
+
+            def _missing(layout):
+                got = {_norm_section(k) for k in (layout or {}).keys()}
+                return [s for s in expected if s and _norm_section(s) not in got]
+
+            miss = _missing(d0.get("layout_sections", {}))
+            if miss:
+                print(f"[EXTRACTOR] {file_path.name}: incomplete response — missing "
+                      f"sections: {miss} — retrying", flush=True)
+                comp = ("INCOMPLETE RESPONSE DETECTED. Your previous response was missing "
+                        f"these required sections: {', '.join(miss)}. You MUST include ALL "
+                        "sections. Each section must have at least one row of extracted "
+                        "line items.\n\n")
+                try:
+                    re2 = (orchestrator.llm.extract(
+                                image_b64=page_img, prompt=comp + prompt,
+                                system_instruction=system_instruction)
+                           if page_img else
+                           orchestrator.llm.extract(
+                                text=doc_text, prompt=comp + prompt,
+                                system_instruction=system_instruction))
+                    if re2 and re2.success and re2.parsed_json:
+                        rd2 = _unwrap_doc(re2.parsed_json)
+                        if (rd2.get("layout_sections")
+                                and len(_missing(rd2["layout_sections"])) < len(miss)):
+                            raw, extraction, d0 = re2.parsed_json, re2, rd2
+                            print(f"[EXTRACTOR] {file_path.name}: retry recovered sections", flush=True)
+                except Exception as e:
+                    print(f"[EXTRACTOR] completeness retry error: {e}", flush=True)
+
+                still = _missing(d0.get("layout_sections", {}))
+                if still and d0.get("extracted_fields"):
+                    conv = _convert_extracted_fields_to_layout(
+                        d0.get("extracted_fields", {}), binding_map or {})
+                    ls = d0.setdefault("layout_sections", {})
+                    for s in still:
+                        for ck, cv in conv.items():
+                            if _norm_section(ck) == _norm_section(s) and cv.get("rows"):
+                                ls[ck] = cv
+                                print(f"[EXTRACTOR] {file_path.name}: reconstructed section "
+                                      f"'{s}' from extracted_fields", flush=True)
+                                break
 
         # field mode but model returned layout_sections -> flatten to extracted_fields
         if (not is_layout and isinstance(d0, dict)

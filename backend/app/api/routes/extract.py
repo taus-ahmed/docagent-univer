@@ -1546,11 +1546,23 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
             _seen_slugs[slug] = 1
         desc.append(f'SECTION: "{sec_label}" (rows {start_ss} to {end_ss})')
         desc.append(f'  Column {lcl} = labels, Column {vcl} = values')
-        desc.append(f'  Extract ALL "{sec_label}" line items from the document — item '
-                    f'name into column {lcl}, amount into column {vcl}, one row per item, '
-                    f'using only rows {start_ss}-{end_ss}.')
+        desc.append(f'  MANDATORY: Extract EVERY individual line item found in the '
+                    f'"{sec_label}" portion of the document. Each line item gets its '
+                    f'own row (name into column {lcl}, amount into column {vcl}, rows '
+                    f'{start_ss}-{end_ss}). The section TOTAL goes in the fixed cell '
+                    f'listed below — NOT in this section\'s rows.')
+        desc.append(f'  This section MUST be present in your response with at least one '
+                    f'row. Do not skip any section.')
         desc.append("")
         out_sections.append((slug, lcl, vcl, start_ss))
+
+    # Global completeness directive — every section is required.
+    if out_sections:
+        _names = ", ".join(f'"{s[0]}"' for s in out_sections)
+        desc.insert(3, f'There are {len(out_sections)} sections. Your layout_sections '
+                       f'response MUST contain ALL of them: {_names}. Each must have '
+                       f'at least one row.')
+        desc.insert(4, "")
 
     if fixed:
         desc.append("FIXED CELLS (labels already in the template — return the value only):")
