@@ -13,6 +13,46 @@ from config import settings
 logger = logging.getLogger("docagent.llm_router")
 
 
+# ============================================================================
+# TEMPORARY DEBUG — capture the raw LLM response exactly as received, BEFORE
+# any cell-mapping / normalization / Excel writing happens.
+# Writes backend/debug_output/last_extraction_raw.json on every extract() call.
+# Remove this block (and the _dump_raw_extraction call in extract()) once the
+# extraction-pipeline investigation is finished.
+# ============================================================================
+import json as _dbg_json
+import time as _dbg_time
+from pathlib import Path as _DbgPath
+
+# backend/engine/connectors/llm_router.py -> parents[2] == backend/
+_DEBUG_DIR = _DbgPath(__file__).resolve().parents[2] / "debug_output"
+
+
+def _dump_raw_extraction(provider, result, use_vision: bool, prompt: str) -> None:
+    """Persist the raw LLM response for inspection. Never raises."""
+    try:
+        _DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+        record = {
+            "captured_at": _dbg_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "provider": type(provider).__name__,
+            "model_used": getattr(result, "model_used", ""),
+            "input_mode": "vision(image)" if use_vision else "text",
+            "tokens_used": getattr(result, "tokens_used", 0),
+            "success": getattr(result, "success", False),
+            "prompt_preview": (prompt or "")[:1500],
+            # raw_text = the provider's response string exactly as received
+            "raw_text": getattr(result, "raw_text", ""),
+            # parsed_json = json.loads() of that text, BEFORE any transformation
+            "parsed_json": getattr(result, "parsed_json", None),
+        }
+        out = _DEBUG_DIR / "last_extraction_raw.json"
+        out.write_text(_dbg_json.dumps(record, indent=2, default=str, ensure_ascii=False),
+                       encoding="utf-8")
+        print(f"[DEBUG] raw extraction response saved -> {out}", flush=True)
+    except Exception as _e:  # debug must never break extraction
+        print(f"[DEBUG] failed to dump raw extraction: {_e}", flush=True)
+
+
 class LLMRouter:
     """Intelligent routing between LLM providers with automatic fallback."""
 
@@ -107,19 +147,23 @@ class LLMRouter:
                     )
                 else:
                     # Groq / other providers: prepend system_instruction to prompt
-                    # so they receive full context even without native si support
+                    # so they receive full context even without native si support.
                     full_prompt = (
                         f"{system_instruction}\n\n{prompt}"
                         if system_instruction else prompt
                     )
+                    # Groq vision takes a single image — use the first page if a
+                    # multi-image list was passed (Gemini handles the full list).
+                    groq_img = image_b64[0] if isinstance(image_b64, (list, tuple)) and image_b64 else image_b64
                     result = (
-                        provider.extract_data_vision(image_b64, full_prompt)
+                        provider.extract_data_vision(groq_img, full_prompt)
                         if use_vision else
                         provider.extract_data(text, full_prompt)
                     )
 
                 if result.success:
                     self._track(provider)
+                    _dump_raw_extraction(provider, result, use_vision, prompt)  # TEMP DEBUG
                     return result
 
                 logger.warning(f"Extraction {name} failed: {result.error[:100]}")

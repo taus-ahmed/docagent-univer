@@ -6125,12 +6125,16 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 chosen = groups[-1]          # no group covers this row -> last group
             if not chosen:
                 return lc, vc
-            new_lc = lc if not need_lc else (chosen.get("label_col_letter") or lc).upper()
-            new_vc = vc if not need_vc else (chosen.get("value_col_letter") or vc).upper()
+            # FIX 2: once we remap a row, correct BOTH columns to the chosen group's
+            # columns — not just the label. (Previously new_vc was only corrected when
+            # vc was out of bounds, so an in-bounds-but-wrong value column like "E"
+            # was left as "A/E" instead of "A/B".)
+            new_lc = (chosen.get("label_col_letter") or lc).upper()
+            new_vc = (chosen.get("value_col_letter") or vc).upper()
             if (new_lc, new_vc) != (lc, vc):
-                print(f"[LAYOUT-FIX] row {rnum} remapped {lc or '<none>'}/{vc or '<none>'} -> "
-                      f"{new_lc}/{new_vc} via binding_column_groups "
-                      f"(group '{chosen.get('section_label','')}')", flush=True)
+                print(f"[LAYOUT-FIX] row {rnum}: label {lc or '<none>'} -> {new_lc}, "
+                      f"value {vc or '<none>'} -> {new_vc} via binding_column_groups "
+                      f"(group '{chosen.get('section_label', '')}')", flush=True)
             return new_lc, new_vc
 
         for sec_key, sec in (ls.items() if isinstance(ls, dict) else []):
