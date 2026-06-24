@@ -1472,32 +1472,79 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
     # ── PARALLEL COLUMN GROUPS (takes priority over flat kv_pairs) ───────────────
     parallel_groups = regions.get("parallel_column_groups", [])
     if parallel_groups:
-        lines.append(f"=== {len(parallel_groups)} PARALLEL COLUMN GROUPS ===")
+        # Build the target list DIRECTLY from the template grid (not from
+        # pg["items"], which can be incomplete when empty value cells aren't
+        # stored as grid entries). For each group's column band, list EVERY row
+        # that has a label in the label column whose value cell is empty/extract
+        # — that is an extraction target. This guarantees Gemini is told exactly
+        # which cells to fill instead of guessing.
+        grid_cells = layout.get("cells", {})
+
+        def _grid_val(row, col):
+            c = grid_cells.get(f"{row},{col}")
+            return str(c.get("value") or "").strip() if isinstance(c, dict) else ""
+
+        def _is_target_value_cell(row, col):
+            """True when the value cell is empty/missing or explicitly an
+            extract target (i.e. NOT a static header like 'Amount')."""
+            c = grid_cells.get(f"{row},{col}")
+            if not isinstance(c, dict):
+                return True                      # not stored → empty → target
+            if c.get("extractTarget"):
+                return True
+            return not str(c.get("value") or "").strip()
+
+        lines.append("=== EXTRACTION TARGETS — fill EXACTLY these cells ===")
         lines.append(
-            "This template has INDEPENDENT side-by-side column groups.\n"
-            "Each group has its OWN section with separate labels and values.\n"
-            "You MUST fill values for ALL groups — leaving any group empty is WRONG."
+            "This template has INDEPENDENT side-by-side column groups. Below is "
+            "the COMPLETE list of every cell you must fill, each with the label "
+            "that sits next to it. Fill EVERY listed cell."
         )
         lines.append("")
+
+        total_targets = 0
         for pg in parallel_groups:
-            gid  = pg["group_id"]
-            slbl = pg["section_label"]
-            l_c  = pg["label_col_letter"]
-            v_c  = pg["value_col_letter"]
+            gid       = pg["group_id"]
+            slbl      = pg["section_label"]
+            label_col = pg["label_col"]
+            value_col = pg["value_col"]
+            v_c       = pg["value_col_letter"]
+
+            # Every row that has a label cell in this group's label column.
+            label_rows = sorted({
+                int(k.split(",")[0])
+                for k in grid_cells
+                if "," in k
+                and k.split(",")[1].isdigit()
+                and int(k.split(",")[1]) == label_col
+            })
+
+            lines.append(f"GROUP {gid} — \"{slbl}\" (Column {v_c}):")
+            group_target_count = 0
+            for r in label_rows:
+                label = _grid_val(r, label_col)
+                if not label:
+                    continue
+                if not _is_target_value_cell(r, value_col):
+                    continue          # static header (e.g. "Amount") — not a target
+                lines.append(f"  {_cell_ref(r, value_col)} = {label}")
+                group_target_count += 1
+                total_targets += 1
+            if group_target_count == 0:
+                lines.append("  (no extraction targets detected in this group)")
             lines.append(
-                f"GROUP {gid} — \"{slbl}\" "
-                f"(labels in col {l_c}, amounts into col {v_c}):"
+                f"  Put ONLY values from the \"{slbl}\" section into column {v_c}; "
+                f"do NOT put another section's values here."
             )
-            lines.append(
-                f"  Fill column {v_c} cells ONLY with values "
-                f"from the \"{slbl}\" section of the document."
-            )
-            lines.append(
-                f"  Do NOT put values from any other section into this group."
-            )
-            for item in pg["items"][:30]:
-                lines.append(f"  [{item['value_ref']}] = \"{item['label']}\"")
             lines.append("")
+
+        lines.append(
+            f"Return EXACTLY these {total_targets} cell references as the keys in "
+            "extracted_fields (use the cell reference, e.g. B2 or D10, as the key). "
+            "Do NOT invent other cell references and do NOT omit any listed cell. "
+            "If a value is genuinely absent from the document, return \"\" for that cell."
+        )
+        lines.append("")
 
     # ── FORM FIELDS ────────────────────────────────────────────────────────────
     elif explicit_targets:
