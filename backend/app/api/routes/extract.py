@@ -4918,9 +4918,19 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
         # correctly LLM-extracted fields to be flagged as low confidence.
         primary_mode = regions.get("primary_mode", "form_kv")
         _pdf_has_text = bool(doc_text) and _is_text_pdf(file_path)
+        # Layout-mode templates (unlabeled line-item rows, table_data cells) MUST go
+        # to the layout-aware LLM call — pdfplumber can only produce cell-ref
+        # extracted_fields and cannot reconstruct layout_sections, so letting it win
+        # here silently drops the layout output. Skip the pdfplumber-first path.
+        _is_layout_mode = bool(
+            template_data.get("binding_map", {}).get("_meta", {}).get("has_table_data")
+        )
         if not _pdf_has_text and doc_text:
             print(f"[PLUMBER] {file_path.name}: no extractable text — skipping pdfplumber, LLM only", flush=True)
-        if _pdf_has_text and primary_mode in ("form_kv", "form_with_targets", "parallel_groups", "mixed"):
+        if _is_layout_mode:
+            print(f"[PLUMBER] {file_path.name}: layout-mode template — skipping pdfplumber-first, using layout LLM", flush=True)
+        if (_pdf_has_text and not _is_layout_mode
+                and primary_mode in ("form_kv", "form_with_targets", "parallel_groups", "mixed")):
             _plumber_ef = _pdfplumber_extract_form_fields(doc_text, regions)
 
             # For parallel_groups AND mixed-mode templates that have parallel column groups
@@ -5822,7 +5832,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     designated columns at the AI-specified spreadsheet row, then writes fixed
     extracted_fields (e.g. totals) by cell reference.
     """
-    from openpyxl.utils import column_index_from_string, coordinate_from_string
+    from openpyxl.utils.cell import column_index_from_string, coordinate_from_string
 
     # 1. Static template cells (column headers, section/total labels, etc.)
     for key, cell_def in cells_tpl.items():
