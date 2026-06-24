@@ -3556,7 +3556,14 @@ def _pdfplumber_spatial_extract(file_path: Path, regions: dict, layout: dict,
                 clusters.append([wx0, wx1])
         return clusters
 
-    _clusters = _pdf_x_clusters(words)
+    # FIX B: exclude page-spanning words (title/header rows) before clustering —
+    # a word wider than 60% of the page width bridges column gaps and collapses
+    # distinct columns into one wide cluster.
+    _cluster_words = [
+        w for w in words
+        if (float(w.get("x1", 0)) - float(w.get("x0", 0))) <= pw * 0.6
+    ]
+    _clusters = _pdf_x_clusters(_cluster_words)
     _tpl_cols = sorted({c for pg in para_groups for c in (pg["label_col"], pg["value_col"])})
     _pdf_col_bands: dict = {}
     if _tpl_cols and len(_clusters) == len(_tpl_cols):
@@ -4521,8 +4528,16 @@ def _vision_extract_all_documents(orchestrator, file_path, template_data,
             n_tpl = len(_all_items)
             coverage = n_plumber / n_tpl if n_tpl else 0
             # Use pdfplumber result when label-matched coverage is high enough
-            # OR when dynamic fill found items (dynamic items are not counted in n_tpl).
-            use_plumber = coverage >= 0.5 or bool(_dyn_ef)
+            # OR when dynamic fill found REAL values (not just empty header-clears).
+            # FIX A: an all-empty _dyn_ef (e.g. spatial clustering failed) must NOT
+            # count as success — otherwise the empty result is used and the LLM is
+            # skipped, producing a template with all value cells blank.
+            has_real_values = any(
+                str(v.get("value", "")).strip()
+                for v in _dyn_ef.values()
+                if isinstance(v, dict)
+            )
+            use_plumber = coverage >= 0.5 or has_real_values
             print(
                 f"[PLUMBER] {file_path.name}: coverage {n_plumber}/{n_tpl} "
                 f"({coverage:.0%}) dyn={len(_dyn_ef)} — "
