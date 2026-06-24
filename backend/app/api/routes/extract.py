@@ -3663,6 +3663,19 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
     import time as t
     from core.preprocessor import preprocess_file
 
+    # ── Feature flag: clean v3 extraction engine (engine/extractor.py) ───────
+    # When USE_NEW_EXTRACTOR is on, delegate to the rewritten vision-first
+    # pipeline. Any failure falls back to the legacy path below (safe rollback).
+    if getattr(settings, "USE_NEW_EXTRACTOR", False):
+        try:
+            from extractor import run_extraction as _v3_run
+            print(f"[EXTRACT] {file_path.name}: using v3 engine (USE_NEW_EXTRACTOR=true)", flush=True)
+            return _v3_run(orchestrator, file_path, template_data,
+                           selected_pages=selected_pages)
+        except Exception as _v3_err:
+            print(f"[EXTRACT] v3 engine failed ({_v3_err}) — falling back to legacy", flush=True)
+            traceback.print_exc()
+
     doc_type = template_data.get("doc_type", "other")
     mode = template_data.get("mode", "columns")
     regions = template_data.get("regions", {})
