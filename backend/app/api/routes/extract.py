@@ -763,6 +763,14 @@ def _analyse_template_regions(layout: dict) -> dict:
     )
     if parallel_column_groups:
         primary_mode = "parallel_groups"
+        # FIX 1: when parallel groups are active, suppress all other region
+        # interpretations so ONLY parallel-group instructions reach the AI.
+        # Leaving these populated makes the prompt contradictory (telling Gemini
+        # to fill cells AND extract tables AND transpose the same grid).
+        table_regions = []
+        transposed_tables = []
+        two_col_pairs = []
+        has_table = False
 
     return {
         "primary_mode":            primary_mode,
@@ -1517,7 +1525,9 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
         lines.append("")
 
     # ── TABLES ─────────────────────────────────────────────────────────────────
-    if table_regions:
+    # FIX 1: never render table instructions for parallel-group templates,
+    # even if table_regions somehow survived region analysis.
+    if table_regions and primary_mode != "parallel_groups":
         n = len(table_regions)
 
         # Group by row to detect same-row tables
@@ -1586,7 +1596,8 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
 
     # ── TRANSPOSED TABLES ──────────────────────────────────────────────────────
     transposed = regions.get("transposed_tables", [])
-    if transposed:
+    # FIX 1: never render transposed-table instructions for parallel-group templates.
+    if transposed and primary_mode != "parallel_groups":
         lines.append("=== TRANSPOSED TABLE (horizontal layout) ===")
         lines.append("This template has a HORIZONTAL table where:")
         lines.append("  - Row LABELS are in the leftmost column (column A)")
