@@ -1412,6 +1412,30 @@ def compute_binding_map(template_data: dict, grid: dict):
             ch = col_header.get(c)
             return ch["text"] if ch else ""
 
+        # Distinguish a SECTION HEADER from a TOTALS row (both have label text in the
+        # label column and an empty value cell → value_target structurally). Generic,
+        # no document-type terms. A section header: label text is not a total-like
+        # word, is not purely numeric, and is followed by empty fill rows below it.
+        _TOTAL_INDICATORS = ("total", "sum", "subtotal", "grand", "net", "balance",
+                             "amount due", "amount payable")
+
+        def _is_section_header(row_idx, label_col):
+            label_text = val(row_idx, label_col)
+            if not label_text:
+                return False
+            low = label_text.lower()
+            if any(ind in low for ind in _TOTAL_INDICATORS):
+                return False
+            if (label_text.replace(",", "").replace(".", "").replace("-", "")
+                          .replace("$", "").replace("%", "").isdigit()):
+                return False
+            empty_below = 0
+            for r in range(row_idx + 1, row_idx + 5):
+                if val(r, label_col):
+                    break
+                empty_below += 1
+            return empty_below >= 1
+
         _td_cols = sorted({b["col_index"] for b in binding.values()
                            if isinstance(b, dict) and b.get("role") == "table_data"
                            and isinstance(b.get("col_index"), int)})
@@ -1441,16 +1465,12 @@ def compute_binding_map(template_data: dict, grid: dict):
             if not fill_rows:
                 continue
             anchor = lc if lc is not None else 0
-            # header rows = rows with text in the anchor (label) column whose VALUE
-            # cell is a static header (e.g. "Amount") — NOT a fill cell and NOT a
-            # single value_target (a totals row is not a new section). These delimit
-            # the vertical sections within this pair.
-            header_rows = sorted(
-                r for r in range(max_r + 1)
-                if val(r, anchor)
-                and binding.get(f"{r},{anchor}", {}).get("role") != "table_data"
-                and binding.get(f"{r},{vc}", {}).get("role") not in ("table_data", "value_target")
-            )
+            # Header rows delimit the vertical sections within this pair. Use the
+            # section-header test (label text that is not a total/numeric word and is
+            # followed by empty fill rows) so a section header with an EMPTY value cell
+            # (e.g. "Current liabilities") is detected, while totals rows are excluded.
+            header_rows = sorted(r for r in range(max_r + 1)
+                                 if _is_section_header(r, anchor))
             buckets = {}
             for fr in fill_rows:
                 hr = max((h for h in header_rows if h < fr), default=-1)
