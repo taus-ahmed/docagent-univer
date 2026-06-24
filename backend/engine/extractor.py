@@ -72,10 +72,13 @@ def _build_narrow_section_prompt(group, doc_type, fixed_cells, doc_text):
         f"Value column: {vcl}\n"
         f"Template rows: {start} to {end}\n\n"
         f"Find the {sec} portion of the document.\n"
-        "Extract EVERY line item from this section ONLY.\n"
-        "Place each item using ONLY these columns:\n"
-        f"  labels -> column {lcl}\n"
-        f"  values -> column {vcl}\n"
+        "Extract EVERY line item from this section ONLY.\n\n"
+        "Each row object in your response MUST have ALL of these keys:\n"
+        f'  "label_col": "{lcl}"   (always exactly "{lcl}", NEVER empty or null)\n'
+        f'  "value_col": "{vcl}"   (always exactly "{vcl}", NEVER empty or null)\n'
+        f'  "row": <spreadsheet row number, from {start} to {end}>\n'
+        '  "label": <the item name from the document>\n'
+        '  "value": <the item value from the document>\n'
         f"{fixed_block}\n"
         "Return ONLY this JSON — nothing else:\n"
         "{\n"
