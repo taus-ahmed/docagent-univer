@@ -1400,10 +1400,82 @@ def compute_binding_map(template_data: dict, grid: dict):
                 for k in sibs:
                     binding[k]["row_siblings"] = sibs
 
+        # ── Section-aware COLUMN GROUPS (generic multi-section support) ───────
+        # Pair each value column with the label column to its left, then split
+        # each pair's fill (table_data) rows into VERTICAL SECTIONS delimited by
+        # header rows in the label column. Works for side-by-side AND stacked
+        # repeated sections (balance sheet, payslip, P&L, ...) — no hardcoding.
+        _VALUE_KW = {"amount", "amt", "value", "total", "balance", "price", "cost",
+                     "qty", "quantity", "debit", "credit", "$", "net", "gross", "sum"}
+
+        def _chdr(c):
+            ch = col_header.get(c)
+            return ch["text"] if ch else ""
+
+        _td_cols = sorted({b["col_index"] for b in binding.values()
+                           if isinstance(b, dict) and b.get("role") == "table_data"
+                           and isinstance(b.get("col_index"), int)})
+        _usedc, _pairs = set(), []
+        for c in _td_cols:                       # value columns paired with the label col to their left
+            if c in _usedc or not any(kw in _chdr(c).lower() for kw in _VALUE_KW):
+                continue
+            lc = next((x for x in range(c - 1, -1, -1) if x in _td_cols and x not in _usedc), None)
+            _pairs.append((lc, c)); _usedc.add(c)
+            if lc is not None:
+                _usedc.add(lc)
+        for c in _td_cols:                       # leftovers: pair consecutively
+            if c in _usedc:
+                continue
+            rc = next((x for x in _td_cols if x > c and x not in _usedc), None)
+            if rc is not None:
+                _pairs.append((c, rc)); _usedc.add(c); _usedc.add(rc)
+            else:
+                _pairs.append((c, None)); _usedc.add(c)
+
+        column_groups, _gid = [], 0
+        for (lc, vc) in _pairs:
+            if vc is None:
+                continue
+            fill_rows = sorted(r for r in range(max_r + 1)
+                               if binding.get(f"{r},{vc}", {}).get("role") == "table_data")
+            if not fill_rows:
+                continue
+            anchor = lc if lc is not None else 0
+            # header rows = rows with text in the anchor (label) column whose VALUE
+            # cell is a static header (e.g. "Amount") — NOT a fill cell and NOT a
+            # single value_target (a totals row is not a new section). These delimit
+            # the vertical sections within this pair.
+            header_rows = sorted(
+                r for r in range(max_r + 1)
+                if val(r, anchor)
+                and binding.get(f"{r},{anchor}", {}).get("role") != "table_data"
+                and binding.get(f"{r},{vc}", {}).get("role") not in ("table_data", "value_target")
+            )
+            buckets = {}
+            for fr in fill_rows:
+                hr = max((h for h in header_rows if h < fr), default=-1)
+                buckets.setdefault(hr, []).append(fr)
+            for hr in sorted(buckets):
+                rows = sorted(buckets[hr])
+                slabel = (val(hr, anchor) if hr >= 0
+                          else (_chdr(lc) if lc is not None else _chdr(vc)))
+                _gid += 1
+                column_groups.append({
+                    "group_id": _gid,
+                    "section_label": slabel or f"section_{_gid}",
+                    "label_col": lc, "value_col": vc,
+                    "label_col_letter": _col_letter(lc) if lc is not None else "",
+                    "value_col_letter": _col_letter(vc),
+                    "start_row": rows[0], "end_row": rows[-1],
+                    "rows": rows,
+                })
+        column_groups.sort(key=lambda g: (g["start_row"], g["value_col"]))
+
         binding["_meta"] = {
             "max_row": max_r, "max_col": max_c,
             "has_table_data": any(b.get("role") == "table_data" for b in binding.values()),
             "column_headers": {c: ch["text"] for c, ch in col_header.items()},
+            "column_groups": column_groups,
         }
         return binding
     except Exception as e:
@@ -1416,52 +1488,35 @@ def compute_binding_map(template_data: dict, grid: dict):
 def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
                                system_instruction: str) -> tuple:
     """
-    COMPONENT 4 — build the "extract & place" prompt used when the binding map shows
-    table_data cells (column headers but blank, unlabeled line-item rows).
+    COMPONENT 4 — build the "extract & place" prompt for layout templates. Uses the
+    section-aware column_groups from the binding map so EVERY vertical section
+    (side-by-side AND stacked) is described with its own explicit row range.
     """
     import re as _re
-    meta        = binding_map.get("_meta", {})
-    col_headers = meta.get("column_headers", {})
+    meta           = binding_map.get("_meta", {})
+    column_groups  = meta.get("column_groups", [])
+    col_headers    = meta.get("column_headers", {})
 
-    def header_of(c):
-        return str(col_headers.get(c, col_headers.get(str(c), "")) or "")
-
-    VALUE_KW = {"amount", "amt", "value", "total", "balance", "price", "cost",
-                "qty", "quantity", "debit", "credit", "$", "net", "gross", "sum"}
-
-    td_cols = sorted({b["col_index"] for b in binding_map.values()
-                      if isinstance(b, dict) and b.get("role") == "table_data"
-                      and isinstance(b.get("col_index"), int)})
-
-    def is_value_col(c):
-        h = header_of(c).lower()
-        return any(kw in h for kw in VALUE_KW)
-
-    used, groups = set(), []
-    for c in td_cols:                       # pair value columns with the label column to their left
-        if c in used or not is_value_col(c):
-            continue
-        lc = next((x for x in range(c - 1, -1, -1) if x in td_cols and x not in used), None)
-        groups.append({"label_col": lc, "value_col": c})
-        used.add(c)
-        if lc is not None:
-            used.add(lc)
-    for c in td_cols:                       # leftovers: pair consecutively
-        if c in used:
-            continue
-        rc = next((x for x in td_cols if x > c and x not in used), None)
-        if rc is not None:
-            groups.append({"label_col": c, "value_col": rc}); used.add(c); used.add(rc)
-        else:
-            groups.append({"label_col": c, "value_col": None}); used.add(c)
-    groups.sort(key=lambda g: g["value_col"] if g["value_col"] is not None else g["label_col"])
-
-    def td_rows(col):
-        if col is None:
-            return []
-        return sorted(int(k.split(",")[0]) for k, b in binding_map.items()
-                      if isinstance(b, dict) and b.get("role") == "table_data"
-                      and b.get("col_index") == col)
+    # Fallback: derive minimal groups if column_groups is unexpectedly empty.
+    if not column_groups:
+        td_cols = sorted({b["col_index"] for b in binding_map.values()
+                          if isinstance(b, dict) and b.get("role") == "table_data"
+                          and isinstance(b.get("col_index"), int)})
+        for i in range(0, len(td_cols), 2):
+            lc = td_cols[i]
+            vc = td_cols[i + 1] if i + 1 < len(td_cols) else None
+            if vc is None:
+                continue
+            rows = sorted(int(k.split(",")[0]) for k, b in binding_map.items()
+                          if isinstance(b, dict) and b.get("role") == "table_data"
+                          and b.get("col_index") == vc)
+            if rows:
+                column_groups.append({
+                    "group_id": i // 2 + 1,
+                    "section_label": str(col_headers.get(lc, col_headers.get(str(lc), "")) or f"section_{i}"),
+                    "label_col_letter": _col_letter(lc), "value_col_letter": _col_letter(vc),
+                    "start_row": rows[0], "end_row": rows[-1],
+                })
 
     fixed = sorted(
         (_cell_ref(*map(int, k.split(","))), b["label"])
@@ -1473,27 +1528,29 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
         "=== EXTRACTION TASK (LAYOUT MODE) ===",
         "This template provides a LAYOUT, not a fixed field list. The line-item rows "
         "are BLANK. Read the document, extract ALL line items (both the item NAME and "
-        "its AMOUNT) for each section below, and place them into the grid.",
+        "its AMOUNT) for EACH section below, and place them into the grid. Each section "
+        "has its OWN row range and columns — keep sections separate.",
         "",
     ]
-    out_sections = []
-    for i, g in enumerate(groups, 1):
-        lc, vc = g["label_col"], g["value_col"]
-        lhdr = header_of(lc) if lc is not None else ""
-        vhdr = header_of(vc) if vc is not None else ""
-        slug = _re.sub(r'[^a-z0-9]+', '_', (lhdr or vhdr or f"section_{i}").lower()).strip('_') or f"section_{i}"
-        ss_rows = [r + 1 for r in (td_rows(vc) or td_rows(lc))]   # 1-based spreadsheet rows
-        lcl = _col_letter(lc) if lc is not None else ""
-        vcl = _col_letter(vc) if vc is not None else ""
-        desc.append(f'SECTION {i} — "{lhdr or vhdr}" '
-                    f'(labels -> column {lcl or "(none)"}, values -> column {vcl or "(none)"}):')
-        if ss_rows:
-            desc.append(f"  Available rows (spreadsheet row numbers): {', '.join(map(str, ss_rows))}")
-        desc.append(f"  Extract EVERY line item in this section. Put the item name in "
-                    f"column {lcl or '?'} and its amount in column {vcl or '?'}, one row per item, "
-                    f"starting at the first available row.")
+    out_sections, _seen_slugs = [], {}
+    for g in column_groups:
+        sec_label = g.get("section_label") or f"section_{g.get('group_id', 0)}"
+        lcl = (g.get("label_col_letter") or "").upper()
+        vcl = (g.get("value_col_letter") or "").upper()
+        start_ss = int(g.get("start_row", 0)) + 1     # 1-based spreadsheet rows
+        end_ss   = int(g.get("end_row", 0)) + 1
+        slug = _re.sub(r'[^a-z0-9]+', '_', sec_label.lower()).strip('_') or f"section_{g.get('group_id', 0)}"
+        if slug in _seen_slugs:
+            _seen_slugs[slug] += 1; slug = f"{slug}_{_seen_slugs[slug]}"
+        else:
+            _seen_slugs[slug] = 1
+        desc.append(f'SECTION: "{sec_label}" (rows {start_ss} to {end_ss})')
+        desc.append(f'  Column {lcl} = labels, Column {vcl} = values')
+        desc.append(f'  Extract ALL "{sec_label}" line items from the document — item '
+                    f'name into column {lcl}, amount into column {vcl}, one row per item, '
+                    f'using only rows {start_ss}-{end_ss}.')
         desc.append("")
-        out_sections.append((slug, lcl, vcl, ss_rows[0] if ss_rows else 2))
+        out_sections.append((slug, lcl, vcl, start_ss))
 
     if fixed:
         desc.append("FIXED CELLS (labels already in the template — return the value only):")
@@ -1542,7 +1599,7 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
         + (doc_text_use if doc_text_use else "(See document image)")
         + "\n\n=== OUTPUT FORMAT ===\n" + output_format + "\n"
     )
-    print(f"[LAYOUT] prompt built: {len(groups)} section group(s), "
+    print(f"[LAYOUT] prompt built: {len(column_groups)} section group(s), "
           f"{len(fixed)} fixed cell(s)", flush=True)
     return si, user_prompt
 
@@ -3447,6 +3504,9 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
         # COMPONENT 5: layout-mode "extract & place" output (empty for field-based)
         "layout_sections": (raw_doc.get("layout_sections")
                             if isinstance(raw_doc.get("layout_sections"), dict) else {}),
+        # Section-aware column groups — used by the layout writer's column safety net
+        "binding_column_groups": (template_data.get("binding_map", {})
+                                  .get("_meta", {}).get("column_groups", [])),
         "table_mode": has_table and primary_mode == "table",
         "mixed_mode": has_table and primary_mode == "mixed",
         "table_rows": normalised_rows,
@@ -5994,10 +6054,41 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             pass
         cell.value = str(raw)
 
+    # Template bounding-box width (for the column safety net)
+    _max_tc = max((int(k.split(",")[1]) for k in cells_tpl
+                   if "," in k and k.split(",")[1].isdigit()), default=0)
+
+    def _in_bounds(letter):
+        try:
+            return bool(letter) and column_index_from_string(letter.upper()) <= (_max_tc + 1)
+        except Exception:
+            return False
+
     # 2. Dynamic content + 3. fixed cells, per document
     for doc in doc_results:
         ed = doc.get_extracted_data()
         ls = ed.get("layout_sections", {}) if isinstance(ed, dict) else {}
+        groups = ed.get("binding_column_groups", []) if isinstance(ed, dict) else []
+
+        def _fix_cols(rnum, lc, vc):
+            """SAFETY NET: if Gemini placed a row in a column outside the template
+            bounding box, remap to the column group that covers this row number."""
+            if not groups or (_in_bounds(lc) and _in_bounds(vc)):
+                return lc, vc
+            r0 = rnum - 1
+            covering = [g for g in groups
+                        if int(g.get("start_row", 0)) <= r0 <= int(g.get("end_row", -1))]
+            if not covering:
+                return lc, vc
+            chosen = next((g for g in covering
+                           if (g.get("label_col_letter") or "").upper() == lc), covering[0])
+            new_lc = lc if _in_bounds(lc) else ((chosen.get("label_col_letter") or lc).upper())
+            new_vc = vc if _in_bounds(vc) else ((chosen.get("value_col_letter") or vc).upper())
+            if (new_lc, new_vc) != (lc, vc):
+                print(f"[LAYOUT-FIX] row {rnum}: remapped cols {lc}/{vc} -> {new_lc}/{new_vc} "
+                      f"(group '{chosen.get('section_label','')}')", flush=True)
+            return new_lc, new_vc
+
         for sec in (ls.values() if isinstance(ls, dict) else []):
             if not isinstance(sec, dict):
                 continue
@@ -6010,6 +6101,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                     continue
                 lc = str(row.get("label_col") or "").strip().upper()
                 vc = str(row.get("value_col") or "").strip().upper()
+                lc, vc = _fix_cols(rnum, lc, vc)
                 lbl, vval = row.get("label"), row.get("value")
                 if lc and lbl not in (None, ""):
                     try:
