@@ -553,3 +553,19 @@ For templates where the user did **not** fill in row labels (only column headers
 - **Layout-based** (unlabeled templates): `layout_sections` = `{ "<section_slug>": { "rows": [ {label_col, value_col, row, label, value}, ... ] } }`, where `label_col`/`value_col` are column letters and `row` is the 1-based spreadsheet row number (cell = letter+row, e.g. `A`+`2`=`A2`). Fixed labeled cells (totals) still come back in `extracted_fields`. `_process_vision_result` stores `layout_sections` in `extraction_json`.
 
 **Layout-aware Excel writer:** `_write_layout_excel` runs when any document has non-empty `layout_sections` (checked first in `_write_excel`, before the `primary_mode` routing). It writes the static template cells, then places each `layout_sections` row's label/value at its `(row, column-letter)`, then writes `extracted_fields` (totals) by cell reference. Known v1 limitations: no automatic row push-down on overflow, and multi-document jobs write into the same rows.
+
+### Clean v3 extraction engine — `engine/extractor.py` (2026-06-25)
+
+A clean, vision-first rewrite of the per-document extraction orchestration, behind the **`USE_NEW_EXTRACTOR`** config flag (default `False` = legacy inline pipeline in `extract.py`; `True` = v3). `_extract_with_template_inner` delegates to `extractor.run_extraction()` when the flag is on, and **falls back to the legacy path on any exception** (safe rollback). It does **not** change the API routes, models, auth, upload, job management, or the Excel writers.
+
+`run_extraction(orchestrator, file_path, template_data, selected_pages)` returns `list[DocumentExtractionResult]` — the same contract as the legacy path, so `_run_extraction_sync` and the export writers are unchanged. The 8 steps:
+1. **Preprocess** — `preprocess_file` (text + page image per page).
+2. **Boundary** — layout templates (`binding_map._meta.has_table_data`) are **always ONE document**; field templates with >1 page use `_detect_document_boundaries_vision`; single-page = 1 doc.
+3. **Binding map** — `compute_binding_map` (reused) decides layout vs field mode.
+4. **Prompt** — `_build_vision_prompt` (reused) auto-branches: layout "extract & place" vs field "EXTRACTION TARGETS".
+5. **Gemini call** — **always vision-first** (sends page images), 3 retries w/ 2s backoff; then format enforcement: layout-missing → retry with a strong directive → `_convert_extracted_fields_to_layout`; field-mode-but-got-layout → flatten `layout_sections` into `extracted_fields`.
+6. **Validation** — via `_process_vision_result` (pdfplumber cross-validation, confidence, `needs_review`) + `_cross_validate_section_totals`.
+7. **Result assembly** — `_process_vision_result` builds the `extraction_json` shape (`layout_sections`, `extracted_fields`, `validation`, `template_regions`).
+8. **Excel** — unchanged; the existing `_write_layout_excel` / `_write_form_excel` read the saved JSON at export time.
+
+Key differences from the legacy path: **no pdfplumber-first interception** (always LLM/vision), **single-document for layout templates**, and unified format enforcement. The heavy primitives are imported **lazily** from `app.api.routes.extract` to avoid duplication and import cycles. Verified end-to-end on both an unlabeled balance-sheet template (→ `layout_sections`) and a labeled income-statement template (→ `extracted_fields`).
