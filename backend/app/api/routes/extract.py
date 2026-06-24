@@ -2609,6 +2609,16 @@ def _validate_row_alignment(
     return final_rows, is_misaligned, "; ".join(warnings)
 
 
+def _regions_to_jsonable(regions: dict) -> dict:
+    """FIX 4: make the regions dict JSON-serializable so it can be persisted in
+    document_results.extraction_json and reused verbatim at export time."""
+    out = dict(regions or {})
+    slr = out.get("section_label_rows")
+    if isinstance(slr, (set, frozenset)):
+        out["section_label_rows"] = sorted(slr)
+    return out
+
+
 def _coerce_extracted_fields(raw_doc: dict, regions: dict) -> tuple:
     """
     FIX 3: enforce the extracted_fields (cell-ref keyed) schema on the AI response
@@ -2950,6 +2960,8 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
         "document_type": doc_type,
         "overall_confidence": overall_confidence,
         "extraction_method": "vision_primary",
+        # FIX 4: persist the region analysis so export reuses it (no re-analysis)
+        "template_regions": _regions_to_jsonable(regions),
         "table_mode": has_table and primary_mode == "table",
         "mixed_mode": has_table and primary_mode == "mixed",
         "table_rows": normalised_rows,
@@ -5191,6 +5203,15 @@ def export_job_excel(
     if not doc_results:
         raise HTTPException(status_code=404, detail="No results found.")
 
+    # FIX 4: single source of truth — prefer the region analysis saved at
+    # extraction time so export cannot diverge from extraction.
+    saved_regions = None
+    for _d in doc_results:
+        _ed = _d.get_extracted_data()
+        if isinstance(_ed, dict) and _ed.get("template_regions"):
+            saved_regions = _ed["template_regions"]
+            break
+
     sheet_data = None
     template_regions = None
     if job.schema_id:
@@ -5202,7 +5223,7 @@ def export_job_excel(
                 raw = json.loads(tpl.description)
                 if isinstance(raw, dict) and "cells" in raw:
                     sheet_data = raw
-                    template_regions = _analyse_template_regions(raw)
+                    template_regions = saved_regions or _analyse_template_regions(raw)
         except Exception as e:
             print(f"[EXPORT] Template load error: {e}", flush=True)
 
@@ -5251,6 +5272,15 @@ def export_job_zip(
     if not doc_results:
         raise HTTPException(status_code=404, detail="No results found.")
 
+    # FIX 4: single source of truth — prefer the region analysis saved at
+    # extraction time so export cannot diverge from extraction.
+    saved_regions = None
+    for _d in doc_results:
+        _ed = _d.get_extracted_data()
+        if isinstance(_ed, dict) and _ed.get("template_regions"):
+            saved_regions = _ed["template_regions"]
+            break
+
     sheet_data = None
     template_regions = None
     if job.schema_id:
@@ -5262,7 +5292,7 @@ def export_job_zip(
                 raw = json.loads(tpl.description)
                 if isinstance(raw, dict) and "cells" in raw:
                     sheet_data = raw
-                    template_regions = _analyse_template_regions(raw)
+                    template_regions = saved_regions or _analyse_template_regions(raw)
         except Exception as e:
             print(f"[EXPORT] Template load error: {e}", flush=True)
 
