@@ -3423,9 +3423,43 @@ def _pdfplumber_spatial_extract(file_path: Path, regions: dict, layout: dict,
         ws = sorted(row_map[y], key=lambda w: float(w.get("x0", 0)))
         pdf_rows.append({"y": y, "words": ws, "text": " ".join(ww["text"] for ww in ws)})
 
+    # ── FIX 2: derive column x-bands from the PDF's OWN word clusters ──────────
+    # Template colWidths reflect the editor's visual layout, NOT where values
+    # actually sit in the source PDF. Cluster the page's words by x-position
+    # (gap-based: a gap > 20pt starts a new column) and map template columns to
+    # PDF clusters left-to-right. Falls back to colWidths geometry if the cluster
+    # count doesn't match the template's column count.
+    def _pdf_x_clusters(all_words, gap: float = 20.0):
+        clusters = []  # list of [x0, x1]
+        for w in sorted(all_words, key=lambda w: float(w.get("x0", 0))):
+            wx0 = float(w.get("x0", 0))
+            wx1 = float(w.get("x1", wx0))
+            if clusters and wx0 - clusters[-1][1] <= gap:
+                clusters[-1][1] = max(clusters[-1][1], wx1)
+                clusters[-1][0] = min(clusters[-1][0], wx0)
+            else:
+                clusters.append([wx0, wx1])
+        return clusters
+
+    _clusters = _pdf_x_clusters(words)
+    _tpl_cols = sorted({c for pg in para_groups for c in (pg["label_col"], pg["value_col"])})
+    _pdf_col_bands: dict = {}
+    if _tpl_cols and len(_clusters) == len(_tpl_cols):
+        for _i, _tc in enumerate(_tpl_cols):
+            _pdf_col_bands[_tc] = (_clusters[_i][0], _clusters[_i][1])
+        print(f"[SPATIAL] PDF word-clusters → template cols {_tpl_cols}: "
+              f"{[(round(_pdf_col_bands[c][0]), round(_pdf_col_bands[c][1])) for c in _tpl_cols]}",
+              flush=True)
+    else:
+        print(f"[SPATIAL] cluster count {len(_clusters)} != template cols "
+              f"{len(_tpl_cols)} — falling back to colWidths geometry", flush=True)
+
     # ── Template column → PDF x-band ─────────────────────────────────────────
     def col_x_band(col_idx: int):
-        """Return (x_start, x_end) for a template column index."""
+        """Return (x_start, x_end) for a template column index.
+        FIX 2: prefer PDF-derived word clusters; fall back to template colWidths."""
+        if col_idx in _pdf_col_bands:
+            return _pdf_col_bands[col_idx]
         if col_widths and col_idx < len(col_widths):
             total = sum(col_widths) or 1
             x0 = sum(col_widths[:col_idx]) / total * pw
