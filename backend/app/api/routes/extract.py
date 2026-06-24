@@ -1458,7 +1458,12 @@ def compute_binding_map(template_data: dict, grid: dict):
 
         column_groups, _gid = [], 0
         for (lc, vc) in _pairs:
-            if vc is None:
+            # A column group needs BOTH a value column and a label column to its left.
+            # A value column with no label column (lc is None) is a stray column — e.g.
+            # a grand-total label column like "Final Assets Total" whose header happens
+            # to contain "total". Skip it so it does NOT fall back to column 0's header
+            # rows and create duplicate groups.
+            if vc is None or lc is None:
                 continue
             fill_rows = sorted(r for r in range(max_r + 1)
                                if binding.get(f"{r},{vc}", {}).get("role") == "table_data")
@@ -1490,6 +1495,17 @@ def compute_binding_map(template_data: dict, grid: dict):
                     "rows": rows,
                 })
         column_groups.sort(key=lambda g: (g["start_row"], g["value_col"]))
+
+        # Dedupe: drop any group that duplicates another's columns + row range
+        # (safety net against the same header rows producing repeated groups).
+        _seen_g, _dedup_g = set(), []
+        for g in column_groups:
+            _gk = (g["label_col"], g["value_col"], g["start_row"], g["end_row"])
+            if _gk in _seen_g:
+                continue
+            _seen_g.add(_gk)
+            _dedup_g.append(g)
+        column_groups = _dedup_g
 
         binding["_meta"] = {
             "max_row": max_r, "max_col": max_c,
