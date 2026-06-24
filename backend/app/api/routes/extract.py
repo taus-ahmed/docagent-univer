@@ -1494,15 +1494,11 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
                 return True
             return not str(c.get("value") or "").strip()
 
-        lines.append("=== EXTRACTION TARGETS — fill EXACTLY these cells ===")
-        lines.append(
-            "This template has INDEPENDENT side-by-side column groups. Below is "
-            "the COMPLETE list of every cell you must fill, each with the label "
-            "that sits next to it. Fill EVERY listed cell."
-        )
-        lines.append("")
-
-        total_targets = 0
+        # ── Pass 1: collect every extraction target across all groups, tracking
+        #    the SECTION each cell falls under (the nearest header row above it,
+        #    i.e. the most recent label whose value cell is a static header). ──
+        groups_targets = []   # [(gid, group_label, value_col_letter, [(ref, label, section)])]
+        label_counts = {}     # label_text -> occurrences across the whole template
         for pg in parallel_groups:
             gid       = pg["group_id"]
             slbl      = pg["section_label"]
@@ -1510,7 +1506,6 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
             value_col = pg["value_col"]
             v_c       = pg["value_col_letter"]
 
-            # Every row that has a label cell in this group's label column.
             label_rows = sorted({
                 int(k.split(",")[0])
                 for k in grid_cells
@@ -1519,30 +1514,64 @@ def _build_fields_description(regions: dict, layout: dict) -> str:
                 and int(k.split(",")[1]) == label_col
             })
 
-            lines.append(f"GROUP {gid} — \"{slbl}\" (Column {v_c}):")
-            group_target_count = 0
+            current_section = slbl
+            tgts = []
             for r in label_rows:
                 label = _grid_val(r, label_col)
                 if not label:
                     continue
                 if not _is_target_value_cell(r, value_col):
-                    continue          # static header (e.g. "Amount") — not a target
-                lines.append(f"  {_cell_ref(r, value_col)} = {label}")
-                group_target_count += 1
-                total_targets += 1
-            if group_target_count == 0:
+                    # static header cell (e.g. "Amount") → this row names a section
+                    current_section = label
+                    continue
+                ref = _cell_ref(r, value_col)
+                tgts.append((ref, label, current_section))
+                label_counts[label] = label_counts.get(label, 0) + 1
+            groups_targets.append((gid, slbl, v_c, tgts))
+
+        # ── Pass 2: emit the listing. Ambiguous labels (the same label text used
+        #    more than once anywhere in the template) get an inline section hint;
+        #    unique labels need none. ──
+        lines.append("=== EXTRACTION TARGETS — fill EXACTLY these cells ===")
+        lines.append(
+            "This template has INDEPENDENT side-by-side column groups. Below is "
+            "the COMPLETE list of every cell you must fill, each with the label "
+            "that sits next to it. Fill EVERY listed cell."
+        )
+        lines.append("")
+
+        all_refs = []
+        for gid, slbl, v_c, tgts in groups_targets:
+            lines.append(f"GROUP {gid} — \"{slbl}\" (Column {v_c}):")
+            if tgts:
+                for ref, label, section in tgts:
+                    hint = (f" (from {section} section)"
+                            if label_counts.get(label, 0) > 1 and section else "")
+                    lines.append(f"  {ref} = {label}{hint}")
+                    all_refs.append(ref)
+            else:
                 lines.append("  (no extraction targets detected in this group)")
-            lines.append(
-                f"  Put ONLY values from the \"{slbl}\" section into column {v_c}; "
-                f"do NOT put another section's values here."
-            )
             lines.append("")
 
+        # FIX 1: per-cell matching rule replaces the contradictory per-group
+        # "Put ONLY values from the <section> section" footer.
         lines.append(
-            f"Return EXACTLY these {total_targets} cell references as the keys in "
-            "extracted_fields (use the cell reference, e.g. B2 or D10, as the key). "
-            "Do NOT invent other cell references and do NOT omit any listed cell. "
-            "If a value is genuinely absent from the document, return \"\" for that cell."
+            "Each cell reference above is mapped to its exact source label. "
+            "Extract the value matching that EXACT label from the document. "
+            "Do not use section membership to decide — use the label name only. "
+            "If a label appears multiple times in the document, use the value "
+            "from the row that matches the label text exactly."
+        )
+        lines.append("")
+
+        # FIX 3: strong, explicit closing directive with a dynamically-generated
+        # key list (never hardcoded).
+        lines.append(
+            "MANDATORY: Your response must contain extracted_fields with EXACTLY "
+            f"these keys: [{', '.join(all_refs)}]. "
+            "Every key must be present. Use \"\" for any value not found. "
+            "Match each key to its label above — ignore section boundaries, use "
+            "label text only."
         )
         lines.append("")
 
