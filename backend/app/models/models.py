@@ -109,6 +109,9 @@ class DocumentResult(Base):
     # Stored as JSON string for broad compatibility
     extraction_json = Column(Text, nullable=True)
 
+    # FIX 5: raw LLM (Gemini) response exactly as received — audit / re-export / debug
+    raw_llm_response = Column(Text, nullable=True)
+
     # Validation
     validation_errors = Column(Text, default="")
     validation_warnings = Column(Text, default="")

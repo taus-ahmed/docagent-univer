@@ -5090,12 +5090,18 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
 
                             result.extracted_data = extracted
 
+                        # FIX 5: capture the raw LLM response (empty for pdfplumber-only docs)
+                        _raw_llm = ""
+                        if result.extraction_response is not None:
+                            _raw_llm = getattr(result.extraction_response, "raw_text", "") or ""
+
                         doc = DocumentResult(
                             job_id=job_id,
                             filename=result.filename,
                             document_type=result.document_type if result.success else "unknown",
                             overall_confidence=extracted.get("overall_confidence"),
                             extraction_json=json.dumps(extracted, default=str) if extracted else None,
+                            raw_llm_response=_raw_llm or None,
                             validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
                             validation_warnings=(
                                 "; ".join(f"{f['ref']}: {f['value']}" for f in validation_data.get("flagged_fields", []))
