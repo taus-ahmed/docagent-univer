@@ -6081,32 +6081,69 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
         _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
 
 
+def _calculate_layout(sections):
+    """
+    Dynamic row expansion + push-down planner. Generic for any template.
+
+    sections: list of dicts (template order) with 0-based template rows:
+      {section_label, header_row, template_start_row, template_end_row,
+       extracted_rows, [label_col_letter], [value_col_letter]}
+
+    Side-by-side sections (sharing the same template_start_row) form ONE band and
+    share the band's overflow (max over the band's sections). Each band's overflow
+    pushes everything below it down.
+
+    Returns layout_plan (same order as input):
+      {section_label, header_row_actual, data_start_actual, data_end_actual,
+       overflow, template_start_row, template_end_row, label_col_letter,
+       value_col_letter}
+    """
+    if not sections:
+        return []
+    starts = sorted({int(s["template_start_row"]) for s in sections})
+    band = {}
+    for start in starts:
+        secs = [s for s in sections if int(s["template_start_row"]) == start]
+        end = max(int(s["template_end_row"]) for s in secs)
+        header = min(int(s.get("header_row", start - 1)) for s in secs)
+        tpl_rows = max(1, end - start + 1)
+        band_rows = max(int(s.get("extracted_rows", 0)) for s in secs)
+        band[start] = {"end": end, "header": header,
+                       "overflow": max(0, band_rows - tpl_rows)}
+    # Cumulative shift applied to each band (sum of overflow of all bands above it).
+    cum, shift_at = 0, {}
+    for start in starts:
+        shift_at[start] = cum
+        cum += band[start]["overflow"]
+    plan = []
+    for s in sections:
+        start = int(s["template_start_row"])
+        b, above = band[start], shift_at[start]
+        er = max(int(s.get("extracted_rows", 0)), 0)
+        plan.append({
+            "section_label":      s["section_label"],
+            "label_col_letter":   s.get("label_col_letter", ""),
+            "value_col_letter":   s.get("value_col_letter", ""),
+            "header_row_actual":  b["header"] + above,
+            "data_start_actual":  start + above,
+            "data_end_actual":    start + above + er - 1,
+            "overflow":           b["overflow"],
+            "template_start_row": start,
+            "template_end_row":   b["end"],
+        })
+    return plan
+
+
 def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     """
-    COMPONENT 5 — layout-aware writer. Writes the static template cells (headers,
-    totals labels), then places each layout_sections row's label/value into the
-    designated columns at the AI-specified spreadsheet row, then writes fixed
-    extracted_fields (e.g. totals) by cell reference.
+    Layout-aware writer with dynamic row expansion + push-down. For each document it
+    plans positions via _calculate_layout (sections derived from binding_column_groups
+    + the extracted row counts), expands any section that has more line items than the
+    template provides, pushes all content below down, and stacks multiple documents
+    with a 2-row gap. Falls back to legacy fixed-position writing when no column
+    groups are available.
     """
     from openpyxl.utils.cell import column_index_from_string, coordinate_from_string
-
-    # 1. Static template cells (column headers, section/total labels, etc.)
-    for key, cell_def in cells_tpl.items():
-        if not isinstance(cell_def, dict):
-            continue
-        parts = key.split(",")
-        if len(parts) != 2:
-            continue
-        try:
-            tr, tc = int(parts[0]), int(parts[1])
-        except ValueError:
-            continue
-        v = str(cell_def.get("value") or "").strip()
-        xl = ws.cell(row=tr + 1, column=tc + 1)
-        if v:
-            xl.value = v
-        if cell_def.get("style"):
-            _apply_cell_style(xl, cell_def["style"], openpyxl_mod)
 
     def _set_num(cell, raw):
         s = str(raw).replace(",", "").replace("$", "").strip()
@@ -6118,94 +6155,131 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             pass
         cell.value = str(raw)
 
-    # Template bounding-box width (for the column safety net)
-    _max_tc = max((int(k.split(",")[1]) for k in cells_tpl
-                   if "," in k and k.split(",")[1].isdigit()), default=0)
+    def _nrm(s):
+        return re.sub(r'[^a-z0-9]+', '', str(s or "").lower())
 
-    def _in_bounds(letter):
+    def _col_idx(letter):
         try:
-            return bool(letter) and column_index_from_string(letter.upper()) <= (_max_tc + 1)
+            return column_index_from_string(str(letter).upper())
         except Exception:
-            return False
+            return None
 
-    # 2. Dynamic content + 3. fixed cells, per document
-    for doc in doc_results:
-        ed = doc.get_extracted_data()
+    max_tr = max((int(k.split(",")[0]) for k in cells_tpl
+                  if "," in k and k.split(",")[0].isdigit()), default=0)
+
+    doc_offset = 0          # accumulates across document blocks (with gap rows)
+    GAP_BETWEEN_DOCS = 2
+
+    for block_idx, doc in enumerate(doc_results):
+        ed = doc.get_extracted_data() or {}
         ls = ed.get("layout_sections", {}) if isinstance(ed, dict) else {}
         groups = ed.get("binding_column_groups", []) if isinstance(ed, dict) else []
+        if block_idx > 0:
+            doc_offset += GAP_BETWEEN_DOCS
 
-        def _nrm(s):
-            return re.sub(r'[^a-z0-9]+', '', str(s or "").lower())
+        # ── Match each column group to its extracted rows (fuzzy section key) ──
+        ls_by_norm = {}
+        if isinstance(ls, dict):
+            for k, v in ls.items():
+                if isinstance(v, dict):
+                    ls_by_norm[_nrm(k)] = v.get("rows", []) or []
 
-        def _fix_cols(rnum, lc, vc, sec_key):
-            """SAFETY NET (FIX 2/3): if a column is empty/None or outside the
-            template bounding box, remap to the column group covering this row.
-            Disambiguate side-by-side groups by fuzzy-matching the section key;
-            if no group covers the row, fall back to the last group."""
-            need_lc, need_vc = not _in_bounds(lc), not _in_bounds(vc)
-            if not groups or (not need_lc and not need_vc):
-                return lc, vc
-            r0 = rnum - 1
-            covering = [g for g in groups
-                        if int(g.get("start_row", 0)) <= r0 <= int(g.get("end_row", -1))]
-            chosen = None
-            if covering:
-                # FIX 3: prefer the group whose section label matches the section key
-                chosen = next((g for g in covering
-                               if _nrm(g.get("section_label")) == _nrm(sec_key)), None)
-                if chosen is None:           # else the group already matching an AI column
-                    chosen = next((g for g in covering
-                                   if (g.get("label_col_letter") or "").upper() == lc
-                                   or (g.get("value_col_letter") or "").upper() == vc), covering[0])
-            elif groups:
-                chosen = groups[-1]          # no group covers this row -> last group
-            if not chosen:
-                return lc, vc
-            # FIX 2: once we remap a row, correct BOTH columns to the chosen group's
-            # columns — not just the label. (Previously new_vc was only corrected when
-            # vc was out of bounds, so an in-bounds-but-wrong value column like "E"
-            # was left as "A/E" instead of "A/B".)
-            new_lc = (chosen.get("label_col_letter") or lc).upper()
-            new_vc = (chosen.get("value_col_letter") or vc).upper()
-            if (new_lc, new_vc) != (lc, vc):
-                print(f"[LAYOUT-FIX] row {rnum}: label {lc or '<none>'} -> {new_lc}, "
-                      f"value {vc or '<none>'} -> {new_vc} via binding_column_groups "
-                      f"(group '{chosen.get('section_label', '')}')", flush=True)
-            return new_lc, new_vc
+        sections = []
+        for g in groups:
+            rows = ls_by_norm.get(_nrm(g.get("section_label")), [])
+            sections.append({
+                "section_label":      g.get("section_label", ""),
+                "header_row":         max(0, int(g.get("start_row", 0)) - 1),
+                "template_start_row": int(g.get("start_row", 0)),
+                "template_end_row":   int(g.get("end_row", 0)),
+                "extracted_rows":     len(rows),
+                "label_col_letter":   (g.get("label_col_letter") or "").upper(),
+                "value_col_letter":   (g.get("value_col_letter") or "").upper(),
+                "_rows":              rows,
+            })
 
-        for sec_key, sec in (ls.items() if isinstance(ls, dict) else []):
-            if not isinstance(sec, dict):
+        plan = _calculate_layout(sections)
+
+        # ── Row-shift map: a template row shifts by the overflow of every band whose
+        #    data ends above it. (band_shifts derived from the plan.) ──
+        band_shifts = sorted({(p["template_end_row"], p["overflow"]) for p in plan})
+
+        def out_row(tr0):
+            shift = sum(o for (e, o) in band_shifts if e < tr0)
+            return tr0 + shift + doc_offset
+
+        # ── 1. Static template cells at their shifted positions ──
+        for key, cell_def in cells_tpl.items():
+            if not isinstance(cell_def, dict):
                 continue
-            for row in sec.get("rows", []) or []:
-                if not isinstance(row, dict):
+            parts = key.split(",")
+            if len(parts) != 2:
+                continue
+            try:
+                tr, tc = int(parts[0]), int(parts[1])
+            except ValueError:
+                continue
+            xl = ws.cell(row=out_row(tr) + 1, column=tc + 1)
+            v = str(cell_def.get("value") or "").strip()
+            if v:
+                xl.value = v
+            if cell_def.get("style"):
+                _apply_cell_style(xl, cell_def["style"], openpyxl_mod)
+
+        # ── 2. Section line items, placed sequentially in the (expanded) band, using
+        #       the GROUP's columns (this also corrects any wrong AI column). ──
+        if plan:
+            for p, sec in zip(plan, sections):
+                lci = _col_idx(p["label_col_letter"])
+                vci = _col_idx(p["value_col_letter"])
+                for i, row in enumerate(sec["_rows"]):
+                    if not isinstance(row, dict):
+                        continue
+                    out_r = p["data_start_actual"] + i + doc_offset + 1   # 1-based
+                    lbl, vval = row.get("label"), row.get("value")
+                    if lci and lbl not in (None, ""):
+                        ws.cell(row=out_r, column=lci).value = str(lbl)
+                    if vci and vval not in (None, ""):
+                        _set_num(ws.cell(row=out_r, column=vci), vval)
+            if any(p["overflow"] for p in plan):
+                _ov = sorted({(p["template_end_row"], p["overflow"]) for p in plan})
+                print(f"[EXPORT] layout: doc {block_idx+1} expanded — "
+                      f"overflow per band (template_end_row, rows) {_ov}", flush=True)
+        else:
+            # ── Legacy fallback: no column groups — write at the AI's row numbers ──
+            for sec in (ls.values() if isinstance(ls, dict) else []):
+                if not isinstance(sec, dict):
                     continue
-                try:
-                    rnum = int(row.get("row"))
-                except (TypeError, ValueError):
-                    continue
-                lc = str(row.get("label_col") or "").strip().upper()
-                vc = str(row.get("value_col") or "").strip().upper()
-                lc, vc = _fix_cols(rnum, lc, vc, sec_key)
-                lbl, vval = row.get("label"), row.get("value")
-                if lc and lbl not in (None, ""):
+                for row in sec.get("rows", []) or []:
+                    if not isinstance(row, dict):
+                        continue
                     try:
-                        ws.cell(row=rnum, column=column_index_from_string(lc)).value = str(lbl)
-                    except Exception:
-                        pass
-                if vc and vval not in (None, ""):
-                    try:
-                        _set_num(ws.cell(row=rnum, column=column_index_from_string(vc)), vval)
-                    except Exception:
-                        pass
+                        rnum = int(row.get("row"))
+                    except (TypeError, ValueError):
+                        continue
+                    lci = _col_idx(row.get("label_col"))
+                    vci = _col_idx(row.get("value_col"))
+                    if lci and row.get("label") not in (None, ""):
+                        ws.cell(row=rnum + doc_offset, column=lci).value = str(row.get("label"))
+                    if vci and row.get("value") not in (None, ""):
+                        _set_num(ws.cell(row=rnum + doc_offset, column=vci), row.get("value"))
+
+        # ── 3. Fixed cells (totals) by reference, row-shifted ──
         for ref, v in (ed.get("extracted_fields", {}) or {}).items():
             value = v.get("value", "") if isinstance(v, dict) else v
             if value in (None, ""):
                 continue
             try:
                 col_letter, rownum = coordinate_from_string(str(ref))
-                _set_num(ws.cell(row=rownum, column=column_index_from_string(col_letter)), value)
             except Exception:
                 continue
+            ci = _col_idx(col_letter)
+            if ci:
+                _set_num(ws.cell(row=out_row(rownum - 1) + 1, column=ci), value)
+
+        # ── Advance doc_offset past this whole block (template height + overflow) ──
+        total_overflow = sum(o for (_e, o) in {(p["template_end_row"], p["overflow"]) for p in plan})
+        doc_offset += (max_tr + 1) + total_overflow
 
     print(f"[EXPORT] layout: wrote {len(doc_results)} document block(s)", flush=True)
 
