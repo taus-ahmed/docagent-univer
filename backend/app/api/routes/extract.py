@@ -1507,11 +1507,85 @@ def compute_binding_map(template_data: dict, grid: dict):
             _dedup_g.append(g)
         column_groups = _dedup_g
 
+        # ── PART 1 enhancements: header cell, section totals, parallel ids, type ──
+        for g in column_groups:
+            lc, vc = g["label_col"], g["value_col"]
+            hr = max((r for r in range(g["start_row"] + 1) if _is_section_header(r, lc)),
+                     default=g["start_row"] - 1)
+            g["header_row"] = hr
+            g["header_cell"] = f"{hr},{lc}" if hr >= 0 else ""
+            g["section_type"] = "table"
+            tcells, trow = [], None
+            for r in range(g["end_row"] + 1, min(g["end_row"] + 4, max_r + 1)):
+                if binding.get(f"{r},{vc}", {}).get("role") == "value_target":
+                    tcells.append(_cell_ref(r, vc)); trow = r
+                    break
+            g["total_row"] = trow
+            g["total_cells"] = tcells
+            g["parallel_group_id"] = None
+        # parallel ids — groups sharing the same (start_row, end_row) band
+        _bands = {}
+        for g in column_groups:
+            _bands.setdefault((g["start_row"], g["end_row"]), []).append(g)
+        _pid = 0
+        for bk in sorted(_bands):
+            if len(_bands[bk]) >= 2:
+                _pid += 1
+                for g in _bands[bk]:
+                    g["parallel_group_id"] = _pid
+
+        # ── Display-order structure (the writer iterates this) ───────────────
+        structure, _seen_band = [], set()
+        for g in sorted(column_groups, key=lambda x: (x["start_row"], x["value_col"])):
+            bk = (g["start_row"], g["end_row"])
+            if bk in _seen_band:
+                continue
+            _seen_band.add(bk)
+            gids = [x["group_id"] for x in _bands[bk]]
+            structure.append({
+                "type": "parallel_band" if len(gids) >= 2 else "section_group",
+                "group_ids": gids, "position": "expandable",
+                "overflow_behavior": "expand_push_down",
+                "start_row": g["start_row"], "end_row": g["end_row"],
+            })
+            structure.append({"type": "spacer", "rows": 1})
+
+        # ── KV groups — value_target cells not inside any column-group band ───
+        _band_cells = set()
+        _total_refs = set()
+        for g in column_groups:
+            for r in range(g["start_row"], g["end_row"] + 1):
+                _band_cells.add((r, g["label_col"]))
+                _band_cells.add((r, g["value_col"]))
+            _total_refs.update(g.get("total_cells", []))
+        kv_bindings = []
+        for k, bnd in binding.items():
+            if not isinstance(bnd, dict) or bnd.get("role") != "value_target":
+                continue
+            try:
+                r, c = map(int, str(k).split(","))
+            except (ValueError, AttributeError):
+                continue
+            if (r, c) in _band_cells or _cell_ref(r, c) in _total_refs:
+                continue
+            kv_bindings.append({
+                "label_cell": bnd.get("label_cell", ""),
+                "label_text": bnd.get("label", ""),
+                "value_cell": str(k),
+                "value_col_letter": _col_letter(c),
+                "value_row": r,
+                "direction": "right",
+            })
+        kv_groups = ([{"kv_group_id": 1, "section_label": "Fields",
+                       "bindings": kv_bindings}] if kv_bindings else [])
+
         binding["_meta"] = {
             "max_row": max_r, "max_col": max_c,
             "has_table_data": any(b.get("role") == "table_data" for b in binding.values()),
             "column_headers": {c: ch["text"] for c, ch in col_header.items()},
             "column_groups": column_groups,
+            "kv_groups": kv_groups,
+            "structure": structure,
         }
         return binding
     except Exception as e:
@@ -6146,7 +6220,14 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     from openpyxl.utils.cell import column_index_from_string, coordinate_from_string
 
     def _set_num(cell, raw):
-        s = str(raw).replace(",", "").replace("$", "").strip()
+        # STEP 7 — normalize: strip currency symbols + thousands separators, convert
+        # accounting negatives (500) -> -500; numeric -> float/int, else keep text.
+        s = str(raw).strip()
+        for sym in ("$", "£", "€", "₹", "¥", ","):
+            s = s.replace(sym, "")
+        s = s.strip()
+        if s.startswith("(") and s.endswith(")"):
+            s = "-" + s[1:-1].strip()
         try:
             if s and re.match(r'^-?[0-9]+\.?[0-9]*$', s):
                 cell.value = float(s) if "." in s else int(s)
@@ -6177,16 +6258,50 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         if block_idx > 0:
             doc_offset += GAP_BETWEEN_DOCS
 
-        # ── Match each column group to its extracted rows (fuzzy section key) ──
-        ls_by_norm = {}
-        if isinstance(ls, dict):
-            for k, v in ls.items():
-                if isinstance(v, dict):
-                    ls_by_norm[_nrm(k)] = v.get("rows", []) or []
+        # ── STEP 1+2: dedup duplicate extracted sections, then match each
+        #    extracted section to a template group (exact -> fuzzy/subset). A group
+        #    may collect MORE THAN ONE matched section (concatenated in order). ──
+        raw_secs = [(k, (v.get("rows", []) or [])) for k, v in
+                    (ls.items() if isinstance(ls, dict) else []) if isinstance(v, dict)]
+
+        def _labset(rows):
+            return {_nrm(r.get("label")) for r in rows
+                    if isinstance(r, dict) and r.get("label")}
+
+        drop = set()
+        for i, (k1, r1) in enumerate(raw_secs):
+            for j, (k2, r2) in enumerate(raw_secs):
+                if i == j or k1 in drop or k2 in drop:
+                    continue
+                l2 = _labset(r2)
+                if l2 and len(_labset(r1) & l2) / len(l2) >= 0.8 and len(r1) > len(r2):
+                    drop.add(k1)        # k1 is the broader duplicate -> drop it
+        if drop:
+            print(f"[EXPORT] layout: dropped duplicate section(s) {sorted(drop)}", flush=True)
+        kept = [(k, r) for k, r in raw_secs if k not in drop]
+
+        def _match_group(sec_key):
+            nk = _nrm(sec_key)
+            for g in groups:                                  # 1. exact
+                if _nrm(g.get("section_label")) == nk:
+                    return g
+            for g in groups:                                  # 2. fuzzy / subset
+                gn = _nrm(g.get("section_label"))
+                if gn and (gn in nk or nk in gn):
+                    return g
+            return None
+
+        matched_to, used = {}, set()
+        for k, r in kept:
+            g = _match_group(k)
+            if g is not None:
+                matched_to.setdefault(g["group_id"], []).extend(r)
+                used.add(k)
+        unmatched = [(k, r) for k, r in kept if k not in used]
 
         sections = []
         for g in groups:
-            rows = ls_by_norm.get(_nrm(g.get("section_label")), [])
+            rows = matched_to.get(g["group_id"], [])
             sections.append({
                 "section_label":      g.get("section_label", ""),
                 "header_row":         max(0, int(g.get("start_row", 0)) - 1),
@@ -6277,9 +6392,28 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             if ci:
                 _set_num(ws.cell(row=out_row(rownum - 1) + 1, column=ci), value)
 
-        # ── Advance doc_offset past this whole block (template height + overflow) ──
+        # ── STEP 4: write any unmatched extracted sections (NO DATA DROPPED) in the
+        #    A/B columns after the template block, separated by gap rows. ──
         total_overflow = sum(o for (_e, o) in {(p["template_end_row"], p["overflow"]) for p in plan})
-        doc_offset += (max_tr + 1) + total_overflow
+        consumed = (max_tr + 1) + total_overflow
+        if unmatched:
+            n_un = sum(len(r) for _k, r in unmatched)
+            print(f"[EXPORT] layout: {n_un} unmatched row(s) in {len(unmatched)} "
+                  f"section(s) -> A/B overflow", flush=True)
+            cur = doc_offset + consumed + 1            # 0-based; one gap row before
+            for _k, rows in unmatched:
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    lbl, vval = row.get("label"), row.get("value")
+                    if lbl not in (None, ""):
+                        ws.cell(row=cur + 1, column=1).value = str(lbl)
+                    if vval not in (None, ""):
+                        _set_num(ws.cell(row=cur + 1, column=2), vval)
+                    cur += 1
+                cur += 1                               # gap between overflow sections
+            consumed = cur - doc_offset
+        doc_offset += consumed
 
     print(f"[EXPORT] layout: wrote {len(doc_results)} document block(s)", flush=True)
 
