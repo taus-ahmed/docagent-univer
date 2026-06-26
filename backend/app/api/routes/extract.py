@@ -6129,7 +6129,10 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
         if width_px and c_idx <= max_c:
             ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(8, round(width_px / 7))
 
-    # COMPONENT 5: layout-mode output (extract & place) takes priority when present
+    # Deterministic writer routing that mirrors the extraction routing:
+    #   layout extraction  -> non-empty layout_sections -> layout writer
+    #   field extraction   -> extracted_fields, no layout_sections -> form/mixed/table
+    #   (no template/flat is handled by the export endpoint via _write_flat_table)
     def _has_layout(d):
         ed = d.get_extracted_data()
         ls = ed.get("layout_sections") if isinstance(ed, dict) else None

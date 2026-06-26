@@ -123,6 +123,10 @@ def _understand_document(orchestrator, page_images, doc_text, binding_map, file_
         "section with its exact heading text, 0-indexed start page, approximate "
         "line-item count, and whether it is a 'table' (repeating rows) or "
         "'kv_pairs'.\n\n"
+        "Each section must represent ONE focused group of related content — "
+        "typically 3-15 items. If content would form a section larger than 20 "
+        "items, split it into logical subsections. Sections must be distinct and "
+        "non-overlapping.\n\n"
         "Return ONLY this JSON:\n"
         "{\n"
         '  "file_type": "digital_pdf" | "scanned_pdf" | "image",\n'
@@ -534,77 +538,38 @@ def _assemble_result(filename, doc_index, doc_type, identifier, layout_sections,
     return r
 
 
-def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
+def _run_field_extraction(orchestrator, file_path, template_data, binding_map,
+                          page_images, doc_text, doc_text_pages, file_type,
+                          default_doc_type, start):
     """
-    Single entry point (legacy signature). Returns list[DocumentExtractionResult].
-
-    Field-mode labeled templates reuse the proven single-call field path
-    (_build_vision_prompt + _process_vision_result) for downstream compatibility.
-    Layout templates and no-template documents run the full three-layer pipeline.
+    LABELED template (has_table_data == False). The user told us the exact fields and
+    where to put them — one template-guided Gemini call → extracted_fields. NO Layer
+    1/2/3. Routes to the form/KV writer at export time.
     """
-    from app.api.routes.extract import (
-        compute_binding_map, _build_vision_prompt, _process_vision_result, _fail,
-    )
-    from core.preprocessor import preprocess_file
+    from app.api.routes.extract import _build_vision_prompt, _process_vision_result, _fail
+    _log("FIELD", f"{file_path.name}: labeled template — single template-guided call")
+    td = {**template_data, "binding_map": binding_map} if (template_data and binding_map) else (template_data or {})
+    system, prompt = _build_vision_prompt(td, doc_text)
+    parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images, text=doc_text)
+    if not parsed:
+        return [_fail(file_path.name, "field extraction failed")]
+    d0 = _unwrap(parsed)
+    elapsed = (time.time() - start) * 1000
+    return [_process_vision_result(d0, td, file_path.name, default_doc_type,
+                                   elapsed, resp, doc_text, "", 0)]
 
-    file_path = Path(file_path)
-    default_doc_type = (template_data or {}).get("doc_type", "other")
-    start = time.time()
 
-    # ── Preprocess ──
-    doc = preprocess_file(file_path)
-    doc_text_pages = list(getattr(doc, "page_texts", []) or [])
-    doc_text = doc.extracted_text or ""
-    page_images = doc.page_images_b64 or []
-    if selected_pages and page_images:
-        keep = [i - 1 for i in selected_pages if 0 < i <= len(page_images)]
-        if keep:
-            page_images = [page_images[i] for i in keep]
-            doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
-
-    ftype = (doc.file_type if getattr(doc, "file_type", "") == "image"
-             else ("digital_pdf" if getattr(doc, "has_meaningful_text", False) else "scanned_pdf"))
-    _log("L1", f"{file_path.name}: file_type={ftype} pages={len(page_images)} "
-               f"text_len={len(doc_text)}")
-
-    # ── Binding map + mode ──
-    binding_map = None
-    if template_data:
-        try:
-            binding_map = compute_binding_map(template_data, template_data.get("layout", {}))
-        except Exception as e:
-            _log("L1", f"binding map failed ({e})")
-    is_layout = bool(binding_map and binding_map.get("_meta", {}).get("has_table_data"))
-    regions = (template_data or {}).get("regions", {})
-    is_field = bool(template_data and not is_layout
-                    and (regions.get("explicit_targets") or regions.get("kv_pairs")))
-
-    # ── FIELD MODE — reuse the proven single-call path (compatible extracted_fields) ──
-    if is_field:
-        _log("L1", f"{file_path.name}: field mode — proven single-call path")
-        td = {**template_data, "binding_map": binding_map} if binding_map else template_data
-        system, prompt = _build_vision_prompt(td, doc_text)
-        parsed, resp = _llm_json(orchestrator, prompt, system,
-                                 images=page_images, text=doc_text)
-        if not parsed:
-            return [_fail(file_path.name, "field extraction failed")]
-        d0 = _unwrap(parsed)
-        elapsed = (time.time() - start) * 1000
-        return [_process_vision_result(d0, td, file_path.name, default_doc_type,
-                                       elapsed, resp, doc_text, "", 0)]
-
-    # ── LAYER 1 ──
+def _run_three_layer(orchestrator, file_path, template_data, binding_map, page_images,
+                     doc_text, doc_text_pages, file_type, default_doc_type, start,
+                     primary_mode):
+    """Shared Layer 1 → Layer 2 → Layer 3 pipeline used by layout and unguided paths."""
+    from app.api.routes.extract import _fail
     document_map, l1_resp = _understand_document(orchestrator, page_images, doc_text,
-                                                 binding_map, ftype)
-    file_type = document_map.get("file_type", ftype)
-
-    # ── LAYER 2 ──
+                                                 binding_map, file_type)
+    file_type = document_map.get("file_type", file_type)
     per_doc, l2_responses = _run_all_extractions(orchestrator, document_map, page_images,
                                                  doc_text_pages, binding_map, default_doc_type)
-
-    # ── LAYER 3 + assembly (one DocumentResult per document) ──
     cgs = (binding_map or {}).get("_meta", {}).get("column_groups", []) if binding_map else []
-    primary_mode = "layout" if is_layout else ("unguided" if not template_data else "form")
     results = []
     docs = document_map.get("documents", [])
     for d in docs:
@@ -621,5 +586,82 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
             ext.get("layout_sections", {}), ext.get("extracted_fields", {}),
             cgs, primary_mode, d, conf_map, flagged, notes, overall, needs_review,
             all_resps, (time.time() - start) * 1000))
-
     return results or [_fail(file_path.name, "no documents extracted")]
+
+
+def _run_layout_extraction(orchestrator, file_path, template_data, binding_map,
+                           page_images, doc_text, doc_text_pages, file_type,
+                           default_doc_type, start):
+    """STRUCTURAL template (has_table_data == True): three-layer → layout_sections."""
+    _log("LAYOUT", f"{file_path.name}: structural template — three-layer (L1 -> L2 -> L3)")
+    return _run_three_layer(orchestrator, file_path, template_data, binding_map,
+                            page_images, doc_text, doc_text_pages, file_type,
+                            default_doc_type, start, primary_mode="layout")
+
+
+def _run_unguided_extraction(orchestrator, file_path, template_data, binding_map,
+                             page_images, doc_text, doc_text_pages, file_type,
+                             default_doc_type, start):
+    """NO template: extract everything, two-column A/B output via the three layers."""
+    _log("UNGUIDED", f"{file_path.name}: no template — full document, two-column A/B")
+    return _run_three_layer(orchestrator, file_path, None, None,
+                            page_images, doc_text, doc_text_pages, file_type,
+                            default_doc_type, start, primary_mode="unguided")
+
+
+def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
+    """
+    Single entry point (legacy signature). Returns list[DocumentExtractionResult].
+
+    THE ROUTING DECISION IS MADE AT THE START, by template type (driven by the
+    binding map), so the right extraction runs from the beginning:
+
+      binding_map is None (no template)        -> _run_unguided_extraction
+      binding_map.has_table_data is True        -> _run_layout_extraction (3-layer)
+      binding_map.has_table_data is False        -> _run_field_extraction (single call)
+    """
+    from app.api.routes.extract import compute_binding_map
+    from core.preprocessor import preprocess_file
+
+    file_path = Path(file_path)
+    default_doc_type = (template_data or {}).get("doc_type", "other")
+    start = time.time()
+
+    # ── Preprocess (shared by all paths) ──
+    doc = preprocess_file(file_path)
+    doc_text_pages = list(getattr(doc, "page_texts", []) or [])
+    doc_text = doc.extracted_text or ""
+    page_images = doc.page_images_b64 or []
+    if selected_pages and page_images:
+        keep = [i - 1 for i in selected_pages if 0 < i <= len(page_images)]
+        if keep:
+            page_images = [page_images[i] for i in keep]
+            doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
+
+    ftype = (doc.file_type if getattr(doc, "file_type", "") == "image"
+             else ("digital_pdf" if getattr(doc, "has_meaningful_text", False) else "scanned_pdf"))
+    _log("ROUTE", f"{file_path.name}: file_type={ftype} pages={len(page_images)} "
+                  f"text_len={len(doc_text)}")
+
+    # ── Compute the binding map (only when a template was selected) ──
+    binding_map = None
+    if template_data:
+        try:
+            binding_map = compute_binding_map(template_data, template_data.get("layout", {}))
+        except Exception as e:
+            _log("ROUTE", f"binding map failed ({e})")
+
+    ctx = dict(orchestrator=orchestrator, file_path=file_path, template_data=template_data,
+               binding_map=binding_map, page_images=page_images, doc_text=doc_text,
+               doc_text_pages=doc_text_pages, file_type=ftype,
+               default_doc_type=default_doc_type, start=start)
+
+    # ── ROUTING DECISION AT THE START — by template type ──
+    if not template_data:
+        _log("ROUTE", f"{file_path.name}: NO TEMPLATE -> unguided extraction")
+        return _run_unguided_extraction(**ctx)
+    if binding_map and binding_map.get("_meta", {}).get("has_table_data"):
+        _log("ROUTE", f"{file_path.name}: STRUCTURAL template (has_table_data=True) -> layout extraction")
+        return _run_layout_extraction(**ctx)
+    _log("ROUTE", f"{file_path.name}: LABELED template (has_table_data=False) -> field extraction")
+    return _run_field_extraction(**ctx)
