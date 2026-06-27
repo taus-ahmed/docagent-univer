@@ -1834,12 +1834,18 @@ def _convert_extracted_fields_to_layout(extracted_fields: dict, binding_map: dic
     return out
 
 
-def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
+def _build_vision_prompt(template_data: dict, doc_text: str = "",
+                         force_field_mode: bool = False) -> tuple:
     """
     Build extraction prompt split into (system_instruction, user_prompt).
 
     system_instruction = registry expert persona (stable, doc-type specific).
     user_prompt = template structure + page anchors + self-verification + doc text.
+
+    force_field_mode=True (set by the field-extraction path for labeled/mixed
+    templates): honour the routing decision — skip the layout "extract & place"
+    short-circuit and the PARALLEL COLUMN GROUPS rule, and build the normal
+    field/KV(+table) prompt so Gemini returns extracted_fields, not layout_sections.
     """
     doc_type      = template_data.get("doc_type", "other")
     regions       = template_data.get("regions", {})
@@ -1882,7 +1888,7 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     # Issue 1: inject PARALLEL COLUMN GROUPS RULE when the template has multiple
     # independent label/value column bands on the same row range.
     parallel_groups = regions.get("parallel_column_groups", [])
-    if parallel_groups:
+    if parallel_groups and not force_field_mode:
         group_lines = [
             f"  GROUP {pg['group_id']} \"{pg['section_label']}\": "
             f"labels in column {pg['label_col_letter']}, "
@@ -1915,7 +1921,10 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "") -> tuple:
     # unlabeled line-item rows), switch to the "extract & place" layout prompt.
     # Field-based templates (explicit label→value pairs) keep the logic below.
     binding_map = template_data.get("binding_map")
-    if isinstance(binding_map, dict) and binding_map.get("_meta", {}).get("has_table_data"):
+    if force_field_mode:
+        print("[PROMPT] field-mode forced by routing — building field/KV(+table) prompt "
+              "(layout short-circuit skipped)", flush=True)
+    elif isinstance(binding_map, dict) and binding_map.get("_meta", {}).get("has_table_data"):
         try:
             print("[PROMPT] layout-based extraction selected (table_data present)", flush=True)
             return _build_layout_prompt_parts(binding_map, layout, doc_text, system_instruction)
@@ -3660,6 +3669,10 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
         "extraction_method": "vision_primary",
         # FIX 4: persist the region analysis so export reuses it (no re-analysis)
         "template_regions": _regions_to_jsonable(regions),
+        # template_type (labeled|mixed|structural) from the binding map — drives
+        # deterministic export-writer routing (see _write_excel). Empty for legacy.
+        "template_type": ((template_data.get("binding_map") or {})
+                          .get("_meta", {}).get("template_type", "")),
         # COMPONENT 5: layout-mode "extract & place" output (empty for field-based)
         "layout_sections": (raw_doc.get("layout_sections")
                             if isinstance(raw_doc.get("layout_sections"), dict) else {}),
@@ -6150,25 +6163,45 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
         if width_px and c_idx <= max_c:
             ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(8, round(width_px / 7))
 
-    # Deterministic writer routing that mirrors the extraction routing:
-    #   layout extraction  -> non-empty layout_sections -> layout writer
-    #   field extraction   -> extracted_fields, no layout_sections -> form/mixed/table
+    # Deterministic writer routing that mirrors the extraction routing.
+    # The authoritative signal is the template_type saved in extraction_json:
+    #   structural        -> layout writer
+    #   labeled | mixed   -> form/mixed/table writer (by primary_mode)
     #   (no template/flat is handled by the export endpoint via _write_flat_table)
+    # Legacy jobs (extracted before template_type was persisted) carry no
+    # template_type — fall back to the previous behaviour (layout_sections present
+    # -> layout writer) so already-extracted balance sheets still export correctly.
     def _has_layout(d):
         ed = d.get_extracted_data()
         ls = ed.get("layout_sections") if isinstance(ed, dict) else None
         return isinstance(ls, dict) and any(
             isinstance(s, dict) and s.get("rows") for s in ls.values()
         )
-    if any(_has_layout(d) for d in doc_results):
-        print("[EXPORT] routing: layout-mode writer", flush=True)
-        _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
-        return
 
-    # Route based on template structure — authoritative, never stale
+    template_type = ""
+    for d in doc_results:
+        ed = d.get_extracted_data()
+        if isinstance(ed, dict) and ed.get("template_type"):
+            template_type = ed["template_type"]
+            break
+
     primary_mode = (template_regions or {}).get("primary_mode", "form_kv")
 
-    print(f"[EXPORT] routing: primary_mode={primary_mode}", flush=True)
+    if template_type == "structural":
+        print("[EXPORT] routing: template_type=structural -> layout-mode writer", flush=True)
+        _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        return
+    if template_type in ("labeled", "mixed"):
+        # field path — never the layout writer, even if a stale layout_sections exists
+        print(f"[EXPORT] routing: template_type={template_type} -> "
+              f"form/mixed/table writer (primary_mode={primary_mode})", flush=True)
+    else:
+        # legacy (no template_type) — preserve prior layout-detection behaviour
+        if any(_has_layout(d) for d in doc_results):
+            print("[EXPORT] routing: layout-mode writer (legacy layout_sections)", flush=True)
+            _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+            return
+        print(f"[EXPORT] routing: legacy primary_mode={primary_mode}", flush=True)
 
     if primary_mode == "table":
         _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod)
