@@ -656,12 +656,23 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
                doc_text_pages=doc_text_pages, file_type=ftype,
                default_doc_type=default_doc_type, start=start)
 
-    # ── ROUTING DECISION AT THE START — by template type ──
+    # ── ROUTING DECISION AT THE START — by template_type classifier ──
     if not template_data:
         _log("ROUTE", f"{file_path.name}: NO TEMPLATE -> unguided extraction")
         return _run_unguided_extraction(**ctx)
-    if binding_map and binding_map.get("_meta", {}).get("has_table_data"):
-        _log("ROUTE", f"{file_path.name}: STRUCTURAL template (has_table_data=True) -> layout extraction")
+
+    meta = (binding_map or {}).get("_meta", {})
+    template_type = meta.get("template_type", "labeled")
+    vt = meta.get("value_target_count", 0)
+    td = meta.get("table_data_count", 0)
+    ng = len(meta.get("column_groups", []))
+
+    if template_type == "structural":
+        _log("ROUTE", f"{file_path.name}: template_type=structural "
+                      f"(value_targets={vt}, table_data={td}, groups={ng}) -> layout extraction")
         return _run_layout_extraction(**ctx)
-    _log("ROUTE", f"{file_path.name}: LABELED template (has_table_data=False) -> field extraction")
+
+    # labeled OR mixed -> field path (handles KV pairs AND embedded tables together)
+    _log("ROUTE", f"{file_path.name}: template_type={template_type} "
+                  f"(value_targets={vt}, table_data={td}, groups={ng}) -> field extraction")
     return _run_field_extraction(**ctx)

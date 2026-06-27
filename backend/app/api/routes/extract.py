@@ -1579,9 +1579,30 @@ def compute_binding_map(template_data: dict, grid: dict):
         kv_groups = ([{"kv_group_id": 1, "section_label": "Fields",
                        "bindings": kv_bindings}] if kv_bindings else [])
 
+        # ── Template-type classifier (replaces the binary has_table_data flag) ──
+        # A template can be a pure labeled form, a pure column layout, OR BOTH
+        # (a labeled invoice with an embedded line-items table). Route the latter
+        # to the field path, which handles form + table together.
+        value_target_count = sum(1 for b in binding.values()
+                                 if isinstance(b, dict) and b.get("role") == "value_target")
+        table_data_count = sum(1 for b in binding.values()
+                               if isinstance(b, dict) and b.get("role") == "table_data")
+        if table_data_count == 0:
+            template_type = "labeled"            # pure KV form
+        elif value_target_count == 0:
+            template_type = "structural"         # pure column layout
+        elif column_groups:                      # both, with valid column groups
+            template_type = ("mixed" if value_target_count > table_data_count * 0.5
+                             else "structural")
+        else:                                    # table_data but no usable column groups
+            template_type = "mixed"              # embedded table -> treat as labeled+table
+
         binding["_meta"] = {
             "max_row": max_r, "max_col": max_c,
-            "has_table_data": any(b.get("role") == "table_data" for b in binding.values()),
+            "template_type": template_type,
+            "has_table_data": table_data_count > 0,     # kept for compatibility
+            "value_target_count": value_target_count,
+            "table_data_count": table_data_count,
             "column_headers": {c: ch["text"] for c, ch in col_header.items()},
             "column_groups": column_groups,
             "kv_groups": kv_groups,
