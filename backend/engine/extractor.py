@@ -549,7 +549,11 @@ def _run_field_extraction(orchestrator, file_path, template_data, binding_map,
     from app.api.routes.extract import _build_vision_prompt, _process_vision_result, _fail
     _log("FIELD", f"{file_path.name}: labeled template — single template-guided call")
     td = {**template_data, "binding_map": binding_map} if (template_data and binding_map) else (template_data or {})
-    system, prompt = _build_vision_prompt(td, doc_text)
+    # force_field_mode=True: honour the [ROUTE] decision — _build_vision_prompt must
+    # NOT switch to the layout prompt just because the binding map has table_data
+    # (mixed templates do). td carries the full binding_map so the field prompt
+    # includes both the KV cells and the embedded table.
+    system, prompt = _build_vision_prompt(td, doc_text, force_field_mode=True)
     parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images, text=doc_text)
     if not parsed:
         return [_fail(file_path.name, "field extraction failed")]
