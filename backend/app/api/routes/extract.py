@@ -6480,6 +6480,7 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
     Table mode: write header row with original styles, then one data row per line item.
     Handles tables at any position in the grid (not just row 0).
     """
+    from openpyxl.cell import MergedCell
     table_regions = (template_regions or {}).get("table_regions", [])
     header_row_idx = table_regions[0]["header_row"] if table_regions else 0
     start_col_idx = table_regions[0]["start_col"] if table_regions else 0
@@ -6491,6 +6492,9 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
         if len(parts) != 2: continue
         tr, tc = int(parts[0]), int(parts[1])
         xl_cell = ws.cell(row=tr + 1, column=tc + 1)
+        # Skip merged-cell children — read-only in openpyxl
+        if isinstance(xl_cell, MergedCell):
+            continue
         xl_cell.value = cell_def.get("value", "").strip()
         if cell_def.get("style"):
             _apply_cell_style(xl_cell, cell_def["style"], openpyxl_mod)
@@ -6514,6 +6518,8 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
                 if isinstance(val, dict):
                     val = val.get("value", "")
                 xl_cell = ws.cell(row=current_row, column=c_idx + 1)
+                if isinstance(xl_cell, MergedCell):
+                    continue
                 try:
                     xl_cell.value = (float(val) if "." in str(val) else int(val)) if val else val
                 except (ValueError, TypeError):
@@ -6531,6 +6537,7 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
     """
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
+    from openpyxl.cell import MergedCell
     merges_tpl   = sheet_data.get("merges", {})
     # Extra rows per block for separator (only applied from block 2 onwards)
     SEPARATOR_HEIGHT = 5  # 3 blank + 1 divider + 1 blank
@@ -6567,6 +6574,9 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 continue
             tr, tc = int(parts[0]), int(parts[1])
             xl_cell = ws.cell(row=row_offset + tr + 1, column=tc + 1)
+            # Skip merged-cell children — their .value/.style are read-only in openpyxl
+            if isinstance(xl_cell, MergedCell):
+                continue
             tpl_value = cell_def.get("value","").strip()
 
             ref = f"{_col_letter(tc)}{tr+1}"
@@ -6646,11 +6656,14 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             sep_base = row_offset - SEPARATOR_HEIGHT + 1  # 1-based
             # Grey shaded divider row
             for col_i in range(1, max_c + 3):
-                ws.cell(row=sep_base + 3, column=col_i).fill = \
-                    PatternFill(fill_type="solid", fgColor="FFF3F4F6")
+                _sep = ws.cell(row=sep_base + 3, column=col_i)
+                if isinstance(_sep, MergedCell):
+                    continue
+                _sep.fill = PatternFill(fill_type="solid", fgColor="FFF3F4F6")
             lc = ws.cell(row=sep_base + 3, column=1)
-            lc.value = f"Document {block_idx + 1}  ·  {doc_result.filename}"
-            lc.font = Font(bold=True, color="FF374151", size=10)
+            if not isinstance(lc, MergedCell):
+                lc.value = f"Document {block_idx + 1}  ·  {doc_result.filename}"
+                lc.font = Font(bold=True, color="FF374151", size=10)
 
         # Document separator between blocks — placed AFTER writing this block
         # Use a separate counter so we don't corrupt row_offset for current block
@@ -6695,6 +6708,9 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             except (ValueError, IndexError):
                 continue
             _xl = ws.cell(row=row_offset + _tr2 + 1, column=_tc2 + 1)
+            # Skip merged-cell children — read-only, writing .value raises AttributeError
+            if isinstance(_xl, MergedCell):
+                continue
             _val = ef_val.get("value", "") if isinstance(ef_val, dict) else str(ef_val or "")
             _val = _val if _val is not None else ""
             try:
@@ -6715,8 +6731,9 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
         flag_count = validation.get("flagged_count", 0)
         if flag_count > 0:
             nc = ws.cell(row=row_offset + 1, column=max_c + 2)
-            nc.value = f"! {flag_count} low-confidence fields"
-            nc.font = Font(color="FFDC2626", size=9, italic=True)
+            if not isinstance(nc, MergedCell):
+                nc.value = f"! {flag_count} low-confidence fields"
+                nc.font = Font(color="FFDC2626", size=9, italic=True)
 
     print(f"[EXPORT] form: {len(doc_results)} blocks written", flush=True)
 
@@ -6791,6 +6808,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
     """
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
+    from openpyxl.cell import MergedCell
 
     merges_tpl   = sheet_data.get("merges", {})
     table_regions = (template_regions or {}).get("table_regions", [])
@@ -6990,6 +7008,8 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 if val in col_names:
                     val = ""
                 xl_cell = ws.cell(row=current_row, column=c_idx + 1)
+                if isinstance(xl_cell, MergedCell):
+                    continue
                 try:
                     clean = val.replace(",", "").replace("$", "").replace("£", "").strip()
                     amount_labels = {"amount","total","subtotal","balance","price",
@@ -7035,10 +7055,13 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             # Divider row with filename — styled distinctly from table separators
             for col_i in range(1, max_c + 3):
                 div_cell = ws.cell(row=current_output_row, column=col_i)
+                if isinstance(div_cell, MergedCell):
+                    continue
                 div_cell.fill = PatternFill(fill_type="solid", fgColor="FFE5E7EB")
             lc = ws.cell(row=current_output_row, column=1)
-            lc.value = f"Document: {doc_result.filename}"
-            lc.font = Font(bold=True, color="FF1F2937", size=10)
+            if not isinstance(lc, MergedCell):
+                lc.value = f"Document: {doc_result.filename}"
+                lc.font = Font(bold=True, color="FF1F2937", size=10)
             current_output_row += 1
             # 1 more blank row after the divider before content starts
             current_output_row += 1
@@ -7142,6 +7165,9 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             _anchor_out = template_row_to_output[_anchor_tpl]
             _out_row2 = _anchor_out + (_tr2 - _anchor_tpl)
             _xl = ws.cell(row=_out_row2, column=_tc2 + 1)
+            # Skip merged-cell children — read-only, writing .value raises AttributeError
+            if isinstance(_xl, MergedCell):
+                continue
             _val = ef_val.get("value", "") if isinstance(ef_val, dict) else str(ef_val or "")
             _val = _val if _val is not None else ""
             try:
@@ -7161,8 +7187,9 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
         flag_count = validation.get("flagged_count", 0)
         if flag_count > 0:
             nc = ws.cell(row=block_start_row, column=max_c + 2)
-            nc.value = f"! {flag_count} low-confidence"
-            nc.font = Font(color="FFDC2626", size=9, italic=True)
+            if not isinstance(nc, MergedCell):
+                nc.value = f"! {flag_count} low-confidence"
+                nc.font = Font(color="FFDC2626", size=9, italic=True)
 
         # No trailing blank row here — spacing is added at the START of the next block
         # (3 blank rows for new document, 1 blank row between tables within same doc)
