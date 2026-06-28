@@ -581,6 +581,24 @@ This fixes mixed invoices (id=24: 27 value_targets + 32 table_data + 0 column_gr
 
 `_run_layout_extraction`/`_run_unguided_extraction` share `_run_three_layer`. Export routing in `_write_excel` mirrors this deterministically: non-empty `layout_sections` → layout writer; otherwise `primary_mode` (form/mixed/table); no template → `_write_flat_table`. **Layer-1 over-extraction guard:** the document-map prompt now instructs the model to keep each section a focused 3–15 item group and split anything >20 into non-overlapping subsections. Logging: `[ROUTE]`/`[FIELD]`/`[LAYOUT]`/`[UNGUIDED]`/`[L1]`/`[L2]`/`[L3]`/`[RESULT]`. Verified: routing for labeled (`['FIELD']` only — no L1/L2) vs structural (`['L1','L2',…]`) vs no-template; live-Gemini layout + field e2e; mocked multi-doc, scanned, completeness, financial-mismatch.
 
+### Gemini-based template understanding at SAVE time — `cell_binding_map` (2026-06-28)
+
+Instead of re-running the Python rule analysis (`compute_binding_map`) on every extraction, a template is now understood **once by Gemini when it is saved/updated**, and the result is persisted on the template. This replaces the brittle heuristics (column-header detection, section-header pollution, table/parallel-group detection, `template_type` classification) with a reviewable, model-produced binding map keyed by real cell refs. **Fully additive and gated** — legacy templates with no stored map keep the existing `compute_binding_map` + `template_type` routing unchanged.
+
+- **DB:** `ColumnTemplate.cell_binding_map` — a **TEXT** column (JSON string; `TEXT` not `JSONB` for SQLite/PostgreSQL parity and to match `extraction_json`/`columns_json`). Added via `_run_migrations()` `ADD COLUMN IF NOT EXISTS`. Helpers `get_cell_binding_map()`/`set_cell_binding_map()` mirror `get/set_extracted_data`. Stored shape:
+  ```json
+  {"extract_cells": {"B2": {"label","section","type","data_type"}},
+   "tables": [{"table_id","section","header_row","data_start_row","data_end_row","columns": {"A": "name"}}],
+   "static_cells": ["A1","A12", ...], "sections": ["Seller Info", ...]}
+  ```
+- **`_understand_template(grid, orchestrator=None)`** (`extract.py`): `_grid_to_cells_json` serializes EVERY cell in the bounding box (including blanks/merges) to a `cell_ref → {text|empty, marked_extract, merge}` map; one Gemini call classifies each cell (STATIC / EXTRACT / TABLE) and returns the JSON above. Never raises → returns `None` on any failure. In a request handler the engine dir is not yet on `sys.path`, so the function inserts it before importing `LLMRouter`.
+- **Save path** (`templates.py`): `_compute_and_store_cbm(tpl)` runs in `create_template` and in `update_template` **only when the grid (`description`) changed**. Best-effort: on failure the template still saves (with `cell_binding_map=None`) and extraction falls back to `compute_binding_map`. Logs `[TEMPLATE] binding map computed: N extract cells, M tables, K sections`.
+- **Load** (`_parse_template`): copies a populated stored map into `template_data["cell_binding_map"]`.
+- **Extraction** (`run_extraction`, extractor.py): **the stored map wins over the Python classifier.** If `template_data["cell_binding_map"]` has `extract_cells` or `tables`, it routes to **`_run_cbm_extraction`** — one guided Gemini call whose prompt (`_build_cbm_prompt`) lists the exact extract cells (with sections), the table column names, and an explicit "do NOT write to these static cells" list, returning `extracted_fields` (cell-ref keyed) + `table_rows` (column-name keyed) → `_process_vision_result`. It then **forces `template_type` to `mixed`/`labeled`** (and clears `layout_sections`) so `_write_excel` always uses the form/mixed/table writer — never the layout writer (which would drop `table_rows`). Falls through to the existing `template_type` routing when no map is present.
+- **Verified (live Gemini):** the spec template (merged `Seller Info`, `Seller`/`Tax ID` row, `Item|Qty|Unit|Price|Total` headers at row 12, blank rows 13-18, `Subtotal` row 20) → `extract_cells` `B2`/`D2`/`B20`, `tables[line_items]` rows 13-18, `static_cells` `A1,A2,C2,A12,B12,…,A20`. cbm extraction → export to form/mixed writer, statics intact, table rows placed at rows 13-14. py_compile clean on all 5 files; no circular imports.
+
+**Note on the `USE_NEW_EXTRACTOR` flag:** `run_extraction` (and therefore the `_run_cbm_extraction` path) only runs when `USE_NEW_EXTRACTOR=true`. The save-time understanding (`_understand_template`) runs regardless, so maps are stored even while the flag is off; they are consumed once the v4 engine is enabled.
+
 #### (Superseded) Clean v3 extraction engine — `engine/extractor.py` (2026-06-25)
 
 The earlier v3 (single-call + per-section enhancement) was replaced by the v4 three-layer engine above. Original v3 notes retained for history:
