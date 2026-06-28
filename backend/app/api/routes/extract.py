@@ -6402,6 +6402,20 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
             isinstance(s, dict) and s.get("rows") for s in ls.values()
         )
 
+    # cell_binding_map table path — extraction used a stored, Gemini-understood
+    # table definition. Write deterministically: the form writer lays down the
+    # static template cells + single-value extracted_fields, then _write_form_excel
+    # places each table_row by the cbm definition (data_start_row + columns). This
+    # bypasses the region-analysis primary_mode routing, which can mis-classify a
+    # table template as a plain form and silently drop every data row.
+    if any(isinstance(d.get_extracted_data(), dict)
+           and d.get_extracted_data().get("cbm_tables")
+           for d in doc_results):
+        print("[EXPORT] routing: cell_binding_map tables -> form writer + cbm table rows",
+              flush=True)
+        _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
+        return
+
     template_type = ""
     for d in doc_results:
         ed = d.get_extracted_data()
@@ -6951,6 +6965,14 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
         if _dyn_written:
             print(f"[EXPORT] form dynamic pass: {_dyn_written} extra cells written", flush=True)
 
+        # ── cell_binding_map table rows ──────────────────────────────────────────
+        # When extraction used a stored cell_binding_map with table definitions, the
+        # form writer also lays out the line-item rows (the form loop above only
+        # handles single-value cells). Placed by the cbm definition, so it works for
+        # any template with any table.
+        if extracted_data.get("cbm_tables"):
+            _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod)
+
         # Flag count indicator
         flag_count = validation.get("flagged_count", 0)
         if flag_count > 0:
@@ -6960,6 +6982,83 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 nc.font = Font(color="FFDC2626", size=9, italic=True)
 
     print(f"[EXPORT] form: {len(doc_results)} blocks written", flush=True)
+
+
+def _col_to_index(letter: str) -> int:
+    """Spreadsheet column letter -> 0-based index ('A'->0, 'E'->4, 'AA'->26)."""
+    n = 0
+    for ch in str(letter or "").strip().upper():
+        if not ("A" <= ch <= "Z"):
+            continue
+        n = n * 26 + (ord(ch) - 64)
+    return n - 1
+
+
+def _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod):
+    """
+    Write table_rows using the cell_binding_map table definitions. Generic for any
+    template with any table: for each table, each extracted row is placed at
+    data_start_row + i (1-based) into the cbm-defined columns (letter -> column
+    name), expanding past data_end_row when there are more rows than the template
+    reserved. Independent of region analysis. Skips merged-cell children.
+    """
+    from openpyxl.cell import MergedCell
+    tables = extracted_data.get("cbm_tables") or []
+    # Prefer the raw (column-name keyed) rows captured at extraction; fall back to
+    # the normalized table_rows if absent.
+    all_rows = extracted_data.get("cbm_table_rows")
+    if not isinstance(all_rows, list):
+        all_rows = extracted_data.get("table_rows") or []
+    all_rows = [r for r in all_rows if isinstance(r, dict)]
+
+    written_total = 0
+    for t in tables:
+        if not isinstance(t, dict):
+            continue
+        cols = t.get("columns") or {}            # {"A": "Item", "B": "Qty", ...}
+        if not cols:
+            continue
+        try:
+            data_start = int(t.get("data_start_row")
+                             or (int(t.get("header_row", 0)) + 1))
+        except (ValueError, TypeError):
+            continue
+        col_names = [str(v) for v in cols.values()]
+
+        # Select the rows belonging to THIS table.
+        if len(tables) == 1:
+            rows = all_rows
+        else:
+            tid = _slug(t.get("table_id", ""))
+            rows = [r for r in all_rows
+                    if _slug(str(r.get("_table_source", ""))) == tid
+                    or any(cn in r for cn in col_names)]
+
+        for i, row in enumerate(rows):
+            out_row = row_offset + data_start + i   # data_start is 1-based
+            for letter, name in cols.items():
+                c_idx = _col_to_index(letter)
+                if c_idx < 0:
+                    continue
+                val = row.get(name, "")
+                if isinstance(val, dict):
+                    val = val.get("value", "")
+                xl = ws.cell(row=out_row, column=c_idx + 1)
+                if isinstance(xl, MergedCell):
+                    continue
+                # numeric coercion (strip currency / thousands separators)
+                sval = "" if val is None else str(val)
+                clean = sval.replace(",", "").replace("$", "").replace("£", "") \
+                            .replace("€", "").replace("₹", "").strip()
+                if clean and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
+                    xl.value = float(clean) if "." in clean else int(clean)
+                else:
+                    xl.value = sval
+            written_total += 1
+
+    if written_total:
+        print(f"[EXPORT] cbm tables: {written_total} data rows written "
+              f"({len(tables)} table(s))", flush=True)
 
 
 def _calculate_formula(formula: str, cell_values: dict, row_offset: int) -> Optional[float]:

@@ -596,9 +596,19 @@ def _run_cbm_extraction(orchestrator, file_path, template_data, cell_binding_map
     # say "structural" and wrongly pick the layout writer (which drops table_rows).
     try:
         if isinstance(getattr(result, "extracted_data", None), dict):
-            result.extracted_data["template_type"] = (
-                "mixed" if (cell_binding_map.get("tables")) else "labeled")
+            tables = cell_binding_map.get("tables") or []
+            result.extracted_data["template_type"] = "mixed" if tables else "labeled"
             result.extracted_data["layout_sections"] = {}
+            # Persist the cbm table definitions + the RAW (column-name keyed) rows so
+            # the export writer can place table data deterministically by
+            # data_start_row + columns — independent of the fragile region analysis,
+            # which can mis-classify the template and route it to the form writer
+            # (which otherwise drops table_rows entirely).
+            if tables:
+                result.extracted_data["cbm_tables"] = tables
+                raw_rows = d0.get("table_rows") if isinstance(d0, dict) else None
+                if isinstance(raw_rows, list):
+                    result.extracted_data["cbm_table_rows"] = raw_rows
     except Exception:
         pass
     return [result]
