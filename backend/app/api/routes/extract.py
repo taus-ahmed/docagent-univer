@@ -293,6 +293,14 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                         template_data["regions"], tpl.document_type or "other"
                     )
                 )
+                # Gemini-based template understanding (computed once at save time).
+                # When present, extraction uses it directly instead of re-analysing.
+                try:
+                    cbm = tpl.get_cell_binding_map()
+                    if cbm and (cbm.get("extract_cells") or cbm.get("tables")):
+                        template_data["cell_binding_map"] = cbm
+                except Exception:
+                    pass
                 return template_data
             else:
                 # Bug 4 case 1: JSON without a "cells" key — not a valid grid
@@ -1614,6 +1622,222 @@ def compute_binding_map(template_data: dict, grid: dict):
         print(f"[BINDING] compute_binding_map failed: {e}", flush=True)
         print(_tb.format_exc(), flush=True)
         return None
+
+
+# ==============================================================================
+# GEMINI-BASED TEMPLATE UNDERSTANDING (computed once at SAVE time)
+# ==============================================================================
+# Replaces the Python rule-based compute_binding_map for templates that have a
+# stored map. The result is a reviewable {extract_cells, tables, static_cells,
+# sections} JSON persisted on ColumnTemplate.cell_binding_map. Templates with no
+# stored map fall back to compute_binding_map at extraction time (legacy path).
+
+_TEMPLATE_UNDERSTANDING_SYSTEM = (
+    "You are an expert at analyzing spreadsheet templates that users design to "
+    "extract structured data from business documents. You understand labels, "
+    "section headers, column headers, and which blank cells are meant to receive "
+    "extracted values."
+)
+
+
+def _grid_to_cells_json(grid: dict) -> str:
+    """Serialize the template grid to a compact cell-ref -> descriptor JSON for the
+    understanding prompt. Emits EVERY cell in the bounding box (including blanks) so
+    Gemini can tell which cells are empty (extract candidates) vs typed labels."""
+    cells  = grid.get("cells", {})  if isinstance(grid, dict) else {}
+    merges = grid.get("merges", {}) if isinstance(grid, dict) else {}
+    parsed, max_r, max_c = {}, 0, 0
+    for k, cell in cells.items():
+        if not isinstance(cell, dict):
+            continue
+        try:
+            r, c = map(int, str(k).split(","))
+        except (ValueError, AttributeError):
+            continue
+        max_r = max(max_r, r); max_c = max(max_c, c)
+        parsed[(r, c)] = cell
+    out = {}
+    for r in range(max_r + 1):
+        for c in range(max_c + 1):
+            cell = parsed.get((r, c))
+            v = str((cell or {}).get("value", "") or "").strip()
+            entry = {"text": v} if v else {"empty": True}
+            if cell and cell.get("extractTarget"):
+                entry["marked_extract"] = True
+            span = (cell or {}).get("mergeSpan")
+            if isinstance(span, dict) and (int(span.get("rows", 1) or 1) > 1
+                                           or int(span.get("cols", 1) or 1) > 1):
+                entry["merge"] = {"rows": int(span.get("rows", 1) or 1),
+                                  "cols": int(span.get("cols", 1) or 1)}
+            out[_cell_ref(r, c)] = entry
+    # honour standalone merges dict too
+    for pkey, span in (merges or {}).items():
+        try:
+            pr, pc = map(int, str(pkey).split(","))
+        except (ValueError, AttributeError):
+            continue
+        ref = _cell_ref(pr, pc)
+        if ref in out and "merge" not in out[ref]:
+            out[ref]["merge"] = {"rows": int((span or {}).get("rows", 1) or 1),
+                                 "cols": int((span or {}).get("cols", 1) or 1)}
+    return json.dumps(out, ensure_ascii=False)
+
+
+def _understand_template(grid: dict, orchestrator=None) -> Optional[dict]:
+    """
+    Run Gemini ONCE to understand a template grid. Returns the cell_binding_map
+    {extract_cells, tables, static_cells, sections} or None on any failure (the
+    caller then saves the template without a map and extraction falls back to
+    compute_binding_map). Never raises.
+    """
+    try:
+        cells = grid.get("cells", {}) if isinstance(grid, dict) else {}
+        if not cells:
+            return None
+        grid_json = _grid_to_cells_json(grid)
+
+        prompt = (
+            "You are analyzing a spreadsheet template. The user has designed this "
+            "template to extract data from business documents.\n\n"
+            "Here is the complete template grid (cell reference -> contents; "
+            "\"empty\" means a blank cell, \"merge\" means a merged region anchored "
+            "at that cell):\n"
+            f"{grid_json}\n\n"
+            "For every cell, determine its purpose:\n\n"
+            "1. STATIC cells — text the user typed as labels, headers, or "
+            "decorations. These NEVER receive extracted data (e.g. 'Seller Info', "
+            "'Invoice No', 'Item', 'Subtotal', section headers, column headers).\n\n"
+            "2. EXTRACT cells — empty cells where a single extracted value should be "
+            "placed. The user left them blank intentionally for the AI to fill.\n\n"
+            "3. TABLE cells — empty cells that are part of a repeating table; they "
+            "inherit meaning from the column header above them.\n\n"
+            "For each EXTRACT cell, identify its exact cell reference, what kind of "
+            "data goes there (infer from neighbouring label cells), which section it "
+            "belongs to (nearest section header above), and that it is a single "
+            "value.\n\n"
+            "For each TABLE, identify the header row (row number + column letters), "
+            "the column names and their column letters, the data row range (start "
+            "and end row), and which section of the document it represents.\n\n"
+            "Return ONLY this JSON (no prose, no markdown):\n"
+            "{\n"
+            '  "extract_cells": {\n'
+            '    "B2": {"label": "Seller name", "section": "Seller Info", '
+            '"type": "single_value", "data_type": "company_name"}\n'
+            "  },\n"
+            '  "tables": [\n'
+            '    {"table_id": "line_items", "section": "Line Items", '
+            '"header_row": 12, "data_start_row": 13, "data_end_row": 18,\n'
+            '     "columns": {"A": "Item description", "B": "Quantity", '
+            '"D": "Unit Price", "E": "Line Total"}}\n'
+            "  ],\n"
+            '  "static_cells": ["A1", "A2", "C2", "A12", "B12"],\n'
+            '  "sections": ["Seller Info", "Buyer Info", "Line Items", "Summary"]\n'
+            "}"
+        )
+
+        # Get an LLM. In a request handler the engine dir is not on sys.path yet.
+        llm = getattr(orchestrator, "llm", None)
+        if llm is None:
+            for p in [str(_engine_dir), str(_backend_dir), str(_project_dir)]:
+                if p not in sys.path:
+                    sys.path.insert(0, p)
+            from connectors.llm_router import LLMRouter
+            llm = LLMRouter()
+
+        resp = llm.extract(text=grid_json, prompt=prompt,
+                           system_instruction=_TEMPLATE_UNDERSTANDING_SYSTEM)
+        if not resp or not getattr(resp, "success", False):
+            print("[TEMPLATE] understanding: LLM call failed", flush=True)
+            return None
+        parsed = getattr(resp, "parsed_json", None)
+        if not isinstance(parsed, dict):
+            print("[TEMPLATE] understanding: non-dict response", flush=True)
+            return None
+
+        cbm = {
+            "extract_cells": parsed.get("extract_cells", {}) if isinstance(parsed.get("extract_cells"), dict) else {},
+            "tables":        parsed.get("tables", []) if isinstance(parsed.get("tables"), list) else [],
+            "static_cells":  parsed.get("static_cells", []) if isinstance(parsed.get("static_cells"), list) else [],
+            "sections":      parsed.get("sections", []) if isinstance(parsed.get("sections"), list) else [],
+        }
+        if not cbm["extract_cells"] and not cbm["tables"]:
+            print("[TEMPLATE] understanding: no extract cells or tables found", flush=True)
+            return None
+        return cbm
+    except Exception as e:
+        print(f"[TEMPLATE] understanding error: {e}", flush=True)
+        return None
+
+
+def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
+    """Build the extraction user-prompt directly from a stored cell_binding_map.
+    Asks for extracted_fields (cell-ref keyed) + table_rows (column-name keyed,
+    matching the existing _process_vision_result / writer contract)."""
+    extract_cells = cbm.get("extract_cells", {}) or {}
+    tables        = cbm.get("tables", []) or []
+    static_cells  = cbm.get("static_cells", []) or []
+
+    lines = ["=== EXTRACTION TASK ===",
+             "Extract data from this business document and fill ONLY the cells "
+             "listed below.", ""]
+
+    if extract_cells:
+        lines.append("SINGLE VALUE CELLS — return each in extracted_fields keyed by "
+                     "the EXACT cell reference shown:")
+        for ref, info in extract_cells.items():
+            label   = (info.get("label", "") if isinstance(info, dict) else str(info or "")).strip()
+            section = (info.get("section", "") if isinstance(info, dict) else "").strip()
+            seg = f"  (from the '{section}' section)" if section else ""
+            lines.append(f"  {ref} = {label or 'value'}{seg}")
+        lines.append("")
+
+    if tables:
+        lines.append("TABLES — return rows in table_rows. Use the COLUMN NAMES below "
+                     "as the keys in each row object (one object per line item):")
+        for t in tables:
+            tid     = t.get("table_id", "table")
+            section = t.get("section", "")
+            cols    = t.get("columns", {}) or {}
+            colnames = [cols[k] for k in sorted(cols.keys())]
+            start = t.get("data_start_row")
+            sec_seg = f" (section: {section})" if section else ""
+            lines.append(f"  Table '{tid}'{sec_seg}:")
+            lines.append(f"    Columns: {', '.join(str(x) for x in colnames)}")
+            lines.append("    Extract EVERY line-item row of this table from the "
+                         "document — do not stop early.")
+            if start:
+                lines.append(f"    (template data starts at row {start}; return as "
+                             "many rows as the document actually has)")
+        lines.append("")
+
+    if static_cells:
+        lines.append("DO NOT write to these static label/header cells — they are "
+                     "template text, not data:")
+        lines.append("  " + ", ".join(str(x) for x in static_cells))
+        lines.append("")
+
+    lines += [
+        "CRITICAL RULES:",
+        "1. Only fill the cells / tables listed above. Do NOT invent cell "
+        "references that are not listed.",
+        "2. Match document data to template fields BY MEANING — labels may differ "
+        "(e.g. 'Rcpt No' = 'Receipt Number').",
+        "3. NUMBERS: remove $ £ € ₹ and thousands commas. \"(2.85)\" means -2.85.",
+        "4. DATES: always YYYY-MM-DD.",
+        "5. MISSING values: use \"\" (never 'N/A' or 'null').",
+        "",
+        "=== OUTPUT FORMAT ===",
+        "Return ONLY this JSON:",
+        "{",
+        '  "document_type": "detected type",',
+        '  "overall_confidence": "high",',
+        '  "extracted_fields": { "B2": "value", "D2": "value" },',
+        '  "table_rows": [ { "ColumnName1": "value", "ColumnName2": "value" } ]',
+        "}",
+    ]
+    if doc_text:
+        lines += ["", "=== DOCUMENT TEXT ===", doc_text[:8000]]
+    return "\n".join(lines)
 
 
 def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,

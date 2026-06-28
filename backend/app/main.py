@@ -93,6 +93,12 @@ def _run_migrations():
             # FIX 5: persist the raw LLM (Gemini) response for audit / re-export / debug
             """ALTER TABLE document_results
                ADD COLUMN IF NOT EXISTS raw_llm_response TEXT""",
+
+            # Gemini-based template understanding computed once at save time.
+            # TEXT (not JSONB) for SQLite/PostgreSQL parity — matches the codebase
+            # convention of storing JSON as TEXT (extraction_json, columns_json).
+            """ALTER TABLE column_templates
+               ADD COLUMN IF NOT EXISTS cell_binding_map TEXT""",
         ]
 
         for sql in migrations:

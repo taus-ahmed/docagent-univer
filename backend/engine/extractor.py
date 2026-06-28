@@ -563,6 +563,47 @@ def _run_field_extraction(orchestrator, file_path, template_data, binding_map,
                                    elapsed, resp, doc_text, "", 0)]
 
 
+def _run_cbm_extraction(orchestrator, file_path, template_data, cell_binding_map,
+                        binding_map, page_images, doc_text, doc_text_pages, file_type,
+                        default_doc_type, start):
+    """
+    STORED cell_binding_map path (Gemini-based template understanding from save time).
+    One template-guided Gemini call whose prompt is built directly from the stored
+    map (exact extract cells + table definitions + static-cell exclusions). Returns
+    extracted_fields + table_rows → _process_vision_result → form/mixed/table writer.
+    No Layer 1/2/3, no re-analysis of the grid.
+    """
+    from app.api.routes.extract import (_build_cbm_prompt, _process_vision_result,
+                                         _get_system_prompt, _fail)
+    n_cells = len(cell_binding_map.get("extract_cells", {}) or {})
+    n_tables = len(cell_binding_map.get("tables", []) or [])
+    _log("FIELD", f"{file_path.name}: stored cell_binding_map "
+                  f"({n_cells} extract cells, {n_tables} tables) — single guided call")
+    system = _get_system_prompt(default_doc_type)
+    prompt = _build_cbm_prompt(cell_binding_map, doc_text)
+    parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images, text=doc_text)
+    if not parsed:
+        return [_fail(file_path.name, "cell_binding_map extraction failed")]
+    d0 = _unwrap(parsed)
+    td = ({**template_data, "binding_map": binding_map}
+          if binding_map else dict(template_data or {}))
+    elapsed = (time.time() - start) * 1000
+    result = _process_vision_result(d0, td, file_path.name, default_doc_type,
+                                    elapsed, resp, doc_text, "", 0)
+    # The cbm path always returns extracted_fields + table_rows (field/mixed shape),
+    # so EXPORT must use the form/mixed/table writer — never the layout writer. Force
+    # template_type accordingly; compute_binding_map's verdict for the same grid may
+    # say "structural" and wrongly pick the layout writer (which drops table_rows).
+    try:
+        if isinstance(getattr(result, "extracted_data", None), dict):
+            result.extracted_data["template_type"] = (
+                "mixed" if (cell_binding_map.get("tables")) else "labeled")
+            result.extracted_data["layout_sections"] = {}
+    except Exception:
+        pass
+    return [result]
+
+
 def _run_three_layer(orchestrator, file_path, template_data, binding_map, page_images,
                      doc_text, doc_text_pages, file_type, default_doc_type, start,
                      primary_mode):
@@ -660,10 +701,24 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
                doc_text_pages=doc_text_pages, file_type=ftype,
                default_doc_type=default_doc_type, start=start)
 
-    # ── ROUTING DECISION AT THE START — by template_type classifier ──
+    # ── ROUTING DECISION AT THE START ──
     if not template_data:
         _log("ROUTE", f"{file_path.name}: NO TEMPLATE -> unguided extraction")
         return _run_unguided_extraction(**ctx)
+
+    # STORED cell_binding_map (Gemini understood the template at save time) wins over
+    # the Python template_type classifier — use it directly, always field extraction.
+    cbm = template_data.get("cell_binding_map")
+    if isinstance(cbm, dict) and (cbm.get("extract_cells") or cbm.get("tables")):
+        _log("ROUTE", f"{file_path.name}: stored cell_binding_map present "
+                      f"({len(cbm.get('extract_cells', {}) or {})} cells, "
+                      f"{len(cbm.get('tables', []) or [])} tables) -> cbm field extraction")
+        return _run_cbm_extraction(orchestrator=orchestrator, file_path=file_path,
+                                   template_data=template_data, cell_binding_map=cbm,
+                                   binding_map=binding_map, page_images=page_images,
+                                   doc_text=doc_text, doc_text_pages=doc_text_pages,
+                                   file_type=ftype, default_doc_type=default_doc_type,
+                                   start=start)
 
     meta = (binding_map or {}).get("_meta", {})
     template_type = meta.get("template_type", "labeled")
