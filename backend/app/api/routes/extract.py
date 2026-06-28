@@ -1847,9 +1847,12 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
         "references that are not listed.",
         "2. Match document data to template fields BY MEANING — labels may differ "
         "(e.g. 'Rcpt No' = 'Receipt Number').",
-        "3. NUMBERS: remove $ £ € ₹ and thousands commas. \"(2.85)\" means -2.85.",
+        "3. NUMBERS: return the COMPLETE numeric amount including all digits "
+        "(e.g. 320.00, 12179.21). Remove thousands commas. \"(2.85)\" means -2.85. "
+        "NEVER return only a currency symbol like \"$\" with no digits — if a cell "
+        "shows a currency sign next to an amount, return the AMOUNT, not the sign.",
         "4. DATES: always YYYY-MM-DD.",
-        "5. MISSING values: use \"\" (never 'N/A' or 'null').",
+        "5. MISSING values: use \"\" (never 'N/A', 'null', or a lone currency symbol).",
         "",
         "=== OUTPUT FORMAT ===",
         "Return ONLY this JSON:",
@@ -3373,8 +3376,17 @@ def _normalize_value(v) -> str:
             except Exception:
                 pass
 
-    # Currency/number cleanup: strip symbols and commas
-    num_candidate = re.sub(r'[$£€₹,\s]', '', s)
+    # Currency/number cleanup. Strip currency symbols from the START only (a lone
+    # symbol must never replace a real value, and digits must never be lost).
+    _CURRENCY = "$£€₹¥"
+    stripped = s
+    had_currency = False
+    while stripped and stripped[0] in _CURRENCY:
+        stripped = stripped[1:].lstrip()
+        had_currency = True
+    num_candidate = stripped.replace(",", "").strip()
+
+    # K / M suffix expansion (e.g. "5K" -> 5000, "1.2M" -> 1200000)
     km = re.match(r'^(-?[0-9.]+)[Kk]$', num_candidate)
     if km:
         try:
@@ -3387,6 +3399,22 @@ def _normalize_value(v) -> str:
             return str(float(mm.group(1)) * 1_000_000)
         except Exception:
             pass
+
+    # A valid number after stripping the leading currency -> return it as a number,
+    # but only for clearly-monetary values (had a currency symbol, a thousands
+    # comma, or a decimal point). A bare integer is left as a string so IDs /
+    # invoice numbers / leading zeros are never mangled.
+    if (re.match(r'^-?[0-9]+\.?[0-9]*$', num_candidate)
+            and (had_currency or "," in s or "." in num_candidate)):
+        try:
+            return float(num_candidate)
+        except Exception:
+            pass
+
+    # Stripping a currency symbol left nothing usable (e.g. value was just "$"):
+    # return the original unchanged — never lose data, never blank it silently.
+    if had_currency and not num_candidate:
+        return s
 
     return s
 
@@ -6588,18 +6616,6 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             return {_nrm(r.get("label")) for r in rows
                     if isinstance(r, dict) and r.get("label")}
 
-        drop = set()
-        for i, (k1, r1) in enumerate(raw_secs):
-            for j, (k2, r2) in enumerate(raw_secs):
-                if i == j or k1 in drop or k2 in drop:
-                    continue
-                l2 = _labset(r2)
-                if l2 and len(_labset(r1) & l2) / len(l2) >= 0.8 and len(r1) > len(r2):
-                    drop.add(k1)        # k1 is the broader duplicate -> drop it
-        if drop:
-            print(f"[EXPORT] layout: dropped duplicate section(s) {sorted(drop)}", flush=True)
-        kept = [(k, r) for k, r in raw_secs if k not in drop]
-
         def _match_group(sec_key):
             nk = _nrm(sec_key)
             for g in groups:                                  # 1. exact
@@ -6610,6 +6626,32 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 if gn and (gn in nk or nk in gn):
                     return g
             return None
+
+        # ── Dedup — TIGHTENED. Only drop a section k1 when it is a redundant
+        #    superset of a section k2 that is ALREADY captured by a column group,
+        #    AND k1 adds nothing beyond k2 except (at most) one subtotal label.
+        #    This drops pure "<Group> + subtotal" duplicates (e.g. "Total Current
+        #    Assets" duplicating the "Current assets" group) while KEEPING
+        #    multi-section roll-ups and unique summaries (TOTAL ASSETS, TOTAL
+        #    LIABILITIES, Shareholders Equity, Long-term Liabilities, ...). A section
+        #    is NEVER dropped just for sharing a few labels with another.
+        drop = set()
+        for i, (k1, r1) in enumerate(raw_secs):
+            for j, (k2, r2) in enumerate(raw_secs):
+                if i == j or k1 in drop or k2 in drop:
+                    continue
+                l1, l2 = _labset(r1), _labset(r2)
+                if not l1 or not l2:
+                    continue
+                inter = len(l1 & l2)
+                if (inter / len(l2) >= 0.9              # 90%+ of k2's labels are in k1
+                        and len(r1) > len(r2)           # k1 has MORE rows than k2
+                        and _match_group(k2) is not None  # k2 is already in a column group
+                        and len(l1 - l2) <= 1):         # k1 adds <=1 label (its subtotal)
+                    drop.add(k1)        # k1 is the redundant superset -> drop it
+        if drop:
+            print(f"[EXPORT] layout: dropped duplicate section(s) {sorted(drop)}", flush=True)
+        kept = [(k, r) for k, r in raw_secs if k not in drop]
 
         matched_to, used = {}, set()
         for k, r in kept:
