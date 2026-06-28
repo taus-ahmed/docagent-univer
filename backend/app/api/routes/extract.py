@@ -1773,32 +1773,39 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
     """Build the extraction user-prompt directly from a stored cell_binding_map.
     Asks for extracted_fields (cell-ref keyed) + table_rows (column-name keyed,
     matching the existing _process_vision_result / writer contract)."""
-    extract_cells = cbm.get("extract_cells", {}) or {}
-    tables        = cbm.get("tables", []) or []
-    static_cells  = cbm.get("static_cells", []) or []
+    extract_cells = cbm.get("extract_cells") if isinstance(cbm, dict) else None
+    extract_cells = extract_cells if isinstance(extract_cells, dict) else {}
+    tables        = cbm.get("tables") if isinstance(cbm, dict) else None
+    tables        = tables if isinstance(tables, list) else []
+    static_cells  = cbm.get("static_cells") if isinstance(cbm, dict) else None
+    static_cells  = static_cells if isinstance(static_cells, list) else []
 
     lines = ["=== EXTRACTION TASK ===",
              "Extract data from this business document and fill ONLY the cells "
              "listed below.", ""]
 
-    if extract_cells:
+    # Only list cells whose ref is a real string and whose info isn't garbage.
+    single = [(ref, info) for ref, info in extract_cells.items() if ref]
+    if single:
         lines.append("SINGLE VALUE CELLS — return each in extracted_fields keyed by "
                      "the EXACT cell reference shown:")
-        for ref, info in extract_cells.items():
+        for ref, info in single:
             label   = (info.get("label", "") if isinstance(info, dict) else str(info or "")).strip()
             section = (info.get("section", "") if isinstance(info, dict) else "").strip()
             seg = f"  (from the '{section}' section)" if section else ""
             lines.append(f"  {ref} = {label or 'value'}{seg}")
         lines.append("")
 
-    if tables:
+    # Skip any non-dict / empty table entries (a malformed map must never crash).
+    valid_tables = [t for t in tables if isinstance(t, dict) and (t.get("columns") or {})]
+    if valid_tables:
         lines.append("TABLES — return rows in table_rows. Use the COLUMN NAMES below "
                      "as the keys in each row object (one object per line item):")
-        for t in tables:
+        for t in valid_tables:
             tid     = t.get("table_id", "table")
             section = t.get("section", "")
-            cols    = t.get("columns", {}) or {}
-            colnames = [cols[k] for k in sorted(cols.keys())]
+            cols    = t.get("columns") or {}
+            colnames = [cols[k] for k in sorted(cols.keys()) if cols.get(k)]
             start = t.get("data_start_row")
             sec_seg = f" (section: {section})" if section else ""
             lines.append(f"  Table '{tid}'{sec_seg}:")
@@ -1810,10 +1817,11 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
                              "many rows as the document actually has)")
         lines.append("")
 
-    if static_cells:
+    statics = [str(x) for x in static_cells if x]
+    if statics:
         lines.append("DO NOT write to these static label/header cells — they are "
                      "template text, not data:")
-        lines.append("  " + ", ".join(str(x) for x in static_cells))
+        lines.append("  " + ", ".join(statics))
         lines.append("")
 
     lines += [
