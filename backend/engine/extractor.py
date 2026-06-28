@@ -254,7 +254,11 @@ def _build_section_prompt(section_info, template_group, doc_type, total_cell=Non
             "- Row numbers MUST be sequential starting from 1\n"
             "- NEVER leave label_col or value_col empty or null\n"
             "- Extract EVERY item — do not stop early\n"
-            "- Values must be exactly as they appear in the document"
+            "- Values must be exactly as they appear in the document\n"
+            "- NUMBERS: return the COMPLETE numeric amount including digits "
+            "(e.g. \"$320.00\" -> \"320.00\"). NEVER return only a currency symbol "
+            "($, £, €, etc.) as a value — a lone currency symbol means the value was "
+            "not found, return \"\" instead."
         )
     else:
         prompt = (
@@ -265,7 +269,11 @@ def _build_section_prompt(section_info, template_group, doc_type, total_cell=Non
             f'  "layout_sections": {{ "{key}": {{ "rows": [\n'
             '    {"label_col": "A", "value_col": "B", "row": 1, '
             '"label": "field name", "value": "field value"}\n'
-            "  ] } }\n}"
+            "  ] } }\n}\n\n"
+            "NUMBERS: return the COMPLETE numeric amount including digits "
+            "(e.g. \"$320.00\" -> \"320.00\"). NEVER return only a currency symbol "
+            "($, £, €, etc.) as a value — a lone currency symbol means the value was "
+            "not found, return \"\" instead."
         )
     return prompt, key
 

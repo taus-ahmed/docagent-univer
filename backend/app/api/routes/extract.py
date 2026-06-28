@@ -2240,9 +2240,13 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "",
    "EIN"="Employer ID Number", "SSN"="Social Security Number"
 2. BLANK ROWS IN TEMPLATE are placeholders only — they do NOT limit row count.
    If the document has 15 rows, return 15 rows. If it has 2, return 2.
-3. NUMBERS: Remove $ £ € ₹ and commas. "(2.85)" means -2.85.
+3. NUMBERS: Return the COMPLETE numeric amount including all digits
+   (e.g. "$320.00" -> "320.00" or 320.00). Remove $ £ € ₹ and commas.
+   "(2.85)" means -2.85. NEVER return only a currency symbol ($, £, €, etc.)
+   as a value — return the AMOUNT, not the sign.
 4. DATES: Always YYYY-MM-DD format.
-5. MISSING VALUES: Use "" — never "N/A", "null", or "not found".
+5. MISSING VALUES: Use "" — never "N/A", "null", "not found", or a lone
+   currency symbol. A lone currency symbol means the value was not found.
 6. ALL PAGES: Extract from every page. Never stop at page 1.
 7. HEADERS ARE NOT DATA: Section label rows and column header rows are
    template structure only. Never include them as data rows in table_rows.
