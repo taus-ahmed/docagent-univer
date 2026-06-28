@@ -203,19 +203,24 @@ def _compute_and_store_cbm(tpl: ColumnTemplate) -> None:
         except Exception:
             ttype = None
         if ttype == "structural":
+            had_cbm = bool(tpl.cell_binding_map)
             tpl.set_cell_binding_map(None)
-            print("[TEMPLATE] structural template — skipping CBM (uses layout path)",
-                  flush=True)
+            if had_cbm:
+                # FIX 5 — a structural template that previously had a (wrong) CBM
+                # stored gets it cleared on re-save.
+                print("[TEMPLATE] structural — cleared incorrect CBM", flush=True)
+            else:
+                print("[TEMPLATE] structural template — CBM skipped, uses layout extraction",
+                      flush=True)
             return
 
         cbm = _understand_template(raw)
         if cbm:
             tpl.set_cell_binding_map(cbm)
             print(
-                f"[TEMPLATE] binding map computed: "
-                f"{len(cbm.get('extract_cells', {}))} extract cells, "
-                f"{len(cbm.get('tables', []))} tables, "
-                f"{len(cbm.get('sections', []))} sections",
+                f"[TEMPLATE] labeled/mixed — CBM stored: "
+                f"{len(cbm.get('extract_cells', {}))} cells, "
+                f"{len(cbm.get('tables', []))} tables",
                 flush=True,
             )
         else:

@@ -113,6 +113,36 @@ def _run_migrations():
 
         logger.info("Database migrations applied")
 
+        # FIX 7 — clear cell_binding_map that was incorrectly stored for STRUCTURAL
+        # templates (e.g. BS Luq before the save-time structural guard existed). The
+        # signature of a mis-analyzed structural template is a CBM with < 5 single
+        # cells AND no tables. Done in Python (parse the TEXT JSON) so it works on
+        # both SQLite and PostgreSQL. Runs once per boot; idempotent.
+        try:
+            import json as _json
+            from app.models.models import ColumnTemplate
+            rows = (db.query(ColumnTemplate)
+                      .filter(ColumnTemplate.cell_binding_map.isnot(None)).all())
+            cleared = 0
+            for t in rows:
+                try:
+                    cbm = _json.loads(t.cell_binding_map)
+                except Exception:
+                    continue
+                if not isinstance(cbm, dict):
+                    continue
+                ec = cbm.get("extract_cells") if isinstance(cbm.get("extract_cells"), dict) else {}
+                tb = cbm.get("tables") if isinstance(cbm.get("tables"), list) else []
+                if len(ec) < 5 and len(tb) == 0:
+                    t.cell_binding_map = None
+                    cleared += 1
+            if cleared:
+                db.commit()
+                logger.info(f"Cleared {cleared} incorrect CBM(s) from structural templates")
+        except Exception as e:
+            db.rollback()
+            logger.warning(f"CBM cleanup skipped: {e}")
+
     except Exception as e:
         logger.warning(f"Migration error: {e}")
     finally:
