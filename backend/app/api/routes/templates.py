@@ -191,7 +191,23 @@ def _compute_and_store_cbm(tpl: ColumnTemplate) -> None:
 
     try:
         # Lazy import — extract.py pulls in heavy engine modules; avoid import cycles.
-        from app.api.routes.extract import _understand_template
+        from app.api.routes.extract import _understand_template, compute_binding_map
+
+        # Gate by template_type: STRUCTURAL templates (pure column layouts — balance
+        # sheets, P&L, payslips with side-by-side sections) are handled best by the
+        # three-layer layout path, which uses the section-aware column_groups. Skip
+        # CBM for them so extraction falls through to the layout path. Only LABELED /
+        # MIXED templates (KV forms, invoices with embedded tables) get a CBM.
+        try:
+            ttype = (compute_binding_map({}, raw) or {}).get("_meta", {}).get("template_type")
+        except Exception:
+            ttype = None
+        if ttype == "structural":
+            tpl.set_cell_binding_map(None)
+            print("[TEMPLATE] structural template — skipping CBM (uses layout path)",
+                  flush=True)
+            return
+
         cbm = _understand_template(raw)
         if cbm:
             tpl.set_cell_binding_map(cbm)
