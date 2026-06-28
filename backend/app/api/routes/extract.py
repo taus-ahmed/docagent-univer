@@ -1763,6 +1763,14 @@ def _understand_template(grid: dict, orchestrator=None) -> Optional[dict]:
         if not cbm["extract_cells"] and not cbm["tables"]:
             print("[TEMPLATE] understanding: no extract cells or tables found", flush=True)
             return None
+        # FIX 5 — reject an under-specified CBM (few single cells and no table). This
+        # is the signature of a STRUCTURAL template (column layout / parallel sections)
+        # that Gemini mis-analyzed as a sparse form. Returning None means it falls
+        # through to the three-layer layout path instead of a wrong CBM field path.
+        if len(cbm["extract_cells"]) < 5 and len(cbm["tables"]) == 0:
+            print("[TEMPLATE] CBM rejected — too few cells, likely structural template "
+                  "misanalyzed", flush=True)
+            return None
         return cbm
     except Exception as e:
         print(f"[TEMPLATE] understanding error: {e}", flush=True)
@@ -1784,16 +1792,25 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
              "Extract data from this business document and fill ONLY the cells "
              "listed below.", ""]
 
-    # Only list cells whose ref is a real string and whose info isn't garbage.
-    single = [(ref, info) for ref, info in extract_cells.items() if ref]
+    # FIX 3 — fully defensive: no None ever reaches .get()/.strip(); a cell with no
+    # usable label is skipped (we can't tell the model what to extract there).
+    single = []
+    for cell_ref, info in extract_cells.items():
+        if not cell_ref or not isinstance(info, dict):
+            continue
+        label = (info.get("label") or "").strip()
+        section = (info.get("section") or "").strip()
+        data_type = (info.get("data_type") or "").strip()
+        if not label:
+            continue
+        single.append((cell_ref, label, section, data_type))
     if single:
         lines.append("SINGLE VALUE CELLS — return each in extracted_fields keyed by "
                      "the EXACT cell reference shown:")
-        for ref, info in single:
-            label   = (info.get("label", "") if isinstance(info, dict) else str(info or "")).strip()
-            section = (info.get("section", "") if isinstance(info, dict) else "").strip()
+        for cell_ref, label, section, data_type in single:
             seg = f"  (from the '{section}' section)" if section else ""
-            lines.append(f"  {ref} = {label or 'value'}{seg}")
+            dt = f" [{data_type}]" if data_type else ""
+            lines.append(f"  {cell_ref} = {label}{seg}{dt}")
         lines.append("")
 
     # Skip any non-dict / empty table entries (a malformed map must never crash).
@@ -6973,13 +6990,16 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
         if _dyn_written:
             print(f"[EXPORT] form dynamic pass: {_dyn_written} extra cells written", flush=True)
 
-        # ── cell_binding_map table rows ──────────────────────────────────────────
-        # When extraction used a stored cell_binding_map with table definitions, the
-        # form writer also lays out the line-item rows (the form loop above only
-        # handles single-value cells). Placed by the cbm definition, so it works for
-        # any template with any table.
+        # ── table rows (FIX 4) ───────────────────────────────────────────────────
+        # The form loop above only handles single-value cells. If the document has
+        # table_rows, write them now: by the cell_binding_map table definition when
+        # present (exact data_start_row + columns), else as a generic A/B/C... fallback
+        # placed after the template block so table data is never silently dropped.
         if extracted_data.get("cbm_tables"):
             _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod)
+        elif extracted_data.get("table_rows"):
+            _write_table_rows_fallback(ws, extracted_data,
+                                       row_offset + max_r + 2, openpyxl_mod)
 
         # Flag count indicator
         flag_count = validation.get("flagged_count", 0)
@@ -7069,6 +7089,39 @@ def _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod):
               f"({len(tables)} table(s))", flush=True)
 
 
+def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod):
+    """
+    FIX 4 fallback — write table_rows when there is NO cell_binding_map table
+    definition. Each row's values are placed sequentially into columns A, B, C, ...
+    (row-dict order, skipping private _keys) starting at start_row (1-based), so
+    extracted table data is never silently dropped. Skips merged-cell children.
+    """
+    from openpyxl.cell import MergedCell
+    rows = [r for r in (extracted_data.get("table_rows") or []) if isinstance(r, dict)]
+    if not rows:
+        return
+    written = 0
+    for i, row in enumerate(rows):
+        out_row = start_row + i
+        vals = [v for k, v in row.items() if not str(k).startswith("_")]
+        for c_idx, val in enumerate(vals):
+            if isinstance(val, dict):
+                val = val.get("value", "")
+            xl = ws.cell(row=out_row, column=c_idx + 1)
+            if isinstance(xl, MergedCell):
+                continue
+            sval = "" if val is None else str(val)
+            clean = sval.replace(",", "").replace("$", "").replace("£", "") \
+                        .replace("€", "").replace("₹", "").strip()
+            if clean and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
+                xl.value = float(clean) if "." in clean else int(clean)
+            else:
+                xl.value = sval
+        written += 1
+    if written:
+        print(f"[EXPORT] table_rows fallback: {written} rows written (A/B/C...)", flush=True)
+
+
 def _calculate_formula(formula: str, cell_values: dict, row_offset: int) -> Optional[float]:
     """
     Calculate simple Excel formulas using known cell values.
@@ -7140,6 +7193,17 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
     from openpyxl.cell import MergedCell
+
+    # FIX 4 — cell_binding_map table docs use ABSOLUTE positions (data_start_row).
+    # The mixed writer repositions rows dynamically and would misplace them, so it
+    # delegates such docs to the fixed-position form writer. Keeps the CBM path and
+    # the legacy mixed path from crossing.
+    if any(isinstance(d.get_extracted_data(), dict)
+           and d.get_extracted_data().get("cbm_tables")
+           for d in doc_results):
+        print("[EXPORT] mixed: cbm_tables present -> delegating to form writer", flush=True)
+        _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
+        return
 
     merges_tpl   = sheet_data.get("merges", {})
     table_regions = (template_regions or {}).get("table_regions", [])

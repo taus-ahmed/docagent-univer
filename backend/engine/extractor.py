@@ -614,14 +614,42 @@ def _run_cbm_extraction(orchestrator, file_path, template_data, cell_binding_map
     return [result]
 
 
+def _collapse_to_single_document(document_map, n_pages):
+    """FIX 6 — merge a multi-document map into ONE document spanning all pages,
+    preserving every section. Used for structural templates (a balance sheet / P&L
+    is always one document even across pages)."""
+    docs = document_map.get("documents", []) or []
+    if len(docs) <= 1:
+        return document_map
+    sections = []
+    for d in docs:
+        sections.extend(d.get("sections", []) or [])
+    merged = {
+        "doc_index": 0,
+        "doc_type": docs[0].get("doc_type", "other"),
+        "pages": list(range(n_pages)) if n_pages else docs[0].get("pages", [0]),
+        "identifier": docs[0].get("identifier", ""),
+        "sections": sections,
+    }
+    document_map = dict(document_map)
+    document_map["documents"] = [merged]
+    document_map["total_documents"] = 1
+    _log("L1", f"structural template — collapsed {len(docs)} documents into ONE "
+               f"({len(sections)} sections, all {n_pages} pages)")
+    return document_map
+
+
 def _run_three_layer(orchestrator, file_path, template_data, binding_map, page_images,
                      doc_text, doc_text_pages, file_type, default_doc_type, start,
-                     primary_mode):
+                     primary_mode, single_document=False):
     """Shared Layer 1 → Layer 2 → Layer 3 pipeline used by layout and unguided paths."""
     from app.api.routes.extract import _fail
     document_map, l1_resp = _understand_document(orchestrator, page_images, doc_text,
                                                  binding_map, file_type)
     file_type = document_map.get("file_type", file_type)
+    # FIX 6 — structural templates are always ONE document; never split.
+    if single_document:
+        document_map = _collapse_to_single_document(document_map, len(page_images))
     per_doc, l2_responses = _run_all_extractions(orchestrator, document_map, page_images,
                                                  doc_text_pages, binding_map, default_doc_type)
     cgs = (binding_map or {}).get("_meta", {}).get("column_groups", []) if binding_map else []
@@ -647,11 +675,14 @@ def _run_three_layer(orchestrator, file_path, template_data, binding_map, page_i
 def _run_layout_extraction(orchestrator, file_path, template_data, binding_map,
                            page_images, doc_text, doc_text_pages, file_type,
                            default_doc_type, start):
-    """STRUCTURAL template (has_table_data == True): three-layer → layout_sections."""
-    _log("LAYOUT", f"{file_path.name}: structural template — three-layer (L1 -> L2 -> L3)")
+    """STRUCTURAL template: three-layer → layout_sections. Forced single-document
+    (FIX 6): the whole PDF is ONE document, all page images passed to extraction."""
+    _log("LAYOUT", f"{file_path.name}: structural template — three-layer (L1 -> L2 -> L3), "
+                   f"single-document")
     return _run_three_layer(orchestrator, file_path, template_data, binding_map,
                             page_images, doc_text, doc_text_pages, file_type,
-                            default_doc_type, start, primary_mode="layout")
+                            default_doc_type, start, primary_mode="layout",
+                            single_document=True)
 
 
 def _run_unguided_extraction(orchestrator, file_path, template_data, binding_map,
@@ -711,16 +742,34 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
                doc_text_pages=doc_text_pages, file_type=ftype,
                default_doc_type=default_doc_type, start=start)
 
-    # ── ROUTING DECISION AT THE START ──
+    # ── ROUTING DECISION AT THE START — STRICT SEPARATION (the 3 paths never cross) ──
+    # 1. no template            -> unguided
+    # 2. template_type structural -> layout (NEVER cbm, even if a cbm exists)
+    # 3. labeled/mixed + valid cbm -> cbm field extraction
+    # 4. labeled/mixed, no cbm   -> legacy field extraction
     if not template_data:
         _log("ROUTE", f"{file_path.name}: NO TEMPLATE -> unguided extraction")
         return _run_unguided_extraction(**ctx)
 
-    # STORED cell_binding_map (Gemini understood the template at save time) wins over
-    # the Python template_type classifier — use it directly, always field extraction.
+    meta = (binding_map or {}).get("_meta", {}) if binding_map else {}
+    template_type = meta.get("template_type", "labeled")
+    vt = meta.get("value_target_count", 0)
+    td = meta.get("table_data_count", 0)
+    ng = len(meta.get("column_groups", []))
+
+    # 2. STRUCTURAL — always the three-layer layout path. A stored cell_binding_map
+    # is deliberately ignored here (a structural template must never use CBM).
+    if template_type == "structural":
+        _log("ROUTE", f"{file_path.name}: template_type=structural "
+                      f"(value_targets={vt}, table_data={td}, groups={ng}) -> layout extraction")
+        return _run_layout_extraction(**ctx)
+
+    # 3. LABELED / MIXED with a valid stored CBM -> CBM field extraction.
     cbm = template_data.get("cell_binding_map")
-    if isinstance(cbm, dict) and (cbm.get("extract_cells") or cbm.get("tables")):
-        _log("ROUTE", f"{file_path.name}: stored cell_binding_map present "
+    if (template_type in ("labeled", "mixed")
+            and isinstance(cbm, dict)
+            and (cbm.get("extract_cells") or cbm.get("tables"))):
+        _log("ROUTE", f"{file_path.name}: template_type={template_type} + stored CBM "
                       f"({len(cbm.get('extract_cells', {}) or {})} cells, "
                       f"{len(cbm.get('tables', []) or [])} tables) -> cbm field extraction")
         return _run_cbm_extraction(orchestrator=orchestrator, file_path=file_path,
@@ -730,18 +779,7 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
                                    file_type=ftype, default_doc_type=default_doc_type,
                                    start=start)
 
-    meta = (binding_map or {}).get("_meta", {})
-    template_type = meta.get("template_type", "labeled")
-    vt = meta.get("value_target_count", 0)
-    td = meta.get("table_data_count", 0)
-    ng = len(meta.get("column_groups", []))
-
-    if template_type == "structural":
-        _log("ROUTE", f"{file_path.name}: template_type=structural "
-                      f"(value_targets={vt}, table_data={td}, groups={ng}) -> layout extraction")
-        return _run_layout_extraction(**ctx)
-
-    # labeled OR mixed -> field path (handles KV pairs AND embedded tables together)
-    _log("ROUTE", f"{file_path.name}: template_type={template_type} "
+    # 4. LABELED / MIXED without a CBM -> legacy field path (handles KV + table).
+    _log("ROUTE", f"{file_path.name}: template_type={template_type} (no CBM) "
                   f"(value_targets={vt}, table_data={td}, groups={ng}) -> field extraction")
     return _run_field_extraction(**ctx)
