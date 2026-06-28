@@ -165,6 +165,12 @@ class ColumnTemplate(Base):
     columns_json = Column(Text, nullable=False)       # ["field1", "field2", ...]
     column_order_json = Column(Text, nullable=True)   # explicit ordering
 
+    # Gemini-based template understanding, computed ONCE at save/update time.
+    # JSON string: {extract_cells, tables, static_cells, sections}. NULL = legacy
+    # template (extraction falls back to compute_binding_map). Stored as TEXT for
+    # SQLite/PostgreSQL parity, matching extraction_json / columns_json.
+    cell_binding_map = Column(Text, nullable=True)
+
     is_default = Column(Boolean, default=False)       # visible to all users
     is_shared = Column(Boolean, default=False)        # shared within client org
 
@@ -179,6 +185,18 @@ class ColumnTemplate(Base):
             return json.loads(self.columns_json)
         except Exception:
             return []
+
+    def get_cell_binding_map(self) -> Optional[dict]:
+        if not self.cell_binding_map:
+            return None
+        try:
+            data = json.loads(self.cell_binding_map)
+            return data if isinstance(data, dict) else None
+        except Exception:
+            return None
+
+    def set_cell_binding_map(self, data: Optional[dict]):
+        self.cell_binding_map = json.dumps(data, default=str) if data else None
 
     def get_column_order(self) -> list[str] | None:
         if not self.column_order_json:
