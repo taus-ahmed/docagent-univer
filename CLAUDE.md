@@ -599,6 +599,24 @@ Instead of re-running the Python rule analysis (`compute_binding_map`) on every 
 
 **Note on the `USE_NEW_EXTRACTOR` flag:** `run_extraction` (and therefore the `_run_cbm_extraction` path) only runs when `USE_NEW_EXTRACTOR=true`. The save-time understanding (`_understand_template`) runs regardless, so maps are stored even while the flag is off; they are consumed once the v4 engine is enabled.
 
+### Strict three-path separation (2026-06-29)
+
+The three template kinds map to three extraction paths that **must never cross** — every prior CBM bug came from them crossing. The separation is enforced at four points (save, routing, validation, DB cleanup):
+
+| Template kind | Detection | Save (`_compute_and_store_cbm`) | Extraction (`run_extraction`) | Writer |
+|---|---|---|---|---|
+| **STRUCTURAL** (column layout, parallel sections — BS Luq) | `template_type=="structural"` | **Skip** `_understand_template`; `cell_binding_map=None` | `_run_layout_extraction` (3-layer, **single-document**) — CBM ignored even if present | `_write_layout_excel` |
+| **LABELED / MIXED** (KV form, invoice + table) | `template_type in ("labeled","mixed")` | Run `_understand_template` → store CBM | `_run_cbm_extraction` if valid CBM, else `_run_field_extraction` | form/mixed/table (CBM tables via `_write_cbm_tables`) |
+| **NO TEMPLATE** | `template_data is None` | n/a | `_run_unguided_extraction` | `_write_flat_table` |
+
+- **Routing order (FIX 2, critical):** `run_extraction` checks `not template_data → unguided`; then **`template_type=="structural" → layout` (BEFORE any CBM check)**; then `labeled/mixed + valid CBM → cbm`; else `field`. A structural template with a stale CBM still goes to layout — the stored map can never hijack a balance sheet.
+- **CBM validation (FIX 5):** `_understand_template` rejects an under-specified map (`< 5 extract_cells AND 0 tables`) — the signature of a structural template Gemini mis-analyzed — returning `None` so it falls to the layout path. A structural re-save clears any previously stored CBM.
+- **Defensive prompt (FIX 3):** `_build_cbm_prompt` skips non-dict cell info and label-less cells; no `None` reaches `.get()/.strip()`.
+- **Table writing (FIX 4):** `_write_form_excel` writes `table_rows` by the CBM table definition (`data_start_row` + `columns`) when present, else an `A/B/C…` sequential fallback (`_write_table_rows_fallback`); `_write_mixed_excel` delegates CBM-table docs to the fixed-position form writer (its dynamic repositioning would misplace absolute rows).
+- **Structural = single document (FIX 6):** `_run_layout_extraction` forces `single_document=True`; `_collapse_to_single_document` merges any multi-doc Layer-1 map into ONE document spanning all pages (a balance sheet is one document even across pages).
+- **DB cleanup (FIX 7):** `_run_migrations()` clears `cell_binding_map` for templates whose stored CBM has `< 5 cells AND 0 tables` (one-time, Python-side JSON parse for SQLite/PostgreSQL parity) — removes wrong CBMs already stored for BS Luq etc.
+- **Verified** (prod templates BS Luq id=31 / Invoice-Template-101 id=24): S1 structural → no `_understand_template`; S2 mixed → CBM stored; S3 None-safe prompt; S4 rows at 14-17 via `data_start_row`; S5 routing incl. defensive structural+staleCBM → layout; plus Fix5 rejection and Fix6 collapse. py_compile clean.
+
 #### (Superseded) Clean v3 extraction engine — `engine/extractor.py` (2026-06-25)
 
 The earlier v3 (single-call + per-section enhancement) was replaced by the v4 three-layer engine above. Original v3 notes retained for history:
