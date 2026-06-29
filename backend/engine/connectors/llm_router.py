@@ -118,7 +118,7 @@ class LLMRouter:
 
     def extract(self, text: str = "", image_b64: str = "",
                 prompt: str = "",
-                system_instruction: str = "") -> LLMResponse:
+                system_instruction: str = "", model: str = None) -> LLMResponse:
         """
         Route an extraction request with automatic fallback.
 
@@ -128,6 +128,10 @@ class LLMRouter:
           Groq receives it prepended to the prompt (Groq has no system role split).
 
         prompt: template fields + doc text (variable per document).
+
+        model: optional Gemini model override tried FIRST (e.g. "gemini-2.5-flash"
+          to pin accuracy-critical calls to a stronger tier than the default -lite).
+          Ignored by Groq (which selects its own models).
         """
         use_vision = bool(image_b64) and not text
 
@@ -140,10 +144,10 @@ class LLMRouter:
                     # Gemini: pass system_instruction separately for token savings
                     result = (
                         provider.extract_data_vision(
-                            image_b64, prompt, system_instruction)
+                            image_b64, prompt, system_instruction, model=model)
                         if use_vision else
                         provider.extract_data(
-                            text, prompt, system_instruction)
+                            text, prompt, system_instruction, model=model)
                     )
                 else:
                     # Groq / other providers: prepend system_instruction to prompt
