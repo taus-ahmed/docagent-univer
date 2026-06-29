@@ -66,23 +66,24 @@ def _num(s):
         return None
 
 
-def _llm_json(orchestrator, prompt, system, images=None, text=""):
+def _llm_json(orchestrator, prompt, system, images=None, text="", model=None):
     """
     One Gemini call (vision-first, all images), returning (parsed_dict_or_None,
     response_or_None). 3 attempts with 2s backoff; text fallback when vision fails.
+    `model` pins the Gemini tier (e.g. "gemini-2.5-flash" for accuracy-critical calls).
     """
     resp = None
     for attempt in range(3):
         try:
             if images:
                 resp = orchestrator.llm.extract(image_b64=images, prompt=prompt,
-                                                system_instruction=system)
+                                                system_instruction=system, model=model)
                 if (not getattr(resp, "success", False)) and text:
                     resp = orchestrator.llm.extract(text=text, prompt=prompt,
-                                                    system_instruction=system)
+                                                    system_instruction=system, model=model)
             elif text:
                 resp = orchestrator.llm.extract(text=text, prompt=prompt,
-                                                system_instruction=system)
+                                                system_instruction=system, model=model)
             else:
                 return None, None
             if resp and getattr(resp, "success", False) and getattr(resp, "parsed_json", None):
@@ -571,6 +572,67 @@ def _run_field_extraction(orchestrator, file_path, template_data, binding_map,
                                    elapsed, resp, doc_text, "", 0)]
 
 
+# CBM extraction is a single focused call where accuracy matters more than cost —
+# pin it to the stronger gemini-2.5-flash tier (not the default -lite, which has
+# been observed returning bare currency symbols instead of full amounts).
+_CBM_MODEL = "gemini-2.5-flash"
+_BARE_CURRENCY = {"$", "£", "€", "₹", "¥"}
+
+
+def _val_str(x):
+    """Stringify an extracted field value (handles {"value": ...} dicts), trimmed."""
+    return str((x.get("value", "") if isinstance(x, dict) else x) or "").strip()
+
+
+def _retry_bare_currency(orchestrator, d0, cell_binding_map, page_images, doc_text, system):
+    """
+    FIX 2 — gemini sometimes returns ONLY a currency symbol (e.g. "$") with no digits
+    for a currency cell. Detect those fields and re-ask Gemini for JUST those cells
+    (same page images, stronger model), then merge the recovered amounts back into
+    d0["extracted_fields"]. Generic — works for any field / document type. Mutates d0
+    in place; returns the number of fields fixed.
+    """
+    ef = d0.get("extracted_fields") if isinstance(d0, dict) else None
+    if not isinstance(ef, dict) or not ef:
+        return 0
+    bare = {ref: info for ref, info in ef.items() if _val_str(info) in _BARE_CURRENCY}
+    if not bare:
+        return 0
+
+    _log("CBM", f"{len(bare)} bare currency symbol(s) detected — retrying those fields")
+    extract_cells = ((cell_binding_map.get("extract_cells") or {})
+                     if isinstance(cell_binding_map, dict) else {})
+    field_lines = []
+    for ref in bare:
+        info = extract_cells.get(ref) or {}
+        label = (info.get("label") if isinstance(info, dict) else "") or ref
+        field_lines.append(f"  {ref} = {label}")
+    retry_prompt = (
+        "Some fields were previously returned with ONLY a currency symbol and no "
+        "digits. Re-read the document and return the COMPLETE numeric amount for each "
+        "of these cells:\n"
+        + "\n".join(field_lines) + "\n\n"
+        "Return ONLY JSON: {\"extracted_fields\": {\"<cell_ref>\": \"<full amount>\"}}\n"
+        "Each value must be the full number (e.g. 320.00, 12179.21) — NEVER just a "
+        "currency symbol. If a value genuinely does not appear, return \"\"."
+    )
+    parsed, _ = _llm_json(orchestrator, retry_prompt, system,
+                          images=page_images, text=doc_text, model=_CBM_MODEL)
+    r0 = _unwrap(parsed) if parsed else {}
+    rfields = r0.get("extracted_fields") if isinstance(r0, dict) else {}
+    if not isinstance(rfields, dict):
+        return 0
+    fixed = 0
+    for ref in bare:
+        newv = _val_str(rfields.get(ref))
+        if newv and newv not in _BARE_CURRENCY:
+            ef[ref] = ({**ef[ref], "value": newv} if isinstance(ef[ref], dict) else newv)
+            fixed += 1
+    if fixed:
+        _log("CBM", f"retry recovered {fixed}/{len(bare)} bare currency field(s)")
+    return fixed
+
+
 def _run_cbm_extraction(orchestrator, file_path, template_data, cell_binding_map,
                         binding_map, page_images, doc_text, doc_text_pages, file_type,
                         default_doc_type, start):
@@ -589,10 +651,14 @@ def _run_cbm_extraction(orchestrator, file_path, template_data, cell_binding_map
                   f"({n_cells} extract cells, {n_tables} tables) — single guided call")
     system = _get_system_prompt(default_doc_type)
     prompt = _build_cbm_prompt(cell_binding_map, doc_text)
-    parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images, text=doc_text)
+    # FIX 1 — pin CBM extraction to the stronger gemini-2.5-flash tier (accuracy).
+    parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images,
+                             text=doc_text, model=_CBM_MODEL)
     if not parsed:
         return [_fail(file_path.name, "cell_binding_map extraction failed")]
     d0 = _unwrap(parsed)
+    # FIX 2 — recover any field that came back as a bare currency symbol.
+    _retry_bare_currency(orchestrator, d0, cell_binding_map, page_images, doc_text, system)
     td = ({**template_data, "binding_map": binding_map}
           if binding_map else dict(template_data or {}))
     elapsed = (time.time() - start) * 1000

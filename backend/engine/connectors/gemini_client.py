@@ -144,20 +144,22 @@ class GeminiClient:
 
     def _call(self, prompt: str, system_instruction: str = "",
               temperature: float = 0.1, max_tokens: int = 8192,
-              label: str = "text") -> Tuple[str, int, str]:
+              label: str = "text", model: str = None) -> Tuple[str, int, str]:
         """
         Call Gemini with automatic model discovery.
         Returns (raw_text, total_tokens, model_used).
 
-        Tries the cached working model first, then the preferred model,
-        then falls back through CANDIDATES until one succeeds.
+        A caller-requested `model` is tried FIRST (used to pin accuracy-critical
+        calls to a stronger tier, e.g. CBM extraction -> gemini-2.5-flash instead of
+        the default -lite). Otherwise tries the cached working model, then the
+        preferred model, then falls back through CANDIDATES until one succeeds.
         """
         body = self._build_body(prompt, system_instruction,
                                 temperature, max_tokens)
 
-        # Build ordered candidate list
+        # Build ordered candidate list (requested model first when provided)
         ordered = []
-        for m in ([self._good_model, self._preferred] + self.CANDIDATES):
+        for m in ([model, self._good_model, self._preferred] + self.CANDIDATES):
             if m and m not in ordered:
                 ordered.append(m)
 
@@ -188,10 +190,11 @@ class GeminiClient:
     # ── Vision call ───────────────────────────────────────────────────────────
 
     def _call_vision(self, prompt: str, image_b64,
-                     system_instruction: str = "") -> Tuple[str, int, str]:
+                     system_instruction: str = "", model: str = None) -> Tuple[str, int, str]:
         """Vision extraction — text prompt + one or more page images.
         image_b64 may be a single base64 string OR a list of them (multi-page);
-        each image becomes its own inlineData part so Gemini sees every page."""
+        each image becomes its own inlineData part so Gemini sees every page.
+        A caller-requested `model` is tried FIRST (accuracy-critical calls)."""
         imgs = image_b64 if isinstance(image_b64, (list, tuple)) else [image_b64]
         parts = [{"text": prompt}]
         for im in imgs:
@@ -209,7 +212,7 @@ class GeminiClient:
             body["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
         ordered = []
-        for m in ([self._good_model, self._preferred] + self.CANDIDATES):
+        for m in ([model, self._good_model, self._preferred] + self.CANDIDATES):
             if m and m not in ordered:
                 ordered.append(m)
 
@@ -292,7 +295,7 @@ class GeminiClient:
                                latency_ms=(time.time()-t0)*1000)
 
     def extract_data(self, text: str, prompt: str,
-                     system_instruction: str = "") -> LLMResponse:
+                     system_instruction: str = "", model: str = None) -> LLMResponse:
         t0 = time.time()
         try:
             # Fold the document text into the prompt — mirrors GroqClient.extract_data.
@@ -302,10 +305,10 @@ class GeminiClient:
             user_prompt = (
                 f"{prompt}\n\nDocument content:\n\n{text}" if text else prompt
             )
-            raw, tok, model = self._call(
-                user_prompt, system_instruction, label="extract"
+            raw, tok, model_used = self._call(
+                user_prompt, system_instruction, label="extract", model=model
             )
-            return self._make_response(raw, tok, model, t0, "extract")
+            return self._make_response(raw, tok, model_used, t0, "extract")
         except Exception as e:
             return LLMResponse(raw_text="", success=False,
                                error=f"Gemini error: {e}",
@@ -313,13 +316,13 @@ class GeminiClient:
                                latency_ms=(time.time()-t0)*1000)
 
     def extract_data_vision(self, image_b64: str, prompt: str,
-                             system_instruction: str = "") -> LLMResponse:
+                             system_instruction: str = "", model: str = None) -> LLMResponse:
         t0 = time.time()
         try:
-            raw, tok, model = self._call_vision(
-                prompt, image_b64, system_instruction
+            raw, tok, model_used = self._call_vision(
+                prompt, image_b64, system_instruction, model=model
             )
-            return self._make_response(raw, tok, model, t0, "extract-vision")
+            return self._make_response(raw, tok, model_used, t0, "extract-vision")
         except Exception as e:
             return LLMResponse(raw_text="", success=False,
                                error=f"Gemini vision error: {e}",
