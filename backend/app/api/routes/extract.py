@@ -1812,6 +1812,17 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
             dt = f" [{data_type}]" if data_type else ""
             lines.append(f"  {cell_ref} = {label}{seg}{dt}")
         lines.append("")
+        # B2 — company-name cells must receive an ORGANIZATION name, never a
+        # contact person. Generic: applies to any cell typed company_name.
+        company_cells = [ref for ref, _l, _s, dt in single
+                         if "company" in dt.lower() or "organization" in dt.lower()]
+        if company_cells:
+            lines.append(
+                f"COMPANY NAME CELLS ({', '.join(company_cells)}): Extract the "
+                "COMPANY or ORGANIZATION name here. If only a person's name is "
+                "visible, look for the company they represent. A 'Bill to' field "
+                "should contain a company name, not a person's name.")
+            lines.append("")
 
     # Skip any non-dict / empty table entries (a malformed map must never crash).
     valid_tables = [t for t in tables if isinstance(t, dict) and (t.get("columns") or {})]
@@ -1853,6 +1864,14 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
         "shows a currency sign next to an amount, return the AMOUNT, not the sign.",
         "4. DATES: always YYYY-MM-DD.",
         "5. MISSING values: use \"\" (never 'N/A', 'null', or a lone currency symbol).",
+        "6. FIELD SEPARATION RULE: Each cell must contain ONE piece of information "
+        "only. Never combine a company name and address in one cell. Never combine "
+        "a person's name and their contact details in one cell. If a document field "
+        "contains multiple pieces of information, put each piece in its designated "
+        "separate cell.",
+        "7. TABLE COMPLETENESS: table_rows must contain ONE object per line item in "
+        "the document. If the document shows 4 line items, return exactly 4 row "
+        "objects — never merge, summarize, or stop early.",
         "",
         "=== OUTPUT FORMAT ===",
         "Return ONLY this JSON:",
@@ -1862,6 +1881,12 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
         '  "extracted_fields": { "B2": "value", "D2": "value" },',
         '  "table_rows": [ { "ColumnName1": "value", "ColumnName2": "value" } ]',
         "}",
+        "",
+        "MULTIPLE DOCUMENTS: if this file contains MORE THAN ONE separate document "
+        "(e.g. two different invoices), return instead:",
+        '{ "documents": [ { "document_type": "...", "extracted_fields": {...}, '
+        '"table_rows": [...] }, ... ] }',
+        "— one entry per document, each with its OWN fields and its OWN table_rows.",
     ]
     if doc_text:
         lines += ["", "=== DOCUMENT TEXT ===", doc_text[:8000]]
@@ -2250,6 +2275,11 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "",
 6. ALL PAGES: Extract from every page. Never stop at page 1.
 7. HEADERS ARE NOT DATA: Section label rows and column header rows are
    template structure only. Never include them as data rows in table_rows.
+8. FIELD SEPARATION RULE: Each cell must contain ONE piece of information
+   only. Never combine a company name and address in one cell. Never combine
+   a person's name and their contact details in one cell. If a document field
+   contains multiple pieces of information, put each piece in its designated
+   separate cell.
 
 === DOCUMENT TEXT ===
 {doc_text_use if doc_text_use else "(See document image)"}
@@ -6513,16 +6543,22 @@ def _calculate_layout(sections):
 
     sections: list of dicts (template order) with 0-based template rows:
       {section_label, header_row, template_start_row, template_end_row,
-       extracted_rows, [label_col_letter], [value_col_letter]}
+       extracted_rows, [total_row], [label_col_letter], [value_col_letter]}
 
     Side-by-side sections (sharing the same template_start_row) form ONE band and
     share the band's overflow (max over the band's sections). Each band's overflow
     pushes everything below it down.
 
+    A4 (gap rows): every band except the last gets a "gap" of 1 when the template
+    has NO blank row between this band's content (data rows + its own totals row)
+    and the next band's section header. The gap shifts rows BELOW the band's
+    content end (so a totals row directly under the band stays attached to it,
+    while the next section header moves down one row).
+
     Returns layout_plan (same order as input):
       {section_label, header_row_actual, data_start_actual, data_end_actual,
-       overflow, template_start_row, template_end_row, label_col_letter,
-       value_col_letter}
+       overflow, gap, content_end_row, template_start_row, template_end_row,
+       label_col_letter, value_col_letter}
     """
     if not sections:
         return []
@@ -6534,13 +6570,23 @@ def _calculate_layout(sections):
         header = min(int(s.get("header_row", start - 1)) for s in secs)
         tpl_rows = max(1, end - start + 1)
         band_rows = max(int(s.get("extracted_rows", 0)) for s in secs)
-        band[start] = {"end": end, "header": header,
-                       "overflow": max(0, band_rows - tpl_rows)}
-    # Cumulative shift applied to each band (sum of overflow of all bands above it).
+        # Content end = last data row OR the band's own totals row directly below it.
+        totals = [int(s["total_row"]) for s in secs
+                  if s.get("total_row") is not None and int(s["total_row"]) > end]
+        content_end = max([end] + totals)
+        band[start] = {"end": end, "header": header, "content_end": content_end,
+                       "overflow": max(0, band_rows - tpl_rows), "gap": 0}
+    # A4 — insert a gap row before the next band's header when the template has
+    # no blank row between this band's content end and that header.
+    for i, start in enumerate(starts[:-1]):
+        next_header = band[starts[i + 1]]["header"]
+        if next_header <= band[start]["content_end"] + 1:
+            band[start]["gap"] = 1
+    # Cumulative shift applied to each band (overflow + gap of all bands above it).
     cum, shift_at = 0, {}
     for start in starts:
         shift_at[start] = cum
-        cum += band[start]["overflow"]
+        cum += band[start]["overflow"] + band[start]["gap"]
     plan = []
     for s in sections:
         start = int(s["template_start_row"])
@@ -6554,6 +6600,8 @@ def _calculate_layout(sections):
             "data_start_actual":  start + above,
             "data_end_actual":    start + above + er - 1,
             "overflow":           b["overflow"],
+            "gap":                b["gap"],
+            "content_end_row":    b["content_end"],
             "template_start_row": start,
             "template_end_row":   b["end"],
         })
@@ -6597,8 +6645,50 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         except Exception:
             return None
 
-    max_tr = max((int(k.split(",")[0]) for k in cells_tpl
-                  if "," in k and k.split(",")[0].isdigit()), default=0)
+    # A1 — semantic section↔group matching. Canonicalizes common accounting
+    # phrasing (long-term ↔ non-current, stockholders ↔ shareholders, ...) then
+    # scores label token sets by Jaccard similarity. Generic — no document names.
+    _SEM_CANON = (
+        ("long term", "noncurrent"), ("long-term", "noncurrent"),
+        ("longterm", "noncurrent"), ("non current", "noncurrent"),
+        ("non-current", "noncurrent"), ("noncurrent", "noncurrent"),
+        ("fixed asset", "noncurrent asset"),
+        ("short term", "current"), ("short-term", "current"),
+        ("stockholder", "shareholder"), ("owner", "shareholder"),
+    )
+    _SEM_STOP = {"total", "and", "the", "of", "amount", "amounts", "section"}
+
+    def _sem_tokens(label):
+        s = re.sub(r"[^a-z0-9]+", " ", str(label or "").lower()).strip()
+        for a, b in _SEM_CANON:
+            s = s.replace(a, b)
+        toks = set()
+        for t in s.split():
+            if not t or t in _SEM_STOP:
+                continue
+            toks.add(t[:-1] if t.endswith("s") else t)   # crude plural fold
+        return toks
+
+    def _sem_score(a, b):
+        ta, tb = _sem_tokens(a), _sem_tokens(b)
+        if not ta or not tb:
+            return 0.0
+        return len(ta & tb) / len(ta | tb)
+
+    # A6 — bounding box from CONTENT cells only (value / extractTarget / merge),
+    # so stray styled-but-empty cells can't stretch the output area.
+    max_tr, max_tc_content = 0, 0
+    for k, cd in cells_tpl.items():
+        if not isinstance(cd, dict) or "," not in k:
+            continue
+        try:
+            _r, _c = int(k.split(",")[0]), int(k.split(",")[1])
+        except ValueError:
+            continue
+        if (str(cd.get("value") or "").strip() or cd.get("extractTarget")
+                or cd.get("mergeSpan") or cd.get("mergeParent")):
+            max_tr = max(max_tr, _r)
+            max_tc_content = max(max_tc_content, _c)
 
     doc_offset = 0          # accumulates across document blocks (with gap rows)
     GAP_BETWEEN_DOCS = 2
@@ -6616,6 +6706,26 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         raw_secs = [(k, (v.get("rows", []) or [])) for k, v in
                     (ls.items() if isinstance(ls, dict) else []) if isinstance(v, dict)]
 
+        # ── A2: drop sections whose row CONTENT is identical to one already kept
+        #    (same labels + values in the same order) — the source of the
+        #    "Long-term Liabilities written twice" duplication. ──
+        def _content_sig(rows):
+            return tuple((_nrm(r.get("label")), _nrm(str(r.get("value"))))
+                         for r in rows if isinstance(r, dict)
+                         and (r.get("label") or r.get("value") not in (None, "")))
+
+        _seen_sigs, _deduped = {}, []
+        for k, r in raw_secs:
+            sig = _content_sig(r)
+            if sig and sig in _seen_sigs:
+                print(f"[EXPORT] layout: dropped section '{k}' — identical content "
+                      f"to '{_seen_sigs[sig]}'", flush=True)
+                continue
+            if sig:
+                _seen_sigs[sig] = k
+            _deduped.append((k, r))
+        raw_secs = _deduped
+
         def _labset(rows):
             return {_nrm(r.get("label")) for r in rows
                     if isinstance(r, dict) and r.get("label")}
@@ -6629,6 +6739,20 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 gn = _nrm(g.get("section_label"))
                 if gn and (gn in nk or nk in gn):
                     return g
+            # 3. A1: semantic (synonym-canonical token overlap) — catches e.g.
+            #    document heading "Long-term Liabilities" vs template group
+            #    "Non current liabilities", which no substring test can match.
+            best, best_score = None, 0.0
+            for g in groups:
+                sc = _sem_score(sec_key, g.get("section_label"))
+                if sc > best_score:
+                    best, best_score = g, sc
+            if best is not None and best_score >= 0.6:
+                print(f"[EXPORT] layout: semantic match '{sec_key}' -> group "
+                      f"'{best.get('section_label')}' (score {best_score:.2f}, "
+                      f"cols {best.get('label_col_letter')}/"
+                      f"{best.get('value_col_letter')})", flush=True)
+                return best
             return None
 
         # ── Dedup — TIGHTENED. Only drop a section k1 when it is a redundant
@@ -6673,6 +6797,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 "header_row":         max(0, int(g.get("start_row", 0)) - 1),
                 "template_start_row": int(g.get("start_row", 0)),
                 "template_end_row":   int(g.get("end_row", 0)),
+                "total_row":          g.get("total_row"),
                 "extracted_rows":     len(rows),
                 "label_col_letter":   (g.get("label_col_letter") or "").upper(),
                 "value_col_letter":   (g.get("value_col_letter") or "").upper(),
@@ -6682,8 +6807,10 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         plan = _calculate_layout(sections)
 
         # ── Row-shift map: a template row shifts by the overflow of every band whose
-        #    data ends above it. (band_shifts derived from the plan.) ──
-        band_shifts = sorted({(p["template_end_row"], p["overflow"]) for p in plan})
+        #    data ends above it, plus the A4 gap row of every band whose CONTENT
+        #    (data + totals) ends above it. ──
+        band_shifts = sorted({(p["template_end_row"], p["overflow"]) for p in plan}
+                             | {(p["content_end_row"], p["gap"]) for p in plan})
 
         def out_row(tr0):
             shift = sum(o for (e, o) in band_shifts if e < tr0)
@@ -6700,8 +6827,13 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 tr, tc = int(parts[0]), int(parts[1])
             except ValueError:
                 continue
-            xl = ws.cell(row=out_row(tr) + 1, column=tc + 1)
+            # A6 — never touch cells outside the template's content bounding box
+            if tr > max_tr or tc > max_tc_content:
+                continue
             v = str(cell_def.get("value") or "").strip()
+            if not v and not cell_def.get("style"):
+                continue
+            xl = ws.cell(row=out_row(tr) + 1, column=tc + 1)
             if v:
                 xl.value = v
             if cell_def.get("style"):
@@ -6760,7 +6892,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
 
         # ── STEP 4: write any unmatched extracted sections (NO DATA DROPPED) in the
         #    A/B columns after the template block, separated by gap rows. ──
-        total_overflow = sum(o for (_e, o) in {(p["template_end_row"], p["overflow"]) for p in plan})
+        total_overflow = sum(o for (_e, o) in set(band_shifts)) if plan else 0
         consumed = (max_tr + 1) + total_overflow
         if unmatched:
             n_un = sum(len(r) for _k, r in unmatched)
@@ -6795,16 +6927,24 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
     start_col_idx = table_regions[0]["start_col"] if table_regions else 0
 
     # Write ALL cells from the template (including any form fields above the table)
+    _bx_r, _bx_c = _find_template_dimensions(cells_tpl)
     for key, cell_def in cells_tpl.items():
         if not isinstance(cell_def, dict): continue
         parts = key.split(",")
         if len(parts) != 2: continue
         tr, tc = int(parts[0]), int(parts[1])
+        # A6 — skip cells outside the content bounding box
+        if tr > _bx_r or tc > _bx_c:
+            continue
+        tpl_value = str(cell_def.get("value") or "").strip()
+        if not tpl_value and not cell_def.get("style"):
+            continue
         xl_cell = ws.cell(row=tr + 1, column=tc + 1)
         # Skip merged-cell children — read-only in openpyxl
         if isinstance(xl_cell, MergedCell):
             continue
-        xl_cell.value = cell_def.get("value", "").strip()
+        if tpl_value:
+            xl_cell.value = tpl_value
         if cell_def.get("style"):
             _apply_cell_style(xl_cell, cell_def["style"], openpyxl_mod)
 
@@ -6882,6 +7022,11 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             if len(parts) != 2:
                 continue
             tr, tc = int(parts[0]), int(parts[1])
+            # A6 — never touch cells outside the template's content bounding box
+            # (style-only / cleared editor cells would otherwise materialize as
+            # empty columns in the output).
+            if tr > max_r or tc > max_c:
+                continue
             xl_cell = ws.cell(row=row_offset + tr + 1, column=tc + 1)
             # Skip merged-cell children — their .value/.style are read-only in openpyxl
             if isinstance(xl_cell, MergedCell):
@@ -6942,7 +7087,9 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                     # Write the formula with adjusted row offset for this block
                     adjusted = _adjust_formula_for_block(tpl_value, row_offset)
                     xl_cell.value = adjusted
-            else:
+            elif tpl_value:
+                # A6 — only write non-empty static text; assigning "" materializes
+                # an empty cell that reads back as a None column.
                 xl_cell.value = tpl_value
 
             if cell_def.get("style"):
@@ -7085,28 +7232,38 @@ def _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod):
         all_rows = extracted_data.get("table_rows") or []
     all_rows = [r for r in all_rows if isinstance(r, dict)]
 
+    valid_tables = [t for t in tables if isinstance(t, dict) and (t.get("columns") or {})]
+
+    # A5 — assign each row to exactly ONE table (by _table_source id, else by the
+    # greatest column-name overlap, else table 0). The old per-table filter dropped
+    # any row that matched neither table and could duplicate rows matching both.
+    if len(valid_tables) <= 1:
+        assignment = {0: all_rows} if valid_tables else {}
+    else:
+        assignment = {i: [] for i in range(len(valid_tables))}
+        for r in all_rows:
+            src = _slug(str(r.get("_table_source", "")))
+            best_i, best_ov = 0, -1
+            for i, t in enumerate(valid_tables):
+                if src and _slug(str(t.get("table_id", ""))) == src:
+                    best_i = i
+                    break
+                cols_t = [str(v) for v in (t.get("columns") or {}).values()]
+                ov = sum(1 for cn in cols_t if cn in r)
+                if ov > best_ov:
+                    best_i, best_ov = i, ov
+            assignment[best_i].append(r)
+
     written_total = 0
-    for t in tables:
-        if not isinstance(t, dict):
-            continue
+    for t_idx, t in enumerate(valid_tables):
         cols = t.get("columns") or {}            # {"A": "Item", "B": "Qty", ...}
-        if not cols:
-            continue
         try:
             data_start = int(t.get("data_start_row")
                              or (int(t.get("header_row", 0)) + 1))
         except (ValueError, TypeError):
             continue
-        col_names = [str(v) for v in cols.values()]
 
-        # Select the rows belonging to THIS table.
-        if len(tables) == 1:
-            rows = all_rows
-        else:
-            tid = _slug(t.get("table_id", ""))
-            rows = [r for r in all_rows
-                    if _slug(str(r.get("_table_source", ""))) == tid
-                    or any(cn in r for cn in col_names)]
+        rows = assignment.get(t_idx, [])
 
         for i, row in enumerate(rows):
             out_row = row_offset + data_start + i   # data_start is 1-based
@@ -7126,13 +7283,14 @@ def _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod):
                             .replace("€", "").replace("₹", "").strip()
                 if clean and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
                     xl.value = float(clean) if "." in clean else int(clean)
-                else:
+                elif sval:
                     xl.value = sval
             written_total += 1
 
-    if written_total:
-        print(f"[EXPORT] cbm tables: {written_total} data rows written "
-              f"({len(tables)} table(s))", flush=True)
+    # A5 diagnostic — always log rows-in vs rows-written so a dropped line item
+    # is visible in the export logs, not silent.
+    print(f"[EXPORT] cbm tables: {written_total}/{len(all_rows)} data rows written "
+          f"({len(tables)} table(s))", flush=True)
 
 
 def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod):
@@ -7161,7 +7319,7 @@ def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod):
                         .replace("€", "").replace("₹", "").strip()
             if clean and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
                 xl.value = float(clean) if "." in clean else int(clean)
-            else:
+            elif sval:
                 xl.value = sval
         written += 1
     if written:
@@ -7322,6 +7480,9 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
             if int(parts[0]) != tr:
                 continue
             tc = int(parts[1])
+            # A6 — skip cells outside the content bounding box
+            if tc > max_c:
+                continue
             tpl_value = cell_def.get("value", "").strip()
             xl_cell = ws.cell(row=current_row, column=tc + 1)
 
@@ -7380,7 +7541,9 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                     xl_cell.value = tpl_value
                 except AttributeError:
                     pass
-            else:
+            elif tpl_value:
+                # A6 — only write non-empty static text (assigning "" materializes
+                # an empty cell that reads back as a None column)
                 try:
                     xl_cell.value = tpl_value
                 except AttributeError:
@@ -7703,12 +7866,26 @@ def _apply_cell_style(xl_cell, style, _openpyxl_mod):
         except Exception: pass
 
 def _find_template_dimensions(cells):
+    """Bounding box of the template's CONTENT cells only (non-empty value,
+    extract target, or merge). The spreadsheet editor keeps style-only and
+    cleared cells ({value:""}) in the saved grid — counting those inflated the
+    box to the full 50x26 editor canvas and made the writers materialize dozens
+    of empty (None) columns in the exported Excel (bug A6)."""
     max_r, max_c = 0, 0
-    for key in cells:
+    for key, cell in cells.items():
         parts = key.split(",")
-        if len(parts)==2:
-            r,c = int(parts[0]),int(parts[1])
-            max_r=max(max_r,r); max_c=max(max_c,c)
+        if len(parts) != 2:
+            continue
+        try:
+            r, c = int(parts[0]), int(parts[1])
+        except (ValueError, TypeError):
+            continue
+        if isinstance(cell, dict) and not (
+                str(cell.get("value") or "").strip()
+                or cell.get("extractTarget")
+                or cell.get("mergeSpan") or cell.get("mergeParent")):
+            continue
+        max_r = max(max_r, r); max_c = max(max_c, c)
     return max_r, max_c
 
 def _get_table_headers(layout):

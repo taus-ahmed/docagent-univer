@@ -760,7 +760,7 @@ export default function ExtractPage() {
           {/* Extract button */}
           {!isRunning && !hasResults && activeTab !== "drive" && (
             <button className="btn btn-primary btn-full btn-lg" onClick={handleExtract}
-              disabled={isExtracting || !selectedTemplate || (activeTab === "upload" && !files.length)}>
+              disabled={isExtracting || (activeTab === "upload" && !files.length)}>
               {isExtracting ? (
                 <><svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Starting…</>
               ) : (
@@ -1100,8 +1100,8 @@ export default function ExtractPage() {
                   No template selected
                 </div>
                 <p style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.6, margin: 0 }}>
-                  Extraction will be based on AI understanding of this document.
-                  All key fields will be extracted automatically.
+                  The AI will extract all content from this document in a
+                  structured format.
                 </p>
               </div>
             </div>

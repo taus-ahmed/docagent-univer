@@ -51,6 +51,26 @@ def _unwrap(parsed):
     return parsed if isinstance(parsed, dict) else {}
 
 
+def _unwrap_all(parsed):
+    """
+    A7 — return EVERY document dict from a Gemini response. The old _unwrap took
+    documents[0] and silently discarded every other document, so a file holding
+    two invoices exported only the first. Top-level fields (extracted_fields /
+    table_rows) are merged into the first document when it lacks them.
+    """
+    if not isinstance(parsed, dict):
+        return [{}]
+    docs = parsed.get("documents")
+    if isinstance(docs, list):
+        docs = [d for d in docs if isinstance(d, dict)]
+        if docs:
+            for key in ("extracted_fields", "table_rows", "layout_sections"):
+                if parsed.get(key) and not docs[0].get(key):
+                    docs[0][key] = parsed[key]
+            return docs
+    return [parsed]
+
+
 def _digits(s) -> str:
     return re.sub(r'[^0-9]', '', str(s or ""))
 
@@ -233,6 +253,10 @@ def _build_section_prompt(section_info, template_group, doc_type, total_cell=Non
                            f"as \"{total_cell}\": value. Do NOT include the total in rows.\n")
             ef_example = f'"{total_cell}": "total value"'
         else:
+            # A3 — even without a designated total cell, the total must NEVER be
+            # returned as a line-item row (it corrupts a neighbouring row's value).
+            total_block = ("\nDo NOT include the section's TOTAL/SUBTOTAL row in "
+                           "rows — line items only.\n")
             ef_example = ""
         prompt = (
             f"Extract the '{heading}' section from this document page.\n\n"
@@ -256,6 +280,9 @@ def _build_section_prompt(section_info, template_group, doc_type, total_cell=Non
             "- NEVER leave label_col or value_col empty or null\n"
             "- Extract EVERY item — do not stop early\n"
             "- Values must be exactly as they appear in the document\n"
+            "- PAIRING: each row's value must be the amount printed on the SAME "
+            "line as that row's label in the document. NEVER assign a section "
+            "total or another line's amount to a different label.\n"
             "- NUMBERS: return the COMPLETE numeric amount including digits "
             "(e.g. \"$320.00\" -> \"320.00\"). NEVER return only a currency symbol "
             "($, £, €, etc.) as a value — a lone currency symbol means the value was "
@@ -438,6 +465,22 @@ def _validate_extraction(extracted, doc_text, doc_type, file_type, document_map_
                     notes.append(f"Section '{sec_label}' total mismatch — items sum to "
                                  f"{s:g}, total shows {tot:g}")
                     flagged.append({"ref": ref, "value": str(tot), "issue": "section total mismatch"})
+                # A3 — a line item carrying the SECTION TOTAL as its value is the
+                # signature of a label/value misassignment (e.g. "Current Portion
+                # of Long-term Debt" = 499200 when 499200 is Total Current
+                # Liabilities). Flag those rows explicitly for review.
+                if tot and len(rows) > 1:
+                    for r_i in rows:
+                        if not isinstance(r_i, dict):
+                            continue
+                        rv = _num(r_i.get("value"))
+                        if rv is not None and rv == tot:
+                            rref = f"{r_i.get('value_col','')}{r_i.get('row','')}"
+                            notes.append(f"Section '{sec_label}': row "
+                                         f"'{r_i.get('label','')}' value equals the "
+                                         f"section total ({tot:g}) — likely misassigned")
+                            flagged.append({"ref": rref, "value": str(rv),
+                                            "issue": "row value equals section total"})
 
     # Step 3 — completeness (extracted vs expected item count from Layer 1).
     sec_expected = {}
@@ -566,10 +609,18 @@ def _run_field_extraction(orchestrator, file_path, template_data, binding_map,
     parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images, text=doc_text)
     if not parsed:
         return [_fail(file_path.name, "field extraction failed")]
-    d0 = _unwrap(parsed)
-    elapsed = (time.time() - start) * 1000
-    return [_process_vision_result(d0, td, file_path.name, default_doc_type,
-                                   elapsed, resp, doc_text, "", 0)]
+    # A7 — process EVERY document Gemini returned, not just documents[0].
+    doc_dicts = _unwrap_all(parsed)
+    if len(doc_dicts) > 1:
+        _log("FIELD", f"{file_path.name}: response contains {len(doc_dicts)} documents")
+    results = []
+    for di, d0 in enumerate(doc_dicts):
+        elapsed = (time.time() - start) * 1000
+        seg_fn = (file_path.name if len(doc_dicts) == 1
+                  else f"{file_path.stem}_doc{di+1}{file_path.suffix}")
+        results.append(_process_vision_result(d0, td, seg_fn, default_doc_type,
+                                              elapsed, resp, doc_text, "", di))
+    return results
 
 
 # CBM extraction is a single focused call where accuracy matters more than cost —
@@ -656,36 +707,46 @@ def _run_cbm_extraction(orchestrator, file_path, template_data, cell_binding_map
                              text=doc_text, model=_CBM_MODEL)
     if not parsed:
         return [_fail(file_path.name, "cell_binding_map extraction failed")]
-    d0 = _unwrap(parsed)
-    # FIX 2 — recover any field that came back as a bare currency symbol.
-    _retry_bare_currency(orchestrator, d0, cell_binding_map, page_images, doc_text, system)
+    # A5/A7 — process EVERY document in the response, not just documents[0].
+    # A file holding two invoices must produce two result blocks with each
+    # document's own fields and line-item rows.
+    doc_dicts = _unwrap_all(parsed)
+    if len(doc_dicts) > 1:
+        _log("CBM", f"{file_path.name}: response contains {len(doc_dicts)} documents")
     td = ({**template_data, "binding_map": binding_map}
           if binding_map else dict(template_data or {}))
-    elapsed = (time.time() - start) * 1000
-    result = _process_vision_result(d0, td, file_path.name, default_doc_type,
-                                    elapsed, resp, doc_text, "", 0)
-    # The cbm path always returns extracted_fields + table_rows (field/mixed shape),
-    # so EXPORT must use the form/mixed/table writer — never the layout writer. Force
-    # template_type accordingly; compute_binding_map's verdict for the same grid may
-    # say "structural" and wrongly pick the layout writer (which drops table_rows).
-    try:
-        if isinstance(getattr(result, "extracted_data", None), dict):
-            tables = cell_binding_map.get("tables") or []
-            result.extracted_data["template_type"] = "mixed" if tables else "labeled"
-            result.extracted_data["layout_sections"] = {}
-            # Persist the cbm table definitions + the RAW (column-name keyed) rows so
-            # the export writer can place table data deterministically by
-            # data_start_row + columns — independent of the fragile region analysis,
-            # which can mis-classify the template and route it to the form writer
-            # (which otherwise drops table_rows entirely).
-            if tables:
-                result.extracted_data["cbm_tables"] = tables
-                raw_rows = d0.get("table_rows") if isinstance(d0, dict) else None
-                if isinstance(raw_rows, list):
-                    result.extracted_data["cbm_table_rows"] = raw_rows
-    except Exception:
-        pass
-    return [result]
+    results = []
+    for di, d0 in enumerate(doc_dicts):
+        # FIX 2 — recover any field that came back as a bare currency symbol.
+        _retry_bare_currency(orchestrator, d0, cell_binding_map, page_images, doc_text, system)
+        elapsed = (time.time() - start) * 1000
+        seg_fn = (file_path.name if len(doc_dicts) == 1
+                  else f"{file_path.stem}_doc{di+1}{file_path.suffix}")
+        result = _process_vision_result(d0, td, seg_fn, default_doc_type,
+                                        elapsed, resp, doc_text, "", di)
+        # The cbm path always returns extracted_fields + table_rows (field/mixed
+        # shape), so EXPORT must use the form/mixed/table writer — never the layout
+        # writer. Force template_type accordingly; compute_binding_map's verdict for
+        # the same grid may say "structural" and wrongly pick the layout writer
+        # (which drops table_rows).
+        try:
+            if isinstance(getattr(result, "extracted_data", None), dict):
+                tables = cell_binding_map.get("tables") or []
+                result.extracted_data["template_type"] = "mixed" if tables else "labeled"
+                result.extracted_data["layout_sections"] = {}
+                # Persist the cbm table definitions + the RAW (column-name keyed)
+                # rows so the export writer can place table data deterministically
+                # by data_start_row + columns.
+                if tables:
+                    result.extracted_data["cbm_tables"] = tables
+                    raw_rows = d0.get("table_rows") if isinstance(d0, dict) else None
+                    if isinstance(raw_rows, list):
+                        result.extracted_data["cbm_table_rows"] = raw_rows
+                        _log("CBM", f"doc {di}: {len(raw_rows)} raw table row(s) persisted")
+        except Exception:
+            pass
+        results.append(result)
+    return results
 
 
 def _collapse_to_single_document(document_map, n_pages):
