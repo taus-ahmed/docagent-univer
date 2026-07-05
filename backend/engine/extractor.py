@@ -93,7 +93,9 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None):
     `model` pins the Gemini tier (e.g. "gemini-2.5-flash" for accuracy-critical calls).
     """
     resp = None
+    base_delay = 1
     for attempt in range(3):
+        err_txt = ""
         try:
             if images:
                 resp = orchestrator.llm.extract(image_b64=images, prompt=prompt,
@@ -108,10 +110,20 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None):
                 return None, None
             if resp and getattr(resp, "success", False) and getattr(resp, "parsed_json", None):
                 return resp.parsed_json, resp
+            err_txt = str(getattr(resp, "error", "") or "")
         except Exception as e:
+            err_txt = str(e)
             _log("LLM", f"error attempt {attempt+1}: {e}")
         if attempt < 2:
-            time.sleep(2)
+            # E5 — exponential backoff on rate limiting: 1s, 2s, 4s... capped at
+            # 30s. Non-429 failures keep the original fixed 2s retry delay.
+            low = err_txt.lower()
+            if "429" in err_txt or "rate limit" in low or "resource_exhausted" in low or "quota" in low:
+                delay = min(base_delay * (2 ** attempt), 30)
+                _log("RATE", f"429 received — backing off {delay}s before retry")
+                time.sleep(delay)
+            else:
+                time.sleep(2)
     return None, resp
 
 
@@ -125,8 +137,19 @@ _L1_SYSTEM = (
 )
 
 
+_L1_MAX_PAGES = 20
+
+
 def _understand_document(orchestrator, page_images, doc_text, binding_map, file_type):
     """LAYER 1 — ONE Gemini call inventorying the whole file. Returns (document_map, response)."""
+    # E4 — very large documents: cap the Layer-1 mapping call at the first 20
+    # pages to stay inside Gemini's context limit. Layer 2 is unaffected — it
+    # always sends each section's OWN page(s).
+    l1_images = page_images
+    if page_images and len(page_images) > _L1_MAX_PAGES:
+        _log("L1", f"large document — using first {_L1_MAX_PAGES} of "
+                   f"{len(page_images)} pages for the document map")
+        l1_images = page_images[:_L1_MAX_PAGES]
     text_block = ""
     if doc_text and doc_text.strip():
         text_block = ("\n=== EXTRACTED TEXT (for reference) ===\n"
@@ -162,7 +185,7 @@ def _understand_document(orchestrator, page_images, doc_text, binding_map, file_
         "  ]\n}"
     )
     parsed, resp = _llm_json(orchestrator, prompt, _L1_SYSTEM,
-                             images=page_images, text=doc_text)
+                             images=l1_images, text=doc_text)
     dm = parsed if (isinstance(parsed, dict) and parsed.get("documents")) else None
     if not dm:
         dm = _fallback_document_map(binding_map, len(page_images) or 1, file_type)
@@ -334,6 +357,16 @@ def _extract_section(orchestrator, section_info, sec_images, sec_text,
             "label": r.get("label", ""),
             "value": r.get("value", ""),
         })
+    # S5 — a section returning far MORE rows than the document map counted has
+    # almost certainly absorbed the next section's items (e.g. Shareholders
+    # Equity rows under TOTAL LIABILITIES & EQUITY). Truncate to item_count when
+    # the excess is beyond a 1.5x tolerance (Gemini's counts are approximate).
+    expected = int(section_info.get("item_count", 0) or 0)
+    if expected > 0 and len(out_rows) > expected * 1.5:
+        _log("L2", f"section '{section_info.get('heading', 'section')}' truncated "
+                   f"{len(out_rows)} -> {expected} rows (document map item_count="
+                   f"{expected}; excess likely belongs to the next section)")
+        out_rows = out_rows[:expected]
     return out_rows, (ef if isinstance(ef, dict) else {}), resp
 
 
@@ -376,10 +409,19 @@ def _run_all_extractions(orchestrator, document_map, page_images, doc_text_pages
             sec_text = doc_text_pages[pg] if (doc_text_pages and 0 <= pg < len(doc_text_pages)) else ""
             total_cell = None
             if grp:
-                cand = [fc for fc in fixed_cells
-                        if fc["col"] == grp.get("value_col")
-                        and int(grp.get("start_row", 0)) <= fc["row"] <= int(grp.get("end_row", 0)) + 2]
-                total_cell = cand[0]["ref"] if cand else None
+                # S1 — the group's total cell comes from the binding map's
+                # total-label scan (total_cells). The old window scan picked ANY
+                # value_target between start_row and end_row+2 — including labeled
+                # DATA rows inside the band (that's how B5 was used as a "total"
+                # when the real total row is B9).
+                tc_list = grp.get("total_cells") or []
+                total_cell = tc_list[0] if tc_list else None
+                if total_cell is None:
+                    # legacy maps without total_cells: scan strictly BELOW the band
+                    cand = [fc for fc in fixed_cells
+                            if fc["col"] == grp.get("value_col")
+                            and int(grp.get("end_row", 0)) < fc["row"] <= int(grp.get("end_row", 0)) + 3]
+                    total_cell = cand[0]["ref"] if cand else None
             _log("L2", f"extracting: doc {di} section '{sec.get('heading')}' page {pg}")
             rows, ef, resp = _extract_section(orchestrator, sec, sec_imgs, sec_text,
                                               grp, doc_type, system, total_cell)
@@ -412,9 +454,32 @@ _FINANCIAL_TYPES = {"balance_sheet", "income_statement", "profit_and_loss", "aud
                     "payslip", "bank_statement", "invoice", "purchase_order", "receipt"}
 
 
-def _validate_extraction(extracted, doc_text, doc_type, file_type, document_map_doc):
+def _validate_extraction(extracted, doc_text, doc_type, file_type, document_map_doc,
+                         column_groups=None):
     """LAYER 3 — confidence per value + cross-checks. Returns (confidence_map, flagged, notes,
-    overall_confidence, needs_review)."""
+    overall_confidence, needs_review).
+
+    column_groups (V1): the template's binding-map column groups — each section's
+    total is cross-validated ONLY against its OWN group's total_cell.
+    """
+    ls = extracted.get("layout_sections", {})
+
+    # E1 — scanned / image / no text layer: pdfplumber text is empty or garbage,
+    # so text cross-validation would flag every correct value. Skip it entirely:
+    # every value medium, needs_review globally, one clear note.
+    if file_type in ("scanned_pdf", "image") or len((doc_text or "").strip()) < 50:
+        conf_map = {}
+        for sec_label, block in (ls.items() if isinstance(ls, dict) else []):
+            for row in (block.get("rows", []) if isinstance(block, dict) else []):
+                if isinstance(row, dict):
+                    conf_map[f"{row.get('value_col', '')}{row.get('row', '')}"] = "medium"
+        for ref in (extracted.get("extracted_fields", {}) or {}):
+            conf_map[ref] = "medium"
+        notes = ["Scanned document — manual verification recommended"]
+        _log("L3", "scanned/low-text document — text cross-validation skipped, "
+                   "all values medium, needs_review forced")
+        return conf_map, [], notes, "medium", True
+
     text_norm = _norm(doc_text)
     text_digits = _digits(doc_text)
     conf_map, flagged, notes = {}, [], []
@@ -449,38 +514,55 @@ def _validate_extraction(extracted, doc_text, doc_type, file_type, document_map_
         if c == "low":
             flagged.append({"ref": ref, "value": str(v), "issue": "total not found in text"})
 
-    # Step 2 — financial cross-validation (sum of items vs section total).
+    # Step 2 — financial cross-validation: each section's item sum vs its OWN
+    # column group's total_cell (V1). The old logic compared against ANY
+    # extracted_field in the same column letter, so Current assets (col B) was
+    # checked against B11 — Current LIABILITIES' total — a guaranteed false
+    # positive. Sections whose group has no total_cell are skipped.
     if (doc_type or "").lower() in _FINANCIAL_TYPES:
+        cgs = column_groups or []
+
+        def _group_for(sec_label):
+            n = _norm(sec_label)
+            for g in cgs:                                  # exact
+                if _norm(g.get("section_label")) == n:
+                    return g
+            for g in cgs:                                  # fuzzy substring
+                gn = _norm(g.get("section_label"))
+                if gn and n and (gn in n or n in gn):
+                    return g
+            return None
+
         for sec_label, block in (ls.items() if isinstance(ls, dict) else []):
             rows = block.get("rows", []) if isinstance(block, dict) else []
+            grp = _group_for(sec_label)
+            tot_refs = (grp.get("total_cells") or []) if grp else []
+            if not tot_refs:
+                continue          # V1: no own total cell -> no cross-validation
+            tot_raw = (extracted.get("extracted_fields", {}) or {}).get(tot_refs[0])
+            tot = _num(tot_raw.get("value") if isinstance(tot_raw, dict) else tot_raw)
+            if not tot:
+                continue
             s = sum(v for v in (_num(r.get("value")) for r in rows if isinstance(r, dict)) if v is not None)
-            # nearest total: an extracted_field whose ref column matches a row's value_col
-            vcols = {str(r.get("value_col", "")).upper() for r in rows if isinstance(r, dict)}
-            for ref, val in (extracted.get("extracted_fields", {}) or {}).items():
-                m = re.match(r'^([A-Za-z]+)\d+$', str(ref))
-                if not m or m.group(1).upper() not in vcols:
-                    continue
-                tot = _num(val.get("value") if isinstance(val, dict) else val)
-                if tot and abs(s - tot) / abs(tot) > 0.01:
-                    notes.append(f"Section '{sec_label}' total mismatch — items sum to "
-                                 f"{s:g}, total shows {tot:g}")
-                    flagged.append({"ref": ref, "value": str(tot), "issue": "section total mismatch"})
-                # A3 — a line item carrying the SECTION TOTAL as its value is the
-                # signature of a label/value misassignment (e.g. "Current Portion
-                # of Long-term Debt" = 499200 when 499200 is Total Current
-                # Liabilities). Flag those rows explicitly for review.
-                if tot and len(rows) > 1:
-                    for r_i in rows:
-                        if not isinstance(r_i, dict):
-                            continue
-                        rv = _num(r_i.get("value"))
-                        if rv is not None and rv == tot:
-                            rref = f"{r_i.get('value_col','')}{r_i.get('row','')}"
-                            notes.append(f"Section '{sec_label}': row "
-                                         f"'{r_i.get('label','')}' value equals the "
-                                         f"section total ({tot:g}) — likely misassigned")
-                            flagged.append({"ref": rref, "value": str(rv),
-                                            "issue": "row value equals section total"})
+            if abs(s - tot) / abs(tot) > 0.01:
+                notes.append(f"Section '{sec_label}' total mismatch — items sum to "
+                             f"{s:g}, own total {tot_refs[0]} shows {tot:g}")
+                flagged.append({"ref": tot_refs[0], "value": str(tot),
+                                "issue": "section total mismatch"})
+            # A3 — a line item carrying the SECTION TOTAL as its value is the
+            # signature of a label/value misassignment. Flag for review.
+            if len(rows) > 1:
+                for r_i in rows:
+                    if not isinstance(r_i, dict):
+                        continue
+                    rv = _num(r_i.get("value"))
+                    if rv is not None and rv == tot:
+                        rref = f"{r_i.get('value_col','')}{r_i.get('row','')}"
+                        notes.append(f"Section '{sec_label}': row "
+                                     f"'{r_i.get('label','')}' value equals the "
+                                     f"section total ({tot:g}) — likely misassigned")
+                        flagged.append({"ref": rref, "value": str(rv),
+                                        "issue": "row value equals section total"})
 
     # Step 3 — completeness (extracted vs expected item count from Layer 1).
     sec_expected = {}
@@ -493,29 +575,20 @@ def _validate_extraction(extracted, doc_text, doc_type, file_type, document_map_
             notes.append(f"Section '{sec_label}': expected ~{exp} items, extracted {act}")
             flagged.append({"ref": sec_label, "value": str(act), "issue": "incomplete section"})
 
-    # Step 4 — scanned / image: floor at medium, force review.
-    scanned = file_type in ("scanned_pdf", "image")
-    if scanned:
-        for k in conf_map:
-            if conf_map[k] == "high":
-                conf_map[k] = "medium"
-        notes.append("Scanned document — manual verification recommended")
-
+    # (Scanned/image documents returned early above — E1.)
     confs = list(conf_map.values())
-    if scanned:
-        overall = "medium"
-    elif "low" in confs:
+    if "low" in confs:
         overall = "low"
     elif "medium" in confs:
         overall = "medium"
     else:
         overall = "high"
-    needs_review = bool(flagged) or scanned or overall == "low"
+    needs_review = bool(flagged) or overall == "low"
 
     n_high = confs.count("high"); n_med = confs.count("medium"); n_low = confs.count("low")
     _log("L3", f"validation: {n_high} high, {n_med} medium, {n_low} low confidence")
     if needs_review:
-        _log("L3", f"needs_review: {notes[0] if notes else ('low-confidence values' if 'low' in confs else 'scanned')}")
+        _log("L3", f"needs_review: {notes[0] if notes else 'low-confidence values'}")
     return conf_map, flagged, notes, overall, needs_review
 
 
@@ -795,7 +868,7 @@ def _run_three_layer(orchestrator, file_path, template_data, binding_map, page_i
         ext = per_doc.get(di, {"layout_sections": {}, "extracted_fields": {}})
         doc_type = ext.get("doc_type", default_doc_type)
         conf_map, flagged, notes, overall, needs_review = _validate_extraction(
-            ext, doc_text, doc_type, file_type, d)
+            ext, doc_text, doc_type, file_type, d, column_groups=cgs)
         all_resps = ([l1_resp] if l1_resp is not None else []) + l2_responses
         seg_fn = (file_path.name if len(docs) == 1
                   else f"{file_path.stem}_doc{di+1}{file_path.suffix}")
@@ -885,6 +958,22 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
     if not template_data:
         _log("ROUTE", f"{file_path.name}: NO TEMPLATE -> unguided extraction")
         return _run_unguided_extraction(**ctx)
+
+    # E6 — EMPTY TEMPLATE: a saved grid with zero content cells (no values, no
+    # extract targets) gives extraction nothing to anchor to. Treat it exactly
+    # like no template: unguided extraction instead of a garbage field prompt.
+    if template_data.get("mode", "layout") == "layout":
+        tpl_cells = (template_data.get("layout") or {}).get("cells") or {}
+        has_content = any(
+            isinstance(cd, dict) and (str(cd.get("value") or "").strip()
+                                      or cd.get("extractTarget"))
+            for cd in tpl_cells.values())
+        if not has_content:
+            _log("ROUTE", f"{file_path.name}: EMPTY TEMPLATE (0 content cells) "
+                          f"-> unguided extraction")
+            ctx["template_data"] = None
+            ctx["binding_map"] = None
+            return _run_unguided_extraction(**ctx)
 
     meta = (binding_map or {}).get("_meta", {}) if binding_map else {}
     template_type = meta.get("template_type", "labeled")

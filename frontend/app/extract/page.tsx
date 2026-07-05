@@ -802,7 +802,9 @@ export default function ExtractPage() {
               {isFailed && jobStatus?.error_message && (
                 <p style={{ fontSize: 11, color: "var(--red)", marginTop: 8 }}>{jobStatus.error_message}</p>
               )}
-              {isDone && activeJobId && selectedTemplate && (
+              {/* N1: download available for ANY completed job — with or without a template
+                  (no-template jobs export via the backend's flat-table writer) */}
+              {isDone && !isFailed && activeJobId && (
                 <div className="export-row">
                   <button className="btn btn-primary btn-sm" onClick={async () => {
                     try {

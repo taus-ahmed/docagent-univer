@@ -147,8 +147,10 @@ def update_template(
     if payload.is_shared is not None:
         tpl.is_shared = payload.is_shared and current_user.role in ("admin", "company_admin")
 
-    # Re-run Gemini template understanding only when the grid layout changed.
+    # Re-run Gemini template understanding only when the grid layout changed
+    # (E3 — a template edit must regenerate the stored CBM).
     if description_changed:
+        print(f"[TEMPLATE] CBM regenerated on template update (id={tpl.id})", flush=True)
         _compute_and_store_cbm(tpl)
 
     tpl.updated_at = datetime.utcnow()

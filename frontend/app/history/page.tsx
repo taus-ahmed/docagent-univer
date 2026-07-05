@@ -280,7 +280,6 @@ export default function HistoryPage() {
   });
 
   const selectedJob    = jobs.find(j => j.id === selectedJobId);
-  const jobHasTemplate = Boolean(selectedJob?.schema_id);
 
   async function handleExport(jobId: number, mode: "template" | "combined" | "perfile" | "zip") {
     try {
@@ -470,8 +469,9 @@ export default function HistoryPage() {
                 <div className="detail-header">
                   <span className="detail-title">Job #{selectedJob.id}</span>
                   <StatusBadge status={selectedJob.status} />
-                  {/* Show download buttons for any finished job that has extracted docs */}
-                  {!["pending","processing"].includes(selectedJob.status) && jobHasTemplate && (selectedJob.successful ?? 0) > 0 && (
+                  {/* N1: show download buttons for any completed job with extracted docs —
+                      template or not (no-template jobs export via the flat-table writer) */}
+                  {selectedJob.status === "completed" && (selectedJob.successful ?? 0) > 0 && (
                     <>
                       <button
                         className="btn btn-primary btn-sm"
@@ -483,9 +483,6 @@ export default function HistoryPage() {
                           <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
                         Download Excel
-                        {selectedJob.status === "failed" && (
-                          <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.8 }}>(partial)</span>
-                        )}
                       </button>
                       {results.length > 1 && (
                         <button
@@ -502,11 +499,6 @@ export default function HistoryPage() {
                         </button>
                       )}
                     </>
-                  )}
-                  {!["pending","processing"].includes(selectedJob.status) && !jobHasTemplate && (selectedJob.successful ?? 0) > 0 && (
-                    <span style={{ fontSize: 11, color: "var(--text3)" }}>
-                      No template used
-                    </span>
                   )}
                   {selectedJob.status === "failed" && (selectedJob.successful ?? 0) === 0 && (
                     <span style={{ fontSize: 12, color: "var(--red,#ef4444)" }}>

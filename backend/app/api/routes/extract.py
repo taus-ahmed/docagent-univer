@@ -1484,9 +1484,20 @@ def compute_binding_map(template_data: dict, grid: dict):
             # (e.g. "Current liabilities") is detected, while totals rows are excluded.
             header_rows = sorted(r for r in range(max_r + 1)
                                  if _is_section_header(r, anchor))
+            # S1 — total-label rows are section DELIMITERS too. Without this,
+            # blank rows after a "Total ..." row are bucketed into the section
+            # above, stretching end_row past the total row — the below-band total
+            # scan then hits the NEXT section header and finds no total at all.
+            total_label_rows = {r for r in range(max_r + 1)
+                                if val(r, anchor)
+                                and any(kw in val(r, anchor).lower()
+                                        for kw in _TOTAL_INDICATORS)}
+            boundaries = sorted(set(header_rows) | total_label_rows)
             buckets = {}
             for fr in fill_rows:
-                hr = max((h for h in header_rows if h < fr), default=-1)
+                hr = max((h for h in boundaries if h < fr), default=-1)
+                if hr in total_label_rows:
+                    continue    # spacer rows below a section total — not data rows
                 buckets.setdefault(hr, []).append(fr)
             for hr in sorted(buckets):
                 rows = sorted(buckets[hr])
@@ -1523,11 +1534,21 @@ def compute_binding_map(template_data: dict, grid: dict):
             g["header_row"] = hr
             g["header_cell"] = f"{hr},{lc}" if hr >= 0 else ""
             g["section_type"] = "table"
+            # S1 — the total cell is the value cell of the first row BELOW the
+            # group whose LABEL-column text contains a total indicator ("Total
+            # current assets" -> that row's value cell). The first non-empty
+            # label row below the band decides: a total-indicator label is the
+            # total row; anything else (the next section header) means this
+            # group has NO total row. Never pick a cell by role/window alone —
+            # that grabbed labeled data rows (B5) instead of the real total (B9).
             tcells, trow = [], None
-            for r in range(g["end_row"] + 1, min(g["end_row"] + 4, max_r + 1)):
-                if binding.get(f"{r},{vc}", {}).get("role") == "value_target":
+            for r in range(g["end_row"] + 1, max_r + 1):
+                lbl = val(r, lc)
+                if not lbl:
+                    continue
+                if any(kw in lbl.lower() for kw in _TOTAL_INDICATORS):
                     tcells.append(_cell_ref(r, vc)); trow = r
-                    break
+                break
             g["total_row"] = trow
             g["total_cells"] = tcells
             g["parallel_group_id"] = None
@@ -1777,6 +1798,36 @@ def _understand_template(grid: dict, orchestrator=None) -> Optional[dict]:
         return None
 
 
+# L1 — semantic aliases for commonly re-labeled fields. A template says
+# "Contract" while the document says "PO Ref"; without an alias hint Gemini
+# returns "". Matched against the cell's data_type OR label keywords (first
+# matching entry wins). Generic — applies to any template/document type.
+_CBM_FIELD_ALIASES = (
+    {"data_types": ("contract_number", "reference_number", "po_number", "order_reference"),
+     "label_kw": (r"\bcontract\b", r"\breference\b", r"\bref\b", r"\bpo\b", r"\border\s*no\b"),
+     "note": "May appear as: PO Number, PO Ref, Purchase Order, Contract Number, "
+             "Reference Number, Order Reference"},
+    {"data_types": ("company_name", "organization_name"),
+     "label_kw": (r"\bcompany\b", r"\borgani[sz]ation\b", r"\bfirm\b"),
+     "note": "May appear as: Company, Organization, Firm, Business, Corp, LLC, Ltd, Inc"},
+    {"data_types": ("invoice_number",),
+     "label_kw": (r"\binvoice\b", r"\binv\b", r"\bbill\s*no\b"),
+     "note": "May appear as: Invoice #, Inv No, Invoice Number, Reference, Bill Number"},
+)
+
+
+def _field_alias_note(label: str, data_type: str) -> str:
+    """Return the alias note for a field, or "" when none applies."""
+    lab = (label or "").lower()
+    dt = (data_type or "").lower()
+    for entry in _CBM_FIELD_ALIASES:
+        if dt and any(d in dt for d in entry["data_types"]):
+            return entry["note"]
+        if any(re.search(kw, lab) for kw in entry["label_kw"]):
+            return entry["note"]
+    return ""
+
+
 def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
     """Build the extraction user-prompt directly from a stored cell_binding_map.
     Asks for extracted_fields (cell-ref keyed) + table_rows (column-name keyed,
@@ -1810,7 +1861,10 @@ def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
         for cell_ref, label, section, data_type in single:
             seg = f"  (from the '{section}' section)" if section else ""
             dt = f" [{data_type}]" if data_type else ""
-            lines.append(f"  {cell_ref} = {label}{seg}{dt}")
+            # L1 — semantic alias hint for commonly re-labeled fields
+            alias = _field_alias_note(label, data_type)
+            alias_seg = f" — {alias}" if alias else ""
+            lines.append(f"  {cell_ref} = {label}{seg}{dt}{alias_seg}")
         lines.append("")
         # B2 — company-name cells must receive an ORGANIZATION name, never a
         # contact person. Generic: applies to any cell typed company_name.
@@ -6789,6 +6843,38 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 used.add(k)
         unmatched = [(k, r) for k, r in kept if k not in used]
 
+        # ── S4: place still-unmatched sections into an EMPTY column group whose
+        #    PARALLEL PARTNER already has content (the C/D half of a band whose
+        #    A/B half matched). Candidates are ranked by semantic score against
+        #    the section label; ties fall back to template order. Only truly
+        #    orphaned sections remain for the A/B overflow area. ──
+        if unmatched and groups:
+            remaining = []
+            for k, r in unmatched:
+                cands = []
+                for g in groups:
+                    pid = g.get("parallel_group_id")
+                    if pid is None or g["group_id"] in matched_to:
+                        continue
+                    partner_filled = any(
+                        g2["group_id"] in matched_to
+                        and g2.get("parallel_group_id") == pid
+                        and g2["group_id"] != g["group_id"]
+                        for g2 in groups)
+                    if partner_filled:
+                        cands.append(g)
+                if cands:
+                    best = max(cands, key=lambda g: _sem_score(k, g.get("section_label")))
+                    print(f"[EXPORT] layout: S4 overflow section '{k}' -> parallel "
+                          f"group '{best.get('section_label')}' (cols "
+                          f"{best.get('label_col_letter')}/{best.get('value_col_letter')}, "
+                          f"parallel_group_id={best.get('parallel_group_id')}, "
+                          f"sem={_sem_score(k, best.get('section_label')):.2f})", flush=True)
+                    matched_to.setdefault(best["group_id"], []).extend(r)
+                else:
+                    remaining.append((k, r))
+            unmatched = remaining
+
         sections = []
         for g in groups:
             rows = matched_to.get(g["group_id"], [])
@@ -6887,8 +6973,21 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             except Exception:
                 continue
             ci = _col_idx(col_letter)
-            if ci:
-                _set_num(ws.cell(row=out_row(rownum - 1) + 1, column=ci), value)
+            if not ci:
+                continue
+            # S2 — NEVER overwrite a static template cell (section header, column
+            # header, label, merged child). A static cell = template text that is
+            # not an extract target; a value_target's cell is empty in the template.
+            tpl_cell = cells_tpl.get(f"{rownum - 1},{ci - 1}")
+            if isinstance(tpl_cell, dict) and (
+                    tpl_cell.get("mergeParent")
+                    or (str(tpl_cell.get("value") or "").strip()
+                        and not tpl_cell.get("extractTarget"))):
+                print(f"[EXPORT] layout: SKIP extracted_fields {ref} -> static "
+                      f"template cell ('{str(tpl_cell.get('value') or '')[:30]}') "
+                      f"— never overwritten", flush=True)
+                continue
+            _set_num(ws.cell(row=out_row(rownum - 1) + 1, column=ci), value)
 
         # ── STEP 4: write any unmatched extracted sections (NO DATA DROPPED) in the
         #    A/B columns after the template block, separated by gap rows. ──
@@ -7224,6 +7323,7 @@ def _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod):
     reserved. Independent of region analysis. Skips merged-cell children.
     """
     from openpyxl.cell import MergedCell
+    from openpyxl.styles import Alignment
     tables = extracted_data.get("cbm_tables") or []
     # Prefer the raw (column-name keyed) rows captured at extraction; fall back to
     # the normalized table_rows if absent.
@@ -7285,6 +7385,10 @@ def _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod):
                     xl.value = float(clean) if "." in clean else int(clean)
                 elif sval:
                     xl.value = sval
+                # L2 — reset to default alignment so ALL table rows render
+                # consistently (template styles gave some rows explicit left
+                # alignment while overflow rows inherited the default).
+                xl.alignment = Alignment()
             written_total += 1
 
     # A5 diagnostic — always log rows-in vs rows-written so a dropped line item
