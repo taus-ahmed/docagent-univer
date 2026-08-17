@@ -1,0 +1,64 @@
+{
+  "captured_at": "2026-06-28 02:39:26",
+  "provider": "GeminiClient",
+  "model_used": "gemini-2.5-flash",
+  "input_mode": "text",
+  "tokens_used": 3316,
+  "success": true,
+  "prompt_preview": "You are analyzing a spreadsheet template. The user has designed this template to extract data from business documents.\n\nHere is the complete template grid (cell reference -> contents; \"empty\" means a blank cell, \"merge\" means a merged region anchored at that cell):\n{\"A1\": {\"text\": \"Seller Info\", \"merge\": {\"rows\": 1, \"cols\": 4}}, \"B1\": {\"empty\": true}, \"C1\": {\"empty\": true}, \"D1\": {\"empty\": true}, \"E1\": {\"empty\": true}, \"A2\": {\"text\": \"Seller\"}, \"B2\": {\"empty\": true, \"marked_extract\": true}, \"C2\": {\"text\": \"Tax ID\"}, \"D2\": {\"empty\": true, \"marked_extract\": true}, \"E2\": {\"empty\": true}, \"A3\": {\"empty\": true}, \"B3\": {\"empty\": true}, \"C3\": {\"empty\": true}, \"D3\": {\"empty\": true}, \"E3\": {\"empty\": true}, \"A4\": {\"empty\": true}, \"B4\": {\"empty\": true}, \"C4\": {\"empty\": true}, \"D4\": {\"empty\": true}, \"E4\": {\"empty\": true}, \"A5\": {\"empty\": true}, \"B5\": {\"empty\": true}, \"C5\": {\"empty\": true}, \"D5\": {\"empty\": true}, \"E5\": {\"empty\": true}, \"A6\": {\"empty\": true}, \"B6\": {\"empty\": true}, \"C6\": {\"empty\": true}, \"D6\": {\"empty\": true}, \"E6\": {\"empty\": true}, \"A7\": {\"empty\": true}, \"B7\": {\"empty\": true}, \"C7\": {\"empty\": true}, \"D7\": {\"empty\": true}, \"E7\": {\"empty\": true}, \"A8\": {\"empty\": true}, \"B8\": {\"empty\": true}, \"C8\": {\"empty\": true}, \"D8\": {\"empty\": true}, \"E8\": {\"empty\": true}, \"A9\": {\"empty\": true}, \"B9\": {\"empty\": true}, \"C9\": {\"empty\": true}, \"D9\": {\"empty\": true}, \"E9\": {\"empty\": true}, \"A10\": {\"empty\": true}, \"B10\": {\"empty\": true}, \"C10\": {\"empty\": true}, \"D10\": {\"empty\": true}, \"E10\": ",
+  "raw_text": "{\n  \"extract_cells\": {\n    \"B2\": {\n      \"label\": \"Seller name\",\n      \"section\": \"Seller Info\",\n      \"type\": \"single_value\",\n      \"data_type\": \"company_name\"\n    },\n    \"D2\": {\n      \"label\": \"Tax ID\",\n      \"section\": \"Seller Info\",\n      \"type\": \"single_value\",\n      \"data_type\": \"tax_id\"\n    },\n    \"B20\": {\n      \"label\": \"Subtotal\",\n      \"section\": \"Summary\",\n      \"type\": \"single_value\",\n      \"data_type\": \"amount\"\n    }\n  },\n  \"tables\": [\n    {\n      \"table_id\": \"line_items\",\n      \"section\": \"Line Items\",\n      \"header_row\": 12,\n      \"data_start_row\": 13,\n      \"data_end_row\": 18,\n      \"columns\": {\n        \"A\": \"Item description\",\n        \"B\": \"Quantity\",\n        \"C\": \"Unit\",\n        \"D\": \"Unit Price\",\n        \"E\": \"Line Total\"\n      }\n    }\n  ],\n  \"static_cells\": [\n    \"A1\",\n    \"A2\",\n    \"C2\",\n    \"A12\",\n    \"B12\",\n    \"C12\",\n    \"D12\",\n    \"E12\",\n    \"A20\"\n  ],\n  \"sections\": [\n    \"Seller Info\",\n    \"Line Items\",\n    \"Summary\"\n  ]\n}",
+  "parsed_json": {
+    "extract_cells": {
+      "B2": {
+        "label": "Seller name",
+        "section": "Seller Info",
+        "type": "single_value",
+        "data_type": "company_name"
+      },
+      "D2": {
+        "label": "Tax ID",
+        "section": "Seller Info",
+        "type": "single_value",
+        "data_type": "tax_id"
+      },
+      "B20": {
+        "label": "Subtotal",
+        "section": "Summary",
+        "type": "single_value",
+        "data_type": "amount"
+      }
+    },
+    "tables": [
+      {
+        "table_id": "line_items",
+        "section": "Line Items",
+        "header_row": 12,
+        "data_start_row": 13,
+        "data_end_row": 18,
+        "columns": {
+          "A": "Item description",
+          "B": "Quantity",
+          "C": "Unit",
+          "D": "Unit Price",
+          "E": "Line Total"
+        }
+      }
+    ],
+    "static_cells": [
+      "A1",
+      "A2",
+      "C2",
+      "A12",
+      "B12",
+      "C12",
+      "D12",
+      "E12",
+      "A20"
+    ],
+    "sections": [
+      "Seller Info",
+      "Line Items",
+      "Summary"
+    ]
+  }
+}

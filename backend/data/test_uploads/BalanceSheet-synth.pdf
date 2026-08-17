@@ -1,0 +1,57 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 919 >>
+stream
+BT /F1 10 Tf
+1 0 0 1 150 750 Tm (Nexus Global Trading LLC - Balance Sheet \(As at 2024-12-31\)) Tj
+1 0 0 1 50 710 Tm (Current Assets) Tj
+1 0 0 1 330 710 Tm (Current Liabilities) Tj
+1 0 0 1 50 685 Tm (Cash & Cash Equivalents) Tj
+1 0 0 1 235 685 Tm (168,000) Tj
+1 0 0 1 330 685 Tm (Accounts Payable) Tj
+1 0 0 1 520 685 Tm (262,000) Tj
+1 0 0 1 50 663 Tm (Accounts Receivable) Tj
+1 0 0 1 235 663 Tm (95,000) Tj
+1 0 0 1 330 663 Tm (Short-Term Debt) Tj
+1 0 0 1 520 663 Tm (80,000) Tj
+1 0 0 1 50 641 Tm (Inventory) Tj
+1 0 0 1 235 641 Tm (140,000) Tj
+1 0 0 1 330 641 Tm (Accrued Expenses) Tj
+1 0 0 1 520 641 Tm (33,000) Tj
+1 0 0 1 50 619 Tm (Prepaid Expenses) Tj
+1 0 0 1 235 619 Tm (12,000) Tj
+1 0 0 1 330 619 Tm (Deferred Revenue) Tj
+1 0 0 1 520 619 Tm (25,000) Tj
+1 0 0 1 50 597 Tm (Total Current Assets) Tj
+1 0 0 1 235 597 Tm (415,000) Tj
+1 0 0 1 330 597 Tm (Total Current Liabilities) Tj
+1 0 0 1 520 597 Tm (400,000) Tj
+ET
+
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001211 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1281
+%%EOF

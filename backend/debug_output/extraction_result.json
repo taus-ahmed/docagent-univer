@@ -1,0 +1,301 @@
+[
+  {
+    "filename": "BalanceSheet-synth.pdf",
+    "success": true,
+    "document_type": "balance_sheet",
+    "extracted_data": {
+      "document_type": "balance_sheet",
+      "overall_confidence": "high",
+      "extraction_method": "v4_three_layer",
+      "identifier": null,
+      "doc_index": 0,
+      "layout_sections": {
+        "Current Assets": {
+          "rows": [
+            {
+              "label_col": "A",
+              "value_col": "B",
+              "row": 1,
+              "label": "Cash & Cash Equivalents",
+              "value": "168,000"
+            },
+            {
+              "label_col": "A",
+              "value_col": "B",
+              "row": 2,
+              "label": "Accounts Receivable",
+              "value": "95,000"
+            },
+            {
+              "label_col": "A",
+              "value_col": "B",
+              "row": 3,
+              "label": "Inventory",
+              "value": "140,000"
+            },
+            {
+              "label_col": "A",
+              "value_col": "B",
+              "row": 4,
+              "label": "Prepaid Expenses",
+              "value": "12,000"
+            }
+          ]
+        },
+        "Current Liabilities": {
+          "rows": [
+            {
+              "label_col": "C",
+              "value_col": "D",
+              "row": 1,
+              "label": "Accounts Payable",
+              "value": "262,000"
+            },
+            {
+              "label_col": "C",
+              "value_col": "D",
+              "row": 2,
+              "label": "Short-Term Debt",
+              "value": "80,000"
+            },
+            {
+              "label_col": "C",
+              "value_col": "D",
+              "row": 3,
+              "label": "Accrued Expenses",
+              "value": "33,000"
+            },
+            {
+              "label_col": "C",
+              "value_col": "D",
+              "row": 4,
+              "label": "Deferred Revenue",
+              "value": "25,000"
+            }
+          ]
+        }
+      },
+      "extracted_fields": {
+        "B10": "415,000",
+        "D10": "400,000"
+      },
+      "binding_column_groups": [
+        {
+          "group_id": 1,
+          "section_label": "Current Assets",
+          "label_col": 0,
+          "value_col": 1,
+          "label_col_letter": "A",
+          "value_col_letter": "B",
+          "start_row": 1,
+          "end_row": 8,
+          "rows": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "header_row": 0,
+          "header_cell": "0,0",
+          "section_type": "table",
+          "total_row": 9,
+          "total_cells": [
+            "B10"
+          ],
+          "parallel_group_id": 1
+        },
+        {
+          "group_id": 2,
+          "section_label": "Current Liabilities",
+          "label_col": 2,
+          "value_col": 3,
+          "label_col_letter": "C",
+          "value_col_letter": "D",
+          "start_row": 1,
+          "end_row": 8,
+          "rows": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "header_row": 0,
+          "header_cell": "0,2",
+          "section_type": "table",
+          "total_row": 9,
+          "total_cells": [
+            "D10"
+          ],
+          "parallel_group_id": 1
+        }
+      ],
+      "extracted_data": {
+        "Cash & Cash Equivalents": {
+          "value": "168,000",
+          "confidence": "high",
+          "ref": "B1"
+        },
+        "Accounts Receivable": {
+          "value": "95,000",
+          "confidence": "high",
+          "ref": "B2"
+        },
+        "Inventory": {
+          "value": "140,000",
+          "confidence": "high",
+          "ref": "B3"
+        },
+        "Prepaid Expenses": {
+          "value": "12,000",
+          "confidence": "high",
+          "ref": "B4"
+        },
+        "Accounts Payable": {
+          "value": "262,000",
+          "confidence": "high",
+          "ref": "D1"
+        },
+        "Short-Term Debt": {
+          "value": "80,000",
+          "confidence": "high",
+          "ref": "D2"
+        },
+        "Accrued Expenses": {
+          "value": "33,000",
+          "confidence": "high",
+          "ref": "D3"
+        },
+        "Deferred Revenue": {
+          "value": "25,000",
+          "confidence": "high",
+          "ref": "D4"
+        },
+        "B10": {
+          "value": "415,000",
+          "confidence": "high",
+          "ref": "B10"
+        },
+        "D10": {
+          "value": "400,000",
+          "confidence": "high",
+          "ref": "D10"
+        }
+      },
+      "table_rows": [],
+      "validation": {
+        "flagged_count": 0,
+        "flagged_fields": [],
+        "confidence_map": {
+          "B1": "high",
+          "B2": "high",
+          "B3": "high",
+          "B4": "high",
+          "D1": "high",
+          "D2": "high",
+          "D3": "high",
+          "D4": "high",
+          "B10": "high",
+          "D10": "high"
+        }
+      },
+      "validation_notes": [],
+      "needs_review": false,
+      "template_regions": {
+        "primary_mode": "layout",
+        "binding_column_groups": [
+          {
+            "group_id": 1,
+            "section_label": "Current Assets",
+            "label_col": 0,
+            "value_col": 1,
+            "label_col_letter": "A",
+            "value_col_letter": "B",
+            "start_row": 1,
+            "end_row": 8,
+            "rows": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "header_row": 0,
+            "header_cell": "0,0",
+            "section_type": "table",
+            "total_row": 9,
+            "total_cells": [
+              "B10"
+            ],
+            "parallel_group_id": 1
+          },
+          {
+            "group_id": 2,
+            "section_label": "Current Liabilities",
+            "label_col": 2,
+            "value_col": 3,
+            "label_col_letter": "C",
+            "value_col_letter": "D",
+            "start_row": 1,
+            "end_row": 8,
+            "rows": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "header_row": 0,
+            "header_cell": "0,2",
+            "section_type": "table",
+            "total_row": 9,
+            "total_cells": [
+              "D10"
+            ],
+            "parallel_group_id": 1
+          }
+        ],
+        "document_map": {
+          "doc_index": 0,
+          "doc_type": "balance_sheet",
+          "pages": [
+            0
+          ],
+          "identifier": null,
+          "sections": [
+            {
+              "heading": "Current Assets",
+              "page": 0,
+              "item_count": 5,
+              "structure": "table"
+            },
+            {
+              "heading": "Current Liabilities",
+              "page": 0,
+              "item_count": 5,
+              "structure": "table"
+            }
+          ]
+        }
+      },
+      "raw_llm_responses": [
+        "{\n  \"file_type\": \"digital_pdf\",\n  \"total_documents\": 1,\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"doc_type\": \"balance_sheet\",\n      \"pages\": [\n        0\n      ],\n      \"identifier\": null,\n      \"sections\": [\n        {\n          \"heading\": \"Current Assets\",\n          \"page\": 0,\n          \"item_count\": 5,\n          \"structure\": \"table\"\n        },\n        {\n          \"heading\": \"Current Liabilities\",\n          \"page\": 0,\n          \"item_count\": 5,\n          \"structure\": \"table\"\n        }\n      ]\n    }\n  ]\n}",
+        "{\n  \"layout_sections\": {\n    \"currentassets\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Cash & Cash Equivalents\",\n          \"value\": \"168,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Accounts Receivable\",\n          \"value\": \"95,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Inventory\",\n          \"value\": \"140,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"Prepaid Expenses\",\n          \"value\": \"12,000\"\n        }\n      ]\n    }\n  },\n  \"extracted_fields\": {\n    \"B10\": \"415,000\"\n  }\n}",
+        "{\n  \"layout_sections\": {\n    \"currentliabilities\": {\n      \"rows\": [\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 1,\n          \"label\": \"Accounts Payable\",\n          \"value\": \"262,000\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 2,\n          \"label\": \"Short-Term Debt\",\n          \"value\": \"80,000\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 3,\n          \"label\": \"Accrued Expenses\",\n          \"value\": \"33,000\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 4,\n          \"label\": \"Deferred Revenue\",\n          \"value\": \"25,000\"\n        }\n      ]\n    }\n  },\n  \"extracted_fields\": {\n    \"D10\": \"400,000\"\n  }\n}"
+      ]
+    }
+  }
+]
