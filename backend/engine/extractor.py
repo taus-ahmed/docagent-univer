@@ -893,14 +893,179 @@ def _run_layout_extraction(orchestrator, file_path, template_data, binding_map,
                             single_document=True)
 
 
+_UNGUIDED_SYSTEM = (
+    "You are an expert accountant and document analyst. Extract every piece of "
+    "meaningful financial and business information from this document."
+)
+
+_UNGUIDED_PROMPT = """Extract ALL content from this document.
+
+Return this exact JSON structure:
+{
+  "document_type": "invoice/receipt/balance_sheet/contract/cheque/other",
+  "header_fields": [
+    {"label": "field name", "value": "field value"}
+  ],
+  "line_items": [
+    {
+      "item_index": 1,
+      "fields": [
+        {"label": "Description", "value": "..."},
+        {"label": "Quantity", "value": "..."},
+        {"label": "Unit Price", "value": "..."},
+        {"label": "Amount", "value": "..."}
+      ]
+    }
+  ],
+  "summary_fields": [
+    {"label": "field name", "value": "field value"}
+  ]
+}
+
+Rules:
+- header_fields: ALL identifying information
+  (names, addresses, dates, reference numbers, IDs)
+- line_items: EVERY row in any table or list.
+  Each item gets ALL its column values as separate fields.
+  If no line items exist, return empty array.
+- summary_fields: ALL totals, subtotals, tax,
+  balance, amounts due, signatures, notes
+- Extract EVERY field — nothing omitted
+- Use exact values as they appear in the document
+- Do not summarize or combine fields"""
+
+
+def _fields_list(raw):
+    """Sanitize a [{label, value}] list from the model (drop malformed entries)."""
+    out = []
+    for f in (raw or []):
+        if not isinstance(f, dict):
+            continue
+        label = str(f.get("label") or "").strip()
+        value = "" if f.get("value") is None else str(f.get("value")).strip()
+        if label or value:
+            out.append({"label": label, "value": value})
+    return out
+
+
+def _assemble_unguided_result(filename, doc_index, d0, doc_text, file_type, resp, elapsed):
+    """Build a DocumentExtractionResult from the vertical unguided structure
+    (header_fields / line_items / summary_fields). The full structure is stored
+    as extracted_data["unguided_content"] for _write_flat_table's vertical
+    Label|Value export; a label-keyed kv map + table_rows keep the results grid
+    and insights working."""
+    from orchestrator import DocumentExtractionResult
+
+    doc_type = str(d0.get("document_type") or "other").strip() or "other"
+    header_fields = _fields_list(d0.get("header_fields"))
+    summary_fields = _fields_list(d0.get("summary_fields"))
+    line_items = []
+    for i, it in enumerate(d0.get("line_items") or []):
+        if not isinstance(it, dict):
+            continue
+        fields = _fields_list(it.get("fields"))
+        if fields:
+            try:
+                idx = int(it.get("item_index") or (i + 1))
+            except (ValueError, TypeError):
+                idx = i + 1
+            line_items.append({"item_index": idx, "fields": fields})
+
+    # E1-consistent confidence: scanned/low-text -> all medium + review.
+    scanned = file_type in ("scanned_pdf", "image") or len((doc_text or "").strip()) < 50
+    text_norm, text_digits = _norm(doc_text), _digits(doc_text)
+
+    def conf(v):
+        if scanned:
+            return "medium"
+        nv = _norm(v)
+        if not nv or nv in text_norm:
+            return "high"
+        d = _digits(v)
+        return "medium" if (d and d in text_digits) else "low"
+
+    kv, conf_map, flagged = {}, {}, []
+
+    def add_kv(key, value):
+        c = conf(value)
+        kv[key] = {"value": value, "confidence": c}
+        conf_map[key] = c
+        if c == "low":
+            flagged.append({"ref": key, "value": value,
+                            "issue": "value not found in document text"})
+
+    for f in header_fields:
+        add_kv(f["label"] or "field", f["value"])
+    for it in line_items:
+        for f in it["fields"]:
+            add_kv(f"Item {it['item_index']} {f['label']}".strip(), f["value"])
+    for f in summary_fields:
+        add_kv(f["label"] or "field", f["value"])
+
+    notes = ["Scanned document — manual verification recommended"] if scanned else []
+    confs = list(conf_map.values())
+    overall = ("medium" if scanned else
+               "low" if "low" in confs else
+               "medium" if "medium" in confs else "high")
+    needs_review = scanned or bool(flagged)
+
+    r = DocumentExtractionResult(filename=filename)
+    r.document_type = doc_type
+    r.success = True
+    r.processing_time_ms = elapsed
+    r.extraction_response = resp
+    r.extracted_data = {
+        "document_type": doc_type,
+        "overall_confidence": overall,
+        "extraction_method": "unguided_vertical",
+        "doc_index": doc_index,
+        "unguided_content": {
+            "document_type": doc_type,
+            "header_fields": header_fields,
+            "line_items": line_items,
+            "summary_fields": summary_fields,
+        },
+        "extracted_data": kv,
+        "table_rows": [{f["label"]: f["value"] for f in it["fields"]}
+                       for it in line_items],
+        "layout_sections": {},
+        "validation": {"flagged_count": len(flagged), "flagged_fields": flagged,
+                       "confidence_map": conf_map},
+        "validation_notes": notes,
+        "needs_review": needs_review,
+    }
+    _log("RESULT", f"doc {doc_index}: {len(header_fields)} header fields, "
+                   f"{len(line_items)} line items, {len(summary_fields)} summary "
+                   f"fields, {overall}")
+    return r
+
+
 def _run_unguided_extraction(orchestrator, file_path, template_data, binding_map,
                              page_images, doc_text, doc_text_pages, file_type,
                              default_doc_type, start):
-    """NO template: extract everything, two-column A/B output via the three layers."""
-    _log("UNGUIDED", f"{file_path.name}: no template — full document, two-column A/B")
-    return _run_three_layer(orchestrator, file_path, None, None,
-                            page_images, doc_text, doc_text_pages, file_type,
-                            default_doc_type, start, primary_mode="unguided")
+    """NO template: ONE accountant-persona call extracting the COMPLETE document
+    as header_fields / line_items / summary_fields. Exported by _write_flat_table
+    as a vertical two-column Label|Value sheet — no horizontal generic metadata."""
+    from app.api.routes.extract import _fail
+    _log("UNGUIDED", f"{file_path.name}: no template — complete vertical extraction "
+                     f"(header / line items / summary)")
+    prompt = _UNGUIDED_PROMPT
+    if doc_text and doc_text.strip():
+        prompt += "\n\n=== DOCUMENT TEXT (for reference) ===\n" + doc_text[:12000]
+    parsed, resp = _llm_json(orchestrator, prompt, _UNGUIDED_SYSTEM,
+                             images=page_images, text=doc_text)
+    if not parsed:
+        return [_fail(file_path.name, "unguided extraction failed")]
+    doc_dicts = _unwrap_all(parsed)
+    if len(doc_dicts) > 1:
+        _log("UNGUIDED", f"{file_path.name}: response contains {len(doc_dicts)} documents")
+    results = []
+    for di, d0 in enumerate(doc_dicts):
+        seg_fn = (file_path.name if len(doc_dicts) == 1
+                  else f"{file_path.stem}_doc{di+1}{file_path.suffix}")
+        results.append(_assemble_unguided_result(seg_fn, di, d0, doc_text, file_type,
+                                                 resp, (time.time() - start) * 1000))
+    return results or [_fail(file_path.name, "no documents extracted")]
 
 
 def run_extraction(orchestrator, file_path, template_data, selected_pages=None):

@@ -6203,8 +6203,27 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                             orchestrator, file_path, None
                         )
                     else:
-                        result = orchestrator._process_single_document(file_path)
-                        results = [result]
+                        # No-template PDFs: with the v4 engine on, use the unguided
+                        # vertical extraction (header/line items/summary -> vertical
+                        # Label|Value export). The legacy orchestrator schema path
+                        # produced only horizontal generic metadata. Any v4 failure
+                        # falls back to the legacy path (safe rollback).
+                        results = None
+                        if getattr(settings, "USE_NEW_EXTRACTOR", False):
+                            try:
+                                from extractor import run_extraction as _v4_run
+                                print("[THREAD] no template — v4 unguided vertical "
+                                      "extraction", flush=True)
+                                results = _v4_run(orchestrator, file_path, None,
+                                                  selected_pages=selected_pages)
+                            except Exception as _ug_err:
+                                print(f"[THREAD] v4 unguided failed ({_ug_err}) — "
+                                      f"falling back to schema path", flush=True)
+                                traceback.print_exc()
+                                results = None
+                        if results is None:
+                            result = orchestrator._process_single_document(file_path)
+                            results = [result]
 
                 for result in results:
                     try:
@@ -7907,28 +7926,105 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
 
 
 def _write_flat_table(ws, doc_results, openpyxl_mod):
-    """Fallback flat table when no template."""
+    """
+    No-template export — VERTICAL two-column layout (col A = Label, col B = Value)
+    an accountant can read top to bottom:
+
+        Document Type | <type>
+        (blank)
+        <header fields, one per row>
+        (blank)
+        Line Items                       (bold)
+        (blank)
+        Item 1 <field> | <value> ... (blank row between items)
+        Summary                          (bold)
+        (blank)
+        <summary fields, one per row>
+
+    Primary source: extracted_data["unguided_content"] (the v4 vertical unguided
+    structure). Legacy jobs without it fall back to the label-keyed extracted_data
+    dict — still written vertically, never as a wide horizontal table.
+    Multiple documents stack with a filename banner between blocks.
+    """
     from openpyxl.styles import Font, PatternFill
-    from openpyxl.utils import get_column_letter
-    all_keys, seen = [], set()
-    for dr in doc_results:
-        for k in (dr.get_extracted_data().get("extracted_data") or {}):
-            if k not in seen and not k.startswith("_label_"):
-                seen.add(k); all_keys.append(k)
-    hf = PatternFill(fill_type="solid", fgColor="FF4F46E5")
-    hfont = Font(bold=True, color="FFFFFFFF", size=11)
-    c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
-    for ci, key in enumerate(all_keys, 2):
-        c = ws.cell(row=1, column=ci, value=key); c.font=hfont; c.fill=hf
-    for ri, dr in enumerate(doc_results, 2):
-        ws.cell(row=ri, column=1, value=dr.filename)
-        inner = dr.get_extracted_data().get("extracted_data") or {}
-        for ci, key in enumerate(all_keys, 2):
-            v = inner.get(key)
-            ws.cell(row=ri, column=ci, value=(v.get("value","") if isinstance(v,dict) else (v or "")))
-    ws.column_dimensions["A"].width = 30
-    for ci in range(2, len(all_keys)+2):
-        ws.column_dimensions[get_column_letter(ci)].width = 20
+    bold = Font(bold=True, size=11)
+    banner_font = Font(bold=True, color="FFFFFFFF", size=11)
+    banner_fill = PatternFill(fill_type="solid", fgColor="FF4F46E5")
+
+    def put(row, col, value, font=None):
+        c = ws.cell(row=row, column=col)
+        s = "" if value is None else str(value)
+        clean = s.replace(",", "").replace("$", "").replace("£", "") \
+                 .replace("€", "").replace("₹", "").strip()
+        # numeric coercion for VALUE column only; labels always stay text
+        if col == 2 and clean and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
+            c.value = float(clean) if "." in clean else int(clean)
+        elif s:
+            c.value = s
+        if font:
+            c.font = font
+        return c
+
+    row = 1
+    for bi, dr in enumerate(doc_results):
+        ed = dr.get_extracted_data() or {}
+        uc = ed.get("unguided_content")
+
+        if bi > 0:
+            row += 2
+            b = put(row, 1, f"Document {bi + 1}  ·  {dr.filename}", font=banner_font)
+            b.fill = banner_fill
+            b2 = ws.cell(row=row, column=2)
+            b2.fill = banner_fill
+            row += 2
+
+        if isinstance(uc, dict):
+            put(row, 1, "Document Type", font=bold)
+            put(row, 2, uc.get("document_type", "other"))
+            row += 2                                    # blank row after doc type
+
+            for f in uc.get("header_fields") or []:
+                put(row, 1, f.get("label", ""))
+                put(row, 2, f.get("value", ""))
+                row += 1
+            row += 1                                    # separator before Line Items
+
+            put(row, 1, "Line Items", font=bold)
+            row += 2                                    # blank row after header
+
+            items = uc.get("line_items") or []
+            for it in items:
+                idx = it.get("item_index", "")
+                for f in it.get("fields") or []:
+                    put(row, 1, f"Item {idx} {f.get('label', '')}".strip())
+                    put(row, 2, f.get("value", ""))
+                    row += 1
+                row += 1                                # blank row between items
+
+            put(row, 1, "Summary", font=bold)
+            row += 2                                    # blank row after header
+
+            for f in uc.get("summary_fields") or []:
+                put(row, 1, f.get("label", ""))
+                put(row, 2, f.get("value", ""))
+                row += 1
+        else:
+            # Legacy job (no unguided_content) — vertical Label|Value from the
+            # label-keyed extracted_data map.
+            put(row, 1, "Document Type", font=bold)
+            put(row, 2, ed.get("document_type", dr.document_type or "other"))
+            row += 2
+            for k, v in (ed.get("extracted_data") or {}).items():
+                if str(k).startswith("_label_"):
+                    continue
+                put(row, 1, k)
+                put(row, 2, v.get("value", "") if isinstance(v, dict) else (v or ""))
+                row += 1
+
+    ws.column_dimensions["A"].width = 42
+    ws.column_dimensions["B"].width = 34
+    print(f"[EXPORT] flat: {len(doc_results)} document(s) written vertically "
+          f"(Label|Value)", flush=True)
 
 
 # ==============================================================================
