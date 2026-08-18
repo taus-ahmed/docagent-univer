@@ -39,8 +39,6 @@
   "table_types": {
     "line_items": {"Item / Description": "string", "Qty": "number", "Unit": "string", "Unit Cost": "money", "Total": "money"}
   },
-  "uncertain": [
-    "'Authorised By' is labeled with the full printed string 'Janet Wu – VP Operations'; an extraction returning just 'Janet Wu' would score as a near match, not exact. Trim the label if name-only is the desired answer."
-  ],
-  "notes": "Single-page PO. Verified: qty x unit cost = total for all 3 rows; rows sum to 12090.00; 12090.00 + 480.00 + 0.00 = 12570.00. Tax is printed 'Tax (exempt): $0.00' — labeled 0.00, not null."
+  "uncertain": [],
+  "notes": "POLICY P3: 'Authorised By' is labeled with the full printed string 'Janet Wu – VP Operations' — gold is the text printed in that field's own region. (CHQ-001847's signature block prints 'Janet Wu' alone, so its Authorized By label is name-only by the same rule.) Single-page PO. Verified: qty x unit cost = total for all 3 rows; rows sum to 12090.00; 12090.00 + 480.00 + 0.00 = 12570.00. Tax is printed 'Tax (exempt): $0.00' — labeled 0.00, not null."
 }

@@ -49,8 +49,6 @@
     "earnings": {"Description": "string", "Amount": "money"},
     "deductions": {"Description": "string", "Amount": "money"}
   },
-  "uncertain": [
-    "Deduction amounts are printed in accounting parentheses, e.g. ($3,240.00) — labeled NEGATIVE here (and Total Deductions -7070.30). If the desired convention is positive magnitudes, flip all deduction amounts and the total."
-  ],
-  "notes": "2-page payslip. NET PAY is split across the page break in the text layer ('$7,513.0' + orphan '3'); the correct value 7513.03 is confirmed by arithmetic: 14583.33 - 7070.30 = 7513.03. Deductions sum verified: 3240.00+904.17+211.46+880.00+395.00+380.00+966.67+65.00+28.00 = 7070.30. 'Life Insurance' deduction row is on page 2."
+  "uncertain": [],
+  "notes": "POLICY P2: deduction amounts are printed in accounting parentheses, e.g. ($3,240.00) — parentheses ARE explicit negative notation, so they are labeled NEGATIVE (and Total Deductions -7070.30). This also matches the pipeline's own _normalize_value, which converts (2.85) to -2.85. 2-page payslip. NET PAY is split across the page break in the text layer ('$7,513.0' + orphan '3'); the correct value 7513.03 is confirmed by arithmetic: 14583.33 - 7070.30 = 7513.03. Deductions sum verified: 3240.00+904.17+211.46+880.00+395.00+380.00+966.67+65.00+28.00 = 7070.30. 'Life Insurance' deduction row is on page 2."
 }

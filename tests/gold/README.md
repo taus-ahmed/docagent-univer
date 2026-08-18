@@ -31,9 +31,9 @@ schema changes, change `tests/harness/adapter.py` instead.
   "table_types": {                       // per-table column types
     "line_items": {"Qty": "number", "Unit Price": "money", "Amount": "money"}
   },
-  "uncertain": [                         // labeling-policy questions a human should resolve;
-    "…"                                  // a wrong label is worse than a missing one
-  ],
+  "uncertain": [                         // OPEN labeling-policy questions a human must
+    "…"                                  // resolve; a wrong label is worse than a missing
+  ],                                     // one. Empty once decided — see policy below.
   "notes": "free text about the document"
 }
 ```
@@ -46,14 +46,40 @@ schema changes, change `tests/harness/adapter.py` instead.
 - Money values are plain numbers; currency symbols and thousands separators
   are the scorer's job to strip from the *extracted* side.
 - Amounts printed in accounting parentheses — `($3,240.00)` — are recorded as
-  **negative** numbers. Amounts printed positive under a "Less:" label are
-  recorded **positive** (as printed). Both conventions are flagged in
-  `uncertain` where they occur.
+  **negative** numbers (policy P2). Amounts printed positive under a "Less:"
+  label are recorded **positive**, as printed (policy P1).
 - Dates are recorded ISO (`2024-01-15`). Dates printed without a year
   (`03/15` in statement/expense rows) are recorded as printed; the date
   comparator matches them year-agnostically.
 - `null` means "the document genuinely has nothing here" (e.g. the Debit cell
   of a credit transaction). This is what makes hallucinations measurable.
+
+## Resolved labeling policy
+
+Decided by the repo owner on 2026-08-17, in response to the six questions the
+first labeling pass raised. These are binding for all future labels; label
+files carry the policy id in their `notes`, and every `uncertain` array is now
+empty. **The governing principle is P0: gold records what the document
+prints, in the field's own region. Interpreting or transforming that value is
+the product's job downstream, not part of reading it.**
+
+| id | question | decision |
+|---|---|---|
+| **P0** | general | Gold = the value **as printed**, in that field's own region of the page. |
+| **P1** | `Less:` contra lines printed positive with no parentheses and no minus — BS-2024-Q1 `Less: Accum. Depreciation $108,500`; IS-2024-Q4 `Less: Returns $28,600`, `Less: Closing Inventory $724,000` | **Positive, as printed.** Sign inference from the "Less:" prefix is an accounting transform, not a reading task — even though the printed section totals only reconcile when these are subtracted. |
+| **P2** | amounts printed in accounting parentheses — payslip deductions, `Federal Income Tax ($3,240.00)`, `Total ($7,070.30)` | **Negative.** Parentheses *are* explicit negative notation, unlike a "Less:" prefix. This also matches the pipeline's own `_normalize_value`, which already converts `(2.85)` → `-2.85`. |
+| **P3** | a name field whose printed text also carries a title — PO-2024-0018 `Authorised By:` / `Janet Wu – VP Operations` | **Full printed string**, `"Janet Wu – VP Operations"`. Per P0, gold is what that field's region prints. CHQ-001847's signature block prints `Janet Wu` alone, so its label is name-only by the same rule — the two differ because the documents differ. |
+| **P5** | an identifier printed in two forms — CHQ-001847 header `No: CHQ-001847` vs MICR `…C 001847D` | **The human-facing field form**, `"CHQ-001847"`, not the bare MICR serial. |
+| **P6** | print-security decoration around a value — CHQ-001847 `Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***` | **Full printed string including the decoration.** P0 wins over "strip the filler"; the `***`/`U.S. DOLLARS` are on the page. |
+
+(There is no P4: the two payslips raised one shared question, answered by P2.)
+
+Consequences for scoring: an extraction that returns the *other* candidate in
+each case scores **`near`**, not `wrong` — the scorer treats sign-only money
+differences and substring/containment string differences as near misses.
+`near` counts against headline accuracy and is reported separately, so these
+choices move numbers between the `correct` and `near` columns but never hide a
+disagreement.
 
 ## Templates (`templates/`)
 

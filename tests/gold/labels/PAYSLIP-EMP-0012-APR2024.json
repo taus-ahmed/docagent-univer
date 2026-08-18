@@ -47,8 +47,6 @@
     "earnings": {"Description": "string", "Amount": "money"},
     "deductions": {"Description": "string", "Amount": "money"}
   },
-  "uncertain": [
-    "Deduction amounts are printed in accounting parentheses — labeled NEGATIVE here (and Total Deductions -3117.35). If the desired convention is positive magnitudes, flip all deduction amounts and the total."
-  ],
-  "notes": "2-page payslip. NET PAY is split across the page break in the text layer ('$5,182.6' + orphan '5'); the correct value 5182.65 is confirmed by arithmetic: 8300.00 - 3117.35 = 5182.65. Deductions sum verified: 1245+515+120.35+412+185+220+375+45 = 3117.35."
+  "uncertain": [],
+  "notes": "POLICY P2: deduction amounts are printed in accounting parentheses — parentheses ARE explicit negative notation, so they are labeled NEGATIVE (and Total Deductions -3117.35), matching the pipeline's own _normalize_value. 2-page payslip. NET PAY is split across the page break in the text layer ('$5,182.6' + orphan '5'); the correct value 5182.65 is confirmed by arithmetic: 8300.00 - 3117.35 = 5182.65. Deductions sum verified: 1245+515+120.35+412+185+220+375+45 = 3117.35."
 }

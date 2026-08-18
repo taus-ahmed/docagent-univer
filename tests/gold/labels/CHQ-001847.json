@@ -10,7 +10,7 @@
     "Payer Name": "Nexus Global Trading LLC",
     "Payee": "Pacific Steel & Metals Co.",
     "Amount": 8410.00,
-    "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100",
+    "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
     "Memo": "Payment for PO-2024-0018 – Steel materials",
     "Authorized By": "Janet Wu",
     "Routing Number": "021000021",
@@ -24,9 +24,6 @@
   },
   "tables": {},
   "table_types": {},
-  "uncertain": [
-    "'Cheque Number': the document prints 'No: CHQ-001847' at the top and '001847' in the MICR line. Labeled as 'CHQ-001847'; a bare '001847' would be a near match. Decide which form the product should return.",
-    "'Amount in Words' is labeled without the surrounding '***' / 'U.S. DOLLARS' decoration; an extraction including them scores near, not exact."
-  ],
-  "notes": "Single-page cheque (Non-Negotiable Copy). Routing 021000021 and account 7743882201 come from the MICR line 'A021000021A C7743882201C 001847D' and match the ABA/account printed on the invoices' payment instructions. Both are typed string — leading zeros matter."
+  "uncertain": [],
+  "notes": "Single-page cheque (Non-Negotiable Copy). Routing 021000021 and account 7743882201 come from the MICR line 'A021000021A C7743882201C 001847D' and match the ABA/account printed on the invoices' payment instructions. Both are typed string — leading zeros matter. POLICY P5: 'Cheque Number' is the header 'No:' field form 'CHQ-001847', not the bare MICR serial '001847'. POLICY P6: 'Amount in Words' is the FULL printed string including the '*** U.S. DOLLARS ***' anti-tamper decoration."
 }

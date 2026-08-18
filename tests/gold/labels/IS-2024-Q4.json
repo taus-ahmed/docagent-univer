@@ -45,8 +45,6 @@
   },
   "tables": {},
   "table_types": {},
-  "uncertain": [
-    "'Less: Returns' (28600) and 'Less: Closing Inventory' (724000) are labeled positive, as printed. Arithmetic reconciles only when they are SUBTRACTED (1980000 - 28600 = 1951400; 648000 + 1280000 + 52000 - 724000 = 1256000). Flip to negative if that is the desired convention."
-  ],
-  "notes": "2-page income statement (page 2 is only a footer). All subtotals verified: revenue, COGS, opex (sum of 10 items = 359250), EBIT = 695400 - 359250, pre-tax = 336150 + 1240, tax = 21% of 337390 rounded, after-tax = 337390 - 70852. Document prints 'NET INCOME (LOSS) BEFORE TAX' / 'Est. Income Tax Provision (21%)' / 'NET INCOME (LOSS) AFTER TAX' — template uses the shorter labels."
+  "uncertain": [],
+  "notes": "POLICY P1: 'Less: Returns' (28600) and 'Less: Closing Inventory' (724000) are labeled POSITIVE, as printed — the document shows no parentheses or minus sign. Arithmetic reconciles only when they are subtracted (1980000 - 28600 = 1951400; 648000 + 1280000 + 52000 - 724000 = 1256000), but that sign is a downstream transform, not part of reading the value. 2-page income statement (page 2 is only a footer). All subtotals verified: revenue, COGS, opex (sum of 10 items = 359250), EBIT = 695400 - 359250, pre-tax = 336150 + 1240, tax = 21% of 337390 rounded, after-tax = 337390 - 70852. Document prints 'NET INCOME (LOSS) BEFORE TAX' / 'Est. Income Tax Provision (21%)' / 'NET INCOME (LOSS) AFTER TAX' — template uses the shorter labels."
 }

@@ -61,8 +61,6 @@
     "long_term_liabilities": {"Label": "string", "Amount": "money"},
     "shareholders_equity": {"Label": "string", "Amount": "money"}
   },
-  "uncertain": [
-    "non_current_assets 'Less: Accum. Depreciation' is labeled 108500 (positive, as printed). If the desired convention is contra-asset-as-negative (-108500), flip this row and Total Non-Current Assets still reconciles only with the negative interpretation (240000 - 108500 + 85000 + 20000 = 236500)."
-  ],
-  "notes": "2-page stacked balance sheet. The document is internally INCONSISTENT by design: TOTAL ASSETS (1,365,503) != TOTAL LIABILITIES & EQUITY (1,248,704). Labels record what is printed. All section subtotals reconcile against their line items. Equity section spans the page break (Common Stock on page 1, rest on page 2)."
+  "uncertain": [],
+  "notes": "POLICY P1: 'Less: Accum. Depreciation' is labeled 108500 — POSITIVE, as printed. The document prints no parentheses and no minus sign; sign inference from the 'Less:' prefix is a downstream accounting transform, not a reading task. (Total Non-Current Assets 236500 reconciles only when it is subtracted: 240000 - 108500 + 85000 + 20000.) 2-page stacked balance sheet. The document is internally INCONSISTENT by design: TOTAL ASSETS (1,365,503) != TOTAL LIABILITIES & EQUITY (1,248,704). Labels record what is printed. All section subtotals reconcile against their line items. Equity section spans the page break (Common Stock on page 1, rest on page 2)."
 }
