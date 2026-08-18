@@ -193,6 +193,82 @@ def is_usable(shape):
     return bool(shape) and bool(shape.get("field_slots") or shape.get("repeat_bands"))
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PATH SELECTION (Phase 2b)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# How many columns can each extraction path actually put on a sheet? This is a
+# property of the path's own output format, not a guess:
+#
+#   layout  2   `_build_section_prompt` emits {label_col, value_col} rows and
+#               nothing else, so a section can only ever be two columns wide.
+#   field   -   table rows are keyed by column name; no ceiling.
+#   slot    -   every cell is addressed by (row, column header); no ceiling.
+#
+# The router asks one question: how many columns does this template need, and
+# can the chosen path serve that many. It replaces matching the user's column
+# headers against a list of 16 English words, which silently misrouted any
+# template whose value column was headed "2024", "USD", "Q4", a currency
+# symbol, a non-English word, or nothing at all.
+
+PATH_CAPACITY = {"layout": 2, "field": None, "slot": None, "cbm": None}
+
+
+def choose_path(shape, doc_type="", slot_doc_types=()):
+    """Return {path, required_columns, template_type, reason, error}.
+
+    `error` is set when NO path can serve the template. The caller must fail
+    the document with that message — never silently produce a blank or partial
+    sheet, which is what the old router did.
+    """
+    if not is_usable(shape):
+        return {"path": None, "required_columns": 0, "template_type": None,
+                "reason": "",
+                "error": ("This template has no slots to fill. Every cell "
+                          "either contains text (a label) or is outside the "
+                          "used area. Leave a cell empty next to a label, or "
+                          "put column headings in a row with empty rows "
+                          "beneath them.")}
+
+    required = int(shape.get("required_columns") or 0)
+    bands = shape.get("repeat_bands") or []
+    field_slots = shape.get("field_slots") or []
+
+    # Slot-directed extraction serves any width and is the destination for all
+    # templates; it is scoped by document type while it is being rolled out.
+    if doc_type in (slot_doc_types or ()):
+        return {"path": "slot", "required_columns": required,
+                "template_type": "slot",
+                "reason": f"slot-directed (serves {required} columns)",
+                "error": None}
+
+    # Structure of the template, from the shape alone — no keyword list.
+    band_cells = sum(len(b["columns"]) * max(0, b["end_row"] - b["start_row"] + 1)
+                     for b in bands)
+    if not bands:
+        template_type = "labeled"                      # pure key/value form
+    elif not field_slots:
+        template_type = "structural"                   # pure column layout
+    elif len(field_slots) > band_cells * 0.5:
+        template_type = "mixed"                        # labelled form + a table
+    else:
+        template_type = "structural"
+
+    reason = f"{template_type} template needing {required} columns"
+
+    # CAPACITY CHECK — the arithmetic. A path that cannot represent the
+    # template's widest band must not be chosen, however the template looks.
+    if template_type == "structural" and required > PATH_CAPACITY["layout"]:
+        reason = (f"{template_type} by structure, but it needs {required} "
+                  f"columns and the layout path serves only "
+                  f"{PATH_CAPACITY['layout']} — routed to the field path instead")
+        template_type = "mixed"
+
+    path = "layout" if template_type == "structural" else "field"
+    return {"path": path, "required_columns": required,
+            "template_type": template_type, "reason": reason, "error": None}
+
+
 def describe(shape):
     """One-line human summary, for logs and the UI."""
     if not shape:

@@ -1,0 +1,123 @@
+{
+ "key": "b946baf2fda5ef87567338aa55fb57ce5cd14b2090cd95171374b29ac904a57f",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 5241,
+  "captured_at": "2026-08-18 01:51:20",
+  "prompt_preview": "=== EXTRACTION TASK ===\n\n=== FORM FIELDS (marked Extract here) ===\nFill each cell reference with the matching value from the document.\nUse the cell reference as the key in extracted_fields.\n  [B1] Invoice Number\n  [B2] Invoice Date\n  [B3] Due Date\n  [B4] Bill To Company\n  [B5] Bill To Address\n  [B6]"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"Invoice\",\n  \"overall_confidence\": \"high\",\n  \"document_count\": 1,\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"doc_hint\": \"Invoice from NEXUS GLOBAL TRADING LLC\",\n      \"extracted_fields\": {\n        \"B1\": {\n          \"value\": \"INV-2024-0047\",\n          \"confidence\": \"high\"\n        },\n        \"B2\": {\n          \"value\": \"2024-02-03\",\n          \"confidence\": \"high\"\n        },\n        \"B3\": {\n          \"value\": \"2024-03-04\",\n          \"confidence\": \"high\"\n        },\n        \"B4\": {\n          \"value\": \"Pinnacle Electronics Corp.\",\n          \"confidence\": \"high\"\n        },\n        \"B5\": {\n          \"value\": \"3800 Tech Boulevard Floor 5, Austin, TX 78701\",\n          \"confidence\": \"high\"\n        },\n        \"B6\": {\n          \"value\": \"Ms. Sarah Johnson — sjohnson@pinnacleelec.com\",\n          \"confidence\": \"high\"\n        },\n        \"B7\": {\n          \"value\": \"PO-2024-0029\",\n          \"confidence\": \"high\"\n        },\n        \"B8\": {\n          \"value\": \"Net 30\",\n          \"confidence\": \"high\"\n        },\n        \"B9\": {\n          \"value\": \"OUTSTANDING\",\n          \"confidence\": \"high\"\n        },\n        \"B19\": {\n          \"value\": \"15549.00\",\n          \"confidence\": \"high\"\n        },\n        \"B20\": {\n          \"value\": \"580.00\",\n          \"confidence\": \"high\"\n        },\n        \"B21\": {\n          \"value\": \"1282.79\",\n          \"confidence\": \"high\"\n        },\n        \"B22\": {\n          \"value\": \"17411.79\",\n          \"confidence\": \"high\"\n        }\n      },\n      \"table_rows\": [\n        {\n          \"Description\": \"USB-C Hub 7-Port Model HB-720\",\n          \"Qty\": \"150\",\n          \"Unit\": \"units\",\n          \"Unit Price\": \"34.50\",\n          \"Amount\": \"5175.00\"\n        },\n        {\n          \"Description\": \"Wireless Mouse M300 Series\",\n          \"Qty\": \"200\",\n          \"Unit\": \"units\",\n          \"Unit Price\": \"18.75\",\n          \"Amount\": \"3750.00\"\n        },\n        {\n          \"Description\": \"Laptop Cooling Stand Aluminium\",\n          \"Qty\": \"80\",\n          \"Unit\": \"units\",\n          \"Unit Price\": \"27.00\",\n          \"Amount\": \"2160.00\"\n        },\n        {\n          \"Description\": \"HDMI 2.1 Cable 2m Pack/5\",\n          \"Qty\": \"120\",\n          \"Unit\": \"packs\",\n          \"Unit Price\": \"16.20\",\n          \"Amount\": \"1944.00\"\n        },\n        {\n          \"Description\": \"Webcam HD 1080p w/ Mic\",\n          \"Qty\": \"60\",\n          \"Unit\": \"units\",\n          \"Unit Price\": \"42.00\",\n          \"Amount\": \"2520.00\"\n        }\n      ],\n      \"row_count\": 5,\n      \"notes\": \"\"\n    }\n  ]\n}",
+  "parsed_json": {
+   "document_type": "Invoice",
+   "overall_confidence": "high",
+   "document_count": 1,
+   "documents": [
+    {
+     "doc_index": 0,
+     "doc_hint": "Invoice from NEXUS GLOBAL TRADING LLC",
+     "extracted_fields": {
+      "B1": {
+       "value": "INV-2024-0047",
+       "confidence": "high"
+      },
+      "B2": {
+       "value": "2024-02-03",
+       "confidence": "high"
+      },
+      "B3": {
+       "value": "2024-03-04",
+       "confidence": "high"
+      },
+      "B4": {
+       "value": "Pinnacle Electronics Corp.",
+       "confidence": "high"
+      },
+      "B5": {
+       "value": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
+       "confidence": "high"
+      },
+      "B6": {
+       "value": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
+       "confidence": "high"
+      },
+      "B7": {
+       "value": "PO-2024-0029",
+       "confidence": "high"
+      },
+      "B8": {
+       "value": "Net 30",
+       "confidence": "high"
+      },
+      "B9": {
+       "value": "OUTSTANDING",
+       "confidence": "high"
+      },
+      "B19": {
+       "value": "15549.00",
+       "confidence": "high"
+      },
+      "B20": {
+       "value": "580.00",
+       "confidence": "high"
+      },
+      "B21": {
+       "value": "1282.79",
+       "confidence": "high"
+      },
+      "B22": {
+       "value": "17411.79",
+       "confidence": "high"
+      }
+     },
+     "table_rows": [
+      {
+       "Description": "USB-C Hub 7-Port Model HB-720",
+       "Qty": "150",
+       "Unit": "units",
+       "Unit Price": "34.50",
+       "Amount": "5175.00"
+      },
+      {
+       "Description": "Wireless Mouse M300 Series",
+       "Qty": "200",
+       "Unit": "units",
+       "Unit Price": "18.75",
+       "Amount": "3750.00"
+      },
+      {
+       "Description": "Laptop Cooling Stand Aluminium",
+       "Qty": "80",
+       "Unit": "units",
+       "Unit Price": "27.00",
+       "Amount": "2160.00"
+      },
+      {
+       "Description": "HDMI 2.1 Cable 2m Pack/5",
+       "Qty": "120",
+       "Unit": "packs",
+       "Unit Price": "16.20",
+       "Amount": "1944.00"
+      },
+      {
+       "Description": "Webcam HD 1080p w/ Mic",
+       "Qty": "60",
+       "Unit": "units",
+       "Unit Price": "42.00",
+       "Amount": "2520.00"
+      }
+     ],
+     "row_count": 5,
+     "notes": ""
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 5241,
+  "success": true,
+  "error": ""
+ }
+}

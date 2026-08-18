@@ -1,0 +1,135 @@
+{
+ "key": "9ea394a4920cee406e3dfb919ca861d5e26c81c722f011635c0423c19fb52d87",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4496,
+  "captured_at": "2026-08-18 01:51:10",
+  "prompt_preview": "=== EXTRACTION TASK ===\n\n=== FORM FIELDS (marked Extract here) ===\nFill each cell reference with the matching value from the document.\nUse the cell reference as the key in extracted_fields.\n  [B1] Employee Name\n  [B2] Employee ID\n  [B3] Report No\n  [B4] Department\n  [B5] Manager\n  [B6] Period\n  [B7]"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"expense report\",\n  \"overall_confidence\": \"high\",\n  \"document_count\": 1,\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"doc_hint\": \"Nexus Global Trading LLC Expense Report\",\n      \"extracted_fields\": {\n        \"B1\": {\n          \"value\": \"Marcus A. Thompson\",\n          \"confidence\": \"high\"\n        },\n        \"B2\": {\n          \"value\": \"EMP-0012\",\n          \"confidence\": \"high\"\n        },\n        \"B3\": {\n          \"value\": \"EXP-2024-0081\",\n          \"confidence\": \"high\"\n        },\n        \"B4\": {\n          \"value\": \"Procurement\",\n          \"confidence\": \"high\"\n        },\n        \"B5\": {\n          \"value\": \"Janet Wu\",\n          \"confidence\": \"high\"\n        },\n        \"B6\": {\n          \"value\": \"2024-03-15 to 2024-03-22\",\n          \"confidence\": \"high\"\n        },\n        \"B7\": {\n          \"value\": \"Supplier site visit — Pacific Steel, Los Angeles\",\n          \"confidence\": \"high\"\n        },\n        \"B8\": {\n          \"value\": \"APPROVED\",\n          \"confidence\": \"high\"\n        },\n        \"B22\": {\n          \"value\": \"1727.25\",\n          \"confidence\": \"high\"\n        }\n      },\n      \"table_rows\": [\n        {\n          \"Date\": \"2024-03-15\",\n          \"Type\": \"Airfare\",\n          \"Description\": \"Delta Airlines JFK–LAX round trip\",\n          \"Category\": \"Travel - Air\",\n          \"Amount\": \"842.00\"\n        },\n        {\n          \"Date\": \"2024-03-15\",\n          \"Type\": \"Taxi\",\n          \"Description\": \"Airport to hotel LAX\",\n          \"Category\": \"Travel - Ground\",\n          \"Amount\": \"38.50\"\n        },\n        {\n          \"Date\": \"2024-03-15\",\n          \"Type\": \"Hotel\",\n          \"Description\": \"Hilton LAX — 2 nights\",\n          \"Category\": \"Accommodation\",\n          \"Amount\": \"389.00\"\n        },\n        {\n          \"Date\": \"2024-03-16\",\n          \"Type\": \"Meals\",\n          \"Description\": \"Hotel breakfast\",\n          \"Category\": \"Meals - Per Diem\",\n          \"Amount\": \"24.75\"\n        },\n        {\n          \"Date\": \"2024-03-16\",\n          \"Type\": \"M&E;\",\n          \"Description\": \"Client lunch w/ Pacific Steel (4 pax)\",\n          \"Category\": \"Meals & Entertainment\",\n          \"Amount\": \"187.40\"\n        },\n        {\n          \"Date\": \"2024-03-16\",\n          \"Type\": \"Taxi\",\n          \"Description\": \"Hotel to Pacific Steel facility\",\n          \"Category\": \"Travel - Ground\",\n          \"Amount\": \"22.00\"\n        },\n        {\n          \"Date\": \"2024-03-17\",\n          \"Type\": \"Meals\",\n          \"Description\": \"Team dinner (2 pax)\",\n          \"Category\": \"Meals - Per Diem\",\n          \"Amount\": \"95.60\"\n        },\n        {\n          \"Date\": \"2024-03-18\",\n          \"Type\": \"Taxi\",\n          \"Description\": \"Hotel to LAX\",\n          \"Category\": \"Travel - Ground\",\n          \"Amount\": \"41.00\"\n        },\n        {\n          \"Date\": \"2024-03-18\",\n          \"Type\": \"Parking\",\n          \"Description\": \"JFK long-term parking 3 days\",\n          \"Category\": \"Travel - Parking\",\n          \"Amount\": \"87.00\"\n        }\n      ],\n      \"row_count\": 9,\n      \"notes\": \"\"\n    }\n  ]\n}",
+  "parsed_json": {
+   "document_type": "expense report",
+   "overall_confidence": "high",
+   "document_count": 1,
+   "documents": [
+    {
+     "doc_index": 0,
+     "doc_hint": "Nexus Global Trading LLC Expense Report",
+     "extracted_fields": {
+      "B1": {
+       "value": "Marcus A. Thompson",
+       "confidence": "high"
+      },
+      "B2": {
+       "value": "EMP-0012",
+       "confidence": "high"
+      },
+      "B3": {
+       "value": "EXP-2024-0081",
+       "confidence": "high"
+      },
+      "B4": {
+       "value": "Procurement",
+       "confidence": "high"
+      },
+      "B5": {
+       "value": "Janet Wu",
+       "confidence": "high"
+      },
+      "B6": {
+       "value": "2024-03-15 to 2024-03-22",
+       "confidence": "high"
+      },
+      "B7": {
+       "value": "Supplier site visit — Pacific Steel, Los Angeles",
+       "confidence": "high"
+      },
+      "B8": {
+       "value": "APPROVED",
+       "confidence": "high"
+      },
+      "B22": {
+       "value": "1727.25",
+       "confidence": "high"
+      }
+     },
+     "table_rows": [
+      {
+       "Date": "2024-03-15",
+       "Type": "Airfare",
+       "Description": "Delta Airlines JFK–LAX round trip",
+       "Category": "Travel - Air",
+       "Amount": "842.00"
+      },
+      {
+       "Date": "2024-03-15",
+       "Type": "Taxi",
+       "Description": "Airport to hotel LAX",
+       "Category": "Travel - Ground",
+       "Amount": "38.50"
+      },
+      {
+       "Date": "2024-03-15",
+       "Type": "Hotel",
+       "Description": "Hilton LAX — 2 nights",
+       "Category": "Accommodation",
+       "Amount": "389.00"
+      },
+      {
+       "Date": "2024-03-16",
+       "Type": "Meals",
+       "Description": "Hotel breakfast",
+       "Category": "Meals - Per Diem",
+       "Amount": "24.75"
+      },
+      {
+       "Date": "2024-03-16",
+       "Type": "M&E;",
+       "Description": "Client lunch w/ Pacific Steel (4 pax)",
+       "Category": "Meals & Entertainment",
+       "Amount": "187.40"
+      },
+      {
+       "Date": "2024-03-16",
+       "Type": "Taxi",
+       "Description": "Hotel to Pacific Steel facility",
+       "Category": "Travel - Ground",
+       "Amount": "22.00"
+      },
+      {
+       "Date": "2024-03-17",
+       "Type": "Meals",
+       "Description": "Team dinner (2 pax)",
+       "Category": "Meals - Per Diem",
+       "Amount": "95.60"
+      },
+      {
+       "Date": "2024-03-18",
+       "Type": "Taxi",
+       "Description": "Hotel to LAX",
+       "Category": "Travel - Ground",
+       "Amount": "41.00"
+      },
+      {
+       "Date": "2024-03-18",
+       "Type": "Parking",
+       "Description": "JFK long-term parking 3 days",
+       "Category": "Travel - Parking",
+       "Amount": "87.00"
+      }
+     ],
+     "row_count": 9,
+     "notes": ""
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4496,
+  "success": true,
+  "error": ""
+ }
+}

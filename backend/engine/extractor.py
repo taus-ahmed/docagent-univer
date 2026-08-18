@@ -981,46 +981,57 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
             ctx["binding_map"] = None
             return _run_unguided_extraction(**ctx)
 
-    # ── SLOT-DIRECTED EXTRACTION (Phase 1 — bank_statement only) ──
-    # Enumerate the template's cells as addressed slots and ask the model to
-    # fill each one, instead of extracting a bag of values and matching them
-    # into cells afterwards. Gated to one document type until the numbers are
-    # reviewed; the implementation itself is generic (see slot_extractor).
-    if default_doc_type in _SLOT_DOC_TYPES:
-        _log("ROUTE", f"{file_path.name}: doc_type={default_doc_type} "
-                      f"-> slot-directed extraction (Phase 1)")
+    # ── PATH SELECTION BY ARITHMETIC (Phase 2b) ──
+    # How many columns does this template need, and can the path serve that
+    # many? Replaces matching the user's column headers against 16 hardcoded
+    # English words, which silently misrouted any template headed "2024",
+    # "USD", "Q4", a currency symbol, a non-English word, or nothing.
+    from template_shape import choose_path, compute_shape
+
+    shape = (template_data or {}).get("shape")
+    if not shape:
+        shape = compute_shape(template_data.get("layout") or {},
+                              log=lambda m: _log("SHAPE", m))
+    decision = choose_path(shape, default_doc_type, _SLOT_DOC_TYPES)
+
+    if decision.get("error"):
+        # No path fits. Fail the document loudly with a message that says what
+        # to change — never a blank or partial sheet with no explanation.
+        _log("ROUTE", f"{file_path.name}: CANNOT EXTRACT — {decision['error']}")
+        from app.api.routes.extract import _fail
+        return [_fail(file_path.name, decision["error"])]
+
+    path = decision["path"]
+    _log("ROUTE", f"{file_path.name}: needs {decision['required_columns']} column(s) "
+                  f"-> {path} path ({decision['reason']})")
+
+    # The router's decision is the single source of truth for BOTH extraction
+    # and export. _process_vision_result persists template_type from the binding
+    # map's _meta, and _write_excel routes the writer off that value — so if the
+    # two disagreed, a document would be extracted by one path and written by
+    # another's writer. Stamp the decision here so they cannot.
+    if isinstance(binding_map, dict):
+        binding_map.setdefault("_meta", {})["template_type"] = decision["template_type"]
+
+    if path == "slot":
         from slot_extractor import run_slot_extraction
         return run_slot_extraction(**ctx)
 
-    meta = (binding_map or {}).get("_meta", {}) if binding_map else {}
-    template_type = meta.get("template_type", "labeled")
-    vt = meta.get("value_target_count", 0)
-    td = meta.get("table_data_count", 0)
-    ng = len(meta.get("column_groups", []))
-
-    # 2. STRUCTURAL — always the three-layer layout path. A stored cell_binding_map
-    # is deliberately ignored here (a structural template must never use CBM).
-    if template_type == "structural":
-        _log("ROUTE", f"{file_path.name}: template_type=structural "
-                      f"(value_targets={vt}, table_data={td}, groups={ng}) -> layout extraction")
+    if path == "layout":
+        # Pure column layout, 2 columns wide. A stored cell_binding_map is
+        # deliberately ignored here (a structural template must never use CBM).
         return _run_layout_extraction(**ctx)
 
-    # 3. LABELED / MIXED with a valid stored CBM -> CBM field extraction.
+    # field path — handles a labelled form and an embedded table together.
     cbm = template_data.get("cell_binding_map")
-    if (template_type in ("labeled", "mixed")
-            and isinstance(cbm, dict)
-            and (cbm.get("extract_cells") or cbm.get("tables"))):
-        _log("ROUTE", f"{file_path.name}: template_type={template_type} + stored CBM "
+    if isinstance(cbm, dict) and (cbm.get("extract_cells") or cbm.get("tables")):
+        _log("ROUTE", f"{file_path.name}: using stored CBM "
                       f"({len(cbm.get('extract_cells', {}) or {})} cells, "
-                      f"{len(cbm.get('tables', []) or [])} tables) -> cbm field extraction")
+                      f"{len(cbm.get('tables', []) or [])} tables)")
         return _run_cbm_extraction(orchestrator=orchestrator, file_path=file_path,
                                    template_data=template_data, cell_binding_map=cbm,
                                    binding_map=binding_map, page_images=page_images,
                                    doc_text=doc_text, doc_text_pages=doc_text_pages,
                                    file_type=ftype, default_doc_type=default_doc_type,
                                    start=start)
-
-    # 4. LABELED / MIXED without a CBM -> legacy field path (handles KV + table).
-    _log("ROUTE", f"{file_path.name}: template_type={template_type} (no CBM) "
-                  f"(value_targets={vt}, table_data={td}, groups={ng}) -> field extraction")
     return _run_field_extraction(**ctx)

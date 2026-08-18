@@ -1,0 +1,116 @@
+{
+ "key": "24508f3a6ffd1af0e9ccbd69e0f6515e7ff46375d980122b4752510e5c159282",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 5124,
+  "captured_at": "2026-08-18 01:51:15",
+  "prompt_preview": "=== EXTRACTION TASK ===\n\n=== FORM FIELDS (marked Extract here) ===\nFill each cell reference with the matching value from the document.\nUse the cell reference as the key in extracted_fields.\n  [B1] Invoice Number\n  [B2] Invoice Date\n  [B3] Due Date\n  [B4] Bill To Company\n  [B5] Bill To Address\n  [B6]"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"Invoice\",\n  \"overall_confidence\": \"high\",\n  \"document_count\": 1,\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"doc_hint\": \"Invoice from Nexus Global Trading LLC\",\n      \"extracted_fields\": {\n        \"B1\": {\n          \"value\": \"INV-2024-0031\",\n          \"confidence\": \"high\"\n        },\n        \"B2\": {\n          \"value\": \"2024-01-15\",\n          \"confidence\": \"high\"\n        },\n        \"B3\": {\n          \"value\": \"2024-02-14\",\n          \"confidence\": \"high\"\n        },\n        \"B4\": {\n          \"value\": \"Apex Industrial Supplies Inc.\",\n          \"confidence\": \"high\"\n        },\n        \"B5\": {\n          \"value\": \"500 Commerce Drive, Chicago, IL 60601\",\n          \"confidence\": \"high\"\n        },\n        \"B6\": {\n          \"value\": \"Mr. Robert Chen — rchen@apexindustrial.com\",\n          \"confidence\": \"high\"\n        },\n        \"B7\": {\n          \"value\": \"PO-2024-0018\",\n          \"confidence\": \"high\"\n        },\n        \"B8\": {\n          \"value\": \"Net 30\",\n          \"confidence\": \"high\"\n        },\n        \"B9\": {\n          \"value\": \"PAID\",\n          \"confidence\": \"high\"\n        },\n        \"B19\": {\n          \"value\": \"10892.50\",\n          \"confidence\": \"high\"\n        },\n        \"B20\": {\n          \"value\": \"320.00\",\n          \"confidence\": \"high\"\n        },\n        \"B21\": {\n          \"value\": \"966.71\",\n          \"confidence\": \"high\"\n        },\n        \"B22\": {\n          \"value\": \"12179.21\",\n          \"confidence\": \"high\"\n        }\n      },\n      \"table_rows\": [\n        {\n          \"Description\": \"Steel Wire Coils Grade A 500m\",\n          \"Qty\": \"40\",\n          \"Unit\": \"pcs\",\n          \"Unit Price\": \"185.00\",\n          \"Amount\": \"7400.00\"\n        },\n        {\n          \"Description\": \"Industrial Lubricant 5L Drum\",\n          \"Qty\": \"25\",\n          \"Unit\": \"drums\",\n          \"Unit Price\": \"68.00\",\n          \"Amount\": \"1700.00\"\n        },\n        {\n          \"Description\": \"Safety Gloves Heavy Duty Box/12\",\n          \"Qty\": \"60\",\n          \"Unit\": \"boxes\",\n          \"Unit Price\": \"22.50\",\n          \"Amount\": \"1350.00\"\n        },\n        {\n          \"Description\": \"Hex Bolt Set M10 Qty-500\",\n          \"Qty\": \"30\",\n          \"Unit\": \"sets\",\n          \"Unit Price\": \"14.75\",\n          \"Amount\": \"442.50\"\n        }\n      ],\n      \"row_count\": 4,\n      \"notes\": \"\"\n    }\n  ]\n}",
+  "parsed_json": {
+   "document_type": "Invoice",
+   "overall_confidence": "high",
+   "document_count": 1,
+   "documents": [
+    {
+     "doc_index": 0,
+     "doc_hint": "Invoice from Nexus Global Trading LLC",
+     "extracted_fields": {
+      "B1": {
+       "value": "INV-2024-0031",
+       "confidence": "high"
+      },
+      "B2": {
+       "value": "2024-01-15",
+       "confidence": "high"
+      },
+      "B3": {
+       "value": "2024-02-14",
+       "confidence": "high"
+      },
+      "B4": {
+       "value": "Apex Industrial Supplies Inc.",
+       "confidence": "high"
+      },
+      "B5": {
+       "value": "500 Commerce Drive, Chicago, IL 60601",
+       "confidence": "high"
+      },
+      "B6": {
+       "value": "Mr. Robert Chen — rchen@apexindustrial.com",
+       "confidence": "high"
+      },
+      "B7": {
+       "value": "PO-2024-0018",
+       "confidence": "high"
+      },
+      "B8": {
+       "value": "Net 30",
+       "confidence": "high"
+      },
+      "B9": {
+       "value": "PAID",
+       "confidence": "high"
+      },
+      "B19": {
+       "value": "10892.50",
+       "confidence": "high"
+      },
+      "B20": {
+       "value": "320.00",
+       "confidence": "high"
+      },
+      "B21": {
+       "value": "966.71",
+       "confidence": "high"
+      },
+      "B22": {
+       "value": "12179.21",
+       "confidence": "high"
+      }
+     },
+     "table_rows": [
+      {
+       "Description": "Steel Wire Coils Grade A 500m",
+       "Qty": "40",
+       "Unit": "pcs",
+       "Unit Price": "185.00",
+       "Amount": "7400.00"
+      },
+      {
+       "Description": "Industrial Lubricant 5L Drum",
+       "Qty": "25",
+       "Unit": "drums",
+       "Unit Price": "68.00",
+       "Amount": "1700.00"
+      },
+      {
+       "Description": "Safety Gloves Heavy Duty Box/12",
+       "Qty": "60",
+       "Unit": "boxes",
+       "Unit Price": "22.50",
+       "Amount": "1350.00"
+      },
+      {
+       "Description": "Hex Bolt Set M10 Qty-500",
+       "Qty": "30",
+       "Unit": "sets",
+       "Unit Price": "14.75",
+       "Amount": "442.50"
+      }
+     ],
+     "row_count": 4,
+     "notes": ""
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 5124,
+  "success": true,
+  "error": ""
+ }
+}

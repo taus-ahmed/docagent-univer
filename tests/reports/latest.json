@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-18 01:33:47",
- "git_commit": "0feb483",
+ "run_id": "2026-08-18 01:51:30",
+ "git_commit": "91e15c5",
  "config": {
-  "mode": "replay",
+  "mode": "record",
   "repeat": 1,
   "env": {
    "USE_NEW_EXTRACTOR": "true",
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 46,
-  "recorded": 0,
+  "hits": 24,
+  "recorded": 3,
   "live": 0,
   "misses": 0
  },
@@ -1328,96 +1328,149 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "extracted table/section 'NEXUS GLOBAL TRADING LLC' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Employee:' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Date' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'TOTAL CLAIMED:' matches no gold table — all its rows will score as hallucinated"
+    "extracted table/section 'table_1' matches no gold table — all its rows will score as hallucinated"
    ],
    "adapted": {
     "fields": {
-     "MERCHANT NAME": "NEXUS GLOBAL TRADING LLC",
-     "Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Phone": "(212) 555-0148",
      "Employee Name": "Marcus A. Thompson",
      "Employee ID": "EMP-0012",
+     "Report No": "EXP-2024-0081",
      "Department": "Procurement",
-     "03/15": "03/15",
-     "03/16": "03/16",
-     "03/17": "03/17",
-     "03/18": "03/18",
-     "Total Claimed": "1,727.25"
+     "Manager": "Janet Wu",
+     "Period": "2024-03-15 to 2024-03-22",
+     "Purpose": "Supplier site visit — Pacific Steel, Los Angeles",
+     "Status": "APPROVED",
+     "Total Claimed": "1727.25"
     },
     "tables": {
-     "NEXUS GLOBAL TRADING LLC": [
+     "expenses": [
       {
-       "Label": "MERCHANT NAME",
-       "Value": "NEXUS GLOBAL TRADING LLC"
+       "Date": "2024-03-15",
+       "Type": "Airfare",
+       "Description": "Delta Airlines JFK–LAX round trip",
+       "Category": "Travel - Air",
+       "Amount": "842.0"
       },
       {
-       "Label": "Address",
-       "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
+       "Date": "2024-03-15",
+       "Type": "Taxi",
+       "Description": "Airport to hotel LAX",
+       "Category": "Travel - Ground",
+       "Amount": "38.5"
       },
       {
-       "Label": "Phone",
-       "Value": "(212) 555-0148"
+       "Date": "2024-03-15",
+       "Type": "Hotel",
+       "Description": "Hilton LAX — 2 nights",
+       "Category": "Accommodation",
+       "Amount": "389.0"
+      },
+      {
+       "Date": "2024-03-16",
+       "Type": "Meals",
+       "Description": "Hotel breakfast",
+       "Category": "Meals - Per Diem",
+       "Amount": "24.75"
+      },
+      {
+       "Date": "2024-03-16",
+       "Type": "M&E;",
+       "Description": "Client lunch w/ Pacific Steel (4 pax)",
+       "Category": "Meals & Entertainment",
+       "Amount": "187.4"
+      },
+      {
+       "Date": "2024-03-16",
+       "Type": "Taxi",
+       "Description": "Hotel to Pacific Steel facility",
+       "Category": "Travel - Ground",
+       "Amount": "22.0"
+      },
+      {
+       "Date": "2024-03-17",
+       "Type": "Meals",
+       "Description": "Team dinner (2 pax)",
+       "Category": "Meals - Per Diem",
+       "Amount": "95.6"
+      },
+      {
+       "Date": "2024-03-18",
+       "Type": "Taxi",
+       "Description": "Hotel to LAX",
+       "Category": "Travel - Ground",
+       "Amount": "41.0"
+      },
+      {
+       "Date": "2024-03-18",
+       "Type": "Parking",
+       "Description": "JFK long-term parking 3 days",
+       "Category": "Travel - Parking",
+       "Amount": "87.0"
       }
      ],
-     "Employee:": [
+     "table_1": [
       {
-       "Label": "Employee:",
-       "Value": "Marcus A. Thompson"
+       "Date": "2024-03-15",
+       "Type": "Airfare",
+       "Description": "Delta Airlines JFK–LAX round trip",
+       "Category": "Travel - Air",
+       "Amount": "842.0"
       },
       {
-       "Label": "Employee ID:",
-       "Value": "EMP-0012"
+       "Date": "2024-03-15",
+       "Type": "Taxi",
+       "Description": "Airport to hotel LAX",
+       "Category": "Travel - Ground",
+       "Amount": "38.5"
       },
       {
-       "Label": "Department:",
-       "Value": "Procurement"
-      }
-     ],
-     "Date": [
-      {
-       "Label": "03/15",
-       "Value": "03/15"
+       "Date": "2024-03-15",
+       "Type": "Hotel",
+       "Description": "Hilton LAX — 2 nights",
+       "Category": "Accommodation",
+       "Amount": "389.0"
       },
       {
-       "Label": "03/15",
-       "Value": "03/15"
+       "Date": "2024-03-16",
+       "Type": "Meals",
+       "Description": "Hotel breakfast",
+       "Category": "Meals - Per Diem",
+       "Amount": "24.75"
       },
       {
-       "Label": "03/15",
-       "Value": "03/15"
+       "Date": "2024-03-16",
+       "Type": "M&E;",
+       "Description": "Client lunch w/ Pacific Steel (4 pax)",
+       "Category": "Meals & Entertainment",
+       "Amount": "187.4"
       },
       {
-       "Label": "03/16",
-       "Value": "03/16"
+       "Date": "2024-03-16",
+       "Type": "Taxi",
+       "Description": "Hotel to Pacific Steel facility",
+       "Category": "Travel - Ground",
+       "Amount": "22.0"
       },
       {
-       "Label": "03/16",
-       "Value": "03/16"
+       "Date": "2024-03-17",
+       "Type": "Meals",
+       "Description": "Team dinner (2 pax)",
+       "Category": "Meals - Per Diem",
+       "Amount": "95.6"
       },
       {
-       "Label": "03/16",
-       "Value": "03/16"
+       "Date": "2024-03-18",
+       "Type": "Taxi",
+       "Description": "Hotel to LAX",
+       "Category": "Travel - Ground",
+       "Amount": "41.0"
       },
       {
-       "Label": "03/17",
-       "Value": "03/17"
-      },
-      {
-       "Label": "03/18",
-       "Value": "03/18"
-      },
-      {
-       "Label": "03/18",
-       "Value": "03/18"
-      }
-     ],
-     "TOTAL CLAIMED:": [
-      {
-       "Label": "TOTAL CLAIMED:",
-       "Value": "1,727.25"
+       "Date": "2024-03-18",
+       "Type": "Parking",
+       "Description": "JFK long-term parking 3 days",
+       "Category": "Travel - Parking",
+       "Amount": "87.0"
       }
      ]
     }
@@ -1439,9 +1492,9 @@
       "type": "string"
      },
      "Report No": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "EXP-2024-0081",
-      "actual": null,
+      "actual": "EXP-2024-0081",
       "type": "string"
      },
      "Department": {
@@ -1451,790 +1504,458 @@
       "type": "string"
      },
      "Manager": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "Janet Wu",
-      "actual": null,
+      "actual": "Janet Wu",
       "type": "string"
      },
      "Period": {
-      "outcome": "missed",
+      "outcome": "wrong",
       "expected": "March 15–22, 2024",
-      "actual": null,
+      "actual": "2024-03-15 to 2024-03-22",
       "type": "string"
      },
      "Purpose": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "Supplier site visit – Pacific Steel, Los Angeles",
-      "actual": null,
+      "actual": "Supplier site visit — Pacific Steel, Los Angeles",
       "type": "string"
      },
      "Status": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "APPROVED",
-      "actual": null,
+      "actual": "APPROVED",
       "type": "string"
      },
      "Total Claimed": {
       "outcome": "correct",
       "expected": 1727.25,
-      "actual": "1,727.25",
+      "actual": "1727.25",
       "type": "money"
-     },
-     "MERCHANT NAME": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "NEXUS GLOBAL TRADING LLC",
-      "type": "string",
-      "grounded": true
-     },
-     "Address": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
-      "type": "string",
-      "grounded": true
-     },
-     "Phone": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "(212) 555-0148",
-      "type": "string",
-      "grounded": true
-     },
-     "03/15": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "03/15",
-      "type": "string",
-      "grounded": true
-     },
-     "03/16": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "03/16",
-      "type": "string",
-      "grounded": true
-     },
-     "03/17": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "03/17",
-      "type": "string",
-      "grounded": true
-     },
-     "03/18": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "03/18",
-      "type": "string",
-      "grounded": true
      }
     },
     "tables": {
      "expenses": {
       "table": "expenses",
       "gold_row_count": 9,
-      "pred_row_count": 0,
-      "row_count_mismatch": -9,
-      "matched_rows": 0,
-      "row_precision": null,
-      "row_recall": 0.0,
-      "cell_accuracy": null,
-      "missed_rows": [
-       {
-        "row": 0,
-        "gold": {
-         "Date": "03/15",
-         "Type": "Airfare",
-         "Description": "Delta Airlines JFK–LAX round trip",
-         "Category": "Travel",
-         "Amount": 842.0
-        }
-       },
-       {
-        "row": 1,
-        "gold": {
-         "Date": "03/15",
-         "Type": "Taxi",
-         "Description": "Airport to hotel LAX",
-         "Category": "Travel",
-         "Amount": 38.5
-        }
-       },
-       {
-        "row": 2,
-        "gold": {
-         "Date": "03/15",
-         "Type": "Hotel",
-         "Description": "Hilton LAX – 2 nights",
-         "Category": "Lodging",
-         "Amount": 389.0
-        }
-       },
-       {
-        "row": 3,
-        "gold": {
-         "Date": "03/16",
-         "Type": "Meals",
-         "Description": "Hotel breakfast",
-         "Category": "Meals",
-         "Amount": 24.75
-        }
-       },
-       {
-        "row": 4,
-        "gold": {
-         "Date": "03/16",
-         "Type": "M&E",
-         "Description": "Client lunch w/ Pacific Steel (4 pax)",
-         "Category": "Meals & Entmt",
-         "Amount": 187.4
-        }
-       },
-       {
-        "row": 5,
-        "gold": {
-         "Date": "03/16",
-         "Type": "Taxi",
-         "Description": "Hotel to Pacific Steel facility",
-         "Category": "Travel",
-         "Amount": 22.0
-        }
-       },
-       {
-        "row": 6,
-        "gold": {
-         "Date": "03/17",
-         "Type": "Meals",
-         "Description": "Team dinner (2 pax)",
-         "Category": "Meals",
-         "Amount": 95.6
-        }
-       },
-       {
-        "row": 7,
-        "gold": {
-         "Date": "03/18",
-         "Type": "Taxi",
-         "Description": "Hotel to LAX",
-         "Category": "Travel",
-         "Amount": 41.0
-        }
-       },
-       {
-        "row": 8,
-        "gold": {
-         "Date": "03/18",
-         "Type": "Parking",
-         "Description": "JFK long-term parking 3 days",
-         "Category": "Travel",
-         "Amount": 87.0
-        }
-       }
-      ],
+      "pred_row_count": 9,
+      "row_count_mismatch": 0,
+      "matched_rows": 9,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 0.8,
+      "missed_rows": [],
       "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/15",
-        "actual": null
+        "actual": "2024-03-15"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Airfare",
-        "actual": null
+        "actual": "Airfare"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Delta Airlines JFK–LAX round trip",
-        "actual": null
+        "actual": "Delta Airlines JFK–LAX round trip"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "near",
         "expected": "Travel",
-        "actual": null
+        "actual": "Travel - Air"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 842.0,
-        "actual": null
+        "actual": "842.0"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/15",
-        "actual": null
+        "actual": "2024-03-15"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Taxi",
-        "actual": null
+        "actual": "Taxi"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Airport to hotel LAX",
-        "actual": null
+        "actual": "Airport to hotel LAX"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "near",
         "expected": "Travel",
-        "actual": null
+        "actual": "Travel - Ground"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 38.5,
-        "actual": null
+        "actual": "38.5"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/15",
-        "actual": null
+        "actual": "2024-03-15"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Hotel",
-        "actual": null
+        "actual": "Hotel"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Hilton LAX – 2 nights",
-        "actual": null
+        "actual": "Hilton LAX — 2 nights"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "wrong",
         "expected": "Lodging",
-        "actual": null
+        "actual": "Accommodation"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 389.0,
-        "actual": null
+        "actual": "389.0"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/16",
-        "actual": null
+        "actual": "2024-03-16"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Meals",
-        "actual": null
+        "actual": "Meals"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Hotel breakfast",
-        "actual": null
+        "actual": "Hotel breakfast"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "near",
         "expected": "Meals",
-        "actual": null
+        "actual": "Meals - Per Diem"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 24.75,
-        "actual": null
+        "actual": "24.75"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/16",
-        "actual": null
+        "actual": "2024-03-16"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "M&E",
-        "actual": null
+        "actual": "M&E;"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Client lunch w/ Pacific Steel (4 pax)",
-        "actual": null
+        "actual": "Client lunch w/ Pacific Steel (4 pax)"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "wrong",
         "expected": "Meals & Entmt",
-        "actual": null
+        "actual": "Meals & Entertainment"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 187.4,
-        "actual": null
+        "actual": "187.4"
        },
        {
         "row": 5,
-        "pred_row": null,
+        "pred_row": 5,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/16",
-        "actual": null
+        "actual": "2024-03-16"
        },
        {
         "row": 5,
-        "pred_row": null,
+        "pred_row": 5,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Taxi",
-        "actual": null
+        "actual": "Taxi"
        },
        {
         "row": 5,
-        "pred_row": null,
+        "pred_row": 5,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Hotel to Pacific Steel facility",
-        "actual": null
+        "actual": "Hotel to Pacific Steel facility"
        },
        {
         "row": 5,
-        "pred_row": null,
+        "pred_row": 5,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "near",
         "expected": "Travel",
-        "actual": null
+        "actual": "Travel - Ground"
        },
        {
         "row": 5,
-        "pred_row": null,
+        "pred_row": 5,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 22.0,
-        "actual": null
+        "actual": "22.0"
        },
        {
         "row": 6,
-        "pred_row": null,
+        "pred_row": 6,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/17",
-        "actual": null
+        "actual": "2024-03-17"
        },
        {
         "row": 6,
-        "pred_row": null,
+        "pred_row": 6,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Meals",
-        "actual": null
+        "actual": "Meals"
        },
        {
         "row": 6,
-        "pred_row": null,
+        "pred_row": 6,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Team dinner (2 pax)",
-        "actual": null
+        "actual": "Team dinner (2 pax)"
        },
        {
         "row": 6,
-        "pred_row": null,
+        "pred_row": 6,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "near",
         "expected": "Meals",
-        "actual": null
+        "actual": "Meals - Per Diem"
        },
        {
         "row": 6,
-        "pred_row": null,
+        "pred_row": 6,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 95.6,
-        "actual": null
+        "actual": "95.6"
        },
        {
         "row": 7,
-        "pred_row": null,
+        "pred_row": 7,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/18",
-        "actual": null
+        "actual": "2024-03-18"
        },
        {
         "row": 7,
-        "pred_row": null,
+        "pred_row": 7,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Taxi",
-        "actual": null
+        "actual": "Taxi"
        },
        {
         "row": 7,
-        "pred_row": null,
+        "pred_row": 7,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Hotel to LAX",
-        "actual": null
+        "actual": "Hotel to LAX"
        },
        {
         "row": 7,
-        "pred_row": null,
+        "pred_row": 7,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "near",
         "expected": "Travel",
-        "actual": null
+        "actual": "Travel - Ground"
        },
        {
         "row": 7,
-        "pred_row": null,
+        "pred_row": 7,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 41.0,
-        "actual": null
+        "actual": "41.0"
        },
        {
         "row": 8,
-        "pred_row": null,
+        "pred_row": 8,
         "column": "Date",
         "type": "date",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "03/18",
-        "actual": null
+        "actual": "2024-03-18"
        },
        {
         "row": 8,
-        "pred_row": null,
+        "pred_row": 8,
         "column": "Type",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Parking",
-        "actual": null
+        "actual": "Parking"
        },
        {
         "row": 8,
-        "pred_row": null,
+        "pred_row": 8,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "JFK long-term parking 3 days",
-        "actual": null
+        "actual": "JFK long-term parking 3 days"
        },
        {
         "row": 8,
-        "pred_row": null,
+        "pred_row": 8,
         "column": "Category",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "near",
         "expected": "Travel",
-        "actual": null
+        "actual": "Travel - Parking"
        },
        {
         "row": 8,
-        "pred_row": null,
+        "pred_row": 8,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 87.0,
-        "actual": null
+        "actual": "87.0"
        }
       ]
      },
-     "NEXUS GLOBAL TRADING LLC": {
-      "table": "NEXUS GLOBAL TRADING LLC",
-      "gold_row_count": 0,
-      "pred_row_count": 3,
-      "row_count_mismatch": 3,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "MERCHANT NAME",
-         "Value": "NEXUS GLOBAL TRADING LLC"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "Address",
-         "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Phone",
-         "Value": "(212) 555-0148"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "MERCHANT NAME",
-        "grounded": false
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "NEXUS GLOBAL TRADING LLC",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Address",
-        "grounded": false
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Phone",
-        "grounded": false
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "(212) 555-0148",
-        "grounded": true
-       }
-      ]
-     },
-     "Employee:": {
-      "table": "Employee:",
-      "gold_row_count": 0,
-      "pred_row_count": 3,
-      "row_count_mismatch": 3,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Employee:",
-         "Value": "Marcus A. Thompson"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "Employee ID:",
-         "Value": "EMP-0012"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Department:",
-         "Value": "Procurement"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Employee:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Marcus A. Thompson",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Employee ID:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "EMP-0012",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Department:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Procurement",
-        "grounded": true
-       }
-      ]
-     },
-     "Date": {
-      "table": "Date",
+     "table_1": {
+      "table": "table_1",
       "gold_row_count": 0,
       "pred_row_count": 9,
       "row_count_mismatch": 9,
@@ -2247,64 +1968,91 @@
        {
         "pred_row": 0,
         "pred": {
-         "Label": "03/15",
-         "Value": "03/15"
+         "Date": "2024-03-15",
+         "Type": "Airfare",
+         "Description": "Delta Airlines JFK–LAX round trip",
+         "Category": "Travel - Air",
+         "Amount": "842.0"
         }
        },
        {
         "pred_row": 1,
         "pred": {
-         "Label": "03/15",
-         "Value": "03/15"
+         "Date": "2024-03-15",
+         "Type": "Taxi",
+         "Description": "Airport to hotel LAX",
+         "Category": "Travel - Ground",
+         "Amount": "38.5"
         }
        },
        {
         "pred_row": 2,
         "pred": {
-         "Label": "03/15",
-         "Value": "03/15"
+         "Date": "2024-03-15",
+         "Type": "Hotel",
+         "Description": "Hilton LAX — 2 nights",
+         "Category": "Accommodation",
+         "Amount": "389.0"
         }
        },
        {
         "pred_row": 3,
         "pred": {
-         "Label": "03/16",
-         "Value": "03/16"
+         "Date": "2024-03-16",
+         "Type": "Meals",
+         "Description": "Hotel breakfast",
+         "Category": "Meals - Per Diem",
+         "Amount": "24.75"
         }
        },
        {
         "pred_row": 4,
         "pred": {
-         "Label": "03/16",
-         "Value": "03/16"
+         "Date": "2024-03-16",
+         "Type": "M&E;",
+         "Description": "Client lunch w/ Pacific Steel (4 pax)",
+         "Category": "Meals & Entertainment",
+         "Amount": "187.4"
         }
        },
        {
         "pred_row": 5,
         "pred": {
-         "Label": "03/16",
-         "Value": "03/16"
+         "Date": "2024-03-16",
+         "Type": "Taxi",
+         "Description": "Hotel to Pacific Steel facility",
+         "Category": "Travel - Ground",
+         "Amount": "22.0"
         }
        },
        {
         "pred_row": 6,
         "pred": {
-         "Label": "03/17",
-         "Value": "03/17"
+         "Date": "2024-03-17",
+         "Type": "Meals",
+         "Description": "Team dinner (2 pax)",
+         "Category": "Meals - Per Diem",
+         "Amount": "95.6"
         }
        },
        {
         "pred_row": 7,
         "pred": {
-         "Label": "03/18",
-         "Value": "03/18"
+         "Date": "2024-03-18",
+         "Type": "Taxi",
+         "Description": "Hotel to LAX",
+         "Category": "Travel - Ground",
+         "Amount": "41.0"
         }
        },
        {
         "pred_row": 8,
         "pred": {
-         "Label": "03/18",
-         "Value": "03/18"
+         "Date": "2024-03-18",
+         "Type": "Parking",
+         "Description": "JFK long-term parking 3 days",
+         "Category": "Travel - Parking",
+         "Amount": "87.0"
         }
        }
       ],
@@ -2312,237 +2060,466 @@
        {
         "row": null,
         "pred_row": 0,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/15",
+        "actual": "2024-03-15",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 0,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/15",
+        "actual": "Airfare",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Delta Airlines JFK–LAX round trip",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Travel - Air",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "842.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 1,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/15",
+        "actual": "2024-03-15",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 1,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/15",
+        "actual": "Taxi",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Airport to hotel LAX",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Travel - Ground",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "38.5",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 2,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/15",
+        "actual": "2024-03-15",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 2,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/15",
+        "actual": "Hotel",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Hilton LAX — 2 nights",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Accommodation",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "389.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 3,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/16",
+        "actual": "2024-03-16",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 3,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/16",
+        "actual": "Meals",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Hotel breakfast",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Meals - Per Diem",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "24.75",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 4,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/16",
+        "actual": "2024-03-16",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 4,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/16",
+        "actual": "M&E;",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Client lunch w/ Pacific Steel (4 pax)",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Meals & Entertainment",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "187.4",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 5,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/16",
+        "actual": "2024-03-16",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 5,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/16",
+        "actual": "Taxi",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Hotel to Pacific Steel facility",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Travel - Ground",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "22.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 6,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/17",
+        "actual": "2024-03-17",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 6,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/17",
+        "actual": "Meals",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Team dinner (2 pax)",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Meals - Per Diem",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "95.6",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 7,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/18",
+        "actual": "2024-03-18",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 7,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/18",
+        "actual": "Taxi",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Hotel to LAX",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Travel - Ground",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "41.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 8,
-        "column": "Label",
+        "column": "Date",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/18",
+        "actual": "2024-03-18",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 8,
-        "column": "Value",
+        "column": "Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "03/18",
-        "grounded": true
-       }
-      ]
-     },
-     "TOTAL CLAIMED:": {
-      "table": "TOTAL CLAIMED:",
-      "gold_row_count": 0,
-      "pred_row_count": 1,
-      "row_count_mismatch": 1,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "TOTAL CLAIMED:",
-         "Value": "1,727.25"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "TOTAL CLAIMED:",
+        "actual": "Parking",
         "grounded": true
        },
        {
         "row": null,
-        "pred_row": 0,
-        "column": "Value",
+        "pred_row": 8,
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "1,727.25",
+        "actual": "JFK long-term parking 3 days",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Travel - Parking",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "87.0",
         "grounded": true
        }
       ]
      }
     },
     "counts": {
-     "correct": 4,
-     "missed": 50,
-     "hallucinated": 39
+     "correct": 44,
+     "wrong": 3,
+     "near": 7,
+     "hallucinated": 45
     },
-    "hallucinated_ungrounded": 3,
-    "accuracy": 0.07407407407407407,
-    "hallucination_rate": 0.9069767441860465,
-    "invention_rate": 0.06976744186046512
+    "hallucinated_ungrounded": 7,
+    "accuracy": 0.8148148148148148,
+    "hallucination_rate": 0.45454545454545453,
+    "invention_rate": 0.0707070707070707
    },
    "unstable": []
   },
@@ -2559,141 +2536,83 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "extracted table/section 'NEXUS GLOBAL TRADING LLC' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Bill To:' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Invoice:' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Description' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Subtotal:' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Payment Instructions' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Notes' matches no gold table — all its rows will score as hallucinated"
+    "extracted table/section 'table_1' matches no gold table — all its rows will score as hallucinated"
    ],
    "adapted": {
     "fields": {
-     "NEXUS GLOBAL TRADING LLC": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Steel Wire Coils Grade A 500m": "40 pcs $185.00 $7,400.00",
-     "Bill To Company": "Apex Industrial Supplies Inc.",
      "Invoice Number": "INV-2024-0031",
-     "Invoice Date": "January 15, 2024",
-     "Due Date": "February 14, 2024",
+     "Invoice Date": "2024-01-15",
+     "Due Date": "2024-02-14",
+     "Bill To Company": "Apex Industrial Supplies Inc.",
+     "Bill To Address": "500 Commerce Drive, Chicago, IL 60601",
+     "Bill To Contact": "Mr. Robert Chen — rchen@apexindustrial.com",
      "PO Reference": "PO-2024-0018",
      "Payment Terms": "Net 30",
-     "Industrial Lubricant 5L Drum": "25 drums $68.00 $1,700.00",
-     "Safety Gloves Heavy Duty Box/12": "60 boxes $22.50 $1,350.00",
-     "Hex Bolt Set M10 Qty-500": "30 sets $14.75 $442.50",
-     "Subtotal": "10,892.50",
-     "Shipping & Handling": "320.00",
+     "Status": "PAID",
+     "Subtotal": "10892.5",
+     "Shipping & Handling": "320.0",
      "Sales Tax": "966.71",
-     "Total Due": "12,179.21",
-     "Wire: First National Bank of New York": "Wire: First National Bank of New York",
-     "ABA: 021000021 Account: 7743882201": "ABA: 021000021 Account: 7743882201",
-     "Cheque payable to: Nexus Global Trading LLC": "Cheque payable to: Nexus Global Trading LLC",
-     "Payment received via wire transfer Feb 10, 2024. Ref:": "WT-20240210-4421."
+     "Total Due": "12179.21"
     },
     "tables": {
-     "NEXUS GLOBAL TRADING LLC": [
+     "line_items": [
       {
-       "Label": "NEXUS GLOBAL TRADING LLC",
-       "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
+       "Description": "Steel Wire Coils Grade A 500m",
+       "Qty": "40",
+       "Unit": "pcs",
+       "Unit Price": "185.0",
+       "Amount": "7400.0"
       },
       {
-       "Label": "(212) 555-0148 | EIN: 47-3821654",
-       "Value": ""
+       "Description": "Industrial Lubricant 5L Drum",
+       "Qty": "25",
+       "Unit": "drums",
+       "Unit Price": "68.0",
+       "Amount": "1700.0"
       },
       {
-       "Label": "Steel Wire Coils Grade A 500m",
-       "Value": "40"
+       "Description": "Safety Gloves Heavy Duty Box/12",
+       "Qty": "60",
+       "Unit": "boxes",
+       "Unit Price": "22.5",
+       "Amount": "1350.0"
+      },
+      {
+       "Description": "Hex Bolt Set M10 Qty-500",
+       "Qty": "30",
+       "Unit": "sets",
+       "Unit Price": "14.75",
+       "Amount": "442.5"
       }
      ],
-     "Bill To:": [
+     "table_1": [
       {
-       "Label": "Bill To:",
-       "Value": "Apex Industrial Supplies Inc."
+       "Description": "Steel Wire Coils Grade A 500m",
+       "Qty": "40",
+       "Unit": "pcs",
+       "Unit Price": "185.0",
+       "Amount": "7400.0"
       },
       {
-       "Label": "",
-       "Value": "500 Commerce Drive, Chicago, IL 60601"
+       "Description": "Industrial Lubricant 5L Drum",
+       "Qty": "25",
+       "Unit": "drums",
+       "Unit Price": "68.0",
+       "Amount": "1700.0"
       },
       {
-       "Label": "",
-       "Value": "Mr. Robert Chen — rchen@apexindustrial.com"
-      }
-     ],
-     "Invoice:": [
-      {
-       "Label": "Invoice:",
-       "Value": "INV-2024-0031"
+       "Description": "Safety Gloves Heavy Duty Box/12",
+       "Qty": "60",
+       "Unit": "boxes",
+       "Unit Price": "22.5",
+       "Amount": "1350.0"
       },
       {
-       "Label": "Date:",
-       "Value": "January 15, 2024"
-      },
-      {
-       "Label": "Due:",
-       "Value": "February 14, 2024"
-      },
-      {
-       "Label": "PO Ref:",
-       "Value": "PO-2024-0018"
-      },
-      {
-       "Label": "Terms:",
-       "Value": "Net 30"
-      }
-     ],
-     "Description": [
-      {
-       "Label": "Steel Wire Coils Grade A 500m",
-       "Value": "40 pcs $185.00 $7,400.00"
-      },
-      {
-       "Label": "Industrial Lubricant 5L Drum",
-       "Value": "25 drums $68.00 $1,700.00"
-      },
-      {
-       "Label": "Safety Gloves Heavy Duty Box/12",
-       "Value": "60 boxes $22.50 $1,350.00"
-      },
-      {
-       "Label": "Hex Bolt Set M10 Qty-500",
-       "Value": "30 sets $14.75 $442.50"
-      }
-     ],
-     "Subtotal:": [
-      {
-       "Label": "Subtotal:",
-       "Value": "10,892.50"
-      },
-      {
-       "Label": "Shipping & Handling:",
-       "Value": "320.00"
-      },
-      {
-       "Label": "Sales Tax (8.88%):",
-       "Value": "966.71"
-      },
-      {
-       "Label": "TOTAL DUE:",
-       "Value": "12,179.21"
-      }
-     ],
-     "Payment Instructions": [
-      {
-       "Label": "Wire: First National Bank of New York",
-       "Value": "Wire: First National Bank of New York"
-      },
-      {
-       "Label": "ABA: 021000021 Account: 7743882201",
-       "Value": "ABA: 021000021 Account: 7743882201"
-      },
-      {
-       "Label": "Cheque payable to: Nexus Global Trading LLC",
-       "Value": "Cheque payable to: Nexus Global Trading LLC"
-      }
-     ],
-     "Notes": [
-      {
-       "Label": "Payment received via wire transfer Feb 10, 2024. Ref:",
-       "Value": "WT-20240210-4421."
+       "Description": "Hex Bolt Set M10 Qty-500",
+       "Qty": "30",
+       "Unit": "sets",
+       "Unit Price": "14.75",
+       "Amount": "442.5"
       }
      ]
     }
@@ -2711,13 +2630,13 @@
      "Invoice Date": {
       "outcome": "correct",
       "expected": "2024-01-15",
-      "actual": "January 15, 2024",
+      "actual": "2024-01-15",
       "type": "date"
      },
      "Due Date": {
       "outcome": "correct",
       "expected": "2024-02-14",
-      "actual": "February 14, 2024",
+      "actual": "2024-02-14",
       "type": "date"
      },
      "Bill To Company": {
@@ -2727,15 +2646,15 @@
       "type": "string"
      },
      "Bill To Address": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "500 Commerce Drive, Chicago, IL 60601",
-      "actual": null,
+      "actual": "500 Commerce Drive, Chicago, IL 60601",
       "type": "string"
      },
      "Bill To Contact": {
-      "outcome": "missed",
+      "outcome": "near",
       "expected": "Mr. Robert Chen",
-      "actual": null,
+      "actual": "Mr. Robert Chen — rchen@apexindustrial.com",
       "type": "string"
      },
      "PO Reference": {
@@ -2751,21 +2670,21 @@
       "type": "string"
      },
      "Status": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "PAID",
-      "actual": null,
+      "actual": "PAID",
       "type": "string"
      },
      "Subtotal": {
       "outcome": "correct",
       "expected": 10892.5,
-      "actual": "10,892.50",
+      "actual": "10892.5",
       "type": "money"
      },
      "Shipping & Handling": {
       "outcome": "correct",
       "expected": 320.0,
-      "actual": "320.00",
+      "actual": "320.0",
       "type": "money"
      },
      "Sales Tax": {
@@ -2777,623 +2696,207 @@
      "Total Due": {
       "outcome": "correct",
       "expected": 12179.21,
-      "actual": "12,179.21",
+      "actual": "12179.21",
       "type": "money"
-     },
-     "NEXUS GLOBAL TRADING LLC": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
-      "type": "string",
-      "grounded": true
-     },
-     "Steel Wire Coils Grade A 500m": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "40 pcs $185.00 $7,400.00",
-      "type": "string",
-      "grounded": true
-     },
-     "Industrial Lubricant 5L Drum": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "25 drums $68.00 $1,700.00",
-      "type": "string",
-      "grounded": true
-     },
-     "Safety Gloves Heavy Duty Box/12": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "60 boxes $22.50 $1,350.00",
-      "type": "string",
-      "grounded": true
-     },
-     "Hex Bolt Set M10 Qty-500": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "30 sets $14.75 $442.50",
-      "type": "string",
-      "grounded": true
-     },
-     "Wire: First National Bank of New York": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "Wire: First National Bank of New York",
-      "type": "string",
-      "grounded": true
-     },
-     "ABA: 021000021 Account: 7743882201": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "ABA: 021000021 Account: 7743882201",
-      "type": "string",
-      "grounded": true
-     },
-     "Cheque payable to: Nexus Global Trading LLC": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "Cheque payable to: Nexus Global Trading LLC",
-      "type": "string",
-      "grounded": true
-     },
-     "Payment received via wire transfer Feb 10, 2024. Ref:": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "WT-20240210-4421.",
-      "type": "string",
-      "grounded": true
      }
     },
     "tables": {
      "line_items": {
       "table": "line_items",
       "gold_row_count": 4,
-      "pred_row_count": 0,
-      "row_count_mismatch": -4,
-      "matched_rows": 0,
-      "row_precision": null,
-      "row_recall": 0.0,
-      "cell_accuracy": null,
-      "missed_rows": [
-       {
-        "row": 0,
-        "gold": {
-         "Description": "Steel Wire Coils Grade A 500m",
-         "Qty": 40,
-         "Unit": "pcs",
-         "Unit Price": 185.0,
-         "Amount": 7400.0
-        }
-       },
-       {
-        "row": 1,
-        "gold": {
-         "Description": "Industrial Lubricant 5L Drum",
-         "Qty": 25,
-         "Unit": "drums",
-         "Unit Price": 68.0,
-         "Amount": 1700.0
-        }
-       },
-       {
-        "row": 2,
-        "gold": {
-         "Description": "Safety Gloves Heavy Duty Box/12",
-         "Qty": 60,
-         "Unit": "boxes",
-         "Unit Price": 22.5,
-         "Amount": 1350.0
-        }
-       },
-       {
-        "row": 3,
-        "gold": {
-         "Description": "Hex Bolt Set M10 Qty-500",
-         "Qty": 30,
-         "Unit": "sets",
-         "Unit Price": 14.75,
-         "Amount": 442.5
-        }
-       }
-      ],
+      "pred_row_count": 4,
+      "row_count_mismatch": 0,
+      "matched_rows": 4,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
       "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Steel Wire Coils Grade A 500m",
-        "actual": null
+        "actual": "Steel Wire Coils Grade A 500m"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 40,
-        "actual": null
+        "actual": "40"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "pcs",
-        "actual": null
+        "actual": "pcs"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 185.0,
-        "actual": null
+        "actual": "185.0"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 7400.0,
-        "actual": null
+        "actual": "7400.0"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Industrial Lubricant 5L Drum",
-        "actual": null
+        "actual": "Industrial Lubricant 5L Drum"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 25,
-        "actual": null
+        "actual": "25"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "drums",
-        "actual": null
+        "actual": "drums"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 68.0,
-        "actual": null
+        "actual": "68.0"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 1700.0,
-        "actual": null
+        "actual": "1700.0"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Safety Gloves Heavy Duty Box/12",
-        "actual": null
+        "actual": "Safety Gloves Heavy Duty Box/12"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 60,
-        "actual": null
+        "actual": "60"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "boxes",
-        "actual": null
+        "actual": "boxes"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 22.5,
-        "actual": null
+        "actual": "22.5"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 1350.0,
-        "actual": null
+        "actual": "1350.0"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Hex Bolt Set M10 Qty-500",
-        "actual": null
+        "actual": "Hex Bolt Set M10 Qty-500"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 30,
-        "actual": null
+        "actual": "30"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "sets",
-        "actual": null
+        "actual": "sets"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 14.75,
-        "actual": null
+        "actual": "14.75"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 442.5,
-        "actual": null
+        "actual": "442.5"
        }
       ]
      },
-     "NEXUS GLOBAL TRADING LLC": {
-      "table": "NEXUS GLOBAL TRADING LLC",
-      "gold_row_count": 0,
-      "pred_row_count": 3,
-      "row_count_mismatch": 3,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "NEXUS GLOBAL TRADING LLC",
-         "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "(212) 555-0148 | EIN: 47-3821654",
-         "Value": ""
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Steel Wire Coils Grade A 500m",
-         "Value": "40"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "NEXUS GLOBAL TRADING LLC",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "(212) 555-0148 | EIN: 47-3821654",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Steel Wire Coils Grade A 500m",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "40",
-        "grounded": true
-       }
-      ]
-     },
-     "Bill To:": {
-      "table": "Bill To:",
-      "gold_row_count": 0,
-      "pred_row_count": 3,
-      "row_count_mismatch": 3,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Bill To:",
-         "Value": "Apex Industrial Supplies Inc."
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "",
-         "Value": "500 Commerce Drive, Chicago, IL 60601"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "",
-         "Value": "Mr. Robert Chen — rchen@apexindustrial.com"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Bill To:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Apex Industrial Supplies Inc.",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "500 Commerce Drive, Chicago, IL 60601",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Mr. Robert Chen — rchen@apexindustrial.com",
-        "grounded": true
-       }
-      ]
-     },
-     "Invoice:": {
-      "table": "Invoice:",
-      "gold_row_count": 0,
-      "pred_row_count": 5,
-      "row_count_mismatch": 5,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Invoice:",
-         "Value": "INV-2024-0031"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "Date:",
-         "Value": "January 15, 2024"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Due:",
-         "Value": "February 14, 2024"
-        }
-       },
-       {
-        "pred_row": 3,
-        "pred": {
-         "Label": "PO Ref:",
-         "Value": "PO-2024-0018"
-        }
-       },
-       {
-        "pred_row": 4,
-        "pred": {
-         "Label": "Terms:",
-         "Value": "Net 30"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Invoice:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "INV-2024-0031",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Date:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "January 15, 2024",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Due:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "February 14, 2024",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 3,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "PO Ref:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 3,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "PO-2024-0018",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 4,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Terms:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 4,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Net 30",
-        "grounded": true
-       }
-      ]
-     },
-     "Description": {
-      "table": "Description",
+     "table_1": {
+      "table": "table_1",
       "gold_row_count": 0,
       "pred_row_count": 4,
       "row_count_mismatch": 4,
@@ -3406,29 +2909,41 @@
        {
         "pred_row": 0,
         "pred": {
-         "Label": "Steel Wire Coils Grade A 500m",
-         "Value": "40 pcs $185.00 $7,400.00"
+         "Description": "Steel Wire Coils Grade A 500m",
+         "Qty": "40",
+         "Unit": "pcs",
+         "Unit Price": "185.0",
+         "Amount": "7400.0"
         }
        },
        {
         "pred_row": 1,
         "pred": {
-         "Label": "Industrial Lubricant 5L Drum",
-         "Value": "25 drums $68.00 $1,700.00"
+         "Description": "Industrial Lubricant 5L Drum",
+         "Qty": "25",
+         "Unit": "drums",
+         "Unit Price": "68.0",
+         "Amount": "1700.0"
         }
        },
        {
         "pred_row": 2,
         "pred": {
-         "Label": "Safety Gloves Heavy Duty Box/12",
-         "Value": "60 boxes $22.50 $1,350.00"
+         "Description": "Safety Gloves Heavy Duty Box/12",
+         "Qty": "60",
+         "Unit": "boxes",
+         "Unit Price": "22.5",
+         "Amount": "1350.0"
         }
        },
        {
         "pred_row": 3,
         "pred": {
-         "Label": "Hex Bolt Set M10 Qty-500",
-         "Value": "30 sets $14.75 $442.50"
+         "Description": "Hex Bolt Set M10 Qty-500",
+         "Qty": "30",
+         "Unit": "sets",
+         "Unit Price": "14.75",
+         "Amount": "442.5"
         }
        }
       ],
@@ -3436,7 +2951,7 @@
        {
         "row": null,
         "pred_row": 0,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -3446,17 +2961,47 @@
        {
         "row": null,
         "pred_row": 0,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "40 pcs $185.00 $7,400.00",
+        "actual": "40",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Unit",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "pcs",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Unit Price",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "185.0",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "7400.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 1,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -3466,17 +3011,47 @@
        {
         "row": null,
         "pred_row": 1,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "25 drums $68.00 $1,700.00",
+        "actual": "25",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Unit",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "drums",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Unit Price",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "68.0",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "1700.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 2,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -3486,17 +3061,47 @@
        {
         "row": null,
         "pred_row": 2,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "60 boxes $22.50 $1,350.00",
+        "actual": "60",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Unit",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "boxes",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Unit Price",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "22.5",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "1350.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 3,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -3506,285 +3111,54 @@
        {
         "row": null,
         "pred_row": 3,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "30 sets $14.75 $442.50",
-        "grounded": true
-       }
-      ]
-     },
-     "Subtotal:": {
-      "table": "Subtotal:",
-      "gold_row_count": 0,
-      "pred_row_count": 4,
-      "row_count_mismatch": 4,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Subtotal:",
-         "Value": "10,892.50"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "Shipping & Handling:",
-         "Value": "320.00"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Sales Tax (8.88%):",
-         "Value": "966.71"
-        }
-       },
-       {
-        "pred_row": 3,
-        "pred": {
-         "Label": "TOTAL DUE:",
-         "Value": "12,179.21"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Subtotal:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "10,892.50",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Shipping & Handling:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "320.00",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Sales Tax (8.88%):",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "966.71",
+        "actual": "30",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 3,
-        "column": "Label",
+        "column": "Unit",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "TOTAL DUE:",
+        "actual": "sets",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 3,
-        "column": "Value",
+        "column": "Unit Price",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "12,179.21",
-        "grounded": true
-       }
-      ]
-     },
-     "Payment Instructions": {
-      "table": "Payment Instructions",
-      "gold_row_count": 0,
-      "pred_row_count": 3,
-      "row_count_mismatch": 3,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Wire: First National Bank of New York",
-         "Value": "Wire: First National Bank of New York"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "ABA: 021000021 Account: 7743882201",
-         "Value": "ABA: 021000021 Account: 7743882201"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Cheque payable to: Nexus Global Trading LLC",
-         "Value": "Cheque payable to: Nexus Global Trading LLC"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Wire: First National Bank of New York",
+        "actual": "14.75",
         "grounded": true
        },
        {
         "row": null,
-        "pred_row": 0,
-        "column": "Value",
+        "pred_row": 3,
+        "column": "Amount",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "Wire: First National Bank of New York",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "ABA: 021000021 Account: 7743882201",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "ABA: 021000021 Account: 7743882201",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Cheque payable to: Nexus Global Trading LLC",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Cheque payable to: Nexus Global Trading LLC",
-        "grounded": true
-       }
-      ]
-     },
-     "Notes": {
-      "table": "Notes",
-      "gold_row_count": 0,
-      "pred_row_count": 1,
-      "row_count_mismatch": 1,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Payment received via wire transfer Feb 10, 2024. Ref:",
-         "Value": "WT-20240210-4421."
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Payment received via wire transfer Feb 10, 2024. Ref:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "WT-20240210-4421.",
+        "actual": "442.5",
         "grounded": true
        }
       ]
      }
     },
     "counts": {
-     "correct": 10,
-     "missed": 23,
-     "hallucinated": 52
+     "correct": 32,
+     "near": 1,
+     "hallucinated": 20
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.30303030303030304,
-    "hallucination_rate": 0.8387096774193549,
+    "accuracy": 0.9696969696969697,
+    "hallucination_rate": 0.37735849056603776,
     "invention_rate": 0.0
    },
    "unstable": []
@@ -3802,146 +3176,97 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "extracted table/section 'NEXUS GLOBAL TRADING LLC' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Bill To:' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Invoice:' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Description' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Subtotal:' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Payment Instructions' matches no gold table — all its rows will score as hallucinated",
-    "extracted table/section 'Notes' matches no gold table — all its rows will score as hallucinated"
+    "extracted table/section 'table_1' matches no gold table — all its rows will score as hallucinated"
    ],
    "adapted": {
     "fields": {
-     "NEXUS GLOBAL TRADING LLC": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Invoice Number": "INV-2024-0047",
-     "Invoice Date": "February 3, 2024",
-     "Due Date": "March 4, 2024",
+     "Invoice Date": "2024-02-03",
+     "Due Date": "2024-03-04",
+     "Bill To Company": "Pinnacle Electronics Corp.",
+     "Bill To Address": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
+     "Bill To Contact": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
      "PO Reference": "PO-2024-0029",
      "Payment Terms": "Net 30",
-     "USB-C Hub 7-Port Model HB-720": "150 units $34.50 $5,175.00",
-     "Wireless Mouse M300 Series": "200 units $18.75 $3,750.00",
-     "Laptop Cooling Stand Aluminium": "80 units $27.00 $2,160.00",
-     "HDMI 2.1 Cable 2m Pack/5": "120 packs $16.20 $1,944.00",
-     "Webcam HD 1080p w/ Mic": "60 units $42.00 $2,520.00",
-     "Subtotal": "15,549.00",
-     "Shipping & Handling": "580.00",
-     "Sales Tax": "1,282.79",
-     "Total Due": "17,411.79",
-     "Balance due March 4, 2024. Late payments subject to 1.5%": "monthly interest."
+     "Status": "OUTSTANDING",
+     "Subtotal": "15549.0",
+     "Shipping & Handling": "580.0",
+     "Sales Tax": "1282.79",
+     "Total Due": "17411.79"
     },
     "tables": {
-     "NEXUS GLOBAL TRADING LLC": [
+     "line_items": [
       {
-       "Label": "NEXUS GLOBAL TRADING LLC",
-       "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
+       "Description": "USB-C Hub 7-Port Model HB-720",
+       "Qty": "150",
+       "Unit": "units",
+       "Unit Price": "34.5",
+       "Amount": "5175.0"
       },
       {
-       "Label": "(212) 555-0148 | EIN: 47-3821654",
-       "Value": ""
+       "Description": "Wireless Mouse M300 Series",
+       "Qty": "200",
+       "Unit": "units",
+       "Unit Price": "18.75",
+       "Amount": "3750.0"
       },
       {
-       "Label": "Bill To:",
-       "Value": "Pinnacle Electronics Corp."
+       "Description": "Laptop Cooling Stand Aluminium",
+       "Qty": "80",
+       "Unit": "units",
+       "Unit Price": "27.0",
+       "Amount": "2160.0"
+      },
+      {
+       "Description": "HDMI 2.1 Cable 2m Pack/5",
+       "Qty": "120",
+       "Unit": "packs",
+       "Unit Price": "16.2",
+       "Amount": "1944.0"
+      },
+      {
+       "Description": "Webcam HD 1080p w/ Mic",
+       "Qty": "60",
+       "Unit": "units",
+       "Unit Price": "42.0",
+       "Amount": "2520.0"
       }
      ],
-     "Bill To:": [
+     "table_1": [
       {
-       "Label": "Bill To:",
-       "Value": ""
+       "Description": "USB-C Hub 7-Port Model HB-720",
+       "Qty": "150",
+       "Unit": "units",
+       "Unit Price": "34.5",
+       "Amount": "5175.0"
       },
       {
-       "Label": "Pinnacle Electronics Corp.",
-       "Value": ""
+       "Description": "Wireless Mouse M300 Series",
+       "Qty": "200",
+       "Unit": "units",
+       "Unit Price": "18.75",
+       "Amount": "3750.0"
       },
       {
-       "Label": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
-       "Value": ""
+       "Description": "Laptop Cooling Stand Aluminium",
+       "Qty": "80",
+       "Unit": "units",
+       "Unit Price": "27.0",
+       "Amount": "2160.0"
       },
       {
-       "Label": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
-       "Value": ""
-      }
-     ],
-     "Invoice:": [
-      {
-       "Label": "Invoice:",
-       "Value": "INV-2024-0047"
+       "Description": "HDMI 2.1 Cable 2m Pack/5",
+       "Qty": "120",
+       "Unit": "packs",
+       "Unit Price": "16.2",
+       "Amount": "1944.0"
       },
       {
-       "Label": "Date:",
-       "Value": "February 3, 2024"
-      },
-      {
-       "Label": "Due:",
-       "Value": "March 4, 2024"
-      },
-      {
-       "Label": "PO Ref:",
-       "Value": "PO-2024-0029"
-      },
-      {
-       "Label": "Terms:",
-       "Value": "Net 30"
-      }
-     ],
-     "Description": [
-      {
-       "Label": "USB-C Hub 7-Port Model HB-720",
-       "Value": "150 units $34.50 $5,175.00"
-      },
-      {
-       "Label": "Wireless Mouse M300 Series",
-       "Value": "200 units $18.75 $3,750.00"
-      },
-      {
-       "Label": "Laptop Cooling Stand Aluminium",
-       "Value": "80 units $27.00 $2,160.00"
-      },
-      {
-       "Label": "HDMI 2.1 Cable 2m Pack/5",
-       "Value": "120 packs $16.20 $1,944.00"
-      },
-      {
-       "Label": "Webcam HD 1080p w/ Mic",
-       "Value": "60 units $42.00 $2,520.00"
-      }
-     ],
-     "Subtotal:": [
-      {
-       "Label": "Subtotal:",
-       "Value": "15,549.00"
-      },
-      {
-       "Label": "Shipping & Handling:",
-       "Value": "580.00"
-      },
-      {
-       "Label": "Sales Tax (8.25%):",
-       "Value": "1,282.79"
-      },
-      {
-       "Label": "TOTAL DUE:",
-       "Value": "17,411.79"
-      }
-     ],
-     "Payment Instructions": [
-      {
-       "Label": "Wire: First National Bank of New York",
-       "Value": ""
-      },
-      {
-       "Label": "ABA: 021000021 Account: 7743882201",
-       "Value": ""
-      },
-      {
-       "Label": "Cheque payable to: Nexus Global Trading LLC",
-       "Value": ""
-      }
-     ],
-     "Notes": [
-      {
-       "Label": "Balance due March 4, 2024. Late payments subject to 1.5%",
-       "Value": "monthly interest."
+       "Description": "Webcam HD 1080p w/ Mic",
+       "Qty": "60",
+       "Unit": "units",
+       "Unit Price": "42.0",
+       "Amount": "2520.0"
       }
      ]
     }
@@ -3959,31 +3284,31 @@
      "Invoice Date": {
       "outcome": "correct",
       "expected": "2024-02-03",
-      "actual": "February 3, 2024",
+      "actual": "2024-02-03",
       "type": "date"
      },
      "Due Date": {
       "outcome": "correct",
       "expected": "2024-03-04",
-      "actual": "March 4, 2024",
+      "actual": "2024-03-04",
       "type": "date"
      },
      "Bill To Company": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "Pinnacle Electronics Corp.",
-      "actual": null,
+      "actual": "Pinnacle Electronics Corp.",
       "type": "string"
      },
      "Bill To Address": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
-      "actual": null,
+      "actual": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
       "type": "string"
      },
      "Bill To Contact": {
-      "outcome": "missed",
+      "outcome": "near",
       "expected": "Ms. Sarah Johnson",
-      "actual": null,
+      "actual": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
       "type": "string"
      },
      "PO Reference": {
@@ -3999,547 +3324,278 @@
       "type": "string"
      },
      "Status": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "OUTSTANDING",
-      "actual": null,
+      "actual": "OUTSTANDING",
       "type": "string"
      },
      "Subtotal": {
       "outcome": "correct",
       "expected": 15549.0,
-      "actual": "15,549.00",
+      "actual": "15549.0",
       "type": "money"
      },
      "Shipping & Handling": {
       "outcome": "correct",
       "expected": 580.0,
-      "actual": "580.00",
+      "actual": "580.0",
       "type": "money"
      },
      "Sales Tax": {
       "outcome": "correct",
       "expected": 1282.79,
-      "actual": "1,282.79",
+      "actual": "1282.79",
       "type": "money"
      },
      "Total Due": {
       "outcome": "correct",
       "expected": 17411.79,
-      "actual": "17,411.79",
+      "actual": "17411.79",
       "type": "money"
-     },
-     "NEXUS GLOBAL TRADING LLC": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
-      "type": "string",
-      "grounded": true
-     },
-     "USB-C Hub 7-Port Model HB-720": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "150 units $34.50 $5,175.00",
-      "type": "string",
-      "grounded": true
-     },
-     "Wireless Mouse M300 Series": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "200 units $18.75 $3,750.00",
-      "type": "string",
-      "grounded": true
-     },
-     "Laptop Cooling Stand Aluminium": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "80 units $27.00 $2,160.00",
-      "type": "string",
-      "grounded": true
-     },
-     "HDMI 2.1 Cable 2m Pack/5": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "120 packs $16.20 $1,944.00",
-      "type": "string",
-      "grounded": true
-     },
-     "Webcam HD 1080p w/ Mic": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "60 units $42.00 $2,520.00",
-      "type": "string",
-      "grounded": true
-     },
-     "Balance due March 4, 2024. Late payments subject to 1.5%": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "monthly interest.",
-      "type": "string",
-      "grounded": true
      }
     },
     "tables": {
      "line_items": {
       "table": "line_items",
       "gold_row_count": 5,
-      "pred_row_count": 0,
-      "row_count_mismatch": -5,
-      "matched_rows": 0,
-      "row_precision": null,
-      "row_recall": 0.0,
-      "cell_accuracy": null,
-      "missed_rows": [
-       {
-        "row": 0,
-        "gold": {
-         "Description": "USB-C Hub 7-Port Model HB-720",
-         "Qty": 150,
-         "Unit": "units",
-         "Unit Price": 34.5,
-         "Amount": 5175.0
-        }
-       },
-       {
-        "row": 1,
-        "gold": {
-         "Description": "Wireless Mouse M300 Series",
-         "Qty": 200,
-         "Unit": "units",
-         "Unit Price": 18.75,
-         "Amount": 3750.0
-        }
-       },
-       {
-        "row": 2,
-        "gold": {
-         "Description": "Laptop Cooling Stand Aluminium",
-         "Qty": 80,
-         "Unit": "units",
-         "Unit Price": 27.0,
-         "Amount": 2160.0
-        }
-       },
-       {
-        "row": 3,
-        "gold": {
-         "Description": "HDMI 2.1 Cable 2m Pack/5",
-         "Qty": 120,
-         "Unit": "packs",
-         "Unit Price": 16.2,
-         "Amount": 1944.0
-        }
-       },
-       {
-        "row": 4,
-        "gold": {
-         "Description": "Webcam HD 1080p w/ Mic",
-         "Qty": 60,
-         "Unit": "units",
-         "Unit Price": 42.0,
-         "Amount": 2520.0
-        }
-       }
-      ],
+      "pred_row_count": 5,
+      "row_count_mismatch": 0,
+      "matched_rows": 5,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
       "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "USB-C Hub 7-Port Model HB-720",
-        "actual": null
+        "actual": "USB-C Hub 7-Port Model HB-720"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 150,
-        "actual": null
+        "actual": "150"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "units",
-        "actual": null
+        "actual": "units"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 34.5,
-        "actual": null
+        "actual": "34.5"
        },
        {
         "row": 0,
-        "pred_row": null,
+        "pred_row": 0,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 5175.0,
-        "actual": null
+        "actual": "5175.0"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Wireless Mouse M300 Series",
-        "actual": null
+        "actual": "Wireless Mouse M300 Series"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 200,
-        "actual": null
+        "actual": "200"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "units",
-        "actual": null
+        "actual": "units"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 18.75,
-        "actual": null
+        "actual": "18.75"
        },
        {
         "row": 1,
-        "pred_row": null,
+        "pred_row": 1,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 3750.0,
-        "actual": null
+        "actual": "3750.0"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Laptop Cooling Stand Aluminium",
-        "actual": null
+        "actual": "Laptop Cooling Stand Aluminium"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 80,
-        "actual": null
+        "actual": "80"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "units",
-        "actual": null
+        "actual": "units"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 27.0,
-        "actual": null
+        "actual": "27.0"
        },
        {
         "row": 2,
-        "pred_row": null,
+        "pred_row": 2,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 2160.0,
-        "actual": null
+        "actual": "2160.0"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "HDMI 2.1 Cable 2m Pack/5",
-        "actual": null
+        "actual": "HDMI 2.1 Cable 2m Pack/5"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 120,
-        "actual": null
+        "actual": "120"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "packs",
-        "actual": null
+        "actual": "packs"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 16.2,
-        "actual": null
+        "actual": "16.2"
        },
        {
         "row": 3,
-        "pred_row": null,
+        "pred_row": 3,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 1944.0,
-        "actual": null
+        "actual": "1944.0"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Description",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "Webcam HD 1080p w/ Mic",
-        "actual": null
+        "actual": "Webcam HD 1080p w/ Mic"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Qty",
         "type": "number",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 60,
-        "actual": null
+        "actual": "60"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Unit",
         "type": "string",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": "units",
-        "actual": null
+        "actual": "units"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Unit Price",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 42.0,
-        "actual": null
+        "actual": "42.0"
        },
        {
         "row": 4,
-        "pred_row": null,
+        "pred_row": 4,
         "column": "Amount",
         "type": "money",
-        "outcome": "missed",
+        "outcome": "correct",
         "expected": 2520.0,
-        "actual": null
+        "actual": "2520.0"
        }
       ]
      },
-     "NEXUS GLOBAL TRADING LLC": {
-      "table": "NEXUS GLOBAL TRADING LLC",
-      "gold_row_count": 0,
-      "pred_row_count": 3,
-      "row_count_mismatch": 3,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "NEXUS GLOBAL TRADING LLC",
-         "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "(212) 555-0148 | EIN: 47-3821654",
-         "Value": ""
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Bill To:",
-         "Value": "Pinnacle Electronics Corp."
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "NEXUS GLOBAL TRADING LLC",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "(212) 555-0148 | EIN: 47-3821654",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Bill To:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Pinnacle Electronics Corp.",
-        "grounded": true
-       }
-      ]
-     },
-     "Bill To:": {
-      "table": "Bill To:",
-      "gold_row_count": 0,
-      "pred_row_count": 4,
-      "row_count_mismatch": 4,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Bill To:",
-         "Value": ""
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "Pinnacle Electronics Corp.",
-         "Value": ""
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
-         "Value": ""
-        }
-       },
-       {
-        "pred_row": 3,
-        "pred": {
-         "Label": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
-         "Value": ""
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Bill To:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Pinnacle Electronics Corp.",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 3,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
-        "grounded": true
-       }
-      ]
-     },
-     "Invoice:": {
-      "table": "Invoice:",
+     "table_1": {
+      "table": "table_1",
       "gold_row_count": 0,
       "pred_row_count": 5,
       "row_count_mismatch": 5,
@@ -4552,36 +3608,51 @@
        {
         "pred_row": 0,
         "pred": {
-         "Label": "Invoice:",
-         "Value": "INV-2024-0047"
+         "Description": "USB-C Hub 7-Port Model HB-720",
+         "Qty": "150",
+         "Unit": "units",
+         "Unit Price": "34.5",
+         "Amount": "5175.0"
         }
        },
        {
         "pred_row": 1,
         "pred": {
-         "Label": "Date:",
-         "Value": "February 3, 2024"
+         "Description": "Wireless Mouse M300 Series",
+         "Qty": "200",
+         "Unit": "units",
+         "Unit Price": "18.75",
+         "Amount": "3750.0"
         }
        },
        {
         "pred_row": 2,
         "pred": {
-         "Label": "Due:",
-         "Value": "March 4, 2024"
+         "Description": "Laptop Cooling Stand Aluminium",
+         "Qty": "80",
+         "Unit": "units",
+         "Unit Price": "27.0",
+         "Amount": "2160.0"
         }
        },
        {
         "pred_row": 3,
         "pred": {
-         "Label": "PO Ref:",
-         "Value": "PO-2024-0029"
+         "Description": "HDMI 2.1 Cable 2m Pack/5",
+         "Qty": "120",
+         "Unit": "packs",
+         "Unit Price": "16.2",
+         "Amount": "1944.0"
         }
        },
        {
         "pred_row": 4,
         "pred": {
-         "Label": "Terms:",
-         "Value": "Net 30"
+         "Description": "Webcam HD 1080p w/ Mic",
+         "Qty": "60",
+         "Unit": "units",
+         "Unit Price": "42.0",
+         "Amount": "2520.0"
         }
        }
       ],
@@ -4589,157 +3660,7 @@
        {
         "row": null,
         "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Invoice:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "INV-2024-0047",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Date:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "February 3, 2024",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Due:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "March 4, 2024",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 3,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "PO Ref:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 3,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "PO-2024-0029",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 4,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Terms:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 4,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Net 30",
-        "grounded": true
-       }
-      ]
-     },
-     "Description": {
-      "table": "Description",
-      "gold_row_count": 0,
-      "pred_row_count": 5,
-      "row_count_mismatch": 5,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "USB-C Hub 7-Port Model HB-720",
-         "Value": "150 units $34.50 $5,175.00"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "Wireless Mouse M300 Series",
-         "Value": "200 units $18.75 $3,750.00"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Laptop Cooling Stand Aluminium",
-         "Value": "80 units $27.00 $2,160.00"
-        }
-       },
-       {
-        "pred_row": 3,
-        "pred": {
-         "Label": "HDMI 2.1 Cable 2m Pack/5",
-         "Value": "120 packs $16.20 $1,944.00"
-        }
-       },
-       {
-        "pred_row": 4,
-        "pred": {
-         "Label": "Webcam HD 1080p w/ Mic",
-         "Value": "60 units $42.00 $2,520.00"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -4749,17 +3670,47 @@
        {
         "row": null,
         "pred_row": 0,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "150 units $34.50 $5,175.00",
+        "actual": "150",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Unit",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "units",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Unit Price",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "34.5",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "5175.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 1,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -4769,17 +3720,47 @@
        {
         "row": null,
         "pred_row": 1,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "200 units $18.75 $3,750.00",
+        "actual": "200",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Unit",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "units",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Unit Price",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "18.75",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "3750.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 2,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -4789,17 +3770,47 @@
        {
         "row": null,
         "pred_row": 2,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "80 units $27.00 $2,160.00",
+        "actual": "80",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Unit",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "units",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Unit Price",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "27.0",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "2160.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 3,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -4809,17 +3820,47 @@
        {
         "row": null,
         "pred_row": 3,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "120 packs $16.20 $1,944.00",
+        "actual": "120",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Unit",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "packs",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Unit Price",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "16.2",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "1944.0",
         "grounded": true
        },
        {
         "row": null,
         "pred_row": 4,
-        "column": "Label",
+        "column": "Description",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -4829,255 +3870,54 @@
        {
         "row": null,
         "pred_row": 4,
-        "column": "Value",
+        "column": "Qty",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "60 units $42.00 $2,520.00",
-        "grounded": true
-       }
-      ]
-     },
-     "Subtotal:": {
-      "table": "Subtotal:",
-      "gold_row_count": 0,
-      "pred_row_count": 4,
-      "row_count_mismatch": 4,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Subtotal:",
-         "Value": "15,549.00"
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "Shipping & Handling:",
-         "Value": "580.00"
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Sales Tax (8.25%):",
-         "Value": "1,282.79"
-        }
-       },
-       {
-        "pred_row": 3,
-        "pred": {
-         "Label": "TOTAL DUE:",
-         "Value": "17,411.79"
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Subtotal:",
+        "actual": "60",
         "grounded": true
        },
        {
         "row": null,
-        "pred_row": 0,
-        "column": "Value",
+        "pred_row": 4,
+        "column": "Unit",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "15,549.00",
+        "actual": "units",
         "grounded": true
        },
        {
         "row": null,
-        "pred_row": 1,
-        "column": "Label",
+        "pred_row": 4,
+        "column": "Unit Price",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "Shipping & Handling:",
+        "actual": "42.0",
         "grounded": true
        },
        {
         "row": null,
-        "pred_row": 1,
-        "column": "Value",
+        "pred_row": 4,
+        "column": "Amount",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
-        "actual": "580.00",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Sales Tax (8.25%):",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "1,282.79",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 3,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "TOTAL DUE:",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 3,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "17,411.79",
-        "grounded": true
-       }
-      ]
-     },
-     "Payment Instructions": {
-      "table": "Payment Instructions",
-      "gold_row_count": 0,
-      "pred_row_count": 3,
-      "row_count_mismatch": 3,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Wire: First National Bank of New York",
-         "Value": ""
-        }
-       },
-       {
-        "pred_row": 1,
-        "pred": {
-         "Label": "ABA: 021000021 Account: 7743882201",
-         "Value": ""
-        }
-       },
-       {
-        "pred_row": 2,
-        "pred": {
-         "Label": "Cheque payable to: Nexus Global Trading LLC",
-         "Value": ""
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Wire: First National Bank of New York",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 1,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "ABA: 021000021 Account: 7743882201",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Cheque payable to: Nexus Global Trading LLC",
-        "grounded": true
-       }
-      ]
-     },
-     "Notes": {
-      "table": "Notes",
-      "gold_row_count": 0,
-      "pred_row_count": 1,
-      "row_count_mismatch": 1,
-      "matched_rows": 0,
-      "row_precision": 0.0,
-      "row_recall": null,
-      "cell_accuracy": null,
-      "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 0,
-        "pred": {
-         "Label": "Balance due March 4, 2024. Late payments subject to 1.5%",
-         "Value": "monthly interest."
-        }
-       }
-      ],
-      "cells": [
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Balance due March 4, 2024. Late payments subject to 1.5%",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Value",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "monthly interest.",
+        "actual": "2520.0",
         "grounded": true
        }
       ]
      }
     },
     "counts": {
-     "correct": 9,
-     "missed": 29,
-     "hallucinated": 49
+     "correct": 37,
+     "near": 1,
+     "hallucinated": 25
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.23684210526315788,
-    "hallucination_rate": 0.8448275862068966,
+    "accuracy": 0.9736842105263158,
+    "hallucination_rate": 0.3968253968253968,
     "invention_rate": 0.0
    },
    "unstable": []
@@ -8733,20 +7573,20 @@
  "summary": {
   "overall": {
    "counts": {
-    "wrong": 3,
-    "correct": 237,
-    "missed": 134,
-    "hallucinated": 271,
-    "near": 4,
+    "wrong": 6,
+    "correct": 327,
+    "missed": 32,
+    "hallucinated": 221,
+    "near": 13,
     "empty_ok": 12
    },
    "gold_valued": 378,
-   "accuracy": 0.626984126984127,
-   "near_rate": 0.010582010582010581,
-   "hallucinated": 271,
-   "hallucination_rate": 0.5262135922330097,
-   "hallucinated_ungrounded": 3,
-   "invention_rate": 0.005825242718446602
+   "accuracy": 0.8650793650793651,
+   "near_rate": 0.03439153439153439,
+   "hallucinated": 221,
+   "hallucination_rate": 0.3897707231040564,
+   "hallucinated_ungrounded": 7,
+   "invention_rate": 0.012345679012345678
   },
   "by_document_type": {
    "balance_sheet": {
@@ -8792,17 +7632,18 @@
    },
    "expense_report": {
     "counts": {
-     "correct": 4,
-     "missed": 50,
-     "hallucinated": 39
+     "correct": 44,
+     "wrong": 3,
+     "near": 7,
+     "hallucinated": 45
     },
     "gold_valued": 54,
-    "accuracy": 0.07407407407407407,
-    "near_rate": 0.0,
-    "hallucinated": 39,
-    "hallucination_rate": 0.9069767441860465,
-    "hallucinated_ungrounded": 3,
-    "invention_rate": 0.06976744186046512
+    "accuracy": 0.8148148148148148,
+    "near_rate": 0.12962962962962962,
+    "hallucinated": 45,
+    "hallucination_rate": 0.45454545454545453,
+    "hallucinated_ungrounded": 7,
+    "invention_rate": 0.0707070707070707
    },
    "income_statement": {
     "counts": {
@@ -8847,15 +7688,15 @@
    },
    "sales_invoice": {
     "counts": {
-     "correct": 19,
-     "missed": 52,
-     "hallucinated": 101
+     "correct": 69,
+     "near": 2,
+     "hallucinated": 45
     },
     "gold_valued": 71,
-    "accuracy": 0.2676056338028169,
-    "near_rate": 0.0,
-    "hallucinated": 101,
-    "hallucination_rate": 0.8416666666666667,
+    "accuracy": 0.971830985915493,
+    "near_rate": 0.028169014084507043,
+    "hallucinated": 45,
+    "hallucination_rate": 0.3879310344827586,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    }
@@ -8863,11 +7704,10 @@
   "by_field_type": {
    "date": {
     "counts": {
-     "correct": 21,
-     "missed": 9
+     "correct": 30
     },
     "gold_valued": 30,
-    "accuracy": 0.7,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "hallucinated": 0,
     "hallucination_rate": 0.0,
@@ -8877,26 +7717,25 @@
    "money": {
     "counts": {
      "wrong": 1,
-     "correct": 115,
-     "missed": 45,
+     "correct": 142,
+     "missed": 18,
      "hallucinated": 14,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.7142857142857143,
+    "accuracy": 0.8819875776397516,
     "near_rate": 0.0,
     "hallucinated": 14,
-    "hallucination_rate": 0.1076923076923077,
+    "hallucination_rate": 0.08917197452229299,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
    "number": {
     "counts": {
-     "missed": 9,
-     "correct": 3
+     "correct": 12
     },
     "gold_valued": 12,
-    "accuracy": 0.25,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "hallucinated": 0,
     "hallucination_rate": 0.0,
@@ -8905,23 +7744,1350 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 257,
-     "correct": 98,
-     "missed": 71,
-     "near": 4,
-     "wrong": 2
+     "hallucinated": 207,
+     "correct": 143,
+     "missed": 14,
+     "near": 13,
+     "wrong": 5
     },
     "gold_valued": 175,
-    "accuracy": 0.56,
-    "near_rate": 0.022857142857142857,
-    "hallucinated": 257,
-    "hallucination_rate": 0.7119113573407202,
-    "hallucinated_ungrounded": 3,
-    "invention_rate": 0.008310249307479225
+    "accuracy": 0.8171428571428572,
+    "near_rate": 0.07428571428571429,
+    "hallucinated": 207,
+    "hallucination_rate": 0.5625,
+    "hallucinated_ungrounded": 7,
+    "invention_rate": 0.019021739130434784
    }
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-18 01:23:11"
+ "diff": [
+  {
+   "key": "EXP-2024-0081 :: Department",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee ID",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee Name",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Manager",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Period",
+   "before": "missed",
+   "after": "wrong",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Purpose",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Report No",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Status",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Total Claimed",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses :: row_count_mismatch",
+   "before": "-9",
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Category",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Category",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Category",
+   "before": "missed",
+   "after": "wrong",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Category",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Category",
+   "before": "missed",
+   "after": "wrong",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Category",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Category",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Category",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Category",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Type",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1 :: row_count_mismatch",
+   "before": null,
+   "after": "9",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 0].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 0].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 0].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 0].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 0].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 1].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 1].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 1].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 1].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 1].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 2].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 2].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 2].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 2].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 2].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 3].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 3].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 3].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 3].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 3].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 4].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 4].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 4].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 4].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 4].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 5].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 5].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 5].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 5].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 5].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 6].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 6].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 6].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 6].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 6].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 7].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 7].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 7].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 7].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 7].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 8].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 8].Category",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 8].Date",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 8].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: table_1[pred_row 8].Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Address",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Company",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Contact",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Due Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Number",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: PO Reference",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Terms",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Sales Tax",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Shipping & Handling",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Status",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Subtotal",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Total Due",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items :: row_count_mismatch",
+   "before": "-4",
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1 :: row_count_mismatch",
+   "before": null,
+   "after": "4",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 0].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 0].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 0].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 0].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 0].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 1].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 1].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 1].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 1].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 1].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 2].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 2].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 2].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 2].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 2].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 3].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 3].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 3].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 3].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: table_1[pred_row 3].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Address",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Company",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Contact",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Due Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Number",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: PO Reference",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Terms",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Sales Tax",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Shipping & Handling",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Status",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Subtotal",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Total Due",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items :: row_count_mismatch",
+   "before": "-5",
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1 :: row_count_mismatch",
+   "before": null,
+   "after": "5",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 0].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 0].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 0].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 0].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 0].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 1].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 1].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 1].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 1].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 1].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 2].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 2].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 2].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 2].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 2].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 3].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 3].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 3].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 3].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 3].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 4].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 4].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 4].Qty",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 4].Unit",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: table_1[pred_row 4].Unit Price",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-08-18 01:50:49"
 }
