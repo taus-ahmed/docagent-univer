@@ -8,10 +8,10 @@ BEFORE importing any ``app.*`` or engine module, because:
   CWD-relative ``.env`` file. We pre-load ``backend/.env`` into os.environ and
   chdir to ``backend/`` so relative paths (``./storage``, ``debug_output/``)
   land where production's layout puts them.
-- Production runs ``USE_NEW_EXTRACTOR=true``, ``PRIMARY_LLM=gemini``,
+- Production runs ``PRIMARY_LLM=gemini`` and
   ``GEMINI_MODEL=gemini-2.5-flash-lite`` (audit 2026-08-17 §4). Local
-  ``backend/.env`` does NOT set these, so without this bootstrap the harness
-  would measure the dead legacy pipeline instead of what production runs.
+  ``backend/.env`` does not set the model, so without this bootstrap the
+  harness would measure a different Gemini tier than production runs.
 """
 from __future__ import annotations
 
@@ -31,8 +31,10 @@ CACHE_DIR = TESTS_DIR / "llm_cache"
 REPORTS_DIR = TESTS_DIR / "reports"
 
 # Production extraction config, per the 2026-08-17 audit of the Railway env.
+# USE_NEW_EXTRACTOR was removed in Phase 2d — there is one pipeline now, so
+# there is no longer a flag that could make local runs exercise different code
+# than production.
 PRODUCTION_PARITY_ENV = {
-    "USE_NEW_EXTRACTOR": "true",
     "PRIMARY_LLM": "gemini",
     "GEMINI_MODEL": "gemini-2.5-flash-lite",
 }

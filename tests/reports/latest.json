@@ -1,11 +1,10 @@
 {
- "run_id": "2026-08-18 02:07:39",
- "git_commit": "ee07798",
+ "run_id": "2026-08-18 02:16:56",
+ "git_commit": "8831bc7",
  "config": {
-  "mode": "record",
-  "repeat": 3,
+  "mode": "replay",
+  "repeat": 1,
   "env": {
-   "USE_NEW_EXTRACTOR": "true",
    "PRIMARY_LLM": "gemini",
    "GEMINI_MODEL": "gemini-2.5-flash-lite"
   }
@@ -13,14 +12,14 @@
  "cache_stats": {
   "hits": 10,
   "recorded": 0,
-  "live": 20,
+  "live": 0,
   "misses": 0
  },
  "documents": {
   "BS-2024-Q1": {
    "document_type": "balance_sheet",
    "template": "balance_sheet.json",
-   "template_type": "structural",
+   "template_type": "needs 2 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -616,7 +615,7 @@
   "CHQ-001847": {
    "document_type": "cheque",
    "template": "cheque.json",
-   "template_type": "labeled",
+   "template_type": "needs 2 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -721,34 +720,12 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
-   "unstable": [
-    {
-     "key": "field:Account Number",
-     "values": [
-      "\"7743882201\"",
-      "null"
-     ]
-    },
-    {
-     "key": "field:Amount",
-     "values": [
-      "\"$ 8,410.00\"",
-      "\"8,410.00\""
-     ]
-    },
-    {
-     "key": "field:Routing Number",
-     "values": [
-      "\"021000021\"",
-      "null"
-     ]
-    }
-   ]
+   "unstable": []
   },
   "EXP-2024-0081": {
    "document_type": "expense_report",
    "template": "expense_report.json",
-   "template_type": "structural",
+   "template_type": "needs 5 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -1328,20 +1305,12 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
-   "unstable": [
-    {
-     "key": "field:Purpose",
-     "values": [
-      "\"supplier site visit - pacific steel, los angeles\"",
-      "\"supplier site visit - pacific steel, los\""
-     ]
-    }
-   ]
+   "unstable": []
   },
   "INV-2024-0031": {
    "document_type": "sales_invoice",
    "template": "invoice.json",
-   "template_type": "structural",
+   "template_type": "needs 5 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -1695,7 +1664,7 @@
   "INV-2024-0047": {
    "document_type": "sales_invoice",
    "template": "invoice.json",
-   "template_type": "structural",
+   "template_type": "needs 5 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -2101,7 +2070,7 @@
   "IS-2024-Q4": {
    "document_type": "income_statement",
    "template": "income_statement.json",
-   "template_type": "labeled",
+   "template_type": "needs 2 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -2310,7 +2279,7 @@
   "PAYSLIP-EMP-0007-APR2024": {
    "document_type": "payslip",
    "template": "payslip.json",
-   "template_type": "mixed",
+   "template_type": "needs 2 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -2730,27 +2699,12 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
-   "unstable": [
-    {
-     "key": "field:Employer Name",
-     "values": [
-      "\"nexus global trading llc\"",
-      "\"nexus global trading\""
-     ]
-    },
-    {
-     "key": "field:Net Pay",
-     "values": [
-      "\"$7,513.0\"",
-      "\"$7,513.03\""
-     ]
-    }
-   ]
+   "unstable": []
   },
   "PAYSLIP-EMP-0012-APR2024": {
    "document_type": "payslip",
    "template": "payslip.json",
-   "template_type": "mixed",
+   "template_type": "needs 2 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -3130,7 +3084,7 @@
   "PO-2024-0018": {
    "document_type": "purchase_order",
    "template": "purchase_order.json",
-   "template_type": "mixed",
+   "template_type": "needs 5 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -3453,7 +3407,7 @@
   "STMT-2024-01": {
    "document_type": "bank_statement",
    "template": "bank_statement.json",
-   "template_type": "structural",
+   "template_type": "needs 6 columns",
    "success": true,
    "errors": [],
    "log": {
@@ -4496,6 +4450,7 @@
    }
   }
  },
- "unstable_total": 6,
- "diff": []
+ "unstable_total": 0,
+ "diff": [],
+ "diff_against": "2026-08-18 02:07:39"
 }

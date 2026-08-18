@@ -113,10 +113,8 @@ def create_template(
         column_order_json=None,
         is_shared=payload.is_shared and current_user.role in ("admin", "company_admin"),
     )
-    # Template shape (2a) + Gemini template understanding — both computed once
-    # at save time, both best-effort.
+    # Template shape (2a) — computed once at save time, best-effort.
     _compute_and_store_shape(tpl)
-    _compute_and_store_cbm(tpl)
     db.add(tpl)
     db.commit()
     db.refresh(tpl)
@@ -149,13 +147,11 @@ def update_template(
     if payload.is_shared is not None:
         tpl.is_shared = payload.is_shared and current_user.role in ("admin", "company_admin")
 
-    # Re-run Gemini template understanding only when the grid layout changed
-    # (E3 — a template edit must regenerate the stored CBM).
+    # Re-derive the shape only when the grid layout changed.
     if description_changed:
-        print(f"[TEMPLATE] shape + CBM regenerated on template update (id={tpl.id})",
+        print(f"[TEMPLATE] shape regenerated on template update (id={tpl.id})",
               flush=True)
         _compute_and_store_shape(tpl)
-        _compute_and_store_cbm(tpl)
 
     tpl.updated_at = datetime.utcnow()
     db.commit()
@@ -215,65 +211,6 @@ def _compute_and_store_shape(tpl: ColumnTemplate) -> None:
               flush=True)
 
 
-def _compute_and_store_cbm(tpl: ColumnTemplate) -> None:
-    """
-    Run Gemini-based template understanding once and store it on the template's
-    cell_binding_map. Best-effort: any failure leaves cell_binding_map unset so
-    extraction falls back to the existing compute_binding_map path. Never raises.
-    """
-    try:
-        if not tpl.description:
-            tpl.set_cell_binding_map(None)
-            return
-        raw = json.loads(tpl.description)
-        if not (isinstance(raw, dict) and "cells" in raw):
-            tpl.set_cell_binding_map(None)   # not a grid template (plain text / columns)
-            return
-    except Exception:
-        tpl.set_cell_binding_map(None)
-        return
-
-    try:
-        # Lazy import — extract.py pulls in heavy engine modules; avoid import cycles.
-        from app.api.routes.extract import _understand_template, compute_binding_map
-
-        # Gate by template_type: STRUCTURAL templates (pure column layouts — balance
-        # sheets, P&L, payslips with side-by-side sections) are handled best by the
-        # three-layer layout path, which uses the section-aware column_groups. Skip
-        # CBM for them so extraction falls through to the layout path. Only LABELED /
-        # MIXED templates (KV forms, invoices with embedded tables) get a CBM.
-        try:
-            ttype = (compute_binding_map({}, raw) or {}).get("_meta", {}).get("template_type")
-        except Exception:
-            ttype = None
-        if ttype == "structural":
-            had_cbm = bool(tpl.cell_binding_map)
-            tpl.set_cell_binding_map(None)
-            if had_cbm:
-                # FIX 5 — a structural template that previously had a (wrong) CBM
-                # stored gets it cleared on re-save.
-                print("[TEMPLATE] structural — cleared incorrect CBM", flush=True)
-            else:
-                print("[TEMPLATE] structural template — CBM skipped, uses layout extraction",
-                      flush=True)
-            return
-
-        cbm = _understand_template(raw)
-        if cbm:
-            tpl.set_cell_binding_map(cbm)
-            print(
-                f"[TEMPLATE] labeled/mixed — CBM stored: "
-                f"{len(cbm.get('extract_cells', {}))} cells, "
-                f"{len(cbm.get('tables', []))} tables",
-                flush=True,
-            )
-        else:
-            tpl.set_cell_binding_map(None)
-            print("[TEMPLATE] binding map not computed — extraction will fall back "
-                  "to compute_binding_map", flush=True)
-    except Exception as e:
-        tpl.set_cell_binding_map(None)
-        print(f"[TEMPLATE] understanding failed ({e}) — saved without binding map", flush=True)
 
 
 def _get_template_or_403(template_id: int, current_user: User, db: Session) -> ColumnTemplate:

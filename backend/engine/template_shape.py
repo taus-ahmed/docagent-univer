@@ -58,14 +58,18 @@ def _matrix(grid):
                  "extract_target_cells_with_text": marked_with_text}
 
 
-def _ref(r, c):
+def _col_letter(c):
     letter, n = "", c
     while True:
         letter = chr(65 + (n % 26)) + letter
         n = n // 26 - 1
         if n < 0:
             break
-    return f"{letter}{r + 1}"
+    return letter
+
+
+def _ref(r, c):
+    return f"{_col_letter(c)}{r + 1}"
 
 
 def _section_for(m, static, row):
@@ -132,12 +136,22 @@ def compute_shape(grid, log=None):
             name = "table"
         else:
             name = f"table_{len(bands) + 1}"
+        # Each column needs a key that is UNIQUE within its band, because the
+        # model answers with a dict keyed by it. A side-by-side layout headed
+        # "Current Assets | Amount | Current Liabilities | Amount" has the same
+        # header twice, and two identical keys collapse into one — silently
+        # losing half the sheet. Duplicates are disambiguated by column letter.
+        headers = [m[(hr, c)] for c in cols]
+        columns = []
+        for c, h in zip(cols, headers):
+            key = h if headers.count(h) == 1 else f"{h} ({_col_letter(c)})"
+            columns.append({"col": c, "header": h, "key": key})
         bands.append({
             "name": name,
             "header_row": hr,
             "start_row": hr + 1,
             "end_row": end,
-            "columns": [{"col": c, "header": m[(hr, c)]} for c in cols],
+            "columns": columns,
             "section": section,
         })
 
@@ -151,24 +165,28 @@ def compute_shape(grid, log=None):
     for r in rows:
         if r in band_rows or r in header_rows:
             continue
-        for c in range(max_col + 1):
+        # EVERY label/slot pair across the row, not just the leftmost. Side-by-side
+        # layouts put two pairs on one line — "Total Current Assets | _ | Total
+        # Current Liabilities | _" — and taking only the first silently drops the
+        # right-hand half of the sheet.
+        c = 0
+        while c <= max_col:
             if (r, c) not in static:
+                c += 1
                 continue
-            for cc in range(c + 1, max_col + 2):
-                if (r, cc) in static:
-                    break
-                if (r, cc) in m:                        # present and empty -> slot
-                    field_slots.append({
-                        "slot_id": f"F{len(field_slots) + 1}",
-                        "ref": _ref(r, cc), "row": r, "col": cc,
-                        "row_label": m[(r, c)], "col_header": "",
-                        "section": _section_for(m, static, r),
-                    })
-                    label_cols.add(c)
-                    value_cols.add(cc)
-                    break
-                break
-            break                                       # leftmost pair per row
+            cc = c + 1
+            if (r, cc) in m and (r, cc) not in static:   # present and empty -> slot
+                field_slots.append({
+                    "slot_id": f"F{len(field_slots) + 1}",
+                    "ref": _ref(r, cc), "row": r, "col": cc,
+                    "row_label": m[(r, c)], "col_header": "",
+                    "section": _section_for(m, static, r),
+                })
+                label_cols.add(c)
+                value_cols.add(cc)
+                c = cc + 1
+            else:
+                c += 1
 
     for b in bands:
         label_cols.add(b["columns"][0]["col"])

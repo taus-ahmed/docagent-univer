@@ -1,7 +1,7 @@
-# Accuracy report — 2026-08-18 02:07:39
+# Accuracy report — 2026-08-18 02:16:56
 
-- git: `ee07798`  mode: **record**  repeat: 3
-- config: {"USE_NEW_EXTRACTOR": "true", "PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
+- git: `8831bc7`  mode: **replay**  repeat: 1
+- config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
 
@@ -42,12 +42,12 @@
 | document | type | accuracy | halluc. | invented | route | notes |
 |---|---|---|---|---|---|---|
 | BS-2024-Q1 | balance_sheet | 100.0% | 0 | 0 | BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242 |  |
-| CHQ-001847 | cheque | 81.8% | 0 | 0 | CHQ-001847.pdf: file_type=digital_pdf pages=1 text_len=501 | 3 unstable |
-| EXP-2024-0081 | expense_report | 100.0% | 0 | 0 | EXP-2024-0081.pdf: file_type=digital_pdf pages=1 text_len=11 | 1 unstable |
+| CHQ-001847 | cheque | 81.8% | 0 | 0 | CHQ-001847.pdf: file_type=digital_pdf pages=1 text_len=501 |  |
+| EXP-2024-0081 | expense_report | 100.0% | 0 | 0 | EXP-2024-0081.pdf: file_type=digital_pdf pages=1 text_len=11 |  |
 | INV-2024-0031 | sales_invoice | 97.0% | 0 | 0 | INV-2024-0031.pdf: file_type=digital_pdf pages=1 text_len=97 |  |
 | INV-2024-0047 | sales_invoice | 97.4% | 0 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 0 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
-| PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 0 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  | 2 unstable |
+| PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 0 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PAYSLIP-EMP-0012-APR2024 | payslip | 97.0% | 0 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PO-2024-0018 | purchase_order | 96.8% | 0 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
 | STMT-2024-01 | bank_statement | 100.0% | 0 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
@@ -64,12 +64,3 @@
 | PAYSLIP-EMP-0007-APR2024 | Net Pay | wrong | 7513.03 | $7,513.0 |
 | PAYSLIP-EMP-0012-APR2024 | Employer Name | near | Nexus Global Trading LLC | NEXUS GLOBAL TRADING |
 | PO-2024-0018 | Vendor Contact | near | Ms. Linda Zhao | Ms. Linda Zhao \| (310) 555-0233 |
-
-## Unstable fields (varied across --repeat runs)
-
-- CHQ-001847 :: field:Account Number: ['"7743882201"', 'null']
-- CHQ-001847 :: field:Amount: ['"$ 8,410.00"', '"8,410.00"']
-- CHQ-001847 :: field:Routing Number: ['"021000021"', 'null']
-- EXP-2024-0081 :: field:Purpose: ['"supplier site visit - pacific steel, los angeles"', '"supplier site visit - pacific steel, los"']
-- PAYSLIP-EMP-0007-APR2024 :: field:Employer Name: ['"nexus global trading llc"', '"nexus global trading"']
-- PAYSLIP-EMP-0007-APR2024 :: field:Net Pay: ['"$7,513.0"', '"$7,513.03"']

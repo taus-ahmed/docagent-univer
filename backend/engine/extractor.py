@@ -1,13 +1,17 @@
 """
-DocAgent — Three-Layer Extraction Engine (v4)
-=============================================
+DocAgent — Extraction Engine
+============================
 
-A clean rewrite of the extraction engine, behind the USE_NEW_EXTRACTOR flag.
-Everything downstream (writers, routes, models, save path) is UNCHANGED — this
-module only produces `DocumentExtractionResult` objects whose `.extracted_data`
-matches the existing contract.
+The single extraction entry point. `run_extraction` routes a templated
+document to slot-directed extraction (engine/slot_extractor.py); a document
+with no template still goes through the three layers below, until Phase 3
+gives it an inferred shape and sends it through the same slot pipeline.
 
-THREE LAYERS (the complete pipeline):
+Phase 2d removed the USE_NEW_EXTRACTOR flag, the legacy inline pipeline in
+extract.py, and the layout/field/CBM paths. There is one templated pipeline
+and no silent fallback between engines.
+
+THREE LAYERS (no-template path only):
 
   LAYER 1 — DOCUMENT INTELLIGENCE  (_understand_document)
       ONE Gemini call per file. Inventories the whole file: how many documents,
@@ -225,27 +229,6 @@ def _fallback_document_map(binding_map, n_pages, file_type):
 
 # ── template matching (exact → fuzzy) ─────────────────────────────────────────
 
-def _match_groups_to_sections(column_groups, sections):
-    """Map each column group -> best matching document section (or None). Exact then fuzzy."""
-    matches = {}
-    used = set()
-    norm_secs = [(i, _norm(s.get("heading"))) for i, s in enumerate(sections)]
-    for gi, g in enumerate(column_groups):
-        gn = _norm(g.get("section_label"))
-        found = None
-        for si, sn in norm_secs:                       # 1. exact
-            if si not in used and sn and sn == gn:
-                found = si
-                break
-        if found is None:                              # 2. fuzzy (substring either way)
-            for si, sn in norm_secs:
-                if si not in used and gn and (gn in sn or sn in gn):
-                    found = si
-                    break
-        matches[gi] = sections[found] if found is not None else None
-        if found is not None:
-            used.add(found)
-    return matches
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -392,12 +375,7 @@ def _run_all_extractions(orchestrator, document_map, page_images, doc_text_pages
         doc_type = d.get("doc_type") or default_doc_type or "other"
         system = _get_system_prompt(doc_type)
         sections = d.get("sections", []) or []
-        matches = _match_groups_to_sections(cgs, sections) if cgs else {}
-        # invert: section index -> column group
         sec_to_group = {}
-        for gi, sec in matches.items():
-            if sec is not None:
-                sec_to_group[id(sec)] = cgs[gi]
 
         extracted = {"layout_sections": {}, "extracted_fields": {},
                      "doc_type": doc_type, "identifier": d.get("identifier", ""),
@@ -663,37 +641,6 @@ def _assemble_result(filename, doc_index, doc_type, identifier, layout_sections,
     return r
 
 
-def _run_field_extraction(orchestrator, file_path, template_data, binding_map,
-                          page_images, doc_text, doc_text_pages, file_type,
-                          default_doc_type, start):
-    """
-    LABELED template (has_table_data == False). The user told us the exact fields and
-    where to put them — one template-guided Gemini call → extracted_fields. NO Layer
-    1/2/3. Routes to the form/KV writer at export time.
-    """
-    from app.api.routes.extract import _build_vision_prompt, _process_vision_result, _fail
-    _log("FIELD", f"{file_path.name}: labeled template — single template-guided call")
-    td = {**template_data, "binding_map": binding_map} if (template_data and binding_map) else (template_data or {})
-    # force_field_mode=True: honour the [ROUTE] decision — _build_vision_prompt must
-    # NOT switch to the layout prompt just because the binding map has table_data
-    # (mixed templates do). td carries the full binding_map so the field prompt
-    # includes both the KV cells and the embedded table.
-    system, prompt = _build_vision_prompt(td, doc_text, force_field_mode=True)
-    parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images, text=doc_text)
-    if not parsed:
-        return [_fail(file_path.name, "field extraction failed")]
-    # A7 — process EVERY document Gemini returned, not just documents[0].
-    doc_dicts = _unwrap_all(parsed)
-    if len(doc_dicts) > 1:
-        _log("FIELD", f"{file_path.name}: response contains {len(doc_dicts)} documents")
-    results = []
-    for di, d0 in enumerate(doc_dicts):
-        elapsed = (time.time() - start) * 1000
-        seg_fn = (file_path.name if len(doc_dicts) == 1
-                  else f"{file_path.stem}_doc{di+1}{file_path.suffix}")
-        results.append(_process_vision_result(d0, td, seg_fn, default_doc_type,
-                                              elapsed, resp, doc_text, "", di))
-    return results
 
 
 # CBM extraction is a single focused call where accuracy matters more than cost —
@@ -703,161 +650,23 @@ _CBM_MODEL = "gemini-2.5-flash"
 _BARE_CURRENCY = {"$", "£", "€", "₹", "¥"}
 
 
-def _val_str(x):
-    """Stringify an extracted field value (handles {"value": ...} dicts), trimmed."""
-    return str((x.get("value", "") if isinstance(x, dict) else x) or "").strip()
 
 
-def _retry_bare_currency(orchestrator, d0, cell_binding_map, page_images, doc_text, system):
-    """
-    FIX 2 — gemini sometimes returns ONLY a currency symbol (e.g. "$") with no digits
-    for a currency cell. Detect those fields and re-ask Gemini for JUST those cells
-    (same page images, stronger model), then merge the recovered amounts back into
-    d0["extracted_fields"]. Generic — works for any field / document type. Mutates d0
-    in place; returns the number of fields fixed.
-    """
-    ef = d0.get("extracted_fields") if isinstance(d0, dict) else None
-    if not isinstance(ef, dict) or not ef:
-        return 0
-    bare = {ref: info for ref, info in ef.items() if _val_str(info) in _BARE_CURRENCY}
-    if not bare:
-        return 0
-
-    _log("CBM", f"{len(bare)} bare currency symbol(s) detected — retrying those fields")
-    extract_cells = ((cell_binding_map.get("extract_cells") or {})
-                     if isinstance(cell_binding_map, dict) else {})
-    field_lines = []
-    for ref in bare:
-        info = extract_cells.get(ref) or {}
-        label = (info.get("label") if isinstance(info, dict) else "") or ref
-        field_lines.append(f"  {ref} = {label}")
-    retry_prompt = (
-        "Some fields were previously returned with ONLY a currency symbol and no "
-        "digits. Re-read the document and return the COMPLETE numeric amount for each "
-        "of these cells:\n"
-        + "\n".join(field_lines) + "\n\n"
-        "Return ONLY JSON: {\"extracted_fields\": {\"<cell_ref>\": \"<full amount>\"}}\n"
-        "Each value must be the full number (e.g. 320.00, 12179.21) — NEVER just a "
-        "currency symbol. If a value genuinely does not appear, return \"\"."
-    )
-    parsed, _ = _llm_json(orchestrator, retry_prompt, system,
-                          images=page_images, text=doc_text, model=_CBM_MODEL)
-    r0 = _unwrap(parsed) if parsed else {}
-    rfields = r0.get("extracted_fields") if isinstance(r0, dict) else {}
-    if not isinstance(rfields, dict):
-        return 0
-    fixed = 0
-    for ref in bare:
-        newv = _val_str(rfields.get(ref))
-        if newv and newv not in _BARE_CURRENCY:
-            ef[ref] = ({**ef[ref], "value": newv} if isinstance(ef[ref], dict) else newv)
-            fixed += 1
-    if fixed:
-        _log("CBM", f"retry recovered {fixed}/{len(bare)} bare currency field(s)")
-    return fixed
 
 
-def _run_cbm_extraction(orchestrator, file_path, template_data, cell_binding_map,
-                        binding_map, page_images, doc_text, doc_text_pages, file_type,
-                        default_doc_type, start):
-    """
-    STORED cell_binding_map path (Gemini-based template understanding from save time).
-    One template-guided Gemini call whose prompt is built directly from the stored
-    map (exact extract cells + table definitions + static-cell exclusions). Returns
-    extracted_fields + table_rows → _process_vision_result → form/mixed/table writer.
-    No Layer 1/2/3, no re-analysis of the grid.
-    """
-    from app.api.routes.extract import (_build_cbm_prompt, _process_vision_result,
-                                         _get_system_prompt, _fail)
-    n_cells = len(cell_binding_map.get("extract_cells", {}) or {})
-    n_tables = len(cell_binding_map.get("tables", []) or [])
-    _log("FIELD", f"{file_path.name}: stored cell_binding_map "
-                  f"({n_cells} extract cells, {n_tables} tables) — single guided call")
-    system = _get_system_prompt(default_doc_type)
-    prompt = _build_cbm_prompt(cell_binding_map, doc_text)
-    # FIX 1 — pin CBM extraction to the stronger gemini-2.5-flash tier (accuracy).
-    parsed, resp = _llm_json(orchestrator, prompt, system, images=page_images,
-                             text=doc_text, model=_CBM_MODEL)
-    if not parsed:
-        return [_fail(file_path.name, "cell_binding_map extraction failed")]
-    # A5/A7 — process EVERY document in the response, not just documents[0].
-    # A file holding two invoices must produce two result blocks with each
-    # document's own fields and line-item rows.
-    doc_dicts = _unwrap_all(parsed)
-    if len(doc_dicts) > 1:
-        _log("CBM", f"{file_path.name}: response contains {len(doc_dicts)} documents")
-    td = ({**template_data, "binding_map": binding_map}
-          if binding_map else dict(template_data or {}))
-    results = []
-    for di, d0 in enumerate(doc_dicts):
-        # FIX 2 — recover any field that came back as a bare currency symbol.
-        _retry_bare_currency(orchestrator, d0, cell_binding_map, page_images, doc_text, system)
-        elapsed = (time.time() - start) * 1000
-        seg_fn = (file_path.name if len(doc_dicts) == 1
-                  else f"{file_path.stem}_doc{di+1}{file_path.suffix}")
-        result = _process_vision_result(d0, td, seg_fn, default_doc_type,
-                                        elapsed, resp, doc_text, "", di)
-        # The cbm path always returns extracted_fields + table_rows (field/mixed
-        # shape), so EXPORT must use the form/mixed/table writer — never the layout
-        # writer. Force template_type accordingly; compute_binding_map's verdict for
-        # the same grid may say "structural" and wrongly pick the layout writer
-        # (which drops table_rows).
-        try:
-            if isinstance(getattr(result, "extracted_data", None), dict):
-                tables = cell_binding_map.get("tables") or []
-                result.extracted_data["template_type"] = "mixed" if tables else "labeled"
-                result.extracted_data["layout_sections"] = {}
-                # Persist the cbm table definitions + the RAW (column-name keyed)
-                # rows so the export writer can place table data deterministically
-                # by data_start_row + columns.
-                if tables:
-                    result.extracted_data["cbm_tables"] = tables
-                    raw_rows = d0.get("table_rows") if isinstance(d0, dict) else None
-                    if isinstance(raw_rows, list):
-                        result.extracted_data["cbm_table_rows"] = raw_rows
-                        _log("CBM", f"doc {di}: {len(raw_rows)} raw table row(s) persisted")
-        except Exception:
-            pass
-        results.append(result)
-    return results
 
 
-def _collapse_to_single_document(document_map, n_pages):
-    """FIX 6 — merge a multi-document map into ONE document spanning all pages,
-    preserving every section. Used for structural templates (a balance sheet / P&L
-    is always one document even across pages)."""
-    docs = document_map.get("documents", []) or []
-    if len(docs) <= 1:
-        return document_map
-    sections = []
-    for d in docs:
-        sections.extend(d.get("sections", []) or [])
-    merged = {
-        "doc_index": 0,
-        "doc_type": docs[0].get("doc_type", "other"),
-        "pages": list(range(n_pages)) if n_pages else docs[0].get("pages", [0]),
-        "identifier": docs[0].get("identifier", ""),
-        "sections": sections,
-    }
-    document_map = dict(document_map)
-    document_map["documents"] = [merged]
-    document_map["total_documents"] = 1
-    _log("L1", f"structural template — collapsed {len(docs)} documents into ONE "
-               f"({len(sections)} sections, all {n_pages} pages)")
-    return document_map
 
 
 def _run_three_layer(orchestrator, file_path, template_data, binding_map, page_images,
                      doc_text, doc_text_pages, file_type, default_doc_type, start,
-                     primary_mode, single_document=False):
-    """Shared Layer 1 → Layer 2 → Layer 3 pipeline used by layout and unguided paths."""
+                     primary_mode):
+    """Layer 1 → Layer 2 → Layer 3. Reached only by the NO-TEMPLATE path now;
+    Phase 3 replaces it with shape inference feeding the one slot pipeline."""
     from app.api.routes.extract import _fail
     document_map, l1_resp = _understand_document(orchestrator, page_images, doc_text,
                                                  binding_map, file_type)
     file_type = document_map.get("file_type", file_type)
-    # FIX 6 — structural templates are always ONE document; never split.
-    if single_document:
-        document_map = _collapse_to_single_document(document_map, len(page_images))
     per_doc, l2_responses = _run_all_extractions(orchestrator, document_map, page_images,
                                                  doc_text_pages, binding_map, default_doc_type)
     cgs = (binding_map or {}).get("_meta", {}).get("column_groups", []) if binding_map else []
@@ -880,17 +689,6 @@ def _run_three_layer(orchestrator, file_path, template_data, binding_map, page_i
     return results or [_fail(file_path.name, "no documents extracted")]
 
 
-def _run_layout_extraction(orchestrator, file_path, template_data, binding_map,
-                           page_images, doc_text, doc_text_pages, file_type,
-                           default_doc_type, start):
-    """STRUCTURAL template: three-layer → layout_sections. Forced single-document
-    (FIX 6): the whole PDF is ONE document, all page images passed to extraction."""
-    _log("LAYOUT", f"{file_path.name}: structural template — three-layer (L1 -> L2 -> L3), "
-                   f"single-document")
-    return _run_three_layer(orchestrator, file_path, template_data, binding_map,
-                            page_images, doc_text, doc_text_pages, file_type,
-                            default_doc_type, start, primary_mode="layout",
-                            single_document=True)
 
 
 def _run_unguided_extraction(orchestrator, file_path, template_data, binding_map,
@@ -913,16 +711,17 @@ _SLOT_DOC_TYPES = None
 
 def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
     """
-    Single entry point (legacy signature). Returns list[DocumentExtractionResult].
+    Single entry point. Returns list[DocumentExtractionResult].
 
-    THE ROUTING DECISION IS MADE AT THE START, by template type (driven by the
-    binding map), so the right extraction runs from the beginning:
+    Two outcomes, decided at the start:
 
-      binding_map is None (no template)        -> _run_unguided_extraction
-      binding_map.has_table_data is True        -> _run_layout_extraction (3-layer)
-      binding_map.has_table_data is False        -> _run_field_extraction (single call)
+      no template (or a template with no slots) -> _run_unguided_extraction
+      a template with a usable shape            -> slot-directed extraction
+
+    The shape says how many columns the template needs; slot addressing serves
+    any number, so the only way to fail is a template with nowhere to put
+    anything — and that fails loudly, with a message saying what to change.
     """
-    from app.api.routes.extract import compute_binding_map
     from core.preprocessor import preprocess_file
 
     file_path = Path(file_path)
@@ -945,13 +744,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
     _log("ROUTE", f"{file_path.name}: file_type={ftype} pages={len(page_images)} "
                   f"text_len={len(doc_text)}")
 
-    # ── Compute the binding map (only when a template was selected) ──
+    # The binding map is gone with the paths that consumed it: routing is now
+    # arithmetic on the template's stored shape, and slot extraction addresses
+    # cells directly. Kept as None for the no-template path's signature.
     binding_map = None
-    if template_data:
-        try:
-            binding_map = compute_binding_map(template_data, template_data.get("layout", {}))
-        except Exception as e:
-            _log("ROUTE", f"binding map failed ({e})")
 
     ctx = dict(orchestrator=orchestrator, file_path=file_path, template_data=template_data,
                binding_map=binding_map, page_images=page_images, doc_text=doc_text,
@@ -1007,33 +803,5 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
     _log("ROUTE", f"{file_path.name}: needs {decision['required_columns']} column(s) "
                   f"-> {path} path ({decision['reason']})")
 
-    # The router's decision is the single source of truth for BOTH extraction
-    # and export. _process_vision_result persists template_type from the binding
-    # map's _meta, and _write_excel routes the writer off that value — so if the
-    # two disagreed, a document would be extracted by one path and written by
-    # another's writer. Stamp the decision here so they cannot.
-    if isinstance(binding_map, dict):
-        binding_map.setdefault("_meta", {})["template_type"] = decision["template_type"]
-
-    if path == "slot":
-        from slot_extractor import run_slot_extraction
-        return run_slot_extraction(**ctx)
-
-    if path == "layout":
-        # Pure column layout, 2 columns wide. A stored cell_binding_map is
-        # deliberately ignored here (a structural template must never use CBM).
-        return _run_layout_extraction(**ctx)
-
-    # field path — handles a labelled form and an embedded table together.
-    cbm = template_data.get("cell_binding_map")
-    if isinstance(cbm, dict) and (cbm.get("extract_cells") or cbm.get("tables")):
-        _log("ROUTE", f"{file_path.name}: using stored CBM "
-                      f"({len(cbm.get('extract_cells', {}) or {})} cells, "
-                      f"{len(cbm.get('tables', []) or [])} tables)")
-        return _run_cbm_extraction(orchestrator=orchestrator, file_path=file_path,
-                                   template_data=template_data, cell_binding_map=cbm,
-                                   binding_map=binding_map, page_images=page_images,
-                                   doc_text=doc_text, doc_text_pages=doc_text_pages,
-                                   file_type=ftype, default_doc_type=default_doc_type,
-                                   start=start)
-    return _run_field_extraction(**ctx)
+    from slot_extractor import run_slot_extraction
+    return run_slot_extraction(**ctx)

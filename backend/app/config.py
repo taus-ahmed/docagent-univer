@@ -48,10 +48,6 @@ class Settings(BaseSettings):
     RATE_LIMIT_DELAY: float = 2.0
     MAX_RETRIES: int = 3
 
-    # Feature flag: route extraction through the clean engine/extractor.py (v3).
-    # False = legacy inline pipeline in extract.py (safe rollback).
-    USE_NEW_EXTRACTOR: bool = False
-
     # â”€â”€ File Storage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     STORAGE_BACKEND: str = "local"  # local | s3
     LOCAL_UPLOAD_DIR: Path = Path("./storage/uploads")

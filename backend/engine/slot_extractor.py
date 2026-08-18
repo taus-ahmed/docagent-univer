@@ -120,7 +120,7 @@ def build_prompt(slots, page_texts, doc_type=""):
         p.append("")
 
     for t in tables:
-        cols = " | ".join(c["header"] for c in t["columns"])
+        cols = " | ".join(c.get("key") or c["header"] for c in t["columns"])
         p.append(f'TABLE "{t["name"]}" — one object per row present in the document.')
         if t["section"]:
             p.append(f'  section: "{t["section"]}"')
@@ -137,7 +137,8 @@ def build_prompt(slots, page_texts, doc_type=""):
         p.append("  },")
     if tables:
         t0 = tables[0]
-        keys = ", ".join(f'"{c["header"]}": "..."' for c in t0["columns"][:3])
+        keys = ", ".join(f'"{c.get("key") or c["header"]}": "..."'
+                         for c in t0["columns"][:3])
         p.append('  "tables": {')
         p.append(f'    "{t0["name"]}": [')
         p.append(f'      {{"cells": {{{keys}, ...}}, '
@@ -269,7 +270,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 raw = next(iter(resp_tables.values()))  # model renamed the table
             if not isinstance(raw, list):
                 continue
-            headers = [c["header"] for c in t["columns"]]
+            headers = [c.get("key") or c["header"] for c in t["columns"]]
             seen_sources, rows_out = set(), []
             for r in raw:
                 if not isinstance(r, dict):

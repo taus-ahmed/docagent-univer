@@ -65,42 +65,25 @@ def load_labels(only=None) -> list:
 
 
 def build_template_data(label: dict, mode: str, orchestrator=None):
-    """Template grid -> template_data, mirroring the production save+load flow:
-    labeled/mixed templates get a stored cell_binding_map (Gemini-produced at
-    save time); structural templates never do (strict three-path separation)."""
+    """Template grid -> template_data, mirroring the production save+load flow.
+
+    The shape is computed once at save (2a) and read back at load, so the
+    harness measures the stored-shape path rather than a per-run inference the
+    product would never do.
+    """
     import json as _json
-    from app.api.routes.extract import (_parse_template, _understand_template,
-                                        compute_binding_map)
+    from app.api.routes.extract import _parse_template
+    from app.api.routes.templates import _compute_and_store_shape
     from app.models.models import ColumnTemplate
 
     grid = _json.loads((bs.TEMPLATES_DIR / label["template"]).read_text(encoding="utf-8"))
     tpl = ColumnTemplate(name=Path(label["template"]).stem,
                          document_type=label["document_type"],
                          description=_json.dumps(grid), columns_json="[]")
-    # Mirror the production save path: shape is computed once at save (2a) and
-    # read back at load, so the harness measures the stored-shape path, not a
-    # per-run inference the product would never do.
-    from app.api.routes.templates import _compute_and_store_shape
     _compute_and_store_shape(tpl)
     td = _parse_template(tpl)
-
-    bm = compute_binding_map(td, grid)
-    ttype = ((bm or {}).get("_meta", {}) or {}).get("template_type")
-
-    cbm = None
-    if ttype in ("labeled", "mixed"):
-        cbm_path = bs.TEMPLATES_DIR / "cbm" / label["template"]
-        if cbm_path.exists():
-            cbm = _json.loads(cbm_path.read_text(encoding="utf-8"))
-        elif mode != "replay":
-            cbm = _understand_template(grid, orchestrator)
-            if cbm:
-                cbm_path.parent.mkdir(parents=True, exist_ok=True)
-                cbm_path.write_text(_json.dumps(cbm, indent=1, ensure_ascii=False),
-                                    encoding="utf-8")
-    if cbm:
-        td["cell_binding_map"] = cbm
-    return td, grid, ttype
+    shape = (td or {}).get("shape") or {}
+    return td, grid, f"needs {shape.get('required_columns', 0)} columns"
 
 
 def run_pipeline(label: dict, template_data: dict):

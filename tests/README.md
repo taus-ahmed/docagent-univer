@@ -34,8 +34,7 @@ tests/
 
 ```powershell
 # from the repo root, using the backend venv
-backend\.venv\Scripts\python.exe -m pytest            # offline; known_bug tests fail BY DESIGN
-backend\.venv\Scripts\python.exe -m pytest -m "not known_bug"   # green baseline
+backend\.venv\Scripts\python.exe -m pytest            # offline, all green
 
 # accuracy run over all labeled documents (offline, replays cached LLM responses)
 backend\.venv\Scripts\python.exe -m tests.harness.runner --mode replay
@@ -56,17 +55,16 @@ are called out as REGRESSIONS.
 ## What the harness measures
 
 The runner drives the real pipeline in-process (`_extract_with_template`, no
-HTTP, no DB) under **production-parity config**: `USE_NEW_EXTRACTOR=true`,
-`PRIMARY_LLM=gemini`, `GEMINI_MODEL=gemini-2.5-flash-lite` — the audited
-Railway configuration. Each gold document is extracted with a committed
+HTTP, no DB) under **production-parity config**: `PRIMARY_LLM=gemini`,
+`GEMINI_MODEL=gemini-2.5-flash-lite` — the audited Railway configuration.
+(`USE_NEW_EXTRACTOR` was removed in Phase 2d; there is one pipeline now.) Each gold document is extracted with a committed
 template in `tests/gold/templates/` whose requested fields match the gold
 label file, so `missed` means "the engine was asked and returned nothing",
 never "the engine wasn't asked".
 
-If the v4 engine throws and the bare-except fallback silently swaps in the
-legacy engine (audit finding D4), the runner detects the log marker and
-records it per-document — a run that silently measured the wrong engine is
-itself a finding.
+Phase 2d deleted the bare-except fallback that used to swap engines mid-request
+(audit finding D4). The runner still watches for its log marker, so a
+reappearance would be caught rather than absorbed.
 
 ## The old test files: replaced, not repaired
 
