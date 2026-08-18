@@ -79,20 +79,34 @@ def _match_name(pred_name: str, gold_names: list) -> Optional[str]:
             return g
     if not WIDENINGS["W1_fuzzy_names"]:
         return None
-    for g in gold_names:
-        gn = _norm(g)
-        if len(gn) >= 4 and len(pn) >= 4 and (gn in pn or pn in gn):
-            return g
+
+    # A fuzzy match must be UNAMBIGUOUS. Where two gold names fit equally well,
+    # there is no evidence for either, and picking the first one is leniency
+    # dressed as a match — "Total" fit "Total Earnings" and "Total Deductions"
+    # exactly as well, and iteration order decided it. Ambiguity now means no
+    # match, which scores as missed rather than as a coin-flip correct.
+    subs = [g for g in gold_names
+            if len(_norm(g)) >= 4 and len(pn) >= 4
+            and (_norm(g) in pn or pn in _norm(g))]
+    if len(subs) == 1:
+        return subs[0]
+    if len(subs) > 1:
+        return None
+
     pt = _tokens(pred_name)
-    best, best_score = None, 0.0
+    scored = []
     for g in gold_names:
         gt = _tokens(g)
         if not gt or not pt:
             continue
-        score = len(gt & pt) / len(gt | pt)
-        if score > best_score:
-            best, best_score = g, score
-    return best if best_score >= 0.5 else None
+        scored.append((len(gt & pt) / len(gt | pt), g))
+    if not scored:
+        return None
+    best_score = max(s for s, _ in scored)
+    if best_score < 0.5:
+        return None
+    tied = [g for s, g in scored if s == best_score]
+    return tied[0] if len(tied) == 1 else None
 
 
 def _row_labels(rows: list) -> set:

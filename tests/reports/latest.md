@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-18 03:34:13
+# Accuracy report — 2026-08-18 03:36:27
 
-- git: `b399623`  mode: **replay**  repeat: 1
+- git: `c50b2b9`  mode: **record**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -8,7 +8,7 @@
 | metric | value |
 |---|---|
 | **accuracy (correct / gold-valued)** | **97.9%** |
-| **accuracy RAW (all adapter widenings off)** | **44.2%** |
+| **accuracy RAW (all adapter widenings off)** | **49.2%** |
 | **hallucination rate (hallucinated / extracted)** | **0.0%** |
 | **└ invention rate (value found NOWHERE in the PDF)** | **0.0%** |
 | └ misplacement (real content, slot gold leaves empty) | 0.0% |
@@ -42,7 +42,7 @@
 
 | document | type | accuracy | raw | halluc. | invented | route | notes |
 |---|---|---|---|---|---|---|---|
-| BS-2024-Q1 | balance_sheet | 100.0% | 17.4% | 0 | 0 | BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242 |  |
+| BS-2024-Q1 | balance_sheet | 100.0% | 58.7% | 0 | 0 | BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242 |  |
 | CHQ-001847 | cheque | 81.8% | 81.8% | 0 | 0 | CHQ-001847.pdf: file_type=digital_pdf pages=1 text_len=501 |  |
 | EXP-2024-0081 | expense_report | 100.0% | 16.7% | 0 | 0 | EXP-2024-0081.pdf: file_type=digital_pdf pages=1 text_len=11 |  |
 | INV-2024-0031 | sales_invoice | 97.0% | 36.4% | 0 | 0 | INV-2024-0031.pdf: file_type=digital_pdf pages=1 text_len=97 |  |

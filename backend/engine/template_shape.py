@@ -125,13 +125,23 @@ def compute_shape(grid, log=None):
                  f"beneath it — not treated as a repeating band")
             continue
         section = _section_for(m, static, hr)
-        # Name the band after the section that titles it ("Earnings",
-        # "Deductions"). That name is the band's address in the prompt, and a
-        # real name extracts better than "table_2" — the model is being told
-        # which part of the document to read. Falls back to a positional name
-        # only when the template gives the band no title at all.
+        headers_raw = [m[(hr, c)] for c in cols]
+
+        # A TWO-column band is a label/value pair by construction — there is
+        # nothing else two columns can be — so its first column is the label
+        # column and its heading is the band's own identity ("CURRENT ASSETS").
+        # A band of three or more columns has real column headings and no
+        # label column, so its identity has to come from a section title.
+        is_label_value = len(cols) == 2
+
+        # Name the band after the section that titles it ("Earnings"), else —
+        # for a label/value band — after its label column ("CURRENT ASSETS").
+        # A real name is the band's address in the prompt and tells the model
+        # which part of the document to read; "table_2" tells it nothing.
         if section:
             name = section
+        elif is_label_value and headers_raw[0]:
+            name = headers_raw[0]
         elif len(header_candidates) == 1:
             name = "table"
         else:
@@ -141,11 +151,14 @@ def compute_shape(grid, log=None):
         # "Current Assets | Amount | Current Liabilities | Amount" has the same
         # header twice, and two identical keys collapse into one — silently
         # losing half the sheet. Duplicates are disambiguated by column letter.
-        headers = [m[(hr, c)] for c in cols]
+        headers = headers_raw
         columns = []
-        for c, h in zip(cols, headers):
+        for i, (c, h) in enumerate(zip(cols, headers)):
             key = h if headers.count(h) == 1 else f"{h} ({_col_letter(c)})"
-            columns.append({"col": c, "header": h, "key": key})
+            # Say which column holds the row's label rather than leaving it to
+            # be inferred from position downstream.
+            role = "label" if (is_label_value and i == 0) else "value"
+            columns.append({"col": c, "header": h, "key": key, "role": role})
         bands.append({
             "name": name,
             "header_row": hr,

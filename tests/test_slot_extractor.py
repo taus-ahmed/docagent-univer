@@ -128,6 +128,9 @@ BANK_GRID = _grid({
     "2,0": "Date", "2,1": "Amount",     # table header, band = rows 3-5
     "6,0": "Closing Balance", "6,1": "",
 })
+# A two-column band is a label/value pair by construction, so the shape names
+# it after its label column ("Date") rather than positionally.
+BAND = "Date"
 
 
 def _run(payload):
@@ -166,28 +169,28 @@ class TestRun:
         """The phantom-row failure mode: a fabricated row is a second row
         claiming a line another row already used."""
         line = PAGE.splitlines()[2]
-        r = _run({"tables": {"table": [
+        r = _run({"tables": {BAND: [
             {"cells": {"Date": "01/03", "Amount": "$15,000.00"}, "source": line, "page": 1},
             {"cells": {"Date": "01/03", "Amount": "$15,000.00"}, "source": line, "page": 1},
         ]}})
-        rows = r.extracted_data["table_rows"]
+        rows = r.extracted_data[f"{BAND}_rows"]
         assert len(rows) == 1
         assert any("duplicate row dropped" in n
                    for n in r.extracted_data["validation_notes"])
 
     def test_blank_cell_stays_blank_and_is_not_filled_from_a_neighbour(self):
         line = PAGE.splitlines()[2]
-        r = _run({"tables": {"table": [
+        r = _run({"tables": {BAND: [
             {"cells": {"Date": "01/03", "Amount": ""}, "source": line, "page": 1}]}})
-        assert r.extracted_data["table_rows"][0]["Amount"] == ""
+        assert r.extracted_data[f"{BAND}_rows"][0]["Amount"] == ""
 
     def test_two_distinct_rows_both_survive(self):
         lines = PAGE.splitlines()
-        r = _run({"tables": {"table": [
+        r = _run({"tables": {BAND: [
             {"cells": {"Date": "01/03", "Amount": "$15,000.00"}, "source": lines[2], "page": 1},
             {"cells": {"Date": "01/05", "Amount": "$18,450.00"}, "source": lines[3], "page": 1},
         ]}})
-        assert len(r.extracted_data["table_rows"]) == 2
+        assert len(r.extracted_data[f"{BAND}_rows"]) == 2
 
     def test_unparseable_response_fails_the_document_loudly(self):
         r = run_slot_extraction(

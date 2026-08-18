@@ -1,0 +1,227 @@
+{
+ "key": "a6f4c0e80ee14a902982a699626c6d0161a8395bb20c5651be8eb5a8a59b5292",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3679,
+  "captured_at": "2026-08-18 03:36:12",
+  "prompt_preview": "Fill in a balance_sheet spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nBalance Sheet — Q1 2024\nAs of March 31, 2024 | Doc No: BS-2024-Q1\nCURRENT ASSETS\nCash & Cash Equivalents "
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"1,129,003\",\n      \"source\": \"Total Current Assets $1,129,003\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"236,500\",\n      \"source\": \"Total Non-Current Assets $236,500\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"1,365,503\",\n      \"source\": \"TOTAL ASSETS $1,365,503\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"421,200\",\n      \"source\": \"Total Current Liabilities $421,200\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"129,400\",\n      \"source\": \"Total Long-Term Liabilities $129,400\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"550,600\",\n      \"source\": \"TOTAL LIABILITIES $550,600\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"698,104\",\n      \"source\": \"Total Equity $698,104\",\n      \"page\": 2\n    },\n    \"F8\": {\n      \"value\": \"1,248,704\",\n      \"source\": \"TOTAL LIABILITIES & EQUITY $1,248,704\",\n      \"page\": 2\n    }\n  },\n  \"tables\": {\n    \"CURRENT ASSETS\": [\n      {\n        \"cells\": {\n          \"CURRENT ASSETS\": \"Cash & Cash Equivalents\",\n          \"Amount\": \"143,803\"\n        },\n        \"source\": \"Cash & Cash Equivalents $143,803\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT ASSETS\": \"Accounts Receivable (net)\",\n          \"Amount\": \"348,200\"\n        },\n        \"source\": \"Accounts Receivable (net) $348,200\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT ASSETS\": \"Inventory\",\n          \"Amount\": \"612,000\"\n        },\n        \"source\": \"Inventory $612,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT ASSETS\": \"Prepaid Expenses\",\n          \"Amount\": \"16,200\"\n        },\n        \"source\": \"Prepaid Expenses $16,200\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT ASSETS\": \"Other Current Assets\",\n          \"Amount\": \"8,800\"\n        },\n        \"source\": \"Other Current Assets $8,800\",\n        \"page\": 1\n      }\n    ],\n    \"NON-CURRENT ASSETS\": [\n      {\n        \"cells\": {\n          \"NON-CURRENT ASSETS\": \"Property & Equipment (gross)\",\n          \"Amount\": \"240,000\"\n        },\n        \"source\": \"Property & Equipment (gross) $240,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"NON-CURRENT ASSETS\": \"Less: Accum. Depreciation\",\n          \"Amount\": \"108,500\"\n        },\n        \"source\": \"Less: Accum. Depreciation $108,500\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"NON-CURRENT ASSETS\": \"Security Deposits\",\n          \"Amount\": \"85,000\"\n        },\n        \"source\": \"Security Deposits $85,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"NON-CURRENT ASSETS\": \"Intangibles (net)\",\n          \"Amount\": \"20,000\"\n        },\n        \"source\": \"Intangibles (net) $20,000\",\n        \"page\": 1\n      }\n    ],\n    \"CURRENT LIABILITIES\": [\n      {\n        \"cells\": {\n          \"CURRENT LIABILITIES\": \"Accounts Payable\",\n          \"Amount\": \"254,800\"\n        },\n        \"source\": \"Accounts Payable $254,800\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT LIABILITIES\": \"Accrued Liabilities\",\n          \"Amount\": \"44,200\"\n        },\n        \"source\": \"Accrued Liabilities $44,200\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT LIABILITIES\": \"Short-term Loan — First National Bank\",\n          \"Amount\": \"80,000\"\n        },\n        \"source\": \"Short-term Loan — First National Bank $80,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT LIABILITIES\": \"Deferred Revenue\",\n          \"Amount\": \"18,200\"\n        },\n        \"source\": \"Deferred Revenue $18,200\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"CURRENT LIABILITIES\": \"Current Portion of Long-term Debt\",\n          \"Amount\": \"24,000\"\n        },\n        \"source\": \"Current Portion of Long-term Debt $24,000\",\n        \"page\": 1\n      }\n    ],\n    \"LONG-TERM LIABILITIES\": [\n      {\n        \"cells\": {\n          \"LONG-TERM LIABILITIES\": \"Long-term Loan — First National Bank\",\n          \"Amount\": \"121,000\"\n        },\n        \"source\": \"Long-term Loan — First National Bank $121,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"LONG-TERM LIABILITIES\": \"Deferred Tax Liability\",\n          \"Amount\": \"8,400\"\n        },\n        \"source\": \"Deferred Tax Liability $8,400\",\n        \"page\": 1\n      }\n    ],\n    \"SHAREHOLDERS' EQUITY\": [\n      {\n        \"cells\": {\n          \"SHAREHOLDERS' EQUITY\": \"Common Stock (100 shares @ $1,000 par)\",\n          \"Amount\": \"100,000\"\n        },\n        \"source\": \"Common Stock (100 shares @ $1,000 par) $100,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"SHAREHOLDERS' EQUITY\": \"Retained Earnings\",\n          \"Amount\": \"550,751\"\n        },\n        \"source\": \"Retained Earnings $550,751\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"SHAREHOLDERS' EQUITY\": \"Net Income YTD Q1\",\n          \"Amount\": \"47,353\"\n        },\n        \"source\": \"Net Income YTD Q1 $47,353\",\n        \"page\": 2\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "1,129,003",
+     "source": "Total Current Assets $1,129,003",
+     "page": 1
+    },
+    "F2": {
+     "value": "236,500",
+     "source": "Total Non-Current Assets $236,500",
+     "page": 1
+    },
+    "F3": {
+     "value": "1,365,503",
+     "source": "TOTAL ASSETS $1,365,503",
+     "page": 1
+    },
+    "F4": {
+     "value": "421,200",
+     "source": "Total Current Liabilities $421,200",
+     "page": 1
+    },
+    "F5": {
+     "value": "129,400",
+     "source": "Total Long-Term Liabilities $129,400",
+     "page": 1
+    },
+    "F6": {
+     "value": "550,600",
+     "source": "TOTAL LIABILITIES $550,600",
+     "page": 1
+    },
+    "F7": {
+     "value": "698,104",
+     "source": "Total Equity $698,104",
+     "page": 2
+    },
+    "F8": {
+     "value": "1,248,704",
+     "source": "TOTAL LIABILITIES & EQUITY $1,248,704",
+     "page": 2
+    }
+   },
+   "tables": {
+    "CURRENT ASSETS": [
+     {
+      "cells": {
+       "CURRENT ASSETS": "Cash & Cash Equivalents",
+       "Amount": "143,803"
+      },
+      "source": "Cash & Cash Equivalents $143,803",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Accounts Receivable (net)",
+       "Amount": "348,200"
+      },
+      "source": "Accounts Receivable (net) $348,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Inventory",
+       "Amount": "612,000"
+      },
+      "source": "Inventory $612,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Prepaid Expenses",
+       "Amount": "16,200"
+      },
+      "source": "Prepaid Expenses $16,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Other Current Assets",
+       "Amount": "8,800"
+      },
+      "source": "Other Current Assets $8,800",
+      "page": 1
+     }
+    ],
+    "NON-CURRENT ASSETS": [
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Property & Equipment (gross)",
+       "Amount": "240,000"
+      },
+      "source": "Property & Equipment (gross) $240,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Less: Accum. Depreciation",
+       "Amount": "108,500"
+      },
+      "source": "Less: Accum. Depreciation $108,500",
+      "page": 1
+     },
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Security Deposits",
+       "Amount": "85,000"
+      },
+      "source": "Security Deposits $85,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Intangibles (net)",
+       "Amount": "20,000"
+      },
+      "source": "Intangibles (net) $20,000",
+      "page": 1
+     }
+    ],
+    "CURRENT LIABILITIES": [
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Accounts Payable",
+       "Amount": "254,800"
+      },
+      "source": "Accounts Payable $254,800",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Accrued Liabilities",
+       "Amount": "44,200"
+      },
+      "source": "Accrued Liabilities $44,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Short-term Loan — First National Bank",
+       "Amount": "80,000"
+      },
+      "source": "Short-term Loan — First National Bank $80,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Deferred Revenue",
+       "Amount": "18,200"
+      },
+      "source": "Deferred Revenue $18,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Current Portion of Long-term Debt",
+       "Amount": "24,000"
+      },
+      "source": "Current Portion of Long-term Debt $24,000",
+      "page": 1
+     }
+    ],
+    "LONG-TERM LIABILITIES": [
+     {
+      "cells": {
+       "LONG-TERM LIABILITIES": "Long-term Loan — First National Bank",
+       "Amount": "121,000"
+      },
+      "source": "Long-term Loan — First National Bank $121,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "LONG-TERM LIABILITIES": "Deferred Tax Liability",
+       "Amount": "8,400"
+      },
+      "source": "Deferred Tax Liability $8,400",
+      "page": 1
+     }
+    ],
+    "SHAREHOLDERS' EQUITY": [
+     {
+      "cells": {
+       "SHAREHOLDERS' EQUITY": "Common Stock (100 shares @ $1,000 par)",
+       "Amount": "100,000"
+      },
+      "source": "Common Stock (100 shares @ $1,000 par) $100,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "SHAREHOLDERS' EQUITY": "Retained Earnings",
+       "Amount": "550,751"
+      },
+      "source": "Retained Earnings $550,751",
+      "page": 2
+     },
+     {
+      "cells": {
+       "SHAREHOLDERS' EQUITY": "Net Income YTD Q1",
+       "Amount": "47,353"
+      },
+      "source": "Net Income YTD Q1 $47,353",
+      "page": 2
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3679,
+  "success": true,
+  "error": ""
+ }
+}

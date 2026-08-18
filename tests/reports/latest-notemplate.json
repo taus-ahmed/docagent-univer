@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-18 03:34:33",
- "git_commit": "b399623",
+ "run_id": "2026-08-18 03:39:13",
+ "git_commit": "c50b2b9",
  "config": {
-  "mode": "replay",
+  "mode": "record",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -80,7 +80,10 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [],
+   "adapter_notes": [
+    "table 'Assets' identified as gold table 'current_assets' by row content (the template names no bands)",
+    "table 'Liabilities' identified as gold table 'current_liabilities' by row content (the template names no bands)"
+   ],
    "adapted": {
     "fields": {
      "Company Name": "Nexus Global Trading LLC",
@@ -2648,7 +2651,7 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Employee Name": "Marcus A. Thompson",
+     "Employee": "Marcus A. Thompson",
      "Employee ID": "EMP-0012",
      "Department": "Procurement",
      "Manager": "Janet Wu",
@@ -2730,9 +2733,9 @@
     "document_type": "expense_report",
     "fields": {
      "Employee Name": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Marcus A. Thompson",
-      "actual": "Marcus A. Thompson",
+      "actual": null,
       "type": "string"
      },
      "Employee ID": {
@@ -2782,6 +2785,13 @@
       "expected": 1727.25,
       "actual": "$1,727.25",
       "type": "money"
+     },
+     "Employee": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Marcus A. Thompson",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {
@@ -3206,12 +3216,13 @@
      }
     },
     "counts": {
-     "correct": 53,
-     "missed": 1
+     "missed": 2,
+     "correct": 52,
+     "hallucinated": 1
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9814814814814815,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.9629629629629629,
+    "hallucination_rate": 0.018867924528301886,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -3758,9 +3769,9 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Invoice Number": "INV-2024-0031",
-     "Invoice Date": "January 15, 2024",
-     "Due Date": "February 14, 2024",
+     "Invoice": "INV-2024-0031",
+     "Date": "January 15, 2024",
+     "Due": "February 14, 2024",
      "PO Reference": "PO-2024-0018",
      "Payment Terms": "Net 30",
      "Subtotal": "$10,892.50",
@@ -3806,21 +3817,21 @@
     "document_type": "sales_invoice",
     "fields": {
      "Invoice Number": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "INV-2024-0031",
-      "actual": "INV-2024-0031",
+      "actual": null,
       "type": "string"
      },
      "Invoice Date": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "2024-01-15",
-      "actual": "January 15, 2024",
+      "actual": null,
       "type": "date"
      },
      "Due Date": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "2024-02-14",
-      "actual": "February 14, 2024",
+      "actual": null,
       "type": "date"
      },
      "Bill To Company": {
@@ -3882,6 +3893,27 @@
       "expected": 12179.21,
       "actual": "$12,179.21",
       "type": "money"
+     },
+     "Invoice": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "INV-2024-0031",
+      "type": "string",
+      "grounded": true
+     },
+     "Date": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "January 15, 2024",
+      "type": "string",
+      "grounded": true
+     },
+     "Due": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "February 14, 2024",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {
@@ -4081,12 +4113,13 @@
      }
     },
     "counts": {
-     "correct": 29,
-     "missed": 4
+     "missed": 7,
+     "correct": 26,
+     "hallucinated": 3
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8787878787878788,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.7878787878787878,
+    "hallucination_rate": 0.10344827586206896,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -4468,8 +4501,8 @@
    "adapted": {
     "fields": {
      "Invoice Number": "INV-2024-0047",
-     "Invoice Date": "February 3, 2024",
-     "Due Date": "March 4, 2024",
+     "Date": "February 3, 2024",
+     "Due": "March 4, 2024",
      "PO Reference": "PO-2024-0029",
      "Payment Terms": "Net 30",
      "Subtotal": "$15,549.00",
@@ -4528,15 +4561,15 @@
       "type": "string"
      },
      "Invoice Date": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "2024-02-03",
-      "actual": "February 3, 2024",
+      "actual": null,
       "type": "date"
      },
      "Due Date": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "2024-03-04",
-      "actual": "March 4, 2024",
+      "actual": null,
       "type": "date"
      },
      "Bill To Company": {
@@ -4598,6 +4631,20 @@
       "expected": 17411.79,
       "actual": "$17,411.79",
       "type": "money"
+     },
+     "Date": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "February 3, 2024",
+      "type": "string",
+      "grounded": true
+     },
+     "Due": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "March 4, 2024",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {
@@ -4842,12 +4889,13 @@
      }
     },
     "counts": {
-     "correct": 34,
-     "missed": 4
+     "correct": 32,
+     "missed": 6,
+     "hallucinated": 2
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8947368421052632,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.8421052631578947,
+    "hallucination_rate": 0.058823529411764705,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -6397,14 +6445,14 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Employee Name": "Janet L. Wu",
+     "Employee": "Janet L. Wu",
      "Employee ID": "EMP-0007",
      "Title / Dept": "VP Operations – Executive",
      "SSN": "***-**-3317",
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
      "Annual Salary": "$145,000.00",
-     "Total Earnings": "$7,070.30",
+     "Total": "$7,070.30",
      "Net Pay": "$7,513.0 3",
      "YTD Gross Earnings": "$58,333.33",
      "YTD Taxes Withheld": "$22,716.00"
@@ -6479,9 +6527,9 @@
       "type": "string"
      },
      "Employee Name": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Janet L. Wu",
-      "actual": "Janet L. Wu",
+      "actual": null,
       "type": "string"
      },
      "Employee ID": {
@@ -6521,9 +6569,9 @@
       "type": "money"
      },
      "Total Earnings": {
-      "outcome": "wrong",
+      "outcome": "missed",
       "expected": 14583.33,
-      "actual": "$7,070.30",
+      "actual": null,
       "type": "money"
      },
      "Total Deductions": {
@@ -6550,10 +6598,24 @@
       "actual": "$22,716.00",
       "type": "money"
      },
+     "Employee": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Janet L. Wu",
+      "type": "string",
+      "grounded": true
+     },
      "Title / Dept": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "VP Operations – Executive",
+      "type": "string",
+      "grounded": true
+     },
+     "Total": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$7,070.30",
       "type": "string",
       "grounded": true
      }
@@ -6833,14 +6895,13 @@
      }
     },
     "counts": {
-     "missed": 3,
-     "correct": 33,
-     "wrong": 1,
-     "hallucinated": 3
+     "missed": 5,
+     "correct": 32,
+     "hallucinated": 5
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8918918918918919,
-    "hallucination_rate": 0.08108108108108109,
+    "accuracy": 0.8648648648648649,
+    "hallucination_rate": 0.13513513513513514,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -10641,17 +10702,16 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 340,
-    "hallucinated": 41,
-    "missed": 37,
-    "wrong": 1,
+    "correct": 333,
+    "hallucinated": 49,
+    "missed": 45,
     "empty_ok": 12
    },
    "gold_valued": 378,
-   "accuracy": 0.8994708994708994,
+   "accuracy": 0.8809523809523809,
    "near_rate": 0.0,
-   "hallucinated": 41,
-   "hallucination_rate": 0.10732984293193717,
+   "hallucinated": 49,
+   "hallucination_rate": 0.12827225130890052,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0
   },
@@ -10699,14 +10759,15 @@
    },
    "expense_report": {
     "counts": {
-     "correct": 53,
-     "missed": 1
+     "missed": 2,
+     "correct": 52,
+     "hallucinated": 1
     },
     "gold_valued": 54,
-    "accuracy": 0.9814814814814815,
+    "accuracy": 0.9629629629629629,
     "near_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 1,
+    "hallucination_rate": 0.018867924528301886,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -10725,16 +10786,15 @@
    },
    "payslip": {
     "counts": {
-     "missed": 5,
-     "correct": 64,
-     "wrong": 1,
-     "hallucinated": 11
+     "missed": 7,
+     "correct": 63,
+     "hallucinated": 13
     },
     "gold_valued": 70,
-    "accuracy": 0.9142857142857143,
+    "accuracy": 0.9,
     "near_rate": 0.0,
-    "hallucinated": 11,
-    "hallucination_rate": 0.14473684210526316,
+    "hallucinated": 13,
+    "hallucination_rate": 0.17105263157894737,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -10753,14 +10813,15 @@
    },
    "sales_invoice": {
     "counts": {
-     "correct": 63,
-     "missed": 8
+     "missed": 13,
+     "correct": 58,
+     "hallucinated": 5
     },
     "gold_valued": 71,
-    "accuracy": 0.8873239436619719,
+    "accuracy": 0.8169014084507042,
     "near_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 5,
+    "hallucination_rate": 0.07936507936507936,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    }
@@ -10768,10 +10829,11 @@
   "by_field_type": {
    "date": {
     "counts": {
-     "correct": 30
+     "correct": 26,
+     "missed": 4
     },
     "gold_valued": 30,
-    "accuracy": 1.0,
+    "accuracy": 0.8666666666666667,
     "near_rate": 0.0,
     "hallucinated": 0,
     "hallucination_rate": 0.0,
@@ -10782,15 +10844,14 @@
     "counts": {
      "correct": 152,
      "hallucinated": 9,
-     "missed": 8,
-     "wrong": 1,
+     "missed": 9,
      "empty_ok": 12
     },
     "gold_valued": 161,
     "accuracy": 0.9440993788819876,
     "near_rate": 0.0,
     "hallucinated": 9,
-    "hallucination_rate": 0.05555555555555555,
+    "hallucination_rate": 0.055900621118012424,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -10808,15 +10869,15 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 32,
-     "correct": 146,
-     "missed": 29
+     "hallucinated": 40,
+     "correct": 143,
+     "missed": 32
     },
     "gold_valued": 175,
-    "accuracy": 0.8342857142857143,
+    "accuracy": 0.8171428571428572,
     "near_rate": 0.0,
-    "hallucinated": 32,
-    "hallucination_rate": 0.1797752808988764,
+    "hallucinated": 40,
+    "hallucination_rate": 0.2185792349726776,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    }
@@ -11012,6 +11073,5 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-18 02:48:16"
+ "diff": []
 }
