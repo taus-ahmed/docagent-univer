@@ -354,6 +354,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         "needs_review": needs_review,
         "template_type": "slot",
         "template_regions": {"primary_mode": "slot"},
+        # Phase 3 — when the template was inferred rather than chosen, the grid
+        # travels with the result so export can write a proper sheet for it and
+        # the UI can offer "save this as a template".
+        "inferred_template": (template_data or {}).get("inferred"),
+        "inferred_grid": ((template_data or {}).get("layout")
+                          if (template_data or {}).get("inferred") else None),
+        "shape_signature": (template_data or {}).get("shape_signature"),
         "raw_llm_responses": [getattr(resp, "raw_text", "")] if resp else [],
     }
     for name, rows in tables_out.items():

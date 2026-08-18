@@ -1,0 +1,49 @@
+{
+ "key": "bb4f2aed847c144a8df968e7c8ad4fd4a3f30fd90c463a3fe34434be1e25dde7",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1400,
+  "captured_at": "2026-08-18 02:40:54",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC INVOICE\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nBill To: Invoice: INV-2024-0047\nPinnacle Electronics Corp. Date: February 3, 2024\n3800"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"sales_invoice\",\n  \"title\": \"Invoice\",\n  \"fields\": [\n    \"Invoice Number\",\n    \"Date\",\n    \"Due\",\n    \"PO Ref\",\n    \"Terms\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Line Items\",\n      \"columns\": [\n        \"Description\",\n        \"Qty\",\n        \"Unit\",\n        \"Unit Price\",\n        \"Amount\"\n      ],\n      \"row_count\": 5\n    }\n  ],\n  \"totals\": [\n    \"Subtotal\",\n    \"Shipping & Handling\",\n    \"Sales Tax (8.25%)\",\n    \"TOTAL DUE\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "sales_invoice",
+   "title": "Invoice",
+   "fields": [
+    "Invoice Number",
+    "Date",
+    "Due",
+    "PO Ref",
+    "Terms"
+   ],
+   "tables": [
+    {
+     "name": "Line Items",
+     "columns": [
+      "Description",
+      "Qty",
+      "Unit",
+      "Unit Price",
+      "Amount"
+     ],
+     "row_count": 5
+    }
+   ],
+   "totals": [
+    "Subtotal",
+    "Shipping & Handling",
+    "Sales Tax (8.25%)",
+    "TOTAL DUE"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1400,
+  "success": true,
+  "error": ""
+ }
+}

@@ -1,0 +1,70 @@
+{
+ "key": "4503761778ab15afdcb1bf63cd2361a65e92222c66d8583ad5ab409de6ffc9f1",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1790,
+  "captured_at": "2026-08-18 02:40:24",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nBalance Sheet — Q1 2024\nAs of March 31, 2024 | Doc No: BS-2024-Q1\nCURRENT ASSETS\nCash & Cash Equivalents $143"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"balance_sheet\",\n  \"title\": \"Balance Sheet\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company EIN\",\n    \"Period\",\n    \"As of Date\",\n    \"Document Number\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Assets\",\n      \"columns\": [\n        \"Asset Type\",\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 10\n    },\n    {\n      \"name\": \"Liabilities\",\n      \"columns\": [\n        \"Liability Type\",\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 8\n    },\n    {\n      \"name\": \"Equity\",\n      \"columns\": [\n        \"Equity Type\",\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 3\n    }\n  ],\n  \"totals\": [\n    \"Total Current Assets\",\n    \"Total Non-Current Assets\",\n    \"Total Assets\",\n    \"Total Current Liabilities\",\n    \"Total Long-Term Liabilities\",\n    \"Total Liabilities\",\n    \"Total Equity\",\n    \"TOTAL LIABILITIES & EQUITY\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "balance_sheet",
+   "title": "Balance Sheet",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company EIN",
+    "Period",
+    "As of Date",
+    "Document Number"
+   ],
+   "tables": [
+    {
+     "name": "Assets",
+     "columns": [
+      "Asset Type",
+      "Description",
+      "Amount"
+     ],
+     "row_count": 10
+    },
+    {
+     "name": "Liabilities",
+     "columns": [
+      "Liability Type",
+      "Description",
+      "Amount"
+     ],
+     "row_count": 8
+    },
+    {
+     "name": "Equity",
+     "columns": [
+      "Equity Type",
+      "Description",
+      "Amount"
+     ],
+     "row_count": 3
+    }
+   ],
+   "totals": [
+    "Total Current Assets",
+    "Total Non-Current Assets",
+    "Total Assets",
+    "Total Current Liabilities",
+    "Total Long-Term Liabilities",
+    "Total Liabilities",
+    "Total Equity",
+    "TOTAL LIABILITIES & EQUITY"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1790,
+  "success": true,
+  "error": ""
+ }
+}

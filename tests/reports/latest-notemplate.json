@@ -1,17 +1,17 @@
 {
- "run_id": "2026-08-18 02:47:57",
+ "run_id": "2026-08-18 02:48:16",
  "git_commit": "2533afc",
  "config": {
   "mode": "replay",
   "repeat": 1,
-  "no_template": false,
+  "no_template": true,
   "env": {
    "PRIMARY_LLM": "gemini",
    "GEMINI_MODEL": "gemini-2.5-flash-lite"
   }
  },
  "cache_stats": {
-  "hits": 10,
+  "hits": 20,
   "recorded": 0,
   "live": 0,
   "misses": 0
@@ -19,9 +19,59 @@
  "documents": {
   "BS-2024-Q1": {
    "document_type": "balance_sheet",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "balance_sheet",
+    "title": "Balance Sheet",
+    "fields": [
+     "Company Name",
+     "Company Address",
+     "Company EIN",
+     "Period",
+     "As of Date",
+     "Document Number"
+    ],
+    "tables": [
+     {
+      "name": "Assets",
+      "columns": [
+       "Asset Type",
+       "Description",
+       "Amount"
+      ],
+      "row_count": 10
+     },
+     {
+      "name": "Liabilities",
+      "columns": [
+       "Liability Type",
+       "Description",
+       "Amount"
+      ],
+      "row_count": 8
+     },
+     {
+      "name": "Equity",
+      "columns": [
+       "Equity Type",
+       "Description",
+       "Amount"
+      ],
+      "row_count": 3
+     }
+    ],
+    "totals": [
+     "Total Current Assets",
+     "Total Non-Current Assets",
+     "Total Assets",
+     "Total Current Liabilities",
+     "Total Long-Term Liabilities",
+     "Total Liabilities",
+     "Total Equity",
+     "TOTAL LIABILITIES & EQUITY"
+    ]
+   },
    "template": "balance_sheet.json",
-   "template_type": "needs 2 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -30,108 +80,148 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [
-    "table 'table_1' identified as gold table 'current_assets' by row content (the template names no bands)",
-    "table 'table_2' identified as gold table 'non_current_assets' by row content (the template names no bands)",
-    "table 'table_3' identified as gold table 'current_liabilities' by row content (the template names no bands)",
-    "table 'table_4' identified as gold table 'long_term_liabilities' by row content (the template names no bands)",
-    "table 'table_5' identified as gold table 'shareholders_equity' by row content (the template names no bands)"
-   ],
+   "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Total Current Assets": "1,129,003",
-     "Total Non-Current Assets": "236,500",
-     "TOTAL ASSETS": "1,365,503",
-     "Total Current Liabilities": "421,200",
-     "Total Long-Term Liabilities": "129,400",
-     "TOTAL LIABILITIES": "550,600",
-     "Total Equity": "698,104",
-     "TOTAL LIABILITIES & EQUITY": "1,248,704"
+     "Company Name": "Nexus Global Trading LLC",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company EIN": "47-3821654",
+     "Period": "Q1 2024",
+     "As of Date": "March 31, 2024",
+     "Document Number": "BS-2024-Q1",
+     "Total Current Assets": "$1,129,003",
+     "Total Non-Current Assets": "$236,500",
+     "TOTAL ASSETS": "$1,365,503",
+     "Total Current Liabilities": "$421,200",
+     "Total Long-Term Liabilities": "$129,400",
+     "TOTAL LIABILITIES": "$550,600",
+     "Total Equity": "$698,104",
+     "TOTAL LIABILITIES & EQUITY": "$1,248,704"
     },
     "tables": {
      "current_assets": [
       {
+       "Label": "CURRENT ASSETS",
+       "Description": "",
+       "Amount": ""
+      },
+      {
        "Label": "Cash & Cash Equivalents",
+       "Description": "",
        "Amount": "$143,803"
       },
       {
        "Label": "Accounts Receivable (net)",
+       "Description": "",
        "Amount": "$348,200"
       },
       {
        "Label": "Inventory",
+       "Description": "",
        "Amount": "$612,000"
       },
       {
        "Label": "Prepaid Expenses",
+       "Description": "",
        "Amount": "$16,200"
       },
       {
        "Label": "Other Current Assets",
+       "Description": "",
        "Amount": "$8,800"
-      }
-     ],
-     "non_current_assets": [
+      },
+      {
+       "Label": "NON-CURRENT ASSETS",
+       "Description": "",
+       "Amount": ""
+      },
       {
        "Label": "Property & Equipment (gross)",
+       "Description": "",
        "Amount": "$240,000"
       },
       {
        "Label": "Less: Accum. Depreciation",
+       "Description": "",
        "Amount": "$108,500"
       },
       {
        "Label": "Security Deposits",
+       "Description": "",
        "Amount": "$85,000"
       },
       {
        "Label": "Intangibles (net)",
+       "Description": "",
        "Amount": "$20,000"
       }
      ],
      "current_liabilities": [
       {
+       "Label": "CURRENT LIABILITIES",
+       "Description": "",
+       "Amount": ""
+      },
+      {
        "Label": "Accounts Payable",
+       "Description": "",
        "Amount": "$254,800"
       },
       {
        "Label": "Accrued Liabilities",
+       "Description": "",
        "Amount": "$44,200"
       },
       {
        "Label": "Short-term Loan — First National Bank",
+       "Description": "",
        "Amount": "$80,000"
       },
       {
        "Label": "Deferred Revenue",
+       "Description": "",
        "Amount": "$18,200"
       },
       {
        "Label": "Current Portion of Long-term Debt",
+       "Description": "",
        "Amount": "$24,000"
-      }
-     ],
-     "long_term_liabilities": [
+      },
+      {
+       "Label": "LONG-TERM LIABILITIES",
+       "Description": "",
+       "Amount": ""
+      },
       {
        "Label": "Long-term Loan — First National Bank",
+       "Description": "",
        "Amount": "$121,000"
       },
       {
        "Label": "Deferred Tax Liability",
+       "Description": "",
        "Amount": "$8,400"
       }
      ],
      "shareholders_equity": [
       {
+       "Label": "SHAREHOLDERS' EQUITY",
+       "Description": "",
+       "Amount": ""
+      },
+      {
        "Label": "Common Stock (100 shares @ $1,000 par)",
+       "Description": "",
        "Amount": "$100,000"
       },
       {
        "Label": "Retained Earnings",
+       "Description": "",
        "Amount": "$550,751"
       },
       {
        "Label": "Net Income YTD Q1",
+       "Description": "",
        "Amount": "$47,353"
       }
      ]
@@ -144,68 +234,159 @@
      "Total Current Assets": {
       "outcome": "correct",
       "expected": 1129003,
-      "actual": "1,129,003",
+      "actual": "$1,129,003",
       "type": "money"
      },
      "Total Non-Current Assets": {
       "outcome": "correct",
       "expected": 236500,
-      "actual": "236,500",
+      "actual": "$236,500",
       "type": "money"
      },
      "TOTAL ASSETS": {
       "outcome": "correct",
       "expected": 1365503,
-      "actual": "1,365,503",
+      "actual": "$1,365,503",
       "type": "money"
      },
      "Total Current Liabilities": {
       "outcome": "correct",
       "expected": 421200,
-      "actual": "421,200",
+      "actual": "$421,200",
       "type": "money"
      },
      "Total Long-Term Liabilities": {
       "outcome": "correct",
       "expected": 129400,
-      "actual": "129,400",
+      "actual": "$129,400",
       "type": "money"
      },
      "TOTAL LIABILITIES": {
       "outcome": "correct",
       "expected": 550600,
-      "actual": "550,600",
+      "actual": "$550,600",
       "type": "money"
      },
      "Total Equity": {
       "outcome": "correct",
       "expected": 698104,
-      "actual": "698,104",
+      "actual": "$698,104",
       "type": "money"
      },
      "TOTAL LIABILITIES & EQUITY": {
       "outcome": "correct",
       "expected": 1248704,
-      "actual": "1,248,704",
+      "actual": "$1,248,704",
       "type": "money"
+     },
+     "Company Name": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Nexus Global Trading LLC",
+      "type": "string",
+      "grounded": true
+     },
+     "Company Address": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
+      "type": "string",
+      "grounded": true
+     },
+     "Company EIN": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "47-3821654",
+      "type": "string",
+      "grounded": true
+     },
+     "Period": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Q1 2024",
+      "type": "string",
+      "grounded": true
+     },
+     "As of Date": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "March 31, 2024",
+      "type": "string",
+      "grounded": true
+     },
+     "Document Number": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "BS-2024-Q1",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {
      "current_assets": {
       "table": "current_assets",
       "gold_row_count": 5,
-      "pred_row_count": 5,
-      "row_count_mismatch": 0,
+      "pred_row_count": 11,
+      "row_count_mismatch": 6,
       "matched_rows": 5,
-      "row_precision": 1.0,
+      "row_precision": 0.45454545454545453,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "CURRENT ASSETS",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 6,
+        "pred": {
+         "Label": "NON-CURRENT ASSETS",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 7,
+        "pred": {
+         "Label": "Property & Equipment (gross)",
+         "Description": "",
+         "Amount": "$240,000"
+        }
+       },
+       {
+        "pred_row": 8,
+        "pred": {
+         "Label": "Less: Accum. Depreciation",
+         "Description": "",
+         "Amount": "$108,500"
+        }
+       },
+       {
+        "pred_row": 9,
+        "pred": {
+         "Label": "Security Deposits",
+         "Description": "",
+         "Amount": "$85,000"
+        }
+       },
+       {
+        "pred_row": 10,
+        "pred": {
+         "Label": "Intangibles (net)",
+         "Description": "",
+         "Amount": "$20,000"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": 1,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -214,7 +395,7 @@
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": 1,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -223,7 +404,7 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": 2,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -232,7 +413,7 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": 2,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -241,7 +422,7 @@
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": 3,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -250,7 +431,7 @@
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": 3,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -259,7 +440,7 @@
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": 4,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -268,7 +449,7 @@
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": 4,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -277,7 +458,7 @@
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": 5,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -286,116 +467,278 @@
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": 5,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
         "expected": 8800,
         "actual": "$8,800"
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "CURRENT ASSETS",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "NON-CURRENT ASSETS",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Property & Equipment (gross)",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$240,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Less: Accum. Depreciation",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$108,500",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 9,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Security Deposits",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 9,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$85,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 10,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Intangibles (net)",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 10,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$20,000",
+        "grounded": true
        }
       ]
      },
      "non_current_assets": {
       "table": "non_current_assets",
       "gold_row_count": 4,
-      "pred_row_count": 4,
-      "row_count_mismatch": 0,
-      "matched_rows": 4,
-      "row_precision": 1.0,
-      "row_recall": 1.0,
-      "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "pred_row_count": 0,
+      "row_count_mismatch": -4,
+      "matched_rows": 0,
+      "row_precision": null,
+      "row_recall": 0.0,
+      "cell_accuracy": null,
+      "missed_rows": [
+       {
+        "row": 0,
+        "gold": {
+         "Label": "Property & Equipment (gross)",
+         "Amount": 240000
+        }
+       },
+       {
+        "row": 1,
+        "gold": {
+         "Label": "Less: Accum. Depreciation",
+         "Amount": 108500
+        }
+       },
+       {
+        "row": 2,
+        "gold": {
+         "Label": "Security Deposits",
+         "Amount": 85000
+        }
+       },
+       {
+        "row": 3,
+        "gold": {
+         "Label": "Intangibles (net)",
+         "Amount": 20000
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Property & Equipment (gross)",
-        "actual": "Property & Equipment (gross)"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 240000,
-        "actual": "$240,000"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Less: Accum. Depreciation",
-        "actual": "Less: Accum. Depreciation"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 108500,
-        "actual": "$108,500"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Security Deposits",
-        "actual": "Security Deposits"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 85000,
-        "actual": "$85,000"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Intangibles (net)",
-        "actual": "Intangibles (net)"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 20000,
-        "actual": "$20,000"
+        "actual": null
        }
       ]
      },
      "current_liabilities": {
       "table": "current_liabilities",
       "gold_row_count": 5,
-      "pred_row_count": 5,
-      "row_count_mismatch": 0,
+      "pred_row_count": 9,
+      "row_count_mismatch": 4,
       "matched_rows": 5,
-      "row_precision": 1.0,
+      "row_precision": 0.5555555555555556,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "CURRENT LIABILITIES",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 6,
+        "pred": {
+         "Label": "LONG-TERM LIABILITIES",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 7,
+        "pred": {
+         "Label": "Long-term Loan — First National Bank",
+         "Description": "",
+         "Amount": "$121,000"
+        }
+       },
+       {
+        "pred_row": 8,
+        "pred": {
+         "Label": "Deferred Tax Liability",
+         "Description": "",
+         "Amount": "$8,400"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": 1,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -404,7 +747,7 @@
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": 1,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -413,7 +756,7 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": 2,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -422,7 +765,7 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": 2,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -431,7 +774,7 @@
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": 3,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -440,7 +783,7 @@
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": 3,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -449,7 +792,7 @@
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": 4,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -458,7 +801,7 @@
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": 4,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -467,7 +810,7 @@
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": 5,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -476,80 +819,164 @@
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": 5,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
         "expected": 24000,
         "actual": "$24,000"
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "CURRENT LIABILITIES",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "LONG-TERM LIABILITIES",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Long-term Loan — First National Bank",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$121,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Deferred Tax Liability",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$8,400",
+        "grounded": true
        }
       ]
      },
      "long_term_liabilities": {
       "table": "long_term_liabilities",
       "gold_row_count": 2,
-      "pred_row_count": 2,
-      "row_count_mismatch": 0,
-      "matched_rows": 2,
-      "row_precision": 1.0,
-      "row_recall": 1.0,
-      "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "pred_row_count": 0,
+      "row_count_mismatch": -2,
+      "matched_rows": 0,
+      "row_precision": null,
+      "row_recall": 0.0,
+      "cell_accuracy": null,
+      "missed_rows": [
+       {
+        "row": 0,
+        "gold": {
+         "Label": "Long-term Loan – First National Bank",
+         "Amount": 121000
+        }
+       },
+       {
+        "row": 1,
+        "gold": {
+         "Label": "Deferred Tax Liability",
+         "Amount": 8400
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Long-term Loan – First National Bank",
-        "actual": "Long-term Loan — First National Bank"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 121000,
-        "actual": "$121,000"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Deferred Tax Liability",
-        "actual": "Deferred Tax Liability"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 8400,
-        "actual": "$8,400"
+        "actual": null
        }
       ]
      },
      "shareholders_equity": {
       "table": "shareholders_equity",
       "gold_row_count": 3,
-      "pred_row_count": 3,
-      "row_count_mismatch": 0,
+      "pred_row_count": 4,
+      "row_count_mismatch": 1,
       "matched_rows": 3,
-      "row_precision": 1.0,
+      "row_precision": 0.75,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "SHAREHOLDERS' EQUITY",
+         "Description": "",
+         "Amount": ""
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": 1,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -558,7 +985,7 @@
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": 1,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -567,7 +994,7 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": 2,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -576,7 +1003,7 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": 2,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
@@ -585,7 +1012,7 @@
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": 3,
         "column": "Label",
         "type": "string",
         "outcome": "correct",
@@ -594,31 +1021,57 @@
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": 3,
         "column": "Amount",
         "type": "money",
         "outcome": "correct",
         "expected": 47353,
         "actual": "$47,353"
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "SHAREHOLDERS' EQUITY",
+        "grounded": true
        }
       ]
      }
     },
     "counts": {
-     "correct": 46
+     "correct": 34,
+     "hallucinated": 23,
+     "missed": 12
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 1.0,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.7391304347826086,
+    "hallucination_rate": 0.40350877192982454,
     "invention_rate": 0.0
    },
    "unstable": []
   },
   "CHQ-001847": {
    "document_type": "cheque",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "cheque",
+    "title": "Cheque",
+    "fields": [
+     "Bank Name",
+     "Cheque Number",
+     "Payee Name",
+     "Date",
+     "Amount in Words",
+     "Memo",
+     "Authorized Signature"
+    ],
+    "tables": [],
+    "totals": []
+   },
    "template": "cheque.json",
-   "template_type": "needs 2 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -630,15 +1083,13 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Cheque Number": "CHQ-001847",
-     "Date": "January 31, 2024",
      "Bank Name": "FIRST NATIONAL BANK OF NEW YORK",
-     "Payer Name": "Nexus Global Trading LLC",
+     "Cheque Number": "CHQ-001847",
      "Payee": "Pacific Steel & Metals Co.",
-     "Amount": "$ 8,410.00",
+     "Date": "January 31, 2024",
      "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
      "Memo": "Payment for PO-2024-0018 — Steel materials",
-     "Authorized By": "Janet Wu"
+     "Authorized Signature": "Janet Wu"
     },
     "tables": {}
    },
@@ -665,9 +1116,9 @@
       "type": "string"
      },
      "Payer Name": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Nexus Global Trading LLC",
-      "actual": "Nexus Global Trading LLC",
+      "actual": null,
       "type": "string"
      },
      "Payee": {
@@ -677,9 +1128,9 @@
       "type": "string"
      },
      "Amount": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": 8410.0,
-      "actual": "$ 8,410.00",
+      "actual": null,
       "type": "money"
      },
      "Amount in Words": {
@@ -695,9 +1146,9 @@
       "type": "string"
      },
      "Authorized By": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Janet Wu",
-      "actual": "Janet Wu",
+      "actual": null,
       "type": "string"
      },
      "Routing Number": {
@@ -711,25 +1162,61 @@
       "expected": "7743882201",
       "actual": null,
       "type": "string"
+     },
+     "Authorized Signature": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Janet Wu",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {},
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 6,
+     "missed": 5,
+     "hallucinated": 1
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8181818181818182,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.5454545454545454,
+    "hallucination_rate": 0.14285714285714285,
     "invention_rate": 0.0
    },
    "unstable": []
   },
   "EXP-2024-0081": {
    "document_type": "expense_report",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "expense_report",
+    "title": "Expense Report",
+    "fields": [
+     "Employee",
+     "Employee ID",
+     "Department",
+     "Manager",
+     "Period",
+     "Purpose",
+     "Report No"
+    ],
+    "tables": [
+     {
+      "name": "Expenses",
+      "columns": [
+       "Date",
+       "Type",
+       "Description",
+       "Category",
+       "Amount"
+      ],
+      "row_count": 9
+     }
+    ],
+    "totals": [
+     "TOTAL CLAIMED"
+    ]
+   },
    "template": "expense_report.json",
-   "template_type": "needs 5 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -738,19 +1225,16 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [
-    "table 'table' identified as gold table 'expenses' by row content (the template names no bands)"
-   ],
+   "adapter_notes": [],
    "adapted": {
     "fields": {
      "Employee Name": "Marcus A. Thompson",
      "Employee ID": "EMP-0012",
-     "Report No": "EXP-2024-0081",
      "Department": "Procurement",
      "Manager": "Janet Wu",
      "Period": "March 15–22, 2024",
      "Purpose": "Supplier site visit — Pacific Steel, Los Angeles",
-     "Status": "APPROVED",
+     "Report No": "EXP-2024-0081",
      "Total Claimed": "$1,727.25"
     },
     "tables": {
@@ -868,9 +1352,9 @@
       "type": "string"
      },
      "Status": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "APPROVED",
-      "actual": "APPROVED",
+      "actual": null,
       "type": "string"
      },
      "Total Claimed": {
@@ -1302,10 +1786,11 @@
      }
     },
     "counts": {
-     "correct": 54
+     "correct": 53,
+     "missed": 1
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 1.0,
+    "accuracy": 0.9814814814814815,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -1313,9 +1798,38 @@
   },
   "INV-2024-0031": {
    "document_type": "sales_invoice",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "sales_invoice",
+    "title": "Invoice",
+    "fields": [
+     "Invoice",
+     "Date",
+     "Due",
+     "PO Ref",
+     "Terms"
+    ],
+    "tables": [
+     {
+      "name": "Line Items",
+      "columns": [
+       "Description",
+       "Qty",
+       "Unit",
+       "Unit Price",
+       "Amount"
+      ],
+      "row_count": 4
+     }
+    ],
+    "totals": [
+     "Subtotal",
+     "Shipping & Handling",
+     "Sales Tax (8.88%)",
+     "TOTAL DUE"
+    ]
+   },
    "template": "invoice.json",
-   "template_type": "needs 5 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -1324,20 +1838,14 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [
-    "table 'table' identified as gold table 'line_items' by row content (the template names no bands)"
-   ],
+   "adapter_notes": [],
    "adapted": {
     "fields": {
      "Invoice Number": "INV-2024-0031",
      "Invoice Date": "January 15, 2024",
      "Due Date": "February 14, 2024",
-     "Bill To Company": "Apex Industrial Supplies Inc.",
-     "Bill To Address": "500 Commerce Drive, Chicago, IL 60601",
-     "Bill To Contact": "Mr. Robert Chen — rchen@apexindustrial.com",
      "PO Reference": "PO-2024-0018",
      "Payment Terms": "Net 30",
-     "Status": "PAID",
      "Subtotal": "$10,892.50",
      "Shipping & Handling": "$320.00",
      "Sales Tax": "$966.71",
@@ -1399,21 +1907,21 @@
       "type": "date"
      },
      "Bill To Company": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Apex Industrial Supplies Inc.",
-      "actual": "Apex Industrial Supplies Inc.",
+      "actual": null,
       "type": "string"
      },
      "Bill To Address": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "500 Commerce Drive, Chicago, IL 60601",
-      "actual": "500 Commerce Drive, Chicago, IL 60601",
+      "actual": null,
       "type": "string"
      },
      "Bill To Contact": {
-      "outcome": "near",
+      "outcome": "missed",
       "expected": "Mr. Robert Chen",
-      "actual": "Mr. Robert Chen — rchen@apexindustrial.com",
+      "actual": null,
       "type": "string"
      },
      "PO Reference": {
@@ -1429,9 +1937,9 @@
       "type": "string"
      },
      "Status": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "PAID",
-      "actual": "PAID",
+      "actual": null,
       "type": "string"
      },
      "Subtotal": {
@@ -1656,11 +2164,11 @@
      }
     },
     "counts": {
-     "correct": 32,
-     "near": 1
+     "correct": 29,
+     "missed": 4
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9696969696969697,
+    "accuracy": 0.8787878787878788,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -1668,9 +2176,38 @@
   },
   "INV-2024-0047": {
    "document_type": "sales_invoice",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "sales_invoice",
+    "title": "Invoice",
+    "fields": [
+     "Invoice Number",
+     "Date",
+     "Due",
+     "PO Ref",
+     "Terms"
+    ],
+    "tables": [
+     {
+      "name": "Line Items",
+      "columns": [
+       "Description",
+       "Qty",
+       "Unit",
+       "Unit Price",
+       "Amount"
+      ],
+      "row_count": 5
+     }
+    ],
+    "totals": [
+     "Subtotal",
+     "Shipping & Handling",
+     "Sales Tax (8.25%)",
+     "TOTAL DUE"
+    ]
+   },
    "template": "invoice.json",
-   "template_type": "needs 5 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -1679,20 +2216,14 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [
-    "table 'table' identified as gold table 'line_items' by row content (the template names no bands)"
-   ],
+   "adapter_notes": [],
    "adapted": {
     "fields": {
      "Invoice Number": "INV-2024-0047",
      "Invoice Date": "February 3, 2024",
      "Due Date": "March 4, 2024",
-     "Bill To Company": "Pinnacle Electronics Corp.",
-     "Bill To Address": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
-     "Bill To Contact": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
      "PO Reference": "PO-2024-0029",
      "Payment Terms": "Net 30",
-     "Status": "OUTSTANDING",
      "Subtotal": "$15,549.00",
      "Shipping & Handling": "$580.00",
      "Sales Tax": "$1,282.79",
@@ -1761,21 +2292,21 @@
       "type": "date"
      },
      "Bill To Company": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Pinnacle Electronics Corp.",
-      "actual": "Pinnacle Electronics Corp.",
+      "actual": null,
       "type": "string"
      },
      "Bill To Address": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
-      "actual": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
+      "actual": null,
       "type": "string"
      },
      "Bill To Contact": {
-      "outcome": "near",
+      "outcome": "missed",
       "expected": "Ms. Sarah Johnson",
-      "actual": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
+      "actual": null,
       "type": "string"
      },
      "PO Reference": {
@@ -1791,9 +2322,9 @@
       "type": "string"
      },
      "Status": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "OUTSTANDING",
-      "actual": "OUTSTANDING",
+      "actual": null,
       "type": "string"
      },
      "Subtotal": {
@@ -2063,11 +2594,11 @@
      }
     },
     "counts": {
-     "correct": 37,
-     "near": 1
+     "correct": 34,
+     "missed": 4
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9736842105263158,
+    "accuracy": 0.8947368421052632,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -2075,9 +2606,62 @@
   },
   "IS-2024-Q4": {
    "document_type": "income_statement",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "income_statement",
+    "title": "Income Statement",
+    "fields": [
+     "Company Name",
+     "Company Address",
+     "Company EIN",
+     "Period",
+     "Date",
+     "Document Number"
+    ],
+    "tables": [
+     {
+      "name": "Revenue",
+      "columns": [
+       "Revenue Item",
+       "Amount"
+      ],
+      "row_count": 3
+     },
+     {
+      "name": "Cost of Goods Sold",
+      "columns": [
+       "COGS Item",
+       "Amount"
+      ],
+      "row_count": 5
+     },
+     {
+      "name": "Operating Expenses",
+      "columns": [
+       "Operating Expense Item",
+       "Amount"
+      ],
+      "row_count": 10
+     },
+     {
+      "name": "Other Income",
+      "columns": [
+       "Other Income Item",
+       "Amount"
+      ],
+      "row_count": 3
+     }
+    ],
+    "totals": [
+     "Gross Profit",
+     "Total Operating Expenses",
+     "Operating Income (EBIT)",
+     "Net Income (Loss) Before Tax",
+     "Est. Income Tax Provision (21%)",
+     "Net Income (Loss) After Tax"
+    ]
+   },
    "template": "income_statement.json",
-   "template_type": "needs 2 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -2086,9 +2670,30 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [],
+   "adapter_notes": [
+    "extracted table/section 'Revenue' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Cost of Goods Sold' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Operating Expenses' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Other Income' matches no gold table — all its rows will score as hallucinated",
+    "3 label/value row(s) from table 'Revenue' scored as the gold fields they name",
+    "5 label/value row(s) from table 'Cost of Goods Sold' scored as the gold fields they name",
+    "10 label/value row(s) from table 'Operating Expenses' scored as the gold fields they name",
+    "1 label/value row(s) from table 'Other Income' scored as the gold fields they name"
+   ],
    "adapted": {
     "fields": {
+     "Company Name": "Nexus Global Trading LLC",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company EIN": "47-3821654",
+     "Period": "Q4 2024",
+     "Date": "December 31, 2024",
+     "Document Number": "IS-2024-Q4",
+     "Gross Profit": "$695,400",
+     "Total Operating Expenses": "$359,250",
+     "Operating Income (EBIT)": "$336,150",
+     "Net Income Before Tax": "$337,390",
+     "Income Tax Provision": "$70,852",
+     "Net Income After Tax": "$266,538",
      "Gross Sales": "$1,980,000",
      "Less: Returns": "$28,600",
      "Net Revenue": "$1,951,400",
@@ -2097,7 +2702,6 @@
      "Freight In": "$52,000",
      "Less: Closing Inventory": "$724,000",
      "Total COGS": "$1,256,000",
-     "Gross Profit": "$695,400",
      "Salaries & Wages": "$190,000",
      "Rent": "$85,500",
      "Marketing": "$22,400",
@@ -2108,12 +2712,7 @@
      "Professional Fees": "$18,000",
      "Bank Charges & Interest": "$3,800",
      "Bad Debt": "$4,200",
-     "Total Operating Expenses": "$359,250",
-     "Operating Income (EBIT)": "$336,150",
-     "Interest Income": "$1,240",
-     "Net Income Before Tax": "$337,390",
-     "Income Tax Provision": "$70,852",
-     "Net Income After Tax": "$266,538"
+     "Interest Income": "$1,240"
     },
     "tables": {}
    },
@@ -2270,24 +2869,103 @@
       "expected": 266538,
       "actual": "$266,538",
       "type": "money"
+     },
+     "Company Name": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Nexus Global Trading LLC",
+      "type": "string",
+      "grounded": true
+     },
+     "Company Address": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
+      "type": "string",
+      "grounded": true
+     },
+     "Company EIN": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "47-3821654",
+      "type": "string",
+      "grounded": true
+     },
+     "Period": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Q4 2024",
+      "type": "string",
+      "grounded": true
+     },
+     "Date": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "December 31, 2024",
+      "type": "string",
+      "grounded": true
+     },
+     "Document Number": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "IS-2024-Q4",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {},
     "counts": {
-     "correct": 25
+     "correct": 25,
+     "hallucinated": 6
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.0,
+    "hallucination_rate": 0.1935483870967742,
     "invention_rate": 0.0
    },
    "unstable": []
   },
   "PAYSLIP-EMP-0007-APR2024": {
    "document_type": "payslip",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "payslip",
+    "title": "Pay Stub",
+    "fields": [
+     "Employee",
+     "Employee ID",
+     "Title / Dept",
+     "SSN",
+     "Pay Period",
+     "Pay Date",
+     "Annual Salary"
+    ],
+    "tables": [
+     {
+      "name": "Earnings",
+      "columns": [
+       "Description",
+       "Amount"
+      ],
+      "row_count": 3
+     },
+     {
+      "name": "Deductions",
+      "columns": [
+       "Description",
+       "Amount"
+      ],
+      "row_count": 8
+     }
+    ],
+    "totals": [
+     "Total",
+     "NET PAY",
+     "YTD Gross Earnings",
+     "YTD Taxes Withheld"
+    ]
+   },
    "template": "payslip.json",
-   "template_type": "needs 2 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -2299,17 +2977,15 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Employer Name": "NEXUS GLOBAL TRADING",
      "Employee Name": "Janet L. Wu",
      "Employee ID": "EMP-0007",
-     "Title / Department": "VP Operations – Executive",
+     "Title / Dept": "VP Operations – Executive",
      "SSN": "***-**-3317",
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
      "Annual Salary": "$145,000.00",
-     "Total Earnings": "$14,583.33",
-     "Total Deductions": "($7,070.30)",
-     "Net Pay": "$7,513.0",
+     "Total Earnings": "$7,070.30",
+     "Net Pay": "$7,513.0 3",
      "YTD Gross Earnings": "$58,333.33",
      "YTD Taxes Withheld": "$22,716.00"
     },
@@ -2326,6 +3002,10 @@
       {
        "Description": "Executive Bonus",
        "Amount": "$2,000.00"
+      },
+      {
+       "Description": "Total",
+       "Amount": "$14,583.33"
       }
      ],
      "deductions": [
@@ -2373,9 +3053,9 @@
     "document_type": "payslip",
     "fields": {
      "Employer Name": {
-      "outcome": "near",
+      "outcome": "missed",
       "expected": "Nexus Global Trading LLC",
-      "actual": "NEXUS GLOBAL TRADING",
+      "actual": null,
       "type": "string"
      },
      "Employee Name": {
@@ -2391,9 +3071,9 @@
       "type": "string"
      },
      "Title / Department": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "VP Operations – Executive",
-      "actual": "VP Operations – Executive",
+      "actual": null,
       "type": "string"
      },
      "SSN": {
@@ -2421,21 +3101,21 @@
       "type": "money"
      },
      "Total Earnings": {
-      "outcome": "correct",
+      "outcome": "wrong",
       "expected": 14583.33,
-      "actual": "$14,583.33",
+      "actual": "$7,070.30",
       "type": "money"
      },
      "Total Deductions": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": -7070.3,
-      "actual": "($7,070.30)",
+      "actual": null,
       "type": "money"
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0",
+      "actual": "$7,513.0 3",
       "type": "money"
      },
      "YTD Gross Earnings": {
@@ -2449,20 +3129,35 @@
       "expected": 22716.0,
       "actual": "$22,716.00",
       "type": "money"
+     },
+     "Title / Dept": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "VP Operations – Executive",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {
      "earnings": {
       "table": "earnings",
       "gold_row_count": 3,
-      "pred_row_count": 3,
-      "row_count_mismatch": 0,
+      "pred_row_count": 4,
+      "row_count_mismatch": 1,
       "matched_rows": 3,
-      "row_precision": 1.0,
+      "row_precision": 0.75,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 3,
+        "pred": {
+         "Description": "Total",
+         "Amount": "$14,583.33"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -2517,6 +3212,26 @@
         "outcome": "correct",
         "expected": 2000.0,
         "actual": "$2,000.00"
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$14,583.33",
+        "grounded": true
        }
       ]
      },
@@ -2698,22 +3413,63 @@
      }
     },
     "counts": {
-     "near": 1,
-     "correct": 35,
-     "wrong": 1
+     "missed": 3,
+     "correct": 33,
+     "wrong": 1,
+     "hallucinated": 3
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9459459459459459,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.8918918918918919,
+    "hallucination_rate": 0.08108108108108109,
     "invention_rate": 0.0
    },
    "unstable": []
   },
   "PAYSLIP-EMP-0012-APR2024": {
    "document_type": "payslip",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "payslip",
+    "title": "Pay Stub",
+    "fields": [
+     "Company Name",
+     "Company Address",
+     "Company EIN",
+     "Employee Name",
+     "Employee ID",
+     "Title / Dept",
+     "SSN",
+     "Pay Period",
+     "Pay Date",
+     "Annual Salary"
+    ],
+    "tables": [
+     {
+      "name": "Earnings",
+      "columns": [
+       "Description",
+       "Amount"
+      ],
+      "row_count": 3
+     },
+     {
+      "name": "Deductions",
+      "columns": [
+       "Description",
+       "Amount"
+      ],
+      "row_count": 8
+     }
+    ],
+    "totals": [
+     "Total Earnings",
+     "Total Deductions",
+     "NET PAY",
+     "YTD Gross Earnings",
+     "YTD Taxes Withheld"
+    ]
+   },
    "template": "payslip.json",
-   "template_type": "needs 2 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -2725,10 +3481,12 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Employer Name": "NEXUS GLOBAL TRADING",
+     "Company Name": "NEXUS GLOBAL TRADING",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company EIN": "47-3821654",
      "Employee Name": "Marcus A. Thompson",
      "Employee ID": "EMP-0012",
-     "Title / Department": "Purchasing Manager – Procurement",
+     "Title / Dept": "Purchasing Manager – Procurement",
      "SSN": "***-**-4821",
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
@@ -2748,6 +3506,10 @@
       {
        "Description": "Performance Bonus",
        "Amount": "$800.00"
+      },
+      {
+       "Description": "Total",
+       "Amount": "$8,300.00"
       }
      ],
      "deductions": [
@@ -2782,6 +3544,10 @@
       {
        "Description": "Dental & Vision",
        "Amount": "($45.00)"
+      },
+      {
+       "Description": "Total",
+       "Amount": "($3,117.35)"
       }
      ]
     }
@@ -2791,9 +3557,9 @@
     "document_type": "payslip",
     "fields": {
      "Employer Name": {
-      "outcome": "near",
+      "outcome": "missed",
       "expected": "Nexus Global Trading LLC",
-      "actual": "NEXUS GLOBAL TRADING",
+      "actual": null,
       "type": "string"
      },
      "Employee Name": {
@@ -2809,9 +3575,9 @@
       "type": "string"
      },
      "Title / Department": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Purchasing Manager – Procurement",
-      "actual": "Purchasing Manager – Procurement",
+      "actual": null,
       "type": "string"
      },
      "SSN": {
@@ -2867,20 +3633,56 @@
       "expected": 7508.7,
       "actual": "$7,508.70",
       "type": "money"
+     },
+     "Company Name": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "NEXUS GLOBAL TRADING",
+      "type": "string",
+      "grounded": true
+     },
+     "Company Address": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
+      "type": "string",
+      "grounded": true
+     },
+     "Company EIN": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "47-3821654",
+      "type": "string",
+      "grounded": true
+     },
+     "Title / Dept": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Purchasing Manager – Procurement",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {
      "earnings": {
       "table": "earnings",
       "gold_row_count": 2,
-      "pred_row_count": 2,
-      "row_count_mismatch": 0,
+      "pred_row_count": 3,
+      "row_count_mismatch": 1,
       "matched_rows": 2,
-      "row_precision": 1.0,
+      "row_precision": 0.6666666666666666,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 2,
+        "pred": {
+         "Description": "Total",
+         "Amount": "$8,300.00"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -2917,20 +3719,48 @@
         "outcome": "correct",
         "expected": 800.0,
         "actual": "$800.00"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$8,300.00",
+        "grounded": true
        }
       ]
      },
      "deductions": {
       "table": "deductions",
       "gold_row_count": 8,
-      "pred_row_count": 8,
-      "row_count_mismatch": 0,
+      "pred_row_count": 9,
+      "row_count_mismatch": 1,
       "matched_rows": 8,
-      "row_precision": 1.0,
+      "row_precision": 0.8888888888888888,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 8,
+        "pred": {
+         "Description": "Total",
+         "Amount": "($3,117.35)"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -3075,26 +3905,77 @@
         "outcome": "correct",
         "expected": -45.0,
         "actual": "($45.00)"
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "($3,117.35)",
+        "grounded": true
        }
       ]
      }
     },
     "counts": {
-     "near": 1,
-     "correct": 32
+     "missed": 2,
+     "correct": 31,
+     "hallucinated": 8
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.9393939393939394,
+    "hallucination_rate": 0.20512820512820512,
     "invention_rate": 0.0
    },
    "unstable": []
   },
   "PO-2024-0018": {
    "document_type": "purchase_order",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "purchase_order",
+    "title": "Purchase Order",
+    "fields": [
+     "PO Number",
+     "Date",
+     "Required By",
+     "Terms",
+     "Ship Via",
+     "Vendor ID"
+    ],
+    "tables": [
+     {
+      "name": "Items",
+      "columns": [
+       "Item / Description",
+       "Qty",
+       "Unit",
+       "Unit Cost",
+       "Total"
+      ],
+      "row_count": 3
+     }
+    ],
+    "totals": [
+     "Subtotal",
+     "Freight",
+     "Tax (exempt)",
+     "ORDER TOTAL"
+    ]
+   },
    "template": "purchase_order.json",
-   "template_type": "needs 5 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -3103,9 +3984,7 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [
-    "table 'table' identified as gold table 'line_items' by row content (the template names no bands)"
-   ],
+   "adapter_notes": [],
    "adapted": {
     "fields": {
      "PO Number": "PO-2024-0018",
@@ -3113,13 +3992,7 @@
      "Required By": "January 28, 2024",
      "Terms": "Net 30",
      "Ship Via": "Vendor's carrier",
-     "Vendor Name": "Pacific Steel & Metals Co.",
-     "Vendor Address": "2200 Harbor Drive, Los Angeles, CA 90021",
-     "Vendor Contact": "Ms. Linda Zhao | (310) 555-0233",
      "Vendor ID": "VND-0041",
-     "Buyer Name": "Marcus A. Thompson",
-     "Buyer Title": "Purchasing Manager",
-     "Authorised By": "Janet Wu — VP Operations",
      "Subtotal": "$12,090.00",
      "Freight": "$480.00",
      "Tax": "$0.00",
@@ -3186,21 +4059,21 @@
       "type": "string"
      },
      "Vendor Name": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Pacific Steel & Metals Co.",
-      "actual": "Pacific Steel & Metals Co.",
+      "actual": null,
       "type": "string"
      },
      "Vendor Address": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "2200 Harbor Drive, Los Angeles, CA 90021",
-      "actual": "2200 Harbor Drive, Los Angeles, CA 90021",
+      "actual": null,
       "type": "string"
      },
      "Vendor Contact": {
-      "outcome": "near",
+      "outcome": "missed",
       "expected": "Ms. Linda Zhao",
-      "actual": "Ms. Linda Zhao | (310) 555-0233",
+      "actual": null,
       "type": "string"
      },
      "Vendor ID": {
@@ -3210,21 +4083,21 @@
       "type": "string"
      },
      "Buyer Name": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Marcus A. Thompson",
-      "actual": "Marcus A. Thompson",
+      "actual": null,
       "type": "string"
      },
      "Buyer Title": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Purchasing Manager",
-      "actual": "Purchasing Manager",
+      "actual": null,
       "type": "string"
      },
      "Authorised By": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Janet Wu – VP Operations",
-      "actual": "Janet Wu — VP Operations",
+      "actual": null,
       "type": "string"
      },
      "Subtotal": {
@@ -3404,11 +4277,11 @@
      }
     },
     "counts": {
-     "correct": 30,
-     "near": 1
+     "correct": 25,
+     "missed": 6
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.967741935483871,
+    "accuracy": 0.8064516129032258,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -3416,9 +4289,40 @@
   },
   "STMT-2024-01": {
    "document_type": "bank_statement",
-   "inferred_template": null,
+   "inferred_template": {
+    "document_type": "bank_statement",
+    "title": "Account Statement",
+    "fields": [
+     "Bank Name",
+     "Account Holder",
+     "Statement No",
+     "Period",
+     "Account No",
+     "Type"
+    ],
+    "tables": [
+     {
+      "name": "Transactions",
+      "columns": [
+       "Date",
+       "Type",
+       "Description",
+       "Debit",
+       "Credit",
+       "Balance"
+      ],
+      "row_count": 12
+     }
+    ],
+    "totals": [
+     "Opening Balance",
+     "Credits",
+     "Debits",
+     "Closing Balance"
+    ]
+   },
    "template": "bank_statement.json",
-   "template_type": "needs 6 columns",
+   "template_type": "__none__",
    "success": true,
    "errors": [],
    "log": {
@@ -3427,9 +4331,7 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [
-    "table 'table' identified as gold table 'transactions' by row content (the template names no bands)"
-   ],
+   "adapter_notes": [],
    "adapted": {
     "fields": {
      "Bank Name": "FIRST NATIONAL BANK OF NEW YORK",
@@ -4288,30 +5190,32 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 370,
-    "missed": 2,
-    "near": 5,
+    "correct": 340,
+    "hallucinated": 41,
+    "missed": 37,
     "wrong": 1,
     "empty_ok": 12
    },
    "gold_valued": 378,
-   "accuracy": 0.9788359788359788,
-   "near_rate": 0.013227513227513227,
-   "hallucinated": 0,
-   "hallucination_rate": 0.0,
+   "accuracy": 0.8994708994708994,
+   "near_rate": 0.0,
+   "hallucinated": 41,
+   "hallucination_rate": 0.10732984293193717,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0
   },
   "by_document_type": {
    "balance_sheet": {
     "counts": {
-     "correct": 46
+     "correct": 34,
+     "hallucinated": 23,
+     "missed": 12
     },
     "gold_valued": 46,
-    "accuracy": 1.0,
+    "accuracy": 0.7391304347826086,
     "near_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 23,
+    "hallucination_rate": 0.40350877192982454,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -4330,23 +5234,25 @@
    },
    "cheque": {
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 6,
+     "missed": 5,
+     "hallucinated": 1
     },
     "gold_valued": 11,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 0.5454545454545454,
     "near_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 1,
+    "hallucination_rate": 0.14285714285714285,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
    "expense_report": {
     "counts": {
-     "correct": 54
+     "correct": 53,
+     "missed": 1
     },
     "gold_valued": 54,
-    "accuracy": 1.0,
+    "accuracy": 0.9814814814814815,
     "near_rate": 0.0,
     "hallucinated": 0,
     "hallucination_rate": 0.0,
@@ -4355,38 +5261,40 @@
    },
    "income_statement": {
     "counts": {
-     "correct": 25
+     "correct": 25,
+     "hallucinated": 6
     },
     "gold_valued": 25,
     "accuracy": 1.0,
     "near_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 6,
+    "hallucination_rate": 0.1935483870967742,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
    "payslip": {
     "counts": {
-     "near": 2,
-     "correct": 67,
-     "wrong": 1
+     "missed": 5,
+     "correct": 64,
+     "wrong": 1,
+     "hallucinated": 11
     },
     "gold_valued": 70,
-    "accuracy": 0.9571428571428572,
-    "near_rate": 0.02857142857142857,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.9142857142857143,
+    "near_rate": 0.0,
+    "hallucinated": 11,
+    "hallucination_rate": 0.14473684210526316,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
    "purchase_order": {
     "counts": {
-     "correct": 30,
-     "near": 1
+     "correct": 25,
+     "missed": 6
     },
     "gold_valued": 31,
-    "accuracy": 0.967741935483871,
-    "near_rate": 0.03225806451612903,
+    "accuracy": 0.8064516129032258,
+    "near_rate": 0.0,
     "hallucinated": 0,
     "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
@@ -4394,12 +5302,12 @@
    },
    "sales_invoice": {
     "counts": {
-     "correct": 69,
-     "near": 2
+     "correct": 63,
+     "missed": 8
     },
     "gold_valued": 71,
-    "accuracy": 0.971830985915493,
-    "near_rate": 0.028169014084507043,
+    "accuracy": 0.8873239436619719,
+    "near_rate": 0.0,
     "hallucinated": 0,
     "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
@@ -4421,15 +5329,17 @@
    },
    "money": {
     "counts": {
-     "correct": 160,
+     "correct": 152,
+     "hallucinated": 9,
+     "missed": 8,
      "wrong": 1,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.9937888198757764,
+    "accuracy": 0.9440993788819876,
     "near_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 9,
+    "hallucination_rate": 0.05555555555555555,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -4447,15 +5357,15 @@
    },
    "string": {
     "counts": {
-     "correct": 168,
-     "missed": 2,
-     "near": 5
+     "hallucinated": 32,
+     "correct": 146,
+     "missed": 29
     },
     "gold_valued": 175,
-    "accuracy": 0.96,
-    "near_rate": 0.02857142857142857,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.8342857142857143,
+    "near_rate": 0.0,
+    "hallucinated": 32,
+    "hallucination_rate": 0.1797752808988764,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    }
@@ -4463,5 +5373,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-08-18 02:43:16"
+ "diff_against": "2026-08-18 02:46:10"
 }

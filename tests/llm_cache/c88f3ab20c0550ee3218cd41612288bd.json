@@ -1,0 +1,245 @@
+{
+ "key": "c88f3ab20c0550ee3218cd41612288bd523bfbf5f87f02bac757b6214cbae4a0",
+ "meta": {
+  "method": "extract",
+  "context": "IS-2024-Q4",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3712,
+  "captured_at": "2026-08-18 02:45:47",
+  "prompt_preview": "Fill in a income_statement spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nIncome Statement — Q4 2024\nQuarter Ended December 31, 2024 | Doc No: IS-2024-Q4\nREVENUE\nGross Sales $1"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"Nexus Global Trading LLC\",\n      \"source\": \"Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Q4 2024\",\n      \"source\": \"Income Statement — Q4 2024\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"December 31, 2024\",\n      \"source\": \"Quarter Ended December 31, 2024\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"IS-2024-Q4\",\n      \"source\": \"Doc No: IS-2024-Q4\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"$695,400\",\n      \"source\": \"GROSS PROFIT $695,400\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$359,250\",\n      \"source\": \"Total Operating Expenses $359,250\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"$336,150\",\n      \"source\": \"OPERATING INCOME (EBIT) $336,150\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"$337,390\",\n      \"source\": \"NET INCOME (LOSS) BEFORE TAX $337,390\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"$70,852\",\n      \"source\": \"Est. Income Tax Provision (21%) $70,852\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"$266,538\",\n      \"source\": \"NET INCOME (LOSS) AFTER TAX $266,538\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"Revenue\": [\n      {\n        \"cells\": {\n          \"Revenue Item\": \"Gross Sales\",\n          \"Amount\": \"$1,980,000\"\n        },\n        \"source\": \"Gross Sales $1,980,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Revenue Item\": \"Less: Returns\",\n          \"Amount\": \"$28,600\"\n        },\n        \"source\": \"Less: Returns $28,600\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Revenue Item\": \"Net Revenue\",\n          \"Amount\": \"$1,951,400\"\n        },\n        \"source\": \"Net Revenue $1,951,400\",\n        \"page\": 1\n      }\n    ],\n    \"Cost of Goods Sold\": [\n      {\n        \"cells\": {\n          \"COGS Item\": \"Opening Inventory\",\n          \"Amount\": \"$648,000\"\n        },\n        \"source\": \"Opening Inventory $648,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"COGS Item\": \"Purchases\",\n          \"Amount\": \"$1,280,000\"\n        },\n        \"source\": \"Purchases $1,280,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"COGS Item\": \"Freight In\",\n          \"Amount\": \"$52,000\"\n        },\n        \"source\": \"Freight In $52,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"COGS Item\": \"Less: Closing Inventory\",\n          \"Amount\": \"$724,000\"\n        },\n        \"source\": \"Less: Closing Inventory $724,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"COGS Item\": \"Total COGS\",\n          \"Amount\": \"$1,256,000\"\n        },\n        \"source\": \"Total COGS $1,256,000\",\n        \"page\": 1\n      }\n    ],\n    \"Operating Expenses\": [\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Salaries & Wages\",\n          \"Amount\": \"$190,000\"\n        },\n        \"source\": \"Salaries & Wages $190,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Rent\",\n          \"Amount\": \"$85,500\"\n        },\n        \"source\": \"Rent $85,500\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Marketing\",\n          \"Amount\": \"$22,400\"\n        },\n        \"source\": \"Marketing $22,400\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Utilities\",\n          \"Amount\": \"$12,100\"\n        },\n        \"source\": \"Utilities $12,100\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Depreciation\",\n          \"Amount\": \"$10,300\"\n        },\n        \"source\": \"Depreciation $10,300\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Insurance\",\n          \"Amount\": \"$7,150\"\n        },\n        \"source\": \"Insurance $7,150\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Office & Misc\",\n          \"Amount\": \"$5,800\"\n        },\n        \"source\": \"Office & Misc $5,800\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Professional Fees\",\n          \"Amount\": \"$18,000\"\n        },\n        \"source\": \"Professional Fees $18,000\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Bank Charges & Interest\",\n          \"Amount\": \"$3,800\"\n        },\n        \"source\": \"Bank Charges & Interest $3,800\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Operating Expense Item\": \"Bad Debt\",\n          \"Amount\": \"$4,200\"\n        },\n        \"source\": \"Bad Debt $4,200\",\n        \"page\": 1\n      }\n    ],\n    \"Other Income\": [\n      {\n        \"cells\": {\n          \"Other Income Item\": \"Interest Income\",\n          \"Amount\": \"$1,240\"\n        },\n        \"source\": \"Interest Income $1,240\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F2": {
+     "value": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "page": 1
+    },
+    "F3": {
+     "value": "47-3821654",
+     "source": "EIN: 47-3821654",
+     "page": 1
+    },
+    "F4": {
+     "value": "Q4 2024",
+     "source": "Income Statement — Q4 2024",
+     "page": 1
+    },
+    "F5": {
+     "value": "December 31, 2024",
+     "source": "Quarter Ended December 31, 2024",
+     "page": 1
+    },
+    "F6": {
+     "value": "IS-2024-Q4",
+     "source": "Doc No: IS-2024-Q4",
+     "page": 1
+    },
+    "F7": {
+     "value": "$695,400",
+     "source": "GROSS PROFIT $695,400",
+     "page": 1
+    },
+    "F8": {
+     "value": "$359,250",
+     "source": "Total Operating Expenses $359,250",
+     "page": 1
+    },
+    "F9": {
+     "value": "$336,150",
+     "source": "OPERATING INCOME (EBIT) $336,150",
+     "page": 1
+    },
+    "F10": {
+     "value": "$337,390",
+     "source": "NET INCOME (LOSS) BEFORE TAX $337,390",
+     "page": 1
+    },
+    "F11": {
+     "value": "$70,852",
+     "source": "Est. Income Tax Provision (21%) $70,852",
+     "page": 1
+    },
+    "F12": {
+     "value": "$266,538",
+     "source": "NET INCOME (LOSS) AFTER TAX $266,538",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Revenue": [
+     {
+      "cells": {
+       "Revenue Item": "Gross Sales",
+       "Amount": "$1,980,000"
+      },
+      "source": "Gross Sales $1,980,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Revenue Item": "Less: Returns",
+       "Amount": "$28,600"
+      },
+      "source": "Less: Returns $28,600",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Revenue Item": "Net Revenue",
+       "Amount": "$1,951,400"
+      },
+      "source": "Net Revenue $1,951,400",
+      "page": 1
+     }
+    ],
+    "Cost of Goods Sold": [
+     {
+      "cells": {
+       "COGS Item": "Opening Inventory",
+       "Amount": "$648,000"
+      },
+      "source": "Opening Inventory $648,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "COGS Item": "Purchases",
+       "Amount": "$1,280,000"
+      },
+      "source": "Purchases $1,280,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "COGS Item": "Freight In",
+       "Amount": "$52,000"
+      },
+      "source": "Freight In $52,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "COGS Item": "Less: Closing Inventory",
+       "Amount": "$724,000"
+      },
+      "source": "Less: Closing Inventory $724,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "COGS Item": "Total COGS",
+       "Amount": "$1,256,000"
+      },
+      "source": "Total COGS $1,256,000",
+      "page": 1
+     }
+    ],
+    "Operating Expenses": [
+     {
+      "cells": {
+       "Operating Expense Item": "Salaries & Wages",
+       "Amount": "$190,000"
+      },
+      "source": "Salaries & Wages $190,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Rent",
+       "Amount": "$85,500"
+      },
+      "source": "Rent $85,500",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Marketing",
+       "Amount": "$22,400"
+      },
+      "source": "Marketing $22,400",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Utilities",
+       "Amount": "$12,100"
+      },
+      "source": "Utilities $12,100",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Depreciation",
+       "Amount": "$10,300"
+      },
+      "source": "Depreciation $10,300",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Insurance",
+       "Amount": "$7,150"
+      },
+      "source": "Insurance $7,150",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Office & Misc",
+       "Amount": "$5,800"
+      },
+      "source": "Office & Misc $5,800",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Professional Fees",
+       "Amount": "$18,000"
+      },
+      "source": "Professional Fees $18,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Bank Charges & Interest",
+       "Amount": "$3,800"
+      },
+      "source": "Bank Charges & Interest $3,800",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Operating Expense Item": "Bad Debt",
+       "Amount": "$4,200"
+      },
+      "source": "Bad Debt $4,200",
+      "page": 1
+     }
+    ],
+    "Other Income": [
+     {
+      "cells": {
+       "Other Income Item": "Interest Income",
+       "Amount": "$1,240"
+      },
+      "source": "Interest Income $1,240",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3712,
+  "success": true,
+  "error": ""
+ }
+}

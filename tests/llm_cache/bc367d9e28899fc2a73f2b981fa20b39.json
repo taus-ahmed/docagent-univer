@@ -1,0 +1,110 @@
+{
+ "key": "bc367d9e28899fc2a73f2b981fa20b39ed960924105f04bfb179d83a81d0860e",
+ "meta": {
+  "method": "extract",
+  "context": "PO-2024-0018",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2288,
+  "captured_at": "2026-08-18 02:41:25",
+  "prompt_preview": "Fill in a purchase_order spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC PURCHASE ORDER\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nPO Number: PO-2024-0018\nDate: January 10, 2024\nRequired By: January 28, 20"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"PO-2024-0018\",\n      \"source\": \"PO Number: PO-2024-0018\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"January 10, 2024\",\n      \"source\": \"Date: January 10, 2024\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"January 28, 2024\",\n      \"source\": \"Required By: January 28, 2024\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Net 30\",\n      \"source\": \"Terms: Net 30\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"Vendor's carrier\",\n      \"source\": \"Ship Via: Vendor's carrier\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"VND-0041\",\n      \"source\": \"Vendor ID: VND-0041\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"$12,090.00\",\n      \"source\": \"Subtotal: $12,090.00\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$480.00\",\n      \"source\": \"Freight: $480.00\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"$0.00\",\n      \"source\": \"Tax (exempt): $0.00\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"$12,570.00\",\n      \"source\": \"ORDER TOTAL: $12,570.00\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"Items\": [\n      {\n        \"cells\": {\n          \"Item / Description\": \"Steel Wire Coils Grade A 500m (SW-500A)\",\n          \"Qty\": \"50\",\n          \"Unit\": \"pcs\",\n          \"Unit Cost\": \"$155.00\",\n          \"Total\": \"$7,750.00\"\n        },\n        \"source\": \"Steel Wire Coils Grade A 500m (SW-500A) 50 pcs $155.00 $7,750.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Item / Description\": \"Steel Sheet 2mm 1200x2400 (SS-2MM)\",\n          \"Qty\": \"30\",\n          \"Unit\": \"sheets\",\n          \"Unit Cost\": \"$88.00\",\n          \"Total\": \"$2,640.00\"\n        },\n        \"source\": \"Steel Sheet 2mm 1200x2400 (SS-2MM) 30 sheets $88.00 $2,640.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Item / Description\": \"Mild Steel Round Bar 20mm x 3m (RB-20)\",\n          \"Qty\": \"40\",\n          \"Unit\": \"lengths\",\n          \"Unit Cost\": \"$42.50\",\n          \"Total\": \"$1,700.00\"\n        },\n        \"source\": \"Mild Steel Round Bar 20mm x 3m (RB-20) 40 lengths $42.50 $1,700.00\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "PO-2024-0018",
+     "source": "PO Number: PO-2024-0018",
+     "page": 1
+    },
+    "F2": {
+     "value": "January 10, 2024",
+     "source": "Date: January 10, 2024",
+     "page": 1
+    },
+    "F3": {
+     "value": "January 28, 2024",
+     "source": "Required By: January 28, 2024",
+     "page": 1
+    },
+    "F4": {
+     "value": "Net 30",
+     "source": "Terms: Net 30",
+     "page": 1
+    },
+    "F5": {
+     "value": "Vendor's carrier",
+     "source": "Ship Via: Vendor's carrier",
+     "page": 1
+    },
+    "F6": {
+     "value": "VND-0041",
+     "source": "Vendor ID: VND-0041",
+     "page": 1
+    },
+    "F7": {
+     "value": "$12,090.00",
+     "source": "Subtotal: $12,090.00",
+     "page": 1
+    },
+    "F8": {
+     "value": "$480.00",
+     "source": "Freight: $480.00",
+     "page": 1
+    },
+    "F9": {
+     "value": "$0.00",
+     "source": "Tax (exempt): $0.00",
+     "page": 1
+    },
+    "F10": {
+     "value": "$12,570.00",
+     "source": "ORDER TOTAL: $12,570.00",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Items": [
+     {
+      "cells": {
+       "Item / Description": "Steel Wire Coils Grade A 500m (SW-500A)",
+       "Qty": "50",
+       "Unit": "pcs",
+       "Unit Cost": "$155.00",
+       "Total": "$7,750.00"
+      },
+      "source": "Steel Wire Coils Grade A 500m (SW-500A) 50 pcs $155.00 $7,750.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Item / Description": "Steel Sheet 2mm 1200x2400 (SS-2MM)",
+       "Qty": "30",
+       "Unit": "sheets",
+       "Unit Cost": "$88.00",
+       "Total": "$2,640.00"
+      },
+      "source": "Steel Sheet 2mm 1200x2400 (SS-2MM) 30 sheets $88.00 $2,640.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Item / Description": "Mild Steel Round Bar 20mm x 3m (RB-20)",
+       "Qty": "40",
+       "Unit": "lengths",
+       "Unit Cost": "$42.50",
+       "Total": "$1,700.00"
+      },
+      "source": "Mild Steel Round Bar 20mm x 3m (RB-20) 40 lengths $42.50 $1,700.00",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2288,
+  "success": true,
+  "error": ""
+ }
+}

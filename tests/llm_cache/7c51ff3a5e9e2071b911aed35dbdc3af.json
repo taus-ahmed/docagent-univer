@@ -1,0 +1,73 @@
+{
+ "key": "7c51ff3a5e9e2071b911aed35dbdc3af2fb78a00c325f296900bfa725cb58d9d",
+ "meta": {
+  "method": "extract",
+  "context": "IS-2024-Q4",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1743,
+  "captured_at": "2026-08-18 02:41:01",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nIncome Statement — Q4 2024\nQuarter Ended December 31, 2024 | Doc No: IS-2024-Q4\nREVENUE\nGross Sales $1,980,00"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"income_statement\",\n  \"title\": \"Income Statement\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company EIN\",\n    \"Period\",\n    \"Date\",\n    \"Document Number\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Revenue\",\n      \"columns\": [\n        \"Revenue Item\",\n        \"Amount\"\n      ],\n      \"row_count\": 3\n    },\n    {\n      \"name\": \"Cost of Goods Sold\",\n      \"columns\": [\n        \"COGS Item\",\n        \"Amount\"\n      ],\n      \"row_count\": 5\n    },\n    {\n      \"name\": \"Operating Expenses\",\n      \"columns\": [\n        \"Operating Expense Item\",\n        \"Amount\"\n      ],\n      \"row_count\": 10\n    },\n    {\n      \"name\": \"Other Income\",\n      \"columns\": [\n        \"Other Income Item\",\n        \"Amount\"\n      ],\n      \"row_count\": 1\n    }\n  ],\n  \"totals\": [\n    \"Gross Profit\",\n    \"Total Operating Expenses\",\n    \"Operating Income (EBIT)\",\n    \"Net Income (Loss) Before Tax\",\n    \"Est. Income Tax Provision (21%)\",\n    \"Net Income (Loss) After Tax\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "income_statement",
+   "title": "Income Statement",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company EIN",
+    "Period",
+    "Date",
+    "Document Number"
+   ],
+   "tables": [
+    {
+     "name": "Revenue",
+     "columns": [
+      "Revenue Item",
+      "Amount"
+     ],
+     "row_count": 3
+    },
+    {
+     "name": "Cost of Goods Sold",
+     "columns": [
+      "COGS Item",
+      "Amount"
+     ],
+     "row_count": 5
+    },
+    {
+     "name": "Operating Expenses",
+     "columns": [
+      "Operating Expense Item",
+      "Amount"
+     ],
+     "row_count": 10
+    },
+    {
+     "name": "Other Income",
+     "columns": [
+      "Other Income Item",
+      "Amount"
+     ],
+     "row_count": 1
+    }
+   ],
+   "totals": [
+    "Gross Profit",
+    "Total Operating Expenses",
+    "Operating Income (EBIT)",
+    "Net Income (Loss) Before Tax",
+    "Est. Income Tax Provision (21%)",
+    "Net Income (Loss) After Tax"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1743,
+  "success": true,
+  "error": ""
+ }
+}

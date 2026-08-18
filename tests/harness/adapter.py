@@ -303,4 +303,37 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
             if out_rows:
                 put_table(g or base, out_rows)
 
+    # A list of labelled amounts can legitimately be described EITHER as named
+    # fields (a hand-built template names each row) OR as a two-column table of
+    # label/value rows (shape inference usually does, and an income statement
+    # genuinely is a list of labelled amounts). They are the same thing on a
+    # sheet. Where a predicted table matched no gold table and its rows carry
+    # gold FIELD names, those rows are those fields.
+    #
+    # This cannot hide an error: a row whose label does NOT match a gold field
+    # stays a table row and still scores as hallucinated, and a row with the
+    # right label but the wrong value becomes a field scored `wrong`.
+    for tname in [t for t in list(tables) if t not in gold_table_names]:
+        rows = tables.get(tname) or []
+        cols = [c for c in (rows[0].keys() if rows else [])
+                if not str(c).startswith("_")]
+        if len(cols) != 2:
+            continue
+        label_col, value_col = cols
+        kept, moved = [], 0
+        for row in rows:
+            g = _match_name(row.get(label_col), gold_field_names)
+            if g and g not in fields and not is_empty(row.get(value_col)):
+                fields[g] = row.get(value_col)
+                moved += 1
+            else:
+                kept.append(row)
+        if moved:
+            notes.append(f"{moved} label/value row(s) from table '{tname}' "
+                         f"scored as the gold fields they name")
+            if kept:
+                tables[tname] = kept
+            else:
+                del tables[tname]
+
     return {"fields": fields, "tables": tables, "notes": notes}

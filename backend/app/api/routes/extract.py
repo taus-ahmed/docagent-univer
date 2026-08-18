@@ -4089,8 +4089,15 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                             orchestrator, file_path, None
                         )
                     else:
-                        result = orchestrator._process_single_document(file_path)
-                        results = [result]
+                        # Phase 3 — no template: the engine infers one and runs
+                        # the same slot pipeline. Previously this went to the
+                        # orchestrator's schema path, which was bounded to the
+                        # 6 document types in demo_accounting.yaml and dropped
+                        # line items entirely.
+                        results = _extract_with_template(
+                            orchestrator, file_path, None,
+                            selected_pages=selected_pages,
+                        )
 
                 for result in results:
                     try:
@@ -4310,9 +4317,10 @@ def export_job_excel(
 
     if sheet_data:
         _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl)
+    elif _write_inferred_sheets(wb, ws, doc_results, openpyxl):
+        pass          # Phase 3 — written from the template the engine inferred
     else:
-        # No template saved — write a basic structured export
-        # This should rarely happen as jobs are always run with templates
+        # Nothing to build a sheet from (e.g. an image with no text layer).
         _write_flat_table(ws, doc_results, openpyxl)
 
     buf = io.BytesIO()
@@ -4551,6 +4559,54 @@ def _calculate_layout(sections):
             "template_end_row":   b["end"],
         })
     return plan
+
+
+def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod):
+    """Phase 3 — export a job that ran with no template, using the template the
+    engine inferred for each document.
+
+    Documents whose inferred shape matches share ONE sheet and stack in it;
+    genuinely different shapes get their own sheet. Never one sheet per
+    document when the shapes match. Returns False if nothing was inferred.
+    """
+    groups = {}
+    for d in doc_results:
+        ed = d.get_extracted_data()
+        if not isinstance(ed, dict):
+            continue
+        grid = ed.get("inferred_grid")
+        if not (isinstance(grid, dict) and grid.get("cells")):
+            continue
+        sig = ed.get("shape_signature") or "shape"
+        groups.setdefault(sig, {"grid": grid, "docs": [],
+                                "title": (ed.get("inferred_template") or {}).get("title", "")})
+        groups[sig]["docs"].append(d)
+    if not groups:
+        return False
+
+    used_titles = set()
+
+    def _sheet_title(raw, idx):
+        base = re.sub(r"[\\/*?:\[\]]", " ", str(raw or "")).strip() or f"Sheet {idx}"
+        base = base[:28] or f"Sheet {idx}"
+        title, n = base, 2
+        while title.casefold() in used_titles:
+            title = f"{base[:25]} {n}"
+            n += 1
+        used_titles.add(title.casefold())
+        return title
+
+    print(f"[EXPORT] no template: {len(doc_results)} document(s) share "
+          f"{len(groups)} inferred shape(s)", flush=True)
+
+    for i, (sig, g) in enumerate(groups.items()):
+        sheet = ws if i == 0 else wb.create_sheet()
+        sheet.title = _sheet_title(g["title"], i + 1)
+        print(f"[EXPORT]   shape {sig}: {len(g['docs'])} document(s) "
+              f"-> sheet '{sheet.title}'", flush=True)
+        _write_slot_excel(sheet, g["docs"], g["grid"], g["grid"].get("cells", {}),
+                          openpyxl_mod)
+    return True
 
 
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
@@ -6046,6 +6102,50 @@ def get_job_results(job_id: int, doc_type: Optional[str]=None, needs_review: Opt
         model_used=d.model_used, tokens_used=d.tokens_used or 0,
         latency_ms=d.latency_ms or 0, created_at=d.created_at,
     ) for d in docs]
+
+@router.get("/jobs/{job_id}/inferred-templates")
+def get_inferred_templates(job_id: int, db: Session = Depends(get_db),
+                           current_user: User = Depends(get_current_user)):
+    """Phase 3 — the templates the engine designed for a job that ran without
+    one, as payloads POST /api/templates accepts directly ("save this as a
+    template").
+
+    One entry per distinct shape, not per document: documents that inferred the
+    same shape share a template, and the entry says how many used it.
+    """
+    _get_job_or_404(job_id, current_user, db)
+    docs = db.query(DocumentResult).filter(
+        DocumentResult.job_id == job_id).order_by(DocumentResult.id).all()
+
+    out = {}
+    for d in docs:
+        ed = d.get_extracted_data()
+        if not isinstance(ed, dict):
+            continue
+        inferred, grid = ed.get("inferred_template"), ed.get("inferred_grid")
+        if not (isinstance(inferred, dict) and isinstance(grid, dict)):
+            continue
+        sig = ed.get("shape_signature") or "shape"
+        if sig in out:
+            out[sig]["document_count"] += 1
+            out[sig]["documents"].append(d.filename)
+            continue
+        try:
+            for p in [str(_engine_dir), str(_backend_dir), str(_project_dir)]:
+                if p not in sys.path:
+                    sys.path.insert(0, p)
+            from shape_inference import saveable_template
+            payload = saveable_template(inferred, grid)
+        except Exception as e:
+            print(f"[TEMPLATE] could not build saveable template: {e}", flush=True)
+            continue
+        out[sig] = {"shape_signature": sig, "document_count": 1,
+                    "documents": [d.filename], "template": payload,
+                    "fields": inferred.get("fields", []),
+                    "tables": inferred.get("tables", []),
+                    "totals": inferred.get("totals", [])}
+    return list(out.values())
+
 
 @router.put("/jobs/{job_id}/docs/{doc_id}")
 def update_document(job_id: int, doc_id: int, payload: DocumentUpdateRequest,

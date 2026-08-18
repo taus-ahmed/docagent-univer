@@ -86,6 +86,9 @@ def build_template_data(label: dict, mode: str, orchestrator=None):
     return td, grid, f"needs {shape.get('required_columns', 0)} columns"
 
 
+NO_TEMPLATE = "__none__"
+
+
 def run_pipeline(label: dict, template_data: dict):
     """Run the real pipeline for one document; capture its stdout log."""
     from app.api.routes.extract import (_extract_image_with_template,
@@ -307,7 +310,8 @@ def write_markdown(report: dict, path: Path):
 
 
 def run(mode: str = "replay", only=None, repeat: int = 1,
-        report_dir: Path = None, do_diff: bool = True) -> dict:
+        report_dir: Path = None, do_diff: bool = True,
+        no_template: bool = False) -> dict:
     bs.bootstrap()
     report_dir = report_dir or bs.REPORTS_DIR
     bs.chdir_backend()  # pipeline writes relative paths as production does
@@ -332,7 +336,12 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
             cache.context = doc_id
             print(f"[RUN] {doc_id} ({label['document_type']}) …", flush=True)
 
-            td, grid, ttype = build_template_data(label, mode)
+            if no_template:
+                # Phase 3 — extract with NO template and score against the same
+                # gold. The engine must infer the document's structure itself.
+                td, grid, ttype = None, {"cells": {}}, NO_TEMPLATE
+            else:
+                td, grid, ttype = build_template_data(label, mode)
             adapted_runs = []
             log = ""
             results = []
@@ -344,7 +353,11 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                 if i > 0:
                     cache.mode = "live"  # stability runs bypass recording
                 results_i, log_i = run_pipeline(label, td)
-                adapted_runs.append(adapt(results_i, label, grid))
+                grid_i = grid
+                if no_template and results_i:
+                    ed0 = getattr(results_i[0], "extracted_data", None) or {}
+                    grid_i = ed0.get("inferred_grid") or grid
+                adapted_runs.append(adapt(results_i, label, grid_i))
                 if i == 0:
                     results, log = results_i, log_i
             cache.mode = mode
@@ -354,8 +367,13 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                                    doc_text=pdf_text(bs.PDF_DIR / label["pdf"]))
             doc_scores.append(score)
             unstable = find_unstable(adapted_runs)
+            inferred = None
+            if no_template and results:
+                inferred = (getattr(results[0], "extracted_data", None) or {}).get(
+                    "inferred_template")
             doc_reports[doc_id] = {
                 "document_type": label["document_type"],
+                "inferred_template": inferred,
                 "template": label["template"],
                 "template_type": ttype,
                 "success": all(getattr(r, "success", False) for r in results) if results else False,
@@ -380,6 +398,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         "config": {
             "mode": mode,
             "repeat": repeat,
+            "no_template": no_template,
             "env": bs.PRODUCTION_PARITY_ENV,
         },
         "cache_stats": cache.stats,
@@ -388,7 +407,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         "unstable_total": sum(len(d["unstable"]) for d in doc_reports.values()),
     }
 
-    latest = report_dir / "latest.json"
+    stem = "latest-notemplate" if no_template else "latest"
+    latest = report_dir / f"{stem}.json"
     if do_diff and latest.exists():
         try:
             prev = json.loads(latest.read_text(encoding="utf-8"))
@@ -403,12 +423,12 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     report_dir.mkdir(parents=True, exist_ok=True)
     (report_dir / "history").mkdir(exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    (report_dir / "history" / f"{stamp}.json").write_text(
+    (report_dir / "history" / f"{stamp}-{stem}.json").write_text(
         json.dumps(report, indent=1, ensure_ascii=False, default=str),
         encoding="utf-8")
     latest.write_text(json.dumps(report, indent=1, ensure_ascii=False,
                                  default=str), encoding="utf-8")
-    write_markdown(report, report_dir / "latest.md")
+    write_markdown(report, report_dir / f"{stem}.md")
 
     # console summary
     o = report["summary"]["overall"]
@@ -446,10 +466,13 @@ def main():
                     help="run each document N times (record/live only) and "
                          "flag fields whose value varies as unstable")
     ap.add_argument("--no-diff", action="store_true")
+    ap.add_argument("--no-template", action="store_true",
+                    help="extract with NO template — the engine infers the "
+                         "shape (Phase 3) — and score against the same gold")
     args = ap.parse_args()
     only = set(args.docs.split(",")) if args.docs else None
     run(mode=args.mode, only=only, repeat=args.repeat,
-        do_diff=not args.no_diff)
+        do_diff=not args.no_diff, no_template=args.no_template)
 
 
 if __name__ == "__main__":
