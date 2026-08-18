@@ -1,0 +1,32 @@
+{
+  "document_id": "CHQ-001847",
+  "document_type": "cheque",
+  "pdf": "CHQ-001847.pdf",
+  "template": "cheque.json",
+  "fields": {
+    "Cheque Number": "CHQ-001847",
+    "Date": "2024-01-31",
+    "Bank Name": "First National Bank of New York",
+    "Payer Name": "Nexus Global Trading LLC",
+    "Payee": "Pacific Steel & Metals Co.",
+    "Amount": 8410.00,
+    "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100",
+    "Memo": "Payment for PO-2024-0018 – Steel materials",
+    "Authorized By": "Janet Wu",
+    "Routing Number": "021000021",
+    "Account Number": "7743882201"
+  },
+  "field_types": {
+    "Date": "date",
+    "Amount": "money",
+    "Routing Number": "string",
+    "Account Number": "string"
+  },
+  "tables": {},
+  "table_types": {},
+  "uncertain": [
+    "'Cheque Number': the document prints 'No: CHQ-001847' at the top and '001847' in the MICR line. Labeled as 'CHQ-001847'; a bare '001847' would be a near match. Decide which form the product should return.",
+    "'Amount in Words' is labeled without the surrounding '***' / 'U.S. DOLLARS' decoration; an extraction including them scores near, not exact."
+  ],
+  "notes": "Single-page cheque (Non-Negotiable Copy). Routing 021000021 and account 7743882201 come from the MICR line 'A021000021A C7743882201C 001847D' and match the ABA/account printed on the invoices' payment instructions. Both are typed string — leading zeros matter."
+}

@@ -1,0 +1,45 @@
+{
+  "document_id": "STMT-2024-01",
+  "document_type": "bank_statement",
+  "pdf": "STMT-2024-01.pdf",
+  "template": "bank_statement.json",
+  "fields": {
+    "Bank Name": "First National Bank of New York",
+    "Account Holder": "Nexus Global Trading LLC",
+    "Statement No": "STMT-2024-01",
+    "Period": "January 2024",
+    "Account No": "****7743",
+    "Account Type": "Business Checking",
+    "Opening Balance": 184320.55,
+    "Total Credits": 46841.68,
+    "Total Debits": 105804.97,
+    "Closing Balance": 125357.26
+  },
+  "field_types": {
+    "Opening Balance": "money",
+    "Total Credits": "money",
+    "Total Debits": "money",
+    "Closing Balance": "money"
+  },
+  "tables": {
+    "transactions": [
+      {"Date": "01/03", "Type": "DEP", "Description": "Wire deposit – Summit Retail Group", "Debit": null, "Credit": 15000.00, "Balance": 199320.55},
+      {"Date": "01/05", "Type": "ACH", "Description": "Payroll disbursement – January wk1", "Debit": 18450.00, "Credit": null, "Balance": 180870.55},
+      {"Date": "01/10", "Type": "CHQ", "Description": "Cheque #001831 – National Office Supplies", "Debit": 5682.75, "Credit": null, "Balance": 175187.80},
+      {"Date": "01/12", "Type": "DEP", "Description": "Wire deposit – Pinnacle Electronics Corp.", "Debit": null, "Credit": 22934.50, "Balance": 198122.30},
+      {"Date": "01/15", "Type": "FEE", "Description": "Monthly account maintenance fee", "Debit": 25.00, "Credit": null, "Balance": 198097.30},
+      {"Date": "01/15", "Type": "ACH", "Description": "Payroll disbursement – January wk3", "Debit": 18450.00, "Credit": null, "Balance": 179647.30},
+      {"Date": "01/18", "Type": "CHQ", "Description": "Cheque #001832 – Con Edison utilities", "Debit": 3847.22, "Credit": null, "Balance": 175800.08},
+      {"Date": "01/22", "Type": "DEP", "Description": "Wire deposit – BlueLine Wholesale Group", "Debit": null, "Credit": 8765.00, "Balance": 184565.08},
+      {"Date": "01/25", "Type": "ACH", "Description": "Federal tax deposit – Q4 payroll", "Debit": 12400.00, "Credit": null, "Balance": 172165.08},
+      {"Date": "01/28", "Type": "CHQ", "Description": "Cheque #001833 – Manhattan Commercial Prop.", "Debit": 28500.00, "Credit": null, "Balance": 143665.08},
+      {"Date": "01/30", "Type": "INT", "Description": "Interest earned – savings component", "Debit": null, "Credit": 142.18, "Balance": 143807.26},
+      {"Date": "01/31", "Type": "ACH", "Description": "Payroll disbursement – January wk4", "Debit": 18450.00, "Credit": null, "Balance": 125357.26}
+    ]
+  },
+  "table_types": {
+    "transactions": {"Date": "date", "Type": "string", "Description": "string", "Debit": "money", "Credit": "money", "Balance": "money"}
+  },
+  "uncertain": [],
+  "notes": "Single-page statement, 12 transactions. Fully reconciled: credits 15000+22934.50+8765+142.18 = 46841.68; debits (3x18450)+5682.75+25+3847.22+12400+28500 = 105804.97; 184320.55 + 46841.68 - 105804.97 = 125357.26, and every running balance checks. Transaction dates are printed WITHOUT a year (mm/dd); the date comparator matches them year-agnostically. Debit/Credit null = that cell is empty in the document — a value extracted there is a hallucination."
+}

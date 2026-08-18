@@ -1,0 +1,38 @@
+{
+  "document_id": "EXP-2024-0081",
+  "document_type": "expense_report",
+  "pdf": "EXP-2024-0081.pdf",
+  "template": "expense_report.json",
+  "fields": {
+    "Employee Name": "Marcus A. Thompson",
+    "Employee ID": "EMP-0012",
+    "Report No": "EXP-2024-0081",
+    "Department": "Procurement",
+    "Manager": "Janet Wu",
+    "Period": "March 15–22, 2024",
+    "Purpose": "Supplier site visit – Pacific Steel, Los Angeles",
+    "Status": "APPROVED",
+    "Total Claimed": 1727.25
+  },
+  "field_types": {
+    "Total Claimed": "money"
+  },
+  "tables": {
+    "expenses": [
+      {"Date": "03/15", "Type": "Airfare", "Description": "Delta Airlines JFK–LAX round trip", "Category": "Travel", "Amount": 842.00},
+      {"Date": "03/15", "Type": "Taxi", "Description": "Airport to hotel LAX", "Category": "Travel", "Amount": 38.50},
+      {"Date": "03/15", "Type": "Hotel", "Description": "Hilton LAX – 2 nights", "Category": "Lodging", "Amount": 389.00},
+      {"Date": "03/16", "Type": "Meals", "Description": "Hotel breakfast", "Category": "Meals", "Amount": 24.75},
+      {"Date": "03/16", "Type": "M&E", "Description": "Client lunch w/ Pacific Steel (4 pax)", "Category": "Meals & Entmt", "Amount": 187.40},
+      {"Date": "03/16", "Type": "Taxi", "Description": "Hotel to Pacific Steel facility", "Category": "Travel", "Amount": 22.00},
+      {"Date": "03/17", "Type": "Meals", "Description": "Team dinner (2 pax)", "Category": "Meals", "Amount": 95.60},
+      {"Date": "03/18", "Type": "Taxi", "Description": "Hotel to LAX", "Category": "Travel", "Amount": 41.00},
+      {"Date": "03/18", "Type": "Parking", "Description": "JFK long-term parking 3 days", "Category": "Travel", "Amount": 87.00}
+    ]
+  },
+  "table_types": {
+    "expenses": {"Date": "date", "Type": "string", "Description": "string", "Category": "string", "Amount": "money"}
+  },
+  "uncertain": [],
+  "notes": "Single-page expense report, APPROVED stamp, 9 expense rows. Verified: 842+38.50+389+24.75+187.40+22+95.60+41+87 = 1727.25. Expense dates are printed WITHOUT a year (mm/dd); the date comparator matches them year-agnostically. The 'Purpose' value wraps across two printed lines ('Supplier site visit – Pacific Steel, Los' / 'Angeles')."
+}

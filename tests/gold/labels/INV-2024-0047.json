@@ -1,0 +1,44 @@
+{
+  "document_id": "INV-2024-0047",
+  "document_type": "sales_invoice",
+  "pdf": "INV-2024-0047.pdf",
+  "template": "invoice.json",
+  "fields": {
+    "Invoice Number": "INV-2024-0047",
+    "Invoice Date": "2024-02-03",
+    "Due Date": "2024-03-04",
+    "Bill To Company": "Pinnacle Electronics Corp.",
+    "Bill To Address": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
+    "Bill To Contact": "Ms. Sarah Johnson",
+    "PO Reference": "PO-2024-0029",
+    "Payment Terms": "Net 30",
+    "Status": "OUTSTANDING",
+    "Subtotal": 15549.00,
+    "Shipping & Handling": 580.00,
+    "Sales Tax": 1282.79,
+    "Total Due": 17411.79
+  },
+  "field_types": {
+    "Invoice Number": "string",
+    "Invoice Date": "date",
+    "Due Date": "date",
+    "Subtotal": "money",
+    "Shipping & Handling": "money",
+    "Sales Tax": "money",
+    "Total Due": "money"
+  },
+  "tables": {
+    "line_items": [
+      {"Description": "USB-C Hub 7-Port Model HB-720", "Qty": 150, "Unit": "units", "Unit Price": 34.50, "Amount": 5175.00},
+      {"Description": "Wireless Mouse M300 Series", "Qty": 200, "Unit": "units", "Unit Price": 18.75, "Amount": 3750.00},
+      {"Description": "Laptop Cooling Stand Aluminium", "Qty": 80, "Unit": "units", "Unit Price": 27.00, "Amount": 2160.00},
+      {"Description": "HDMI 2.1 Cable 2m Pack/5", "Qty": 120, "Unit": "packs", "Unit Price": 16.20, "Amount": 1944.00},
+      {"Description": "Webcam HD 1080p w/ Mic", "Qty": 60, "Unit": "units", "Unit Price": 42.00, "Amount": 2520.00}
+    ]
+  },
+  "table_types": {
+    "line_items": {"Description": "string", "Qty": "number", "Unit": "string", "Unit Price": "money", "Amount": "money"}
+  },
+  "uncertain": [],
+  "notes": "Single-page invoice, OUTSTANDING stamp. Verified: qty x unit price = amount for all 5 rows; rows sum to 15549.00; tax = 8.25% of 15549.00 = 1282.79 exactly; 15549.00 + 580.00 + 1282.79 = 17411.79."
+}

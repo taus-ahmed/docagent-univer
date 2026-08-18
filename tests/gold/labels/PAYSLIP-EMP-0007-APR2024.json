@@ -1,0 +1,56 @@
+{
+  "document_id": "PAYSLIP-EMP-0007-APR2024",
+  "document_type": "payslip",
+  "pdf": "PAYSLIP-EMP-0007-APR2024.pdf",
+  "template": "payslip.json",
+  "fields": {
+    "Employer Name": "Nexus Global Trading LLC",
+    "Employee Name": "Janet L. Wu",
+    "Employee ID": "EMP-0007",
+    "Title / Department": "VP Operations – Executive",
+    "SSN": "***-**-3317",
+    "Pay Period": "April 1–30, 2024",
+    "Pay Date": "2024-04-30",
+    "Annual Salary": 145000.00,
+    "Total Earnings": 14583.33,
+    "Total Deductions": -7070.30,
+    "Net Pay": 7513.03,
+    "YTD Gross Earnings": 58333.33,
+    "YTD Taxes Withheld": 22716.00
+  },
+  "field_types": {
+    "Pay Date": "date",
+    "Annual Salary": "money",
+    "Total Earnings": "money",
+    "Total Deductions": "money",
+    "Net Pay": "money",
+    "YTD Gross Earnings": "money",
+    "YTD Taxes Withheld": "money"
+  },
+  "tables": {
+    "earnings": [
+      {"Description": "Base Salary", "Amount": 12083.33},
+      {"Description": "Car Allowance", "Amount": 500.00},
+      {"Description": "Executive Bonus", "Amount": 2000.00}
+    ],
+    "deductions": [
+      {"Description": "Federal Income Tax", "Amount": -3240.00},
+      {"Description": "Social Security (6.2%)", "Amount": -904.17},
+      {"Description": "Medicare (1.45%)", "Amount": -211.46},
+      {"Description": "NY State Income Tax", "Amount": -880.00},
+      {"Description": "NY City Tax", "Amount": -395.00},
+      {"Description": "Health Insurance (Family)", "Amount": -380.00},
+      {"Description": "401(k) Contribution (8%)", "Amount": -966.67},
+      {"Description": "Dental & Vision", "Amount": -65.00},
+      {"Description": "Life Insurance", "Amount": -28.00}
+    ]
+  },
+  "table_types": {
+    "earnings": {"Description": "string", "Amount": "money"},
+    "deductions": {"Description": "string", "Amount": "money"}
+  },
+  "uncertain": [
+    "Deduction amounts are printed in accounting parentheses, e.g. ($3,240.00) — labeled NEGATIVE here (and Total Deductions -7070.30). If the desired convention is positive magnitudes, flip all deduction amounts and the total."
+  ],
+  "notes": "2-page payslip. NET PAY is split across the page break in the text layer ('$7,513.0' + orphan '3'); the correct value 7513.03 is confirmed by arithmetic: 14583.33 - 7070.30 = 7513.03. Deductions sum verified: 3240.00+904.17+211.46+880.00+395.00+380.00+966.67+65.00+28.00 = 7070.30. 'Life Insurance' deduction row is on page 2."
+}

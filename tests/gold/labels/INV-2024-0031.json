@@ -1,0 +1,43 @@
+{
+  "document_id": "INV-2024-0031",
+  "document_type": "sales_invoice",
+  "pdf": "INV-2024-0031.pdf",
+  "template": "invoice.json",
+  "fields": {
+    "Invoice Number": "INV-2024-0031",
+    "Invoice Date": "2024-01-15",
+    "Due Date": "2024-02-14",
+    "Bill To Company": "Apex Industrial Supplies Inc.",
+    "Bill To Address": "500 Commerce Drive, Chicago, IL 60601",
+    "Bill To Contact": "Mr. Robert Chen",
+    "PO Reference": "PO-2024-0018",
+    "Payment Terms": "Net 30",
+    "Status": "PAID",
+    "Subtotal": 10892.50,
+    "Shipping & Handling": 320.00,
+    "Sales Tax": 966.71,
+    "Total Due": 12179.21
+  },
+  "field_types": {
+    "Invoice Number": "string",
+    "Invoice Date": "date",
+    "Due Date": "date",
+    "Subtotal": "money",
+    "Shipping & Handling": "money",
+    "Sales Tax": "money",
+    "Total Due": "money"
+  },
+  "tables": {
+    "line_items": [
+      {"Description": "Steel Wire Coils Grade A 500m", "Qty": 40, "Unit": "pcs", "Unit Price": 185.00, "Amount": 7400.00},
+      {"Description": "Industrial Lubricant 5L Drum", "Qty": 25, "Unit": "drums", "Unit Price": 68.00, "Amount": 1700.00},
+      {"Description": "Safety Gloves Heavy Duty Box/12", "Qty": 60, "Unit": "boxes", "Unit Price": 22.50, "Amount": 1350.00},
+      {"Description": "Hex Bolt Set M10 Qty-500", "Qty": 30, "Unit": "sets", "Unit Price": 14.75, "Amount": 442.50}
+    ]
+  },
+  "table_types": {
+    "line_items": {"Description": "string", "Qty": "number", "Unit": "string", "Unit Price": "money", "Amount": "money"}
+  },
+  "uncertain": [],
+  "notes": "Single-page invoice, PAID stamp. Line items verified: qty x unit price = amount for all 4 rows; rows sum to subtotal 10892.50; 10892.50 + 320.00 + 966.71 = 12179.21. (The printed 8.88% tax rate does not exactly reproduce 966.71 from any base; the printed amounts are the ground truth.)"
+}

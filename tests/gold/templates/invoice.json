@@ -1,0 +1,138 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Invoice Number",
+   "extractTarget": false
+  },
+  "0,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "1,0": {
+   "value": "Invoice Date",
+   "extractTarget": false
+  },
+  "1,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "2,0": {
+   "value": "Due Date",
+   "extractTarget": false
+  },
+  "2,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "3,0": {
+   "value": "Bill To Company",
+   "extractTarget": false
+  },
+  "3,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "4,0": {
+   "value": "Bill To Address",
+   "extractTarget": false
+  },
+  "4,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "5,0": {
+   "value": "Bill To Contact",
+   "extractTarget": false
+  },
+  "5,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "6,0": {
+   "value": "PO Reference",
+   "extractTarget": false
+  },
+  "6,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "7,0": {
+   "value": "Payment Terms",
+   "extractTarget": false
+  },
+  "7,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "8,0": {
+   "value": "Status",
+   "extractTarget": false
+  },
+  "8,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "10,0": {
+   "value": "Description",
+   "extractTarget": false
+  },
+  "10,1": {
+   "value": "Qty",
+   "extractTarget": false
+  },
+  "10,2": {
+   "value": "Unit",
+   "extractTarget": false
+  },
+  "10,3": {
+   "value": "Unit Price",
+   "extractTarget": false
+  },
+  "10,4": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "18,0": {
+   "value": "Subtotal",
+   "extractTarget": false
+  },
+  "18,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "19,0": {
+   "value": "Shipping & Handling",
+   "extractTarget": false
+  },
+  "19,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "20,0": {
+   "value": "Sales Tax",
+   "extractTarget": false
+  },
+  "20,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "21,0": {
+   "value": "Total Due",
+   "extractTarget": false
+  },
+  "21,1": {
+   "value": "",
+   "extractTarget": true
+  }
+ },
+ "colWidths": [
+  260,
+  70,
+  80,
+  100,
+  110
+ ],
+ "merges": {},
+ "extractTargets": [],
+ "repeatRows": []
+}

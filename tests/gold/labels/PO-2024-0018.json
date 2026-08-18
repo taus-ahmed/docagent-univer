@@ -1,0 +1,46 @@
+{
+  "document_id": "PO-2024-0018",
+  "document_type": "purchase_order",
+  "pdf": "PO-2024-0018.pdf",
+  "template": "purchase_order.json",
+  "fields": {
+    "PO Number": "PO-2024-0018",
+    "Date": "2024-01-10",
+    "Required By": "2024-01-28",
+    "Terms": "Net 30",
+    "Ship Via": "Vendor's carrier",
+    "Vendor Name": "Pacific Steel & Metals Co.",
+    "Vendor Address": "2200 Harbor Drive, Los Angeles, CA 90021",
+    "Vendor Contact": "Ms. Linda Zhao",
+    "Vendor ID": "VND-0041",
+    "Buyer Name": "Marcus A. Thompson",
+    "Buyer Title": "Purchasing Manager",
+    "Authorised By": "Janet Wu – VP Operations",
+    "Subtotal": 12090.00,
+    "Freight": 480.00,
+    "Tax": 0.00,
+    "Order Total": 12570.00
+  },
+  "field_types": {
+    "Date": "date",
+    "Required By": "date",
+    "Subtotal": "money",
+    "Freight": "money",
+    "Tax": "money",
+    "Order Total": "money"
+  },
+  "tables": {
+    "line_items": [
+      {"Item / Description": "Steel Wire Coils Grade A 500m (SW-500A)", "Qty": 50, "Unit": "pcs", "Unit Cost": 155.00, "Total": 7750.00},
+      {"Item / Description": "Steel Sheet 2mm 1200x2400 (SS-2MM)", "Qty": 30, "Unit": "sheets", "Unit Cost": 88.00, "Total": 2640.00},
+      {"Item / Description": "Mild Steel Round Bar 20mm x 3m (RB-20)", "Qty": 40, "Unit": "lengths", "Unit Cost": 42.50, "Total": 1700.00}
+    ]
+  },
+  "table_types": {
+    "line_items": {"Item / Description": "string", "Qty": "number", "Unit": "string", "Unit Cost": "money", "Total": "money"}
+  },
+  "uncertain": [
+    "'Authorised By' is labeled with the full printed string 'Janet Wu – VP Operations'; an extraction returning just 'Janet Wu' would score as a near match, not exact. Trim the label if name-only is the desired answer."
+  ],
+  "notes": "Single-page PO. Verified: qty x unit cost = total for all 3 rows; rows sum to 12090.00; 12090.00 + 480.00 + 0.00 = 12570.00. Tax is printed 'Tax (exempt): $0.00' — labeled 0.00, not null."
+}

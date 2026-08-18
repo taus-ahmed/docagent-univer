@@ -1,0 +1,106 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Employee Name",
+   "extractTarget": false
+  },
+  "0,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "1,0": {
+   "value": "Employee ID",
+   "extractTarget": false
+  },
+  "1,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "2,0": {
+   "value": "Report No",
+   "extractTarget": false
+  },
+  "2,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "3,0": {
+   "value": "Department",
+   "extractTarget": false
+  },
+  "3,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "4,0": {
+   "value": "Manager",
+   "extractTarget": false
+  },
+  "4,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "5,0": {
+   "value": "Period",
+   "extractTarget": false
+  },
+  "5,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "6,0": {
+   "value": "Purpose",
+   "extractTarget": false
+  },
+  "6,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "7,0": {
+   "value": "Status",
+   "extractTarget": false
+  },
+  "7,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "10,0": {
+   "value": "Date",
+   "extractTarget": false
+  },
+  "10,1": {
+   "value": "Type",
+   "extractTarget": false
+  },
+  "10,2": {
+   "value": "Description",
+   "extractTarget": false
+  },
+  "10,3": {
+   "value": "Category",
+   "extractTarget": false
+  },
+  "10,4": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "21,0": {
+   "value": "Total Claimed",
+   "extractTarget": false
+  },
+  "21,1": {
+   "value": "",
+   "extractTarget": true
+  }
+ },
+ "colWidths": [
+  70,
+  80,
+  260,
+  110,
+  100
+ ],
+ "merges": {},
+ "extractTargets": [],
+ "repeatRows": []
+}

@@ -1,0 +1,139 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Employer Name",
+   "extractTarget": false
+  },
+  "0,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "1,0": {
+   "value": "Employee Name",
+   "extractTarget": false
+  },
+  "1,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "2,0": {
+   "value": "Employee ID",
+   "extractTarget": false
+  },
+  "2,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "3,0": {
+   "value": "Title / Department",
+   "extractTarget": false
+  },
+  "3,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "4,0": {
+   "value": "SSN",
+   "extractTarget": false
+  },
+  "4,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "5,0": {
+   "value": "Pay Period",
+   "extractTarget": false
+  },
+  "5,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "6,0": {
+   "value": "Pay Date",
+   "extractTarget": false
+  },
+  "6,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "7,0": {
+   "value": "Annual Salary",
+   "extractTarget": false
+  },
+  "7,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "9,0": {
+   "value": "Earnings",
+   "extractTarget": false
+  },
+  "10,0": {
+   "value": "Description",
+   "extractTarget": false
+  },
+  "10,1": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "14,0": {
+   "value": "Total Earnings",
+   "extractTarget": false
+  },
+  "14,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "16,0": {
+   "value": "Deductions",
+   "extractTarget": false
+  },
+  "17,0": {
+   "value": "Description",
+   "extractTarget": false
+  },
+  "17,1": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "27,0": {
+   "value": "Total Deductions",
+   "extractTarget": false
+  },
+  "27,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "29,0": {
+   "value": "Net Pay",
+   "extractTarget": false
+  },
+  "29,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "30,0": {
+   "value": "YTD Gross Earnings",
+   "extractTarget": false
+  },
+  "30,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "31,0": {
+   "value": "YTD Taxes Withheld",
+   "extractTarget": false
+  },
+  "31,1": {
+   "value": "",
+   "extractTarget": true
+  }
+ },
+ "colWidths": [
+  240,
+  120
+ ],
+ "merges": {},
+ "extractTargets": [],
+ "repeatRows": []
+}

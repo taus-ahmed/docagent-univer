@@ -1,0 +1,119 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Bank Name",
+   "extractTarget": false
+  },
+  "0,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "1,0": {
+   "value": "Account Holder",
+   "extractTarget": false
+  },
+  "1,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "2,0": {
+   "value": "Statement No",
+   "extractTarget": false
+  },
+  "2,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "3,0": {
+   "value": "Period",
+   "extractTarget": false
+  },
+  "3,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "4,0": {
+   "value": "Account No",
+   "extractTarget": false
+  },
+  "4,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "5,0": {
+   "value": "Account Type",
+   "extractTarget": false
+  },
+  "5,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "6,0": {
+   "value": "Opening Balance",
+   "extractTarget": false
+  },
+  "6,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "9,0": {
+   "value": "Date",
+   "extractTarget": false
+  },
+  "9,1": {
+   "value": "Type",
+   "extractTarget": false
+  },
+  "9,2": {
+   "value": "Description",
+   "extractTarget": false
+  },
+  "9,3": {
+   "value": "Debit",
+   "extractTarget": false
+  },
+  "9,4": {
+   "value": "Credit",
+   "extractTarget": false
+  },
+  "9,5": {
+   "value": "Balance",
+   "extractTarget": false
+  },
+  "22,0": {
+   "value": "Total Credits",
+   "extractTarget": false
+  },
+  "22,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "23,0": {
+   "value": "Total Debits",
+   "extractTarget": false
+  },
+  "23,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "24,0": {
+   "value": "Closing Balance",
+   "extractTarget": false
+  },
+  "24,1": {
+   "value": "",
+   "extractTarget": true
+  }
+ },
+ "colWidths": [
+  70,
+  60,
+  260,
+  100,
+  100,
+  110
+ ],
+ "merges": {},
+ "extractTargets": [],
+ "repeatRows": []
+}

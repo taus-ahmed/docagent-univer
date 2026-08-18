@@ -1,0 +1,215 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Income Statement",
+   "extractTarget": false
+  },
+  "1,0": {
+   "value": "Gross Sales",
+   "extractTarget": false
+  },
+  "1,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "2,0": {
+   "value": "Less: Returns",
+   "extractTarget": false
+  },
+  "2,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "3,0": {
+   "value": "Net Revenue",
+   "extractTarget": false
+  },
+  "3,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "4,0": {
+   "value": "Opening Inventory",
+   "extractTarget": false
+  },
+  "4,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "5,0": {
+   "value": "Purchases",
+   "extractTarget": false
+  },
+  "5,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "6,0": {
+   "value": "Freight In",
+   "extractTarget": false
+  },
+  "6,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "7,0": {
+   "value": "Less: Closing Inventory",
+   "extractTarget": false
+  },
+  "7,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "8,0": {
+   "value": "Total COGS",
+   "extractTarget": false
+  },
+  "8,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "9,0": {
+   "value": "Gross Profit",
+   "extractTarget": false
+  },
+  "9,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "10,0": {
+   "value": "Salaries & Wages",
+   "extractTarget": false
+  },
+  "10,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "11,0": {
+   "value": "Rent",
+   "extractTarget": false
+  },
+  "11,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "12,0": {
+   "value": "Marketing",
+   "extractTarget": false
+  },
+  "12,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "13,0": {
+   "value": "Utilities",
+   "extractTarget": false
+  },
+  "13,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "14,0": {
+   "value": "Depreciation",
+   "extractTarget": false
+  },
+  "14,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "15,0": {
+   "value": "Insurance",
+   "extractTarget": false
+  },
+  "15,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "16,0": {
+   "value": "Office & Misc",
+   "extractTarget": false
+  },
+  "16,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "17,0": {
+   "value": "Professional Fees",
+   "extractTarget": false
+  },
+  "17,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "18,0": {
+   "value": "Bank Charges & Interest",
+   "extractTarget": false
+  },
+  "18,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "19,0": {
+   "value": "Bad Debt",
+   "extractTarget": false
+  },
+  "19,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "20,0": {
+   "value": "Total Operating Expenses",
+   "extractTarget": false
+  },
+  "20,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "21,0": {
+   "value": "Operating Income (EBIT)",
+   "extractTarget": false
+  },
+  "21,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "22,0": {
+   "value": "Interest Income",
+   "extractTarget": false
+  },
+  "22,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "23,0": {
+   "value": "Net Income Before Tax",
+   "extractTarget": false
+  },
+  "23,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "24,0": {
+   "value": "Income Tax Provision",
+   "extractTarget": false
+  },
+  "24,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "25,0": {
+   "value": "Net Income After Tax",
+   "extractTarget": false
+  },
+  "25,1": {
+   "value": "",
+   "extractTarget": true
+  }
+ },
+ "colWidths": [
+  240,
+  120
+ ],
+ "merges": {},
+ "extractTargets": [],
+ "repeatRows": []
+}

@@ -1,0 +1,115 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "CURRENT ASSETS",
+   "extractTarget": false
+  },
+  "0,1": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "6,0": {
+   "value": "Total Current Assets",
+   "extractTarget": false
+  },
+  "6,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "8,0": {
+   "value": "NON-CURRENT ASSETS",
+   "extractTarget": false
+  },
+  "8,1": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "13,0": {
+   "value": "Total Non-Current Assets",
+   "extractTarget": false
+  },
+  "13,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "15,0": {
+   "value": "TOTAL ASSETS",
+   "extractTarget": false
+  },
+  "15,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "17,0": {
+   "value": "CURRENT LIABILITIES",
+   "extractTarget": false
+  },
+  "17,1": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "23,0": {
+   "value": "Total Current Liabilities",
+   "extractTarget": false
+  },
+  "23,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "25,0": {
+   "value": "LONG-TERM LIABILITIES",
+   "extractTarget": false
+  },
+  "25,1": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "28,0": {
+   "value": "Total Long-Term Liabilities",
+   "extractTarget": false
+  },
+  "28,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "30,0": {
+   "value": "TOTAL LIABILITIES",
+   "extractTarget": false
+  },
+  "30,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "32,0": {
+   "value": "SHAREHOLDERS' EQUITY",
+   "extractTarget": false
+  },
+  "32,1": {
+   "value": "Amount",
+   "extractTarget": false
+  },
+  "36,0": {
+   "value": "Total Equity",
+   "extractTarget": false
+  },
+  "36,1": {
+   "value": "",
+   "extractTarget": true
+  },
+  "38,0": {
+   "value": "TOTAL LIABILITIES & EQUITY",
+   "extractTarget": false
+  },
+  "38,1": {
+   "value": "",
+   "extractTarget": true
+  }
+ },
+ "colWidths": [
+  240,
+  120
+ ],
+ "merges": {},
+ "extractTargets": [],
+ "repeatRows": []
+}

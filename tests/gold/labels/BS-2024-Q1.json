@@ -1,0 +1,68 @@
+{
+  "document_id": "BS-2024-Q1",
+  "document_type": "balance_sheet",
+  "pdf": "BS-2024-Q1.pdf",
+  "template": "balance_sheet.json",
+  "fields": {
+    "Total Current Assets": 1129003,
+    "Total Non-Current Assets": 236500,
+    "TOTAL ASSETS": 1365503,
+    "Total Current Liabilities": 421200,
+    "Total Long-Term Liabilities": 129400,
+    "TOTAL LIABILITIES": 550600,
+    "Total Equity": 698104,
+    "TOTAL LIABILITIES & EQUITY": 1248704
+  },
+  "field_types": {
+    "Total Current Assets": "money",
+    "Total Non-Current Assets": "money",
+    "TOTAL ASSETS": "money",
+    "Total Current Liabilities": "money",
+    "Total Long-Term Liabilities": "money",
+    "TOTAL LIABILITIES": "money",
+    "Total Equity": "money",
+    "TOTAL LIABILITIES & EQUITY": "money"
+  },
+  "tables": {
+    "current_assets": [
+      {"Label": "Cash & Cash Equivalents", "Amount": 143803},
+      {"Label": "Accounts Receivable (net)", "Amount": 348200},
+      {"Label": "Inventory", "Amount": 612000},
+      {"Label": "Prepaid Expenses", "Amount": 16200},
+      {"Label": "Other Current Assets", "Amount": 8800}
+    ],
+    "non_current_assets": [
+      {"Label": "Property & Equipment (gross)", "Amount": 240000},
+      {"Label": "Less: Accum. Depreciation", "Amount": 108500},
+      {"Label": "Security Deposits", "Amount": 85000},
+      {"Label": "Intangibles (net)", "Amount": 20000}
+    ],
+    "current_liabilities": [
+      {"Label": "Accounts Payable", "Amount": 254800},
+      {"Label": "Accrued Liabilities", "Amount": 44200},
+      {"Label": "Short-term Loan – First National Bank", "Amount": 80000},
+      {"Label": "Deferred Revenue", "Amount": 18200},
+      {"Label": "Current Portion of Long-term Debt", "Amount": 24000}
+    ],
+    "long_term_liabilities": [
+      {"Label": "Long-term Loan – First National Bank", "Amount": 121000},
+      {"Label": "Deferred Tax Liability", "Amount": 8400}
+    ],
+    "shareholders_equity": [
+      {"Label": "Common Stock (100 shares @ $1,000 par)", "Amount": 100000},
+      {"Label": "Retained Earnings", "Amount": 550751},
+      {"Label": "Net Income YTD Q1", "Amount": 47353}
+    ]
+  },
+  "table_types": {
+    "current_assets": {"Label": "string", "Amount": "money"},
+    "non_current_assets": {"Label": "string", "Amount": "money"},
+    "current_liabilities": {"Label": "string", "Amount": "money"},
+    "long_term_liabilities": {"Label": "string", "Amount": "money"},
+    "shareholders_equity": {"Label": "string", "Amount": "money"}
+  },
+  "uncertain": [
+    "non_current_assets 'Less: Accum. Depreciation' is labeled 108500 (positive, as printed). If the desired convention is contra-asset-as-negative (-108500), flip this row and Total Non-Current Assets still reconciles only with the negative interpretation (240000 - 108500 + 85000 + 20000 = 236500)."
+  ],
+  "notes": "2-page stacked balance sheet. The document is internally INCONSISTENT by design: TOTAL ASSETS (1,365,503) != TOTAL LIABILITIES & EQUITY (1,248,704). Labels record what is printed. All section subtotals reconcile against their line items. Equity section spans the page break (Common Stock on page 1, rest on page 2)."
+}

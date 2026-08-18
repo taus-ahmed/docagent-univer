@@ -1,0 +1,52 @@
+{
+  "document_id": "IS-2024-Q4",
+  "document_type": "income_statement",
+  "pdf": "IS-2024-Q4.pdf",
+  "template": "income_statement.json",
+  "fields": {
+    "Gross Sales": 1980000,
+    "Less: Returns": 28600,
+    "Net Revenue": 1951400,
+    "Opening Inventory": 648000,
+    "Purchases": 1280000,
+    "Freight In": 52000,
+    "Less: Closing Inventory": 724000,
+    "Total COGS": 1256000,
+    "Gross Profit": 695400,
+    "Salaries & Wages": 190000,
+    "Rent": 85500,
+    "Marketing": 22400,
+    "Utilities": 12100,
+    "Depreciation": 10300,
+    "Insurance": 7150,
+    "Office & Misc": 5800,
+    "Professional Fees": 18000,
+    "Bank Charges & Interest": 3800,
+    "Bad Debt": 4200,
+    "Total Operating Expenses": 359250,
+    "Operating Income (EBIT)": 336150,
+    "Interest Income": 1240,
+    "Net Income Before Tax": 337390,
+    "Income Tax Provision": 70852,
+    "Net Income After Tax": 266538
+  },
+  "field_types": {
+    "Gross Sales": "money", "Less: Returns": "money", "Net Revenue": "money",
+    "Opening Inventory": "money", "Purchases": "money", "Freight In": "money",
+    "Less: Closing Inventory": "money", "Total COGS": "money",
+    "Gross Profit": "money", "Salaries & Wages": "money", "Rent": "money",
+    "Marketing": "money", "Utilities": "money", "Depreciation": "money",
+    "Insurance": "money", "Office & Misc": "money",
+    "Professional Fees": "money", "Bank Charges & Interest": "money",
+    "Bad Debt": "money", "Total Operating Expenses": "money",
+    "Operating Income (EBIT)": "money", "Interest Income": "money",
+    "Net Income Before Tax": "money", "Income Tax Provision": "money",
+    "Net Income After Tax": "money"
+  },
+  "tables": {},
+  "table_types": {},
+  "uncertain": [
+    "'Less: Returns' (28600) and 'Less: Closing Inventory' (724000) are labeled positive, as printed. Arithmetic reconciles only when they are SUBTRACTED (1980000 - 28600 = 1951400; 648000 + 1280000 + 52000 - 724000 = 1256000). Flip to negative if that is the desired convention."
+  ],
+  "notes": "2-page income statement (page 2 is only a footer). All subtotals verified: revenue, COGS, opex (sum of 10 items = 359250), EBIT = 695400 - 359250, pre-tax = 336150 + 1240, tax = 21% of 337390 rounded, after-tax = 337390 - 70852. Document prints 'NET INCOME (LOSS) BEFORE TAX' / 'Est. Income Tax Provision (21%)' / 'NET INCOME (LOSS) AFTER TAX' — template uses the shorter labels."
+}
