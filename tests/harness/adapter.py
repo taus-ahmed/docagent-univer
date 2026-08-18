@@ -72,6 +72,47 @@ def _match_name(pred_name: str, gold_names: list) -> Optional[str]:
     return best if best_score >= 0.5 else None
 
 
+def _row_labels(rows: list) -> set:
+    """The identifying text of each row — its first non-numeric cell."""
+    out = set()
+    for r in rows or []:
+        if not isinstance(r, dict):
+            continue
+        for k, v in r.items():
+            if str(k).startswith("_") or is_empty(v):
+                continue
+            s = str(v).strip()
+            if re.search(r"[A-Za-z]{3}", s):
+                out.add(_norm(s))
+                break
+    return out
+
+
+def _match_by_content(pred_rows: list, gold_tables: dict, taken: set):
+    """Map a predicted table to a gold table by which rows it actually holds.
+
+    A template gives its bands no names — the engine can only call them
+    "table_1", "table_2" — but gold names them ("current_assets"). Matching on
+    the row labels the two have in common is how a nameless band is identified.
+    This is a naming impedance mismatch between the engine's output and the
+    labels' vocabulary, which is exactly what this adapter exists to absorb.
+    """
+    pl = _row_labels(pred_rows)
+    if not pl:
+        return None
+    best, best_score = None, 0.0
+    for name, gold_rows in (gold_tables or {}).items():
+        if name in taken:
+            continue
+        gl = _row_labels(gold_rows)
+        if not gl:
+            continue
+        score = len(pl & gl) / len(gl)
+        if score > best_score:
+            best, best_score = name, score
+    return best if best_score >= 0.5 else None
+
+
 def _cell_value(v: Any) -> Any:
     if isinstance(v, dict):
         return v.get("value")
@@ -152,9 +193,12 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
 
     def put_table(name, rows):
         g = _match_name(name, gold_table_names)
+        if g is None:
+            g = _match_by_content(rows, label.get("tables") or {}, set(tables))
+            if g:
+                notes.append(f"table '{name}' identified as gold table '{g}' "
+                             f"by row content (the template names no bands)")
         key = g or str(name)
-        if key != name:
-            pass  # matched a gold table
         tables.setdefault(key, []).extend(rows)
         if g is None and rows:
             notes.append(f"extracted table/section '{name}' matches no gold "
@@ -215,24 +259,48 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
             if not (key == "table_rows" or key.endswith("_rows")):
                 continue
             base = key[:-5] if key.endswith("_rows") else key
+            raw_rows = [row for row in val if isinstance(row, dict)]
+            if not raw_rows:
+                continue
+
+            # Identify the gold table BEFORE mapping columns. The vocabulary to
+            # map column names into is a property of the table, so the table has
+            # to be known first: by name, then by the rows it actually holds,
+            # then — only if gold describes a single table — by elimination.
+            g = _match_name(base, gold_table_names)
+            if g is None:
+                g = _match_by_content(raw_rows, label.get("tables") or {}, set(tables))
+                if g:
+                    notes.append(f"table '{base}' identified as gold table "
+                                 f"'{g}' by row content (the template names "
+                                 f"no bands)")
+            if g is None and len(gold_table_names) == 1:
+                g = gold_table_names[0]
+            cols = list((label.get("table_types", {}) or {}).get(g, {}).keys()) if g else []
+
             out_rows = []
-            for row in val:
-                if not isinstance(row, dict):
-                    continue
-                g = _match_name(base, gold_table_names) or (
-                    gold_table_names[0] if len(gold_table_names) == 1 else None)
-                cols = list((label.get("table_types", {}) or {}).get(g, {}).keys()) if g else []
-                mapped = {}
-                for ck, cv in row.items():
-                    if str(ck).startswith("_"):
-                        continue
-                    gc = _match_name(ck, cols) if cols else None
-                    mapped[gc or str(ck)] = _cell_value(cv)
+            for row in raw_rows:
+                pred_keys = [k for k in row if not str(k).startswith("_")]
+                by_name, used = {}, set()
+                for ck in pred_keys:                       # 1. by name
+                    gc = _match_name(ck, [c for c in cols if c not in used]) if cols else None
+                    if gc:
+                        by_name[ck] = gc
+                        used.add(gc)
+                # 2. by position for the rest. A band's first column header is
+                #    often the SECTION title ("CURRENT ASSETS") where the labels
+                #    call that column "Label" — no name match is possible, but
+                #    the column order is the same, and order is what a table
+                #    means. The export writes by position too.
+                free = [c for c in cols if c not in used]
+                for ck in pred_keys:
+                    if ck not in by_name and free:
+                        by_name[ck] = free.pop(0)
+                mapped = {by_name.get(ck, str(ck)): _cell_value(row[ck])
+                          for ck in pred_keys}
                 if any(not is_empty(v) for v in mapped.values()):
                     out_rows.append(mapped)
             if out_rows:
-                name = base if base != "table" else (
-                    gold_table_names[0] if len(gold_table_names) == 1 else "table")
-                put_table(name, out_rows)
+                put_table(g or base, out_rows)
 
     return {"fields": fields, "tables": tables, "notes": notes}

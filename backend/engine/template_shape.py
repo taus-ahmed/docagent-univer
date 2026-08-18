@@ -120,13 +120,25 @@ def compute_shape(grid, log=None):
                  f"({', '.join(m[(hr, c)] for c in cols)}) but has no empty rows "
                  f"beneath it — not treated as a repeating band")
             continue
+        section = _section_for(m, static, hr)
+        # Name the band after the section that titles it ("Earnings",
+        # "Deductions"). That name is the band's address in the prompt, and a
+        # real name extracts better than "table_2" — the model is being told
+        # which part of the document to read. Falls back to a positional name
+        # only when the template gives the band no title at all.
+        if section:
+            name = section
+        elif len(header_candidates) == 1:
+            name = "table"
+        else:
+            name = f"table_{len(bands) + 1}"
         bands.append({
-            "name": "table" if len(header_candidates) == 1 else f"table_{len(bands) + 1}",
+            "name": name,
             "header_row": hr,
             "start_row": hr + 1,
             "end_row": end,
             "columns": [{"col": c, "header": m[(hr, c)]} for c in cols],
-            "section": _section_for(m, static, hr),
+            "section": section,
         })
 
     band_rows = set()
@@ -234,9 +246,11 @@ def choose_path(shape, doc_type="", slot_doc_types=()):
     bands = shape.get("repeat_bands") or []
     field_slots = shape.get("field_slots") or []
 
-    # Slot-directed extraction serves any width and is the destination for all
-    # templates; it is scoped by document type while it is being rolled out.
-    if doc_type in (slot_doc_types or ()):
+    # Slot-directed extraction addresses every cell by (row label, column
+    # header), so it serves any number of columns. Phase 2c routes every
+    # templated document through it, which is what removes the 2-column
+    # ceiling the layout path imposed. `slot_doc_types=None` means "all".
+    if slot_doc_types is None or doc_type in slot_doc_types:
         return {"path": "slot", "required_columns": required,
                 "template_type": "slot",
                 "reason": f"slot-directed (serves {required} columns)",

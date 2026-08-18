@@ -903,10 +903,12 @@ def _run_unguided_extraction(orchestrator, file_path, template_data, binding_map
                             default_doc_type, start, primary_mode="unguided")
 
 
-# Document types routed to slot-directed extraction. Phase 1 deliberately
-# scopes this to one type so the change can be measured in isolation; Phase 2
-# widens it after the numbers are reviewed.
-_SLOT_DOC_TYPES = {"bank_statement"}
+# Document types routed to slot-directed extraction. Phase 1 scoped this to
+# bank_statement so the change could be measured in isolation; Phase 2c widens
+# it to every document type, because slot addressing by (row label, column
+# header) is what removes the layout path's 2-column ceiling.
+# None = all document types.
+_SLOT_DOC_TYPES = None
 
 
 def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
