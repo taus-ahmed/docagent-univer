@@ -113,7 +113,9 @@ def create_template(
         column_order_json=None,
         is_shared=payload.is_shared and current_user.role in ("admin", "company_admin"),
     )
-    # Gemini-based template understanding — compute once at save time (best-effort).
+    # Template shape (2a) + Gemini template understanding — both computed once
+    # at save time, both best-effort.
+    _compute_and_store_shape(tpl)
     _compute_and_store_cbm(tpl)
     db.add(tpl)
     db.commit()
@@ -150,7 +152,9 @@ def update_template(
     # Re-run Gemini template understanding only when the grid layout changed
     # (E3 — a template edit must regenerate the stored CBM).
     if description_changed:
-        print(f"[TEMPLATE] CBM regenerated on template update (id={tpl.id})", flush=True)
+        print(f"[TEMPLATE] shape + CBM regenerated on template update (id={tpl.id})",
+              flush=True)
+        _compute_and_store_shape(tpl)
         _compute_and_store_cbm(tpl)
 
     tpl.updated_at = datetime.utcnow()
@@ -172,6 +176,44 @@ def delete_template(
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _compute_and_store_shape(tpl: ColumnTemplate) -> None:
+    """
+    Phase 2a — derive the template's shape once, at save, and persist it.
+
+    The shape comes from one rule: a cell with text is a static label, an empty
+    cell is a slot. Extraction then reads the stored shape instead of
+    re-deriving structure from cell text on every run.
+
+    Never raises: a template that fails to yield a shape still saves, and
+    extraction falls back to inferring the shape at load.
+    """
+    try:
+        raw = json.loads(tpl.description) if tpl.description else None
+        if not (isinstance(raw, dict) and "cells" in raw):
+            tpl.set_shape(None)      # not a grid template
+            return
+    except Exception:
+        tpl.set_shape(None)
+        return
+
+    try:
+        from app.api.routes.extract import _compute_shape_for_grid
+        shape = _compute_shape_for_grid(raw)
+        tpl.set_shape(shape)
+        from template_shape import describe
+        print(f"[TEMPLATE] shape: {describe(shape)}", flush=True)
+        mig = (shape or {}).get("migration") or {}
+        if mig.get("extract_target_cells_with_text"):
+            print(f"[TEMPLATE] migration: "
+                  f"{mig['extract_target_cells_with_text']} cell(s) were marked "
+                  f"'extract here' AND contain text; under the one rule (text = "
+                  f"static label) they are now static labels", flush=True)
+    except Exception as e:
+        tpl.set_shape(None)
+        print(f"[TEMPLATE] shape computation failed ({e}) — will infer at load",
+              flush=True)
+
 
 def _compute_and_store_cbm(tpl: ColumnTemplate) -> None:
     """
@@ -279,4 +321,5 @@ def _to_response(t: ColumnTemplate) -> TemplateResponse:
         is_default=t.is_default,
         is_shared=t.is_shared,
         created_at=t.created_at,
+        shape=t.get_shape() if hasattr(t, "get_shape") else None,
     )

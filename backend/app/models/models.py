@@ -171,6 +171,12 @@ class ColumnTemplate(Base):
     # SQLite/PostgreSQL parity, matching extraction_json / columns_json.
     cell_binding_map = Column(Text, nullable=True)
 
+    # Template shape (Phase 2a), computed at save from the one rule "text =
+    # static label, empty = slot". JSON string: {header_rows, label_columns,
+    # value_columns, repeat_bands, field_slots, required_columns}. NULL = saved
+    # before shape existed; it is inferred and persisted on first load.
+    shape_json = Column(Text, nullable=True)
+
     is_default = Column(Boolean, default=False)       # visible to all users
     is_shared = Column(Boolean, default=False)        # shared within client org
 
@@ -197,6 +203,18 @@ class ColumnTemplate(Base):
 
     def set_cell_binding_map(self, data: Optional[dict]):
         self.cell_binding_map = json.dumps(data, default=str) if data else None
+
+    def get_shape(self) -> Optional[dict]:
+        if not self.shape_json:
+            return None
+        try:
+            data = json.loads(self.shape_json)
+            return data if isinstance(data, dict) else None
+        except Exception:
+            return None
+
+    def set_shape(self, data: Optional[dict]):
+        self.shape_json = json.dumps(data, default=str) if data else None
 
     def get_column_order(self) -> list[str] | None:
         if not self.column_order_json:

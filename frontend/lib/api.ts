@@ -64,6 +64,25 @@ export interface ColumnTemplate {
   is_default: boolean;
   is_shared: boolean;
   created_at: string;
+  /** Phase 2a — the shape the engine derived from this template's grid.
+   *  Read-only: correct it by editing cells, not by overriding it here. */
+  shape?: TemplateShape | null;
+}
+
+export interface TemplateShape {
+  header_rows: number[];
+  label_columns: number[];
+  value_columns: number[];
+  repeat_bands: Array<{
+    name: string;
+    header_row: number;
+    start_row: number;
+    end_row: number;
+    columns: Array<{ col: number; header: string }>;
+  }>;
+  field_slots: Array<{ ref: string; row_label: string }>;
+  required_columns: number;
+  summary?: string;
 }
 
 export interface JobStatus {

@@ -254,6 +254,34 @@ async def upload_and_extract(
 # TEMPLATE PARSING & REGION ANALYSIS
 # ==============================================================================
 
+def _persist_inferred_shape(tpl: ColumnTemplate) -> None:
+    """Write a freshly-inferred shape back to the row it came from, so the
+    inference happens once per template rather than once per extraction.
+    Best-effort: a detached or read-only session must never fail extraction."""
+    try:
+        from sqlalchemy.orm import object_session
+        sess = object_session(tpl)
+        if sess is None:
+            return
+        sess.add(tpl)
+        sess.commit()
+        print(f"[TEMPLATE] inferred shape persisted (id={getattr(tpl, 'id', '?')})",
+              flush=True)
+    except Exception as e:
+        print(f"[TEMPLATE] could not persist inferred shape ({e}) — "
+              f"it will be re-inferred next load", flush=True)
+
+
+def _compute_shape_for_grid(grid: dict) -> Optional[dict]:
+    """Phase 2a — template shape from a grid. Safe to call from a request
+    handler (the engine dir may not be on sys.path yet)."""
+    for p in [str(_engine_dir), str(_backend_dir), str(_project_dir)]:
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    from template_shape import compute_shape
+    return compute_shape(grid, log=lambda m: print(f"[SHAPE] {m}", flush=True))
+
+
 def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
     """Parse a ColumnTemplate into extraction-ready format with region analysis."""
     if tpl.description:
@@ -293,6 +321,21 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                         template_data["regions"], tpl.document_type or "other"
                     )
                 )
+                # Phase 2a — template shape. Use the stored one; for templates
+                # saved before shape existed, infer it ONCE here and persist so
+                # the next load is a read, not another inference.
+                try:
+                    shape = tpl.get_shape() if hasattr(tpl, "get_shape") else None
+                    if not shape:
+                        shape = _compute_shape_for_grid(raw)
+                        if shape and hasattr(tpl, "set_shape"):
+                            tpl.set_shape(shape)
+                            _persist_inferred_shape(tpl)
+                    if shape:
+                        template_data["shape"] = shape
+                except Exception as shape_err:
+                    print(f"[TEMPLATE] shape unavailable ({shape_err})", flush=True)
+
                 # Gemini-based template understanding (computed once at save time).
                 # When present, extraction uses it directly instead of re-analysing.
                 try:

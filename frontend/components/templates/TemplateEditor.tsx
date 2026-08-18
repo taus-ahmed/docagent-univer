@@ -155,16 +155,41 @@ export default function TemplateEditor({ templateId }: Props) {
       const hasCells = Object.values(sheetData.cells ?? {}).some((c: any) => c?.value?.trim());
       if (!hasCells) throw new Error("Add some content to the spreadsheet before saving");
 
-      // Build columns list from extract targets OR all cells with values
+      // Build the columns list from the one rule (Phase 2a): a slot is an empty
+      // cell, and its name is the nearest label to its left (then above). The
+      // server derives the authoritative shape from the same grid; this list is
+      // only the flat column summary the template API stores alongside it.
       let cols: TemplateColumn[] = [];
 
-      if (sheetData.extractTargets?.length > 0) {
-        cols = sheetData.extractTargets.map((t: any, i: number) => ({
-          name: t.label,
-          type: "Text" as const,
-          order: i,
-          extraction_type: t.isRepeat ? "lineitem" : "header",
-        }));
+      const cellsMap: Record<string, any> = sheetData.cells ?? {};
+      const txt = (r: number, c: number) => (cellsMap[`${r},${c}`]?.value ?? "").trim();
+      let boxR = -1, boxC = -1;
+      Object.entries(cellsMap).forEach(([k, cell]: any) => {
+        if (!cell?.value?.trim()) return;
+        const [r, c] = k.split(",").map(Number);
+        if (r > boxR) boxR = r;
+        if (c > boxC) boxC = c;
+      });
+      const repeatRows = new Set<number>(sheetData.repeatRows ?? []);
+      const slotCols: TemplateColumn[] = [];
+      for (let r = 0; r <= boxR; r++) {
+        for (let c = 0; c <= boxC; c++) {
+          if (!(`${r},${c}` in cellsMap) || txt(r, c)) continue;
+          let label = "";
+          for (let dc = 1; dc <= 3 && !label; dc++) label = txt(r, c - dc);
+          if (!label) for (let dr = 1; dr <= 3 && !label; dr++) label = txt(r - dr, c);
+          if (!label) continue;
+          slotCols.push({
+            name: label,
+            type: "Text" as const,
+            order: slotCols.length,
+            extraction_type: repeatRows.has(r) ? "lineitem" : "header",
+          });
+        }
+      }
+
+      if (slotCols.length > 0) {
+        cols = slotCols;
       } else {
         const cellEntries = Object.entries(sheetData.cells ?? {});
         const allNamedCells = cellEntries
@@ -336,14 +361,23 @@ export default function TemplateEditor({ templateId }: Props) {
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          Design your template freely — all cells and formatting are saved exactly as you see.
-          Optionally: select cells and click{" "}
-          <strong style={{ margin:"0 3px", color:"#15803d" }}>Extract here</strong>
-          {" "}for single values, or{" "}
-          <strong style={{ margin:"0 3px", color:"#1d4ed8" }}>Repeat row</strong>
-          {" "}for line items (AI creates one row per item).
-          If you don't mark anything, the AI will intelligently extract all visible fields.
+          Type a label in a cell to make it a heading; leave the cell beside it{" "}
+          <strong style={{ margin:"0 3px", color:"#15803d" }}>empty</strong>
+          {" "}and the AI fills that cell. Empty cells are shown in green.
+          For line items, put your column headings in a row and leave the rows
+          beneath them empty — the AI adds one row per item.
         </div>
+
+        {/* SHAPE — what the engine derived from this grid. Read-only on purpose:
+            the grid is the single source of truth, so it is corrected by editing
+            cells rather than by overriding the shape here. */}
+        {existing?.shape?.summary && (
+          <div style={{ flexShrink:0, background:"#f8f9fb", borderBottom:"1px solid #e5e7eb", padding:"6px 20px", fontSize:11.5, color:"#4b5563", display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontWeight:600, color:"#374151" }}>Structure:</span>
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11 }}>{existing.shape.summary}</span>
+            <span style={{ color:"#9ca3af" }}>— edit cells to change this</span>
+          </div>
+        )}
 
         {/* SPREADSHEET */}
         <div style={{ flex:1, minHeight:0, padding:14, overflow:"hidden", display:"flex", flexDirection:"column" }}>

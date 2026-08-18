@@ -142,6 +142,10 @@ class TemplateResponse(BaseModel):
     is_default: bool
     is_shared: bool
     created_at: datetime
+    # Phase 2a — the template's shape (header rows, label/value columns,
+    # repeating bands). Surfaced so the editor can show what the engine
+    # believes the template's structure is, and the user can correct it.
+    shape: Optional[dict] = None
 
 
 # ─── Export ───────────────────────────────────────────────────────────────────

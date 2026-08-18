@@ -18,14 +18,12 @@ interface SheetCell {
   style: CellStyle;
   mergeParent?: [number, number];
   mergeSpan?: { rows: number; cols: number };
-  extractTarget?: boolean;
   repeatRow?: boolean;
 }
 interface GridData {
   cells: Record<string, SheetCell>;
   colWidths: number[];
   merges: Record<string, { rows: number; cols: number }>;
-  extractTargets: Array<{ r: number; c: number; label: string; isRepeat: boolean }>;
   repeatRows: number[];
 }
 
@@ -44,14 +42,10 @@ function contentBounds(g: GridData): { rows: number; cols: number } {
   let maxR = -1, maxC = -1;
   for (const key of Object.keys(g.cells)) {
     const cell = g.cells[key];
-    if (!cell.value?.trim() && !cell.extractTarget) continue;
+    if (!cell.value?.trim()) continue;
     const [r, c] = key.split(",").map(Number);
     if (r > maxR) maxR = r;
     if (c > maxC) maxC = c;
-  }
-  for (const et of (g.extractTargets ?? [])) {
-    if (et.r > maxR) maxR = et.r;
-    if (et.c > maxC) maxC = et.c;
   }
   for (const key of Object.keys(g.merges ?? {})) {
     const [r, c] = key.split(",").map(Number);
@@ -82,7 +76,15 @@ function GridPreview({ grid }: { grid: GridData }) {
     }
   }
 
-  const etKeys = new Set<string>((grid.extractTargets ?? []).map(et => ck(et.r, et.c)));
+  // Phase 2a one rule: a cell with text is a static label, an empty cell
+  // inside the used region is a slot the AI fills.
+  const etKeys = new Set<string>();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const k = ck(r, c);
+      if (k in grid.cells && !grid.cells[k]?.value?.trim()) etKeys.add(k);
+    }
+  }
   const repeatSet = new Set<number>(grid.repeatRows ?? []);
 
   /* Scale colWidths for the preview viewport */
@@ -115,7 +117,7 @@ function GridPreview({ grid }: { grid: GridData }) {
 
                     const cell: SheetCell | undefined = grid.cells[key];
                     const merge = grid.merges?.[key];
-                    const isET = etKeys.has(key) || !!cell?.extractTarget;
+                    const isET = etKeys.has(key);
                     const st = cell?.style ?? {};
 
                     const bg = isET

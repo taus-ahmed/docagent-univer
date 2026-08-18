@@ -68,121 +68,23 @@ def _digits(s) -> str:
 # SLOT ENUMERATION
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _grid_matrix(grid):
-    """{(row, col): text} for every present cell; '' for a present-but-empty cell."""
-    out = {}
-    for key, cell in (grid or {}).get("cells", {}).items():
-        try:
-            r, c = map(int, str(key).split(","))
-        except (ValueError, AttributeError):
-            continue
-        if not isinstance(cell, dict):
-            continue
-        out[(r, c)] = str(cell.get("value") or "").strip()
-    return out
+def slots_from_shape(shape):
+    """Shape (2a) -> the addressed slots this module fills."""
+    return {"fields": list((shape or {}).get("field_slots") or []),
+            "tables": list((shape or {}).get("repeat_bands") or [])}
 
 
-def enumerate_slots(grid):
-    """Grid -> addressed slots. Returns {"fields": [...], "tables": [...]}."""
-    m = _grid_matrix(grid)
-    if not m:
-        return {"fields": [], "tables": []}
+def enumerate_slots(grid, shape=None):
+    """Addressed slots for a template.
 
-    rows = sorted({r for r, _ in m})
-    max_col = max(c for _, c in m)
-    static = {rc for rc, txt in m.items() if txt}
-
-    # 1. table headers: >= 2 adjacent static cells, with no static cell directly
-    #    below them (the band underneath is empty = repeating slots)
-    header_rows = {}
-    for r in rows:
-        cols = sorted(c for c in range(max_col + 1) if (r, c) in static)
-        if len(cols) < 2:
-            continue
-        if cols != list(range(cols[0], cols[0] + len(cols))):
-            continue  # not adjacent
-        below_static = any((r + 1, c) in static for c in cols)
-        if below_static:
-            continue
-        header_rows[r] = cols
-
-    # 2. each header's band runs to the row before the next row holding a static
-    tables = []
-    for hr, cols in sorted(header_rows.items()):
-        later = [r for r in rows if r > hr and any((r, c) in static
-                                                    for c in range(max_col + 1))]
-        end = (min(later) - 1) if later else max(rows)
-        if end <= hr:
-            # A header-looking row with no band beneath it inside the grid is
-            # ambiguous: "Date | Amount" as the last row is indistinguishable
-            # from a label/value pair. Skipped rather than guessed — but said
-            # out loud, because a silently dropped table is the failure this
-            # design exists to remove. Phase 2a's stored shape settles it.
-            _log("SLOT", f"row {hr} looks like a table header "
-                         f"({', '.join(m[(hr, c)] for c in cols)}) but has no "
-                         f"empty rows beneath it — not treated as a table")
-            continue
-        tables.append({
-            "name": "table" if len(header_rows) == 1 else f"table_{len(tables) + 1}",
-            "header_row": hr,
-            "start_row": hr + 1,
-            "end_row": end,
-            "columns": [{"col": c, "header": m[(hr, c)]} for c in cols],
-            "section": _section_for(m, static, hr),
-        })
-
-    band_rows = set()
-    for t in tables:
-        band_rows.update(range(t["start_row"], t["end_row"] + 1))
-    header_row_set = set(header_rows)
-
-    # 3. field slots: static label with an empty cell beside it
-    fields = []
-    for r in rows:
-        if r in band_rows or r in header_row_set:
-            continue
-        for c in range(max_col + 1):
-            if (r, c) not in static:
-                continue
-            # nearest present-but-empty cell to the right
-            for cc in range(c + 1, max_col + 2):
-                if (r, cc) in static:
-                    break
-                if (r, cc) in m:  # present and empty -> a slot
-                    fields.append({
-                        "slot_id": f"F{len(fields) + 1}",
-                        "ref": _ref(r, cc), "row": r, "col": cc,
-                        "row_label": m[(r, c)],
-                        "col_header": "",
-                        "section": _section_for(m, static, r),
-                    })
-                    break
-                break
-            break  # one label->slot pair per row (leftmost)
-    return {"fields": fields, "tables": tables}
-
-
-def _section_for(m, static, row):
-    """Nearest static-only row above `row` that has no slot beside it."""
-    for r in range(row - 1, -1, -1):
-        cols = [c for (rr, c) in static if rr == r]
-        if not cols:
-            continue
-        present = [c for (rr, c) in m if rr == r]
-        if len(cols) == 1 and len(present) == 1:
-            return m[(r, cols[0])]
-        return ""
-    return ""
-
-
-def _ref(r, c):
-    letter, n = "", c
-    while True:
-        letter = chr(65 + (n % 26)) + letter
-        n = n // 26 - 1
-        if n < 0:
-            break
-    return f"{letter}{r + 1}"
+    Prefers the template's STORED shape (Phase 2a). Falls back to inferring it
+    from the grid for templates saved before shape metadata existed — the
+    inference is identical, it just has not been persisted yet.
+    """
+    if shape:
+        return slots_from_shape(shape)
+    from template_shape import compute_shape
+    return slots_from_shape(compute_shape(grid, log=lambda msg: _log("SLOT", msg)))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -310,7 +212,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
 
     file_path = Path(file_path)
     grid = (template_data or {}).get("layout", {}) or {}
-    slots = enumerate_slots(grid)
+    shape = (template_data or {}).get("shape")
+    slots = enumerate_slots(grid, shape)
+    if shape:
+        _log("SLOT", f"{file_path.name}: using STORED template shape")
     n_tbl_cols = sum(len(t["columns"]) for t in slots["tables"])
     _log("SLOT", f"{file_path.name}: {len(slots['fields'])} field slots, "
                  f"{len(slots['tables'])} table(s), {n_tbl_cols} table columns")

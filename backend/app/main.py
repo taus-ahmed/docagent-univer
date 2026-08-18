@@ -99,6 +99,11 @@ def _run_migrations():
             # convention of storing JSON as TEXT (extraction_json, columns_json).
             """ALTER TABLE column_templates
                ADD COLUMN IF NOT EXISTS cell_binding_map TEXT""",
+
+            # Phase 2a — template shape (which rows are headers, which columns
+            # hold labels/values, which bands repeat), computed at save.
+            """ALTER TABLE column_templates
+               ADD COLUMN IF NOT EXISTS shape_json TEXT""",
         ]
 
         for sql in migrations:

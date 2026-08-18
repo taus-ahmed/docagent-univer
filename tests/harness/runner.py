@@ -77,6 +77,11 @@ def build_template_data(label: dict, mode: str, orchestrator=None):
     tpl = ColumnTemplate(name=Path(label["template"]).stem,
                          document_type=label["document_type"],
                          description=_json.dumps(grid), columns_json="[]")
+    # Mirror the production save path: shape is computed once at save (2a) and
+    # read back at load, so the harness measures the stored-shape path, not a
+    # per-run inference the product would never do.
+    from app.api.routes.templates import _compute_and_store_shape
+    _compute_and_store_shape(tpl)
     td = _parse_template(tpl)
 
     bm = compute_binding_map(td, grid)
