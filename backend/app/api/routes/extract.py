@@ -6566,6 +6566,11 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
 
     primary_mode = (template_regions or {}).get("primary_mode", "form_kv")
 
+    if template_type == "slot":
+        print("[EXPORT] routing: template_type=slot -> slot writer "
+              "(values written to the addresses they were requested for)", flush=True)
+        _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        return
     if template_type == "structural":
         print("[EXPORT] routing: template_type=structural -> layout-mode writer", flush=True)
         _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
@@ -6660,6 +6665,112 @@ def _calculate_layout(sections):
             "template_end_row":   b["end"],
         })
     return plan
+
+
+def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
+    """
+    Writer for slot-directed extraction.
+
+    There is no placement logic here, and that is the point: every value was
+    requested for a specific address and is written to that address. The only
+    computed thing is the row shift when a document has more table rows than
+    the template reserved blank rows for.
+
+    The sheet carries VALUES ONLY — no confidence colouring or annotations.
+    Confidence belongs in the app, not in the file a client works in.
+    """
+    from openpyxl.cell import MergedCell
+
+    max_r, max_c = _find_template_dimensions(cells_tpl)
+    GAP_BETWEEN_DOCS = 2
+    doc_offset = 0
+
+    def put(r, c, value):
+        cell = ws.cell(row=r + 1, column=c + 1)
+        if isinstance(cell, MergedCell):
+            return
+        if value is None or str(value).strip() == "":
+            return
+        txt = str(value).strip()
+        num = txt.replace(",", "")
+        for sym in "$£€₹¥":
+            num = num.replace(sym, "")
+        neg = num.startswith("(") and num.endswith(")")
+        if neg:
+            num = num[1:-1]
+        try:
+            val = float(num)
+            cell.value = -val if neg else val
+        except ValueError:
+            cell.value = txt
+
+    for doc in doc_results:
+        ed = doc.get_extracted_data()
+        if not isinstance(ed, dict):
+            continue
+        slot_map = ed.get("slot_map") or {}
+        tables = slot_map.get("tables") or []
+        fields = ed.get("extracted_fields") or {}
+
+        # how far each template row moves down, given table overflow
+        shifts = []
+        for t in tables:
+            rows = ed.get(f"{t['name']}_rows") or []
+            band = t["end_row"] - t["start_row"] + 1
+            shifts.append((t["end_row"], max(0, len(rows) - band)))
+
+        def out_row(tr):
+            return tr + sum(ov for end, ov in shifts if tr > end)
+
+        band_rows = set()
+        for t in tables:
+            band_rows.update(range(t["start_row"], t["end_row"] + 1))
+
+        # 1. static template text, at its shifted position
+        for key, cell_def in cells_tpl.items():
+            if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
+                continue
+            try:
+                tr, tc = map(int, str(key).split(","))
+            except ValueError:
+                continue
+            if tr > max_r or tc > max_c or tr in band_rows:
+                continue
+            text = str(cell_def.get("value") or "").strip()
+            if text:
+                put(doc_offset + out_row(tr), tc, text)
+
+        # 2. field slots, each at the exact address it was asked for
+        for ref, value in fields.items():
+            rc = _ref_to_rowcol(ref)
+            if rc is None:
+                continue
+            tr, tc = rc
+            if tr > max_r or tc > max_c:
+                continue
+            put(doc_offset + out_row(tr), tc, value)
+
+        # 3. table rows, in their band, by column header address
+        for t in tables:
+            rows = ed.get(f"{t['name']}_rows") or []
+            for i, row in enumerate(rows):
+                r = doc_offset + out_row(t["start_row"]) + i
+                for col in t["columns"]:
+                    put(r, col["col"], row.get(col["header"], ""))
+
+        block_height = max_r + 1 + sum(ov for _, ov in shifts)
+        doc_offset += block_height + GAP_BETWEEN_DOCS
+
+
+def _ref_to_rowcol(ref):
+    """'B12' -> (11, 1) 0-based, or None."""
+    m = re.fullmatch(r"([A-Za-z]+)(\d+)", str(ref).strip())
+    if not m:
+        return None
+    col = 0
+    for ch in m.group(1).upper():
+        col = col * 26 + (ord(ch) - 64)
+    return int(m.group(2)) - 1, col - 1
 
 
 def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):

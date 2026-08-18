@@ -903,6 +903,12 @@ def _run_unguided_extraction(orchestrator, file_path, template_data, binding_map
                             default_doc_type, start, primary_mode="unguided")
 
 
+# Document types routed to slot-directed extraction. Phase 1 deliberately
+# scopes this to one type so the change can be measured in isolation; Phase 2
+# widens it after the numbers are reviewed.
+_SLOT_DOC_TYPES = {"bank_statement"}
+
+
 def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
     """
     Single entry point (legacy signature). Returns list[DocumentExtractionResult].
@@ -974,6 +980,17 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
             ctx["template_data"] = None
             ctx["binding_map"] = None
             return _run_unguided_extraction(**ctx)
+
+    # ── SLOT-DIRECTED EXTRACTION (Phase 1 — bank_statement only) ──
+    # Enumerate the template's cells as addressed slots and ask the model to
+    # fill each one, instead of extracting a bag of values and matching them
+    # into cells afterwards. Gated to one document type until the numbers are
+    # reviewed; the implementation itself is generic (see slot_extractor).
+    if default_doc_type in _SLOT_DOC_TYPES:
+        _log("ROUTE", f"{file_path.name}: doc_type={default_doc_type} "
+                      f"-> slot-directed extraction (Phase 1)")
+        from slot_extractor import run_slot_extraction
+        return run_slot_extraction(**ctx)
 
     meta = (binding_map or {}).get("_meta", {}) if binding_map else {}
     template_type = meta.get("template_type", "labeled")

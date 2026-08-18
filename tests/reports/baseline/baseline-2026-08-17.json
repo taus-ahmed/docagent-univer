@@ -1,6 +1,6 @@
 {
- "run_id": "2026-08-18 01:23:11",
- "git_commit": "2cd23c1",
+ "run_id": "2026-08-17 23:14:06",
+ "git_commit": "1596f4a",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -11,7 +11,7 @@
   }
  },
  "cache_stats": {
-  "hits": 46,
+  "hits": 52,
   "recorded": 0,
   "live": 0,
   "misses": 0
@@ -7874,117 +7874,162 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [],
+   "adapter_notes": [
+    "extracted table/section 'FIRST NATIONAL BANK OF NEW YORK' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'ACCOUNT STATEMENT' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Account Holder: Nexus Global Trading LLC' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Opening Balance Credits Debits Closing Balance' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Description' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Closing Balance:' matches no gold table — all its rows will score as hallucinated"
+   ],
    "adapted": {
     "fields": {
-     "Bank Name": "FIRST NATIONAL BANK OF NEW YORK",
+     "Opening Balance": "184,320.55",
+     "Total Credits": "46,841.68",
+     "Total Debits": "105,804.97",
+     "Closing Balance": "125,357.26",
      "Account Holder": "Nexus Global Trading LLC",
-     "Statement No": "STMT-2024-01",
-     "Period": "January 2024",
-     "Account No": "****7743",
-     "Account Type": "Business Checking",
-     "Opening Balance": "$184,320.55",
-     "Total Credits": "$46,841.68",
-     "Total Debits": "$105,804.97",
-     "Closing Balance": "$125,357.26"
+     "Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "EIN": "47-3821654",
+     "01/03": "199,320.55",
+     "01/05": "180,870.55",
+     "01/10": "175,187.80",
+     "01/12": "198,122.30",
+     "01/15": "179,647.30",
+     "01/18": "175,800.08",
+     "01/22": "184,565.08",
+     "01/25": "172,165.08",
+     "01/28": "143,665.08",
+     "01/30": "143,807.26",
+     "01/31": "125,357.26"
     },
     "tables": {
-     "transactions": [
+     "FIRST NATIONAL BANK OF NEW YORK": [
       {
-       "Date": "01/03",
-       "Type": "DEP",
-       "Description": "Wire deposit — Summit Retail Group",
-       "Debit": "",
-       "Credit": "$15,000.00",
-       "Balance": "$199,320.55"
+       "Label": "FIRST NATIONAL BANK OF NEW YORK",
+       "Value": ""
       },
       {
-       "Date": "01/05",
-       "Type": "ACH",
-       "Description": "Payroll disbursement — January wk1",
-       "Debit": "$18,450.00",
-       "Credit": "",
-       "Balance": "$180,870.55"
+       "Label": "330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC",
+       "Value": ""
       },
       {
-       "Date": "01/10",
-       "Type": "CHQ",
-       "Description": "Cheque #001831 — National Office Supplies",
-       "Debit": "$5,682.75",
-       "Credit": "",
-       "Balance": "$175,187.80"
+       "Label": "ACCOUNT STATEMENT",
+       "Value": ""
+      }
+     ],
+     "ACCOUNT STATEMENT": [
+      {
+       "Label": "Opening Balance",
+       "Value": "184,320.55"
       },
       {
-       "Date": "01/12",
-       "Type": "DEP",
-       "Description": "Wire deposit — Pinnacle Electronics Corp.",
-       "Debit": "",
-       "Credit": "$22,934.50",
-       "Balance": "$198,122.30"
+       "Label": "Credits",
+       "Value": "46,841.68"
       },
       {
-       "Date": "01/15",
-       "Type": "FEE",
-       "Description": "Monthly account maintenance fee",
-       "Debit": "$25.00",
-       "Credit": "",
-       "Balance": "$198,097.30"
+       "Label": "Debits",
+       "Value": "105,804.97"
       },
       {
-       "Date": "01/15",
-       "Type": "ACH",
-       "Description": "Payroll disbursement — January wk3",
-       "Debit": "$18,450.00",
-       "Credit": "",
-       "Balance": "$179,647.30"
+       "Label": "Closing Balance",
+       "Value": "125,357.26"
+      }
+     ],
+     "Account Holder: Nexus Global Trading LLC": [
+      {
+       "Label": "Account Holder",
+       "Value": "Nexus Global Trading LLC"
       },
       {
-       "Date": "01/18",
-       "Type": "CHQ",
-       "Description": "Cheque #001832 — Con Edison utilities",
-       "Debit": "$3,847.22",
-       "Credit": "",
-       "Balance": "$175,800.08"
+       "Label": "Address",
+       "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
       },
       {
-       "Date": "01/22",
-       "Type": "DEP",
-       "Description": "Wire deposit — BlueLine Wholesale Group",
-       "Debit": "",
-       "Credit": "$8,765.00",
-       "Balance": "$184,565.08"
+       "Label": "EIN",
+       "Value": "47-3821654"
       },
       {
-       "Date": "01/25",
-       "Type": "ACH",
-       "Description": "Federal tax deposit — Q4 payroll",
-       "Debit": "$12,400.00",
-       "Credit": "",
-       "Balance": "$172,165.08"
+       "Label": "Opening Balance",
+       "Value": "184,320.55"
+      }
+     ],
+     "Opening Balance Credits Debits Closing Balance": [
+      {
+       "Label": "Opening Balance",
+       "Value": "184,320.55"
       },
       {
-       "Date": "01/28",
-       "Type": "CHQ",
-       "Description": "Cheque #001833 — Manhattan Commercial Prop.",
-       "Debit": "$28,500.00",
-       "Credit": "",
-       "Balance": "$143,665.08"
+       "Label": "Credits",
+       "Value": "46,841.68"
       },
       {
-       "Date": "01/30",
-       "Type": "INT",
-       "Description": "Interest earned — savings component",
-       "Debit": "",
-       "Credit": "$142.18",
-       "Balance": "$143,807.26"
+       "Label": "Debits",
+       "Value": "105,804.97"
       },
       {
-       "Date": "01/31",
-       "Type": "ACH",
-       "Description": "Payroll disbursement — January wk4",
-       "Debit": "$18,450.00",
-       "Credit": "",
-       "Balance": "$125,357.26"
+       "Label": "Closing Balance",
+       "Value": "125,357.26"
+      },
+      {
+       "Label": "Closing Balance:",
+       "Value": "125,357.26"
+      }
+     ],
+     "Description": [
+      {
+       "Label": "01/03",
+       "Value": "199,320.55"
+      },
+      {
+       "Label": "01/05",
+       "Value": "180,870.55"
+      },
+      {
+       "Label": "01/10",
+       "Value": "175,187.80"
+      },
+      {
+       "Label": "01/12",
+       "Value": "198,122.30"
+      },
+      {
+       "Label": "01/15",
+       "Value": "198,097.30"
+      },
+      {
+       "Label": "01/15",
+       "Value": "179,647.30"
+      },
+      {
+       "Label": "01/18",
+       "Value": "175,800.08"
+      },
+      {
+       "Label": "01/22",
+       "Value": "184,565.08"
+      },
+      {
+       "Label": "01/25",
+       "Value": "172,165.08"
+      },
+      {
+       "Label": "01/28",
+       "Value": "143,665.08"
+      },
+      {
+       "Label": "01/30",
+       "Value": "143,807.26"
+      },
+      {
+       "Label": "01/31",
+       "Value": "125,357.26"
+      }
+     ],
+     "Closing Balance:": [
+      {
+       "Label": "Closing Balance:",
+       "Value": "125,357.26"
       }
      ]
     }
@@ -7994,9 +8039,9 @@
     "document_type": "bank_statement",
     "fields": {
      "Bank Name": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "First National Bank of New York",
-      "actual": "FIRST NATIONAL BANK OF NEW YORK",
+      "actual": null,
       "type": "string"
      },
      "Account Holder": {
@@ -8006,726 +8051,1686 @@
       "type": "string"
      },
      "Statement No": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "STMT-2024-01",
-      "actual": "STMT-2024-01",
+      "actual": null,
       "type": "string"
      },
      "Period": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "January 2024",
-      "actual": "January 2024",
+      "actual": null,
       "type": "string"
      },
      "Account No": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "****7743",
-      "actual": "****7743",
+      "actual": null,
       "type": "string"
      },
      "Account Type": {
-      "outcome": "correct",
+      "outcome": "missed",
       "expected": "Business Checking",
-      "actual": "Business Checking",
+      "actual": null,
       "type": "string"
      },
      "Opening Balance": {
       "outcome": "correct",
       "expected": 184320.55,
-      "actual": "$184,320.55",
+      "actual": "184,320.55",
       "type": "money"
      },
      "Total Credits": {
       "outcome": "correct",
       "expected": 46841.68,
-      "actual": "$46,841.68",
+      "actual": "46,841.68",
       "type": "money"
      },
      "Total Debits": {
       "outcome": "correct",
       "expected": 105804.97,
-      "actual": "$105,804.97",
+      "actual": "105,804.97",
       "type": "money"
      },
      "Closing Balance": {
       "outcome": "correct",
       "expected": 125357.26,
-      "actual": "$125,357.26",
+      "actual": "125,357.26",
       "type": "money"
+     },
+     "Address": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
+      "type": "string",
+      "grounded": true
+     },
+     "EIN": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "47-3821654",
+      "type": "string",
+      "grounded": true
+     },
+     "01/03": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "199,320.55",
+      "type": "string",
+      "grounded": true
+     },
+     "01/05": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "180,870.55",
+      "type": "string",
+      "grounded": true
+     },
+     "01/10": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "175,187.80",
+      "type": "string",
+      "grounded": true
+     },
+     "01/12": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "198,122.30",
+      "type": "string",
+      "grounded": true
+     },
+     "01/15": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "179,647.30",
+      "type": "string",
+      "grounded": true
+     },
+     "01/18": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "175,800.08",
+      "type": "string",
+      "grounded": true
+     },
+     "01/22": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "184,565.08",
+      "type": "string",
+      "grounded": true
+     },
+     "01/25": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "172,165.08",
+      "type": "string",
+      "grounded": true
+     },
+     "01/28": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "143,665.08",
+      "type": "string",
+      "grounded": true
+     },
+     "01/30": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "143,807.26",
+      "type": "string",
+      "grounded": true
+     },
+     "01/31": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "125,357.26",
+      "type": "string",
+      "grounded": true
      }
     },
     "tables": {
      "transactions": {
       "table": "transactions",
       "gold_row_count": 12,
-      "pred_row_count": 12,
-      "row_count_mismatch": 0,
-      "matched_rows": 12,
-      "row_precision": 1.0,
-      "row_recall": 1.0,
-      "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "pred_row_count": 0,
+      "row_count_mismatch": -12,
+      "matched_rows": 0,
+      "row_precision": null,
+      "row_recall": 0.0,
+      "cell_accuracy": null,
+      "missed_rows": [
+       {
+        "row": 0,
+        "gold": {
+         "Date": "01/03",
+         "Type": "DEP",
+         "Description": "Wire deposit – Summit Retail Group",
+         "Debit": null,
+         "Credit": 15000.0,
+         "Balance": 199320.55
+        }
+       },
+       {
+        "row": 1,
+        "gold": {
+         "Date": "01/05",
+         "Type": "ACH",
+         "Description": "Payroll disbursement – January wk1",
+         "Debit": 18450.0,
+         "Credit": null,
+         "Balance": 180870.55
+        }
+       },
+       {
+        "row": 2,
+        "gold": {
+         "Date": "01/10",
+         "Type": "CHQ",
+         "Description": "Cheque #001831 – National Office Supplies",
+         "Debit": 5682.75,
+         "Credit": null,
+         "Balance": 175187.8
+        }
+       },
+       {
+        "row": 3,
+        "gold": {
+         "Date": "01/12",
+         "Type": "DEP",
+         "Description": "Wire deposit – Pinnacle Electronics Corp.",
+         "Debit": null,
+         "Credit": 22934.5,
+         "Balance": 198122.3
+        }
+       },
+       {
+        "row": 4,
+        "gold": {
+         "Date": "01/15",
+         "Type": "FEE",
+         "Description": "Monthly account maintenance fee",
+         "Debit": 25.0,
+         "Credit": null,
+         "Balance": 198097.3
+        }
+       },
+       {
+        "row": 5,
+        "gold": {
+         "Date": "01/15",
+         "Type": "ACH",
+         "Description": "Payroll disbursement – January wk3",
+         "Debit": 18450.0,
+         "Credit": null,
+         "Balance": 179647.3
+        }
+       },
+       {
+        "row": 6,
+        "gold": {
+         "Date": "01/18",
+         "Type": "CHQ",
+         "Description": "Cheque #001832 – Con Edison utilities",
+         "Debit": 3847.22,
+         "Credit": null,
+         "Balance": 175800.08
+        }
+       },
+       {
+        "row": 7,
+        "gold": {
+         "Date": "01/22",
+         "Type": "DEP",
+         "Description": "Wire deposit – BlueLine Wholesale Group",
+         "Debit": null,
+         "Credit": 8765.0,
+         "Balance": 184565.08
+        }
+       },
+       {
+        "row": 8,
+        "gold": {
+         "Date": "01/25",
+         "Type": "ACH",
+         "Description": "Federal tax deposit – Q4 payroll",
+         "Debit": 12400.0,
+         "Credit": null,
+         "Balance": 172165.08
+        }
+       },
+       {
+        "row": 9,
+        "gold": {
+         "Date": "01/28",
+         "Type": "CHQ",
+         "Description": "Cheque #001833 – Manhattan Commercial Prop.",
+         "Debit": 28500.0,
+         "Credit": null,
+         "Balance": 143665.08
+        }
+       },
+       {
+        "row": 10,
+        "gold": {
+         "Date": "01/30",
+         "Type": "INT",
+         "Description": "Interest earned – savings component",
+         "Debit": null,
+         "Credit": 142.18,
+         "Balance": 143807.26
+        }
+       },
+       {
+        "row": 11,
+        "gold": {
+         "Date": "01/31",
+         "Type": "ACH",
+         "Description": "Payroll disbursement – January wk4",
+         "Debit": 18450.0,
+         "Credit": null,
+         "Balance": 125357.26
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/03",
-        "actual": "01/03"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "DEP",
-        "actual": "DEP"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Wire deposit – Summit Retail Group",
-        "actual": "Wire deposit — Summit Retail Group"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
-        "column": "Debit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Credit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 15000.0,
-        "actual": "$15,000.00"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 199320.55,
-        "actual": "$199,320.55"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/05",
-        "actual": "01/05"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "ACH",
-        "actual": "ACH"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Payroll disbursement – January wk1",
-        "actual": "Payroll disbursement — January wk1"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 18450.0,
-        "actual": "$18,450.00"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 180870.55,
-        "actual": "$180,870.55"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/10",
-        "actual": "01/10"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "CHQ",
-        "actual": "CHQ"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Cheque #001831 – National Office Supplies",
-        "actual": "Cheque #001831 — National Office Supplies"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 5682.75,
-        "actual": "$5,682.75"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 175187.8,
-        "actual": "$175,187.80"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/12",
-        "actual": "01/12"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "DEP",
-        "actual": "DEP"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Wire deposit – Pinnacle Electronics Corp.",
-        "actual": "Wire deposit — Pinnacle Electronics Corp."
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 3,
-        "column": "Debit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 3,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Credit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 22934.5,
-        "actual": "$22,934.50"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 198122.3,
-        "actual": "$198,122.30"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/15",
-        "actual": "01/15"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "FEE",
-        "actual": "FEE"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Monthly account maintenance fee",
-        "actual": "Monthly account maintenance fee"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 25.0,
-        "actual": "$25.00"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 4,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 4,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 198097.3,
-        "actual": "$198,097.30"
+        "actual": null
        },
        {
         "row": 5,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/15",
-        "actual": "01/15"
+        "actual": null
        },
        {
         "row": 5,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "ACH",
-        "actual": "ACH"
+        "actual": null
        },
        {
         "row": 5,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Payroll disbursement – January wk3",
-        "actual": "Payroll disbursement — January wk3"
+        "actual": null
        },
        {
         "row": 5,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 18450.0,
-        "actual": "$18,450.00"
+        "actual": null
        },
        {
         "row": 5,
-        "pred_row": 5,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 5,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 179647.3,
-        "actual": "$179,647.30"
+        "actual": null
        },
        {
         "row": 6,
-        "pred_row": 6,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/18",
-        "actual": "01/18"
+        "actual": null
        },
        {
         "row": 6,
-        "pred_row": 6,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "CHQ",
-        "actual": "CHQ"
+        "actual": null
        },
        {
         "row": 6,
-        "pred_row": 6,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Cheque #001832 – Con Edison utilities",
-        "actual": "Cheque #001832 — Con Edison utilities"
+        "actual": null
        },
        {
         "row": 6,
-        "pred_row": 6,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 3847.22,
-        "actual": "$3,847.22"
+        "actual": null
        },
        {
         "row": 6,
-        "pred_row": 6,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 6,
-        "pred_row": 6,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 175800.08,
-        "actual": "$175,800.08"
+        "actual": null
        },
        {
         "row": 7,
-        "pred_row": 7,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/22",
-        "actual": "01/22"
+        "actual": null
        },
        {
         "row": 7,
-        "pred_row": 7,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "DEP",
-        "actual": "DEP"
+        "actual": null
        },
        {
         "row": 7,
-        "pred_row": 7,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Wire deposit – BlueLine Wholesale Group",
-        "actual": "Wire deposit — BlueLine Wholesale Group"
+        "actual": null
        },
        {
         "row": 7,
-        "pred_row": 7,
-        "column": "Debit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 7,
-        "pred_row": 7,
+        "pred_row": null,
         "column": "Credit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 8765.0,
-        "actual": "$8,765.00"
+        "actual": null
        },
        {
         "row": 7,
-        "pred_row": 7,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 184565.08,
-        "actual": "$184,565.08"
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/25",
-        "actual": "01/25"
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "ACH",
-        "actual": "ACH"
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Federal tax deposit – Q4 payroll",
-        "actual": "Federal tax deposit — Q4 payroll"
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 12400.0,
-        "actual": "$12,400.00"
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 172165.08,
-        "actual": "$172,165.08"
+        "actual": null
        },
        {
         "row": 9,
-        "pred_row": 9,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/28",
-        "actual": "01/28"
+        "actual": null
        },
        {
         "row": 9,
-        "pred_row": 9,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "CHQ",
-        "actual": "CHQ"
+        "actual": null
        },
        {
         "row": 9,
-        "pred_row": 9,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Cheque #001833 – Manhattan Commercial Prop.",
-        "actual": "Cheque #001833 — Manhattan Commercial Prop."
+        "actual": null
        },
        {
         "row": 9,
-        "pred_row": 9,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 28500.0,
-        "actual": "$28,500.00"
+        "actual": null
        },
        {
         "row": 9,
-        "pred_row": 9,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 9,
-        "pred_row": 9,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 143665.08,
-        "actual": "$143,665.08"
+        "actual": null
        },
        {
         "row": 10,
-        "pred_row": 10,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/30",
-        "actual": "01/30"
+        "actual": null
        },
        {
         "row": 10,
-        "pred_row": 10,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "INT",
-        "actual": "INT"
+        "actual": null
        },
        {
         "row": 10,
-        "pred_row": 10,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Interest earned – savings component",
-        "actual": "Interest earned — savings component"
+        "actual": null
        },
        {
         "row": 10,
-        "pred_row": 10,
-        "column": "Debit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 10,
-        "pred_row": 10,
+        "pred_row": null,
         "column": "Credit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 142.18,
-        "actual": "$142.18"
+        "actual": null
        },
        {
         "row": 10,
-        "pred_row": 10,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 143807.26,
-        "actual": "$143,807.26"
+        "actual": null
        },
        {
         "row": 11,
-        "pred_row": 11,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "01/31",
-        "actual": "01/31"
+        "actual": null
        },
        {
         "row": 11,
-        "pred_row": 11,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "ACH",
-        "actual": "ACH"
+        "actual": null
        },
        {
         "row": 11,
-        "pred_row": 11,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Payroll disbursement – January wk4",
-        "actual": "Payroll disbursement — January wk4"
+        "actual": null
        },
        {
         "row": 11,
-        "pred_row": 11,
+        "pred_row": null,
         "column": "Debit",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 18450.0,
-        "actual": "$18,450.00"
+        "actual": null
        },
        {
         "row": 11,
-        "pred_row": 11,
-        "column": "Credit",
-        "type": "money",
-        "outcome": "empty_ok",
-        "expected": null,
-        "actual": ""
-       },
-       {
-        "row": 11,
-        "pred_row": 11,
+        "pred_row": null,
         "column": "Balance",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 125357.26,
-        "actual": "$125,357.26"
+        "actual": null
+       }
+      ]
+     },
+     "FIRST NATIONAL BANK OF NEW YORK": {
+      "table": "FIRST NATIONAL BANK OF NEW YORK",
+      "gold_row_count": 0,
+      "pred_row_count": 3,
+      "row_count_mismatch": 3,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "FIRST NATIONAL BANK OF NEW YORK",
+         "Value": ""
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Label": "330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC",
+         "Value": ""
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Label": "ACCOUNT STATEMENT",
+         "Value": ""
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "FIRST NATIONAL BANK OF NEW YORK",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "ACCOUNT STATEMENT",
+        "grounded": true
+       }
+      ]
+     },
+     "ACCOUNT STATEMENT": {
+      "table": "ACCOUNT STATEMENT",
+      "gold_row_count": 0,
+      "pred_row_count": 4,
+      "row_count_mismatch": 4,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "Opening Balance",
+         "Value": "184,320.55"
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Label": "Credits",
+         "Value": "46,841.68"
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Label": "Debits",
+         "Value": "105,804.97"
+        }
+       },
+       {
+        "pred_row": 3,
+        "pred": {
+         "Label": "Closing Balance",
+         "Value": "125,357.26"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Opening Balance",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "184,320.55",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Credits",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "46,841.68",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Debits",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "105,804.97",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Closing Balance",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "125,357.26",
+        "grounded": true
+       }
+      ]
+     },
+     "Account Holder: Nexus Global Trading LLC": {
+      "table": "Account Holder: Nexus Global Trading LLC",
+      "gold_row_count": 0,
+      "pred_row_count": 4,
+      "row_count_mismatch": 4,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "Account Holder",
+         "Value": "Nexus Global Trading LLC"
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Label": "Address",
+         "Value": "142 West 57th Street, Suite 1800, New York, NY 10019"
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Label": "EIN",
+         "Value": "47-3821654"
+        }
+       },
+       {
+        "pred_row": 3,
+        "pred": {
+         "Label": "Opening Balance",
+         "Value": "184,320.55"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Account Holder",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Nexus Global Trading LLC",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Address",
+        "grounded": false
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "EIN",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "47-3821654",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Opening Balance",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "184,320.55",
+        "grounded": true
+       }
+      ]
+     },
+     "Opening Balance Credits Debits Closing Balance": {
+      "table": "Opening Balance Credits Debits Closing Balance",
+      "gold_row_count": 0,
+      "pred_row_count": 5,
+      "row_count_mismatch": 5,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "Opening Balance",
+         "Value": "184,320.55"
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Label": "Credits",
+         "Value": "46,841.68"
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Label": "Debits",
+         "Value": "105,804.97"
+        }
+       },
+       {
+        "pred_row": 3,
+        "pred": {
+         "Label": "Closing Balance",
+         "Value": "125,357.26"
+        }
+       },
+       {
+        "pred_row": 4,
+        "pred": {
+         "Label": "Closing Balance:",
+         "Value": "125,357.26"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Opening Balance",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "184,320.55",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Credits",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "46,841.68",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Debits",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "105,804.97",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Closing Balance",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "125,357.26",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Closing Balance:",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "125,357.26",
+        "grounded": true
+       }
+      ]
+     },
+     "Description": {
+      "table": "Description",
+      "gold_row_count": 0,
+      "pred_row_count": 12,
+      "row_count_mismatch": 12,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "01/03",
+         "Value": "199,320.55"
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Label": "01/05",
+         "Value": "180,870.55"
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Label": "01/10",
+         "Value": "175,187.80"
+        }
+       },
+       {
+        "pred_row": 3,
+        "pred": {
+         "Label": "01/12",
+         "Value": "198,122.30"
+        }
+       },
+       {
+        "pred_row": 4,
+        "pred": {
+         "Label": "01/15",
+         "Value": "198,097.30"
+        }
+       },
+       {
+        "pred_row": 5,
+        "pred": {
+         "Label": "01/15",
+         "Value": "179,647.30"
+        }
+       },
+       {
+        "pred_row": 6,
+        "pred": {
+         "Label": "01/18",
+         "Value": "175,800.08"
+        }
+       },
+       {
+        "pred_row": 7,
+        "pred": {
+         "Label": "01/22",
+         "Value": "184,565.08"
+        }
+       },
+       {
+        "pred_row": 8,
+        "pred": {
+         "Label": "01/25",
+         "Value": "172,165.08"
+        }
+       },
+       {
+        "pred_row": 9,
+        "pred": {
+         "Label": "01/28",
+         "Value": "143,665.08"
+        }
+       },
+       {
+        "pred_row": 10,
+        "pred": {
+         "Label": "01/30",
+         "Value": "143,807.26"
+        }
+       },
+       {
+        "pred_row": 11,
+        "pred": {
+         "Label": "01/31",
+         "Value": "125,357.26"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/03",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "199,320.55",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/05",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "180,870.55",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/10",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "175,187.80",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/12",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "198,122.30",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/15",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "198,097.30",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/15",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "179,647.30",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/18",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "175,800.08",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/22",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "184,565.08",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/25",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "172,165.08",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 9,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/28",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 9,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "143,665.08",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 10,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/30",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 10,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "143,807.26",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 11,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "01/31",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 11,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "125,357.26",
+        "grounded": true
+       }
+      ]
+     },
+     "Closing Balance:": {
+      "table": "Closing Balance:",
+      "gold_row_count": 0,
+      "pred_row_count": 1,
+      "row_count_mismatch": 1,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Label": "Closing Balance:",
+         "Value": "125,357.26"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Closing Balance:",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Value",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "125,357.26",
+        "grounded": true
        }
       ]
      }
     },
     "counts": {
-     "correct": 70,
-     "empty_ok": 12
+     "missed": 65,
+     "correct": 5,
+     "hallucinated": 68
     },
-    "hallucinated_ungrounded": 0,
-    "accuracy": 1.0,
-    "hallucination_rate": 0.0,
-    "invention_rate": 0.0
+    "hallucinated_ungrounded": 1,
+    "accuracy": 0.07142857142857142,
+    "hallucination_rate": 0.9315068493150684,
+    "invention_rate": 0.0136986301369863
    },
    "unstable": []
   }
@@ -8734,19 +9739,18 @@
   "overall": {
    "counts": {
     "wrong": 3,
-    "correct": 237,
-    "missed": 134,
-    "hallucinated": 271,
-    "near": 4,
-    "empty_ok": 12
+    "correct": 172,
+    "missed": 199,
+    "hallucinated": 339,
+    "near": 4
    },
    "gold_valued": 378,
-   "accuracy": 0.626984126984127,
+   "accuracy": 0.455026455026455,
    "near_rate": 0.010582010582010581,
-   "hallucinated": 271,
-   "hallucination_rate": 0.5262135922330097,
-   "hallucinated_ungrounded": 3,
-   "invention_rate": 0.005825242718446602
+   "hallucinated": 339,
+   "hallucination_rate": 0.6544401544401545,
+   "hallucinated_ungrounded": 4,
+   "invention_rate": 0.007722007722007722
   },
   "by_document_type": {
    "balance_sheet": {
@@ -8766,16 +9770,17 @@
    },
    "bank_statement": {
     "counts": {
-     "correct": 70,
-     "empty_ok": 12
+     "missed": 65,
+     "correct": 5,
+     "hallucinated": 68
     },
     "gold_valued": 70,
-    "accuracy": 1.0,
+    "accuracy": 0.07142857142857142,
     "near_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0
+    "hallucinated": 68,
+    "hallucination_rate": 0.9315068493150684,
+    "hallucinated_ungrounded": 1,
+    "invention_rate": 0.0136986301369863
    },
    "cheque": {
     "counts": {
@@ -8863,11 +9868,11 @@
   "by_field_type": {
    "date": {
     "counts": {
-     "correct": 21,
-     "missed": 9
+     "correct": 9,
+     "missed": 21
     },
     "gold_valued": 30,
-    "accuracy": 0.7,
+    "accuracy": 0.3,
     "near_rate": 0.0,
     "hallucinated": 0,
     "hallucination_rate": 0.0,
@@ -8877,16 +9882,15 @@
    "money": {
     "counts": {
      "wrong": 1,
-     "correct": 115,
-     "missed": 45,
-     "hallucinated": 14,
-     "empty_ok": 12
+     "correct": 91,
+     "missed": 69,
+     "hallucinated": 14
     },
     "gold_valued": 161,
-    "accuracy": 0.7142857142857143,
+    "accuracy": 0.5652173913043478,
     "near_rate": 0.0,
     "hallucinated": 14,
-    "hallucination_rate": 0.1076923076923077,
+    "hallucination_rate": 0.1320754716981132,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -8905,936 +9909,23 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 257,
-     "correct": 98,
-     "missed": 71,
+     "hallucinated": 325,
+     "correct": 69,
+     "missed": 100,
      "near": 4,
      "wrong": 2
     },
     "gold_valued": 175,
-    "accuracy": 0.56,
+    "accuracy": 0.3942857142857143,
     "near_rate": 0.022857142857142857,
-    "hallucinated": 257,
-    "hallucination_rate": 0.7119113573407202,
-    "hallucinated_ungrounded": 3,
-    "invention_rate": 0.008310249307479225
+    "hallucinated": 325,
+    "hallucination_rate": 0.8125,
+    "hallucinated_ungrounded": 4,
+    "invention_rate": 0.01
    }
   }
  },
  "unstable_total": 0,
- "diff": [
-  {
-   "key": "STMT-2024-01 :: 01/03",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/05",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/10",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/12",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/15",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/18",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/22",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/25",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/28",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/30",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: 01/31",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT :: row_count_mismatch",
-   "before": "4",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 0].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 0].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 1].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 1].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 2].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 2].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 3].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: ACCOUNT STATEMENT[pred_row 3].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC :: row_count_mismatch",
-   "before": "4",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 0].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 0].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 1].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 1].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 2].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 2].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 3].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Holder: Nexus Global Trading LLC[pred_row 3].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account No",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Account Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Address",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Bank Name",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Closing Balance: :: row_count_mismatch",
-   "before": "1",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Closing Balance:[pred_row 0].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Closing Balance:[pred_row 0].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description :: row_count_mismatch",
-   "before": "12",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 0].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 0].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 10].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 10].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 11].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 11].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 1].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 1].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 2].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 2].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 3].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 3].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 4].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 4].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 5].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 5].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 6].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 6].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 7].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 7].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 8].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 8].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 9].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Description[pred_row 9].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: EIN",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: FIRST NATIONAL BANK OF NEW YORK :: row_count_mismatch",
-   "before": "3",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: FIRST NATIONAL BANK OF NEW YORK[pred_row 0].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: FIRST NATIONAL BANK OF NEW YORK[pred_row 1].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: FIRST NATIONAL BANK OF NEW YORK[pred_row 2].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance :: row_count_mismatch",
-   "before": "5",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 0].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 0].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 1].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 1].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 2].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 2].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 3].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 3].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 4].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Opening Balance Credits Debits Closing Balance[pred_row 4].Value",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Period",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Statement No",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions :: row_count_mismatch",
-   "before": "-12",
-   "after": "0",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 0].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 0].Credit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 0].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 0].Debit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 0].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 0].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 10].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 10].Credit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 10].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 10].Debit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 10].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 10].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 11].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 11].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 11].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 11].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 11].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 11].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 1].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 1].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 1].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 1].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 1].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 1].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 2].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 2].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 2].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 2].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 2].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 2].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 3].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 3].Credit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 3].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 3].Debit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 3].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 3].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 4].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 4].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 4].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 4].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 4].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 4].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 5].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 5].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 5].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 5].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 5].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 5].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 6].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 6].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 6].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 6].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 6].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 6].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 7].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 7].Credit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 7].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 7].Debit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 7].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 7].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 8].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 8].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 8].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 8].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 8].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 8].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 9].Balance",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 9].Credit",
-   "before": null,
-   "after": "empty_ok",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 9].Date",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 9].Debit",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 9].Description",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: transactions[row 9].Type",
-   "before": "missed",
-   "after": "correct",
-   "regression": false
-  }
- ],
- "diff_against": "2026-08-17 23:14:06"
+ "diff": [],
+ "diff_against": "2026-08-17 23:12:24"
 }
