@@ -1,0 +1,57 @@
+{
+ "key": "fb180f613b66af9cfb9a3418b083704c9ff76f8d6d6495353f4c454ad5b46fe1",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1874,
+  "captured_at": "2026-08-18 04:03:24",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nFIRST NATIONAL BANK OF NEW ACCOUNT STATEMENT\nYORK\n330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC\nAccount Holder: Nexus Global Trading LLC Statement No: STMT-2024-01\n142 West 57th Str"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"bank_statement\",\n  \"title\": \"Account Statement\",\n  \"fields\": [\n    \"Bank Name\",\n    \"Bank Address\",\n    \"ABA Number\",\n    \"Member FDIC\",\n    \"Account Holder\",\n    \"Account Holder Address\",\n    \"EIN\",\n    \"Statement No\",\n    \"Period\",\n    \"Account No\",\n    \"Type\",\n    \"Opening Balance\",\n    \"Credits\",\n    \"Debits\",\n    \"Closing Balance\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Transactions\",\n      \"columns\": [\n        \"Date\",\n        \"Type\",\n        \"Description\",\n        \"Debit\",\n        \"Credit\",\n        \"Balance\"\n      ],\n      \"row_count\": 12\n    }\n  ],\n  \"totals\": [\n    \"Closing Balance\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "bank_statement",
+   "title": "Account Statement",
+   "fields": [
+    "Bank Name",
+    "Bank Address",
+    "ABA Number",
+    "Member FDIC",
+    "Account Holder",
+    "Account Holder Address",
+    "EIN",
+    "Statement No",
+    "Period",
+    "Account No",
+    "Type",
+    "Opening Balance",
+    "Credits",
+    "Debits",
+    "Closing Balance"
+   ],
+   "tables": [
+    {
+     "name": "Transactions",
+     "columns": [
+      "Date",
+      "Type",
+      "Description",
+      "Debit",
+      "Credit",
+      "Balance"
+     ],
+     "row_count": 12
+    }
+   ],
+   "totals": [
+    "Closing Balance"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1874,
+  "success": true,
+  "error": ""
+ }
+}

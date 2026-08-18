@@ -1,0 +1,53 @@
+{
+ "key": "46ab1f2e067f81241b6b7d9c6d286778823d25453082042ead1472090b2a11a0",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1656,
+  "captured_at": "2026-08-18 04:04:33",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC EXPENSE REPORT\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nEmployee: Marcus A. Thompson Report No:\nAPPROVED\nEXP-2024-0081\nEmployee ID: EMP"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"expense_report\",\n  \"title\": \"Expense Report\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company Phone\",\n    \"Company EIN\",\n    \"Employee\",\n    \"Report No\",\n    \"Status\",\n    \"Employee ID\",\n    \"Department\",\n    \"Manager\",\n    \"Period\",\n    \"Purpose\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Expenses\",\n      \"columns\": [\n        \"Date\",\n        \"Type\",\n        \"Description\",\n        \"Category\",\n        \"Amount\"\n      ],\n      \"row_count\": 9\n    }\n  ],\n  \"totals\": [\n    \"TOTAL CLAIMED\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "expense_report",
+   "title": "Expense Report",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company Phone",
+    "Company EIN",
+    "Employee",
+    "Report No",
+    "Status",
+    "Employee ID",
+    "Department",
+    "Manager",
+    "Period",
+    "Purpose"
+   ],
+   "tables": [
+    {
+     "name": "Expenses",
+     "columns": [
+      "Date",
+      "Type",
+      "Description",
+      "Category",
+      "Amount"
+     ],
+     "row_count": 9
+    }
+   ],
+   "totals": [
+    "TOTAL CLAIMED"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1656,
+  "success": true,
+  "error": ""
+ }
+}

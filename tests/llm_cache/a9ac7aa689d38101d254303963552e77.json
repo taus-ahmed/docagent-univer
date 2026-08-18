@@ -1,0 +1,193 @@
+{
+ "key": "a9ac7aa689d38101d254303963552e7782fa29452907a65e4b955424e826c41e",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3751,
+  "captured_at": "2026-08-18 04:04:24",
+  "prompt_preview": "Fill in a balance_sheet spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nBalance Sheet — Q1 2024\nAs of March 31, 2024 | Doc No: BS-2024-Q1\nCURRENT ASSETS\nCash & Cash Equivalents "
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"Nexus Global Trading LLC\",\n      \"source\": \"Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"March 31, 2024\",\n      \"source\": \"As of March 31, 2024 | Doc No: BS-2024-Q1\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"BS-2024-Q1\",\n      \"source\": \"As of March 31, 2024 | Doc No: BS-2024-Q1\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"$143,803\",\n      \"source\": \"Cash & Cash Equivalents $143,803\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$348,200\",\n      \"source\": \"Accounts Receivable (net) $348,200\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"$612,000\",\n      \"source\": \"Inventory $612,000\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"$16,200\",\n      \"source\": \"Prepaid Expenses $16,200\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"$8,800\",\n      \"source\": \"Other Current Assets $8,800\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"$1,129,003\",\n      \"source\": \"Total Current Assets $1,129,003\",\n      \"page\": 1\n    },\n    \"F13\": {\n      \"value\": \"$240,000\",\n      \"source\": \"Property & Equipment (gross) $240,000\",\n      \"page\": 1\n    },\n    \"F14\": {\n      \"value\": \"$108,500\",\n      \"source\": \"Less: Accum. Depreciation $108,500\",\n      \"page\": 1\n    },\n    \"F15\": {\n      \"value\": \"$85,000\",\n      \"source\": \"Security Deposits $85,000\",\n      \"page\": 1\n    },\n    \"F16\": {\n      \"value\": \"$20,000\",\n      \"source\": \"Intangibles (net) $20,000\",\n      \"page\": 1\n    },\n    \"F17\": {\n      \"value\": \"$236,500\",\n      \"source\": \"Total Non-Current Assets $236,500\",\n      \"page\": 1\n    },\n    \"F18\": {\n      \"value\": \"$1,365,503\",\n      \"source\": \"TOTAL ASSETS $1,365,503\",\n      \"page\": 1\n    },\n    \"F19\": {\n      \"value\": \"$254,800\",\n      \"source\": \"Accounts Payable $254,800\",\n      \"page\": 1\n    },\n    \"F20\": {\n      \"value\": \"$44,200\",\n      \"source\": \"Accrued Liabilities $44,200\",\n      \"page\": 1\n    },\n    \"F21\": {\n      \"value\": \"$80,000\",\n      \"source\": \"Short-term Loan — First National Bank $80,000\",\n      \"page\": 1\n    },\n    \"F22\": {\n      \"value\": \"$18,200\",\n      \"source\": \"Deferred Revenue $18,200\",\n      \"page\": 1\n    },\n    \"F23\": {\n      \"value\": \"$24,000\",\n      \"source\": \"Current Portion of Long-term Debt $24,000\",\n      \"page\": 1\n    },\n    \"F24\": {\n      \"value\": \"$421,200\",\n      \"source\": \"Total Current Liabilities $421,200\",\n      \"page\": 1\n    },\n    \"F25\": {\n      \"value\": \"$121,000\",\n      \"source\": \"Long-term Loan — First National Bank $121,000\",\n      \"page\": 1\n    },\n    \"F26\": {\n      \"value\": \"$8,400\",\n      \"source\": \"Deferred Tax Liability $8,400\",\n      \"page\": 1\n    },\n    \"F27\": {\n      \"value\": \"$129,400\",\n      \"source\": \"Total Long-Term Liabilities $129,400\",\n      \"page\": 1\n    },\n    \"F28\": {\n      \"value\": \"$550,600\",\n      \"source\": \"TOTAL LIABILITIES $550,600\",\n      \"page\": 1\n    },\n    \"F29\": {\n      \"value\": \"$100,000\",\n      \"source\": \"Common Stock (100 shares @ $1,000 par) $100,000\",\n      \"page\": 1\n    },\n    \"F30\": {\n      \"value\": \"$550,751\",\n      \"source\": \"Retained Earnings $550,751\",\n      \"page\": 2\n    },\n    \"F31\": {\n      \"value\": \"$47,353\",\n      \"source\": \"Net Income YTD Q1 $47,353\",\n      \"page\": 2\n    },\n    \"F32\": {\n      \"value\": \"$698,104\",\n      \"source\": \"Total Equity $698,104\",\n      \"page\": 2\n    },\n    \"F33\": {\n      \"value\": \"$1,248,704\",\n      \"source\": \"TOTAL LIABILITIES & EQUITY $1,248,704\",\n      \"page\": 2\n    },\n    \"F34\": {\n      \"value\": \"Meridian & Associates CPA\",\n      \"source\": \"Prepared by: Meridian & Associates CPA | Total Assets = Total Liabilities + Equity.\",\n      \"page\": 2\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F2": {
+     "value": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654",
+     "page": 1
+    },
+    "F3": {
+     "value": "New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654",
+     "page": 1
+    },
+    "F4": {
+     "value": "47-3821654",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654",
+     "page": 1
+    },
+    "F5": {
+     "value": "March 31, 2024",
+     "source": "As of March 31, 2024 | Doc No: BS-2024-Q1",
+     "page": 1
+    },
+    "F6": {
+     "value": "BS-2024-Q1",
+     "source": "As of March 31, 2024 | Doc No: BS-2024-Q1",
+     "page": 1
+    },
+    "F7": {
+     "value": "$143,803",
+     "source": "Cash & Cash Equivalents $143,803",
+     "page": 1
+    },
+    "F8": {
+     "value": "$348,200",
+     "source": "Accounts Receivable (net) $348,200",
+     "page": 1
+    },
+    "F9": {
+     "value": "$612,000",
+     "source": "Inventory $612,000",
+     "page": 1
+    },
+    "F10": {
+     "value": "$16,200",
+     "source": "Prepaid Expenses $16,200",
+     "page": 1
+    },
+    "F11": {
+     "value": "$8,800",
+     "source": "Other Current Assets $8,800",
+     "page": 1
+    },
+    "F12": {
+     "value": "$1,129,003",
+     "source": "Total Current Assets $1,129,003",
+     "page": 1
+    },
+    "F13": {
+     "value": "$240,000",
+     "source": "Property & Equipment (gross) $240,000",
+     "page": 1
+    },
+    "F14": {
+     "value": "$108,500",
+     "source": "Less: Accum. Depreciation $108,500",
+     "page": 1
+    },
+    "F15": {
+     "value": "$85,000",
+     "source": "Security Deposits $85,000",
+     "page": 1
+    },
+    "F16": {
+     "value": "$20,000",
+     "source": "Intangibles (net) $20,000",
+     "page": 1
+    },
+    "F17": {
+     "value": "$236,500",
+     "source": "Total Non-Current Assets $236,500",
+     "page": 1
+    },
+    "F18": {
+     "value": "$1,365,503",
+     "source": "TOTAL ASSETS $1,365,503",
+     "page": 1
+    },
+    "F19": {
+     "value": "$254,800",
+     "source": "Accounts Payable $254,800",
+     "page": 1
+    },
+    "F20": {
+     "value": "$44,200",
+     "source": "Accrued Liabilities $44,200",
+     "page": 1
+    },
+    "F21": {
+     "value": "$80,000",
+     "source": "Short-term Loan — First National Bank $80,000",
+     "page": 1
+    },
+    "F22": {
+     "value": "$18,200",
+     "source": "Deferred Revenue $18,200",
+     "page": 1
+    },
+    "F23": {
+     "value": "$24,000",
+     "source": "Current Portion of Long-term Debt $24,000",
+     "page": 1
+    },
+    "F24": {
+     "value": "$421,200",
+     "source": "Total Current Liabilities $421,200",
+     "page": 1
+    },
+    "F25": {
+     "value": "$121,000",
+     "source": "Long-term Loan — First National Bank $121,000",
+     "page": 1
+    },
+    "F26": {
+     "value": "$8,400",
+     "source": "Deferred Tax Liability $8,400",
+     "page": 1
+    },
+    "F27": {
+     "value": "$129,400",
+     "source": "Total Long-Term Liabilities $129,400",
+     "page": 1
+    },
+    "F28": {
+     "value": "$550,600",
+     "source": "TOTAL LIABILITIES $550,600",
+     "page": 1
+    },
+    "F29": {
+     "value": "$100,000",
+     "source": "Common Stock (100 shares @ $1,000 par) $100,000",
+     "page": 1
+    },
+    "F30": {
+     "value": "$550,751",
+     "source": "Retained Earnings $550,751",
+     "page": 2
+    },
+    "F31": {
+     "value": "$47,353",
+     "source": "Net Income YTD Q1 $47,353",
+     "page": 2
+    },
+    "F32": {
+     "value": "$698,104",
+     "source": "Total Equity $698,104",
+     "page": 2
+    },
+    "F33": {
+     "value": "$1,248,704",
+     "source": "TOTAL LIABILITIES & EQUITY $1,248,704",
+     "page": 2
+    },
+    "F34": {
+     "value": "Meridian & Associates CPA",
+     "source": "Prepared by: Meridian & Associates CPA | Total Assets = Total Liabilities + Equity.",
+     "page": 2
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3751,
+  "success": true,
+  "error": ""
+ }
+}

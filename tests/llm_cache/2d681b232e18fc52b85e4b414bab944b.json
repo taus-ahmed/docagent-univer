@@ -1,0 +1,69 @@
+{
+ "key": "2d681b232e18fc52b85e4b414bab944b8cacafdeb296f9b0ddb0cb6c5f2478fd",
+ "meta": {
+  "method": "extract",
+  "context": "PO-2024-0018",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1822,
+  "captured_at": "2026-08-18 04:05:24",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC PURCHASE ORDER\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nPO Number: PO-2024-0018\nDate: January 10, 2024\nRequired By: January 28, 2024\nTe"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"purchase_order\",\n  \"title\": \"Purchase Order\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company Phone\",\n    \"Company Tax ID\",\n    \"PO Number\",\n    \"Date\",\n    \"Required By\",\n    \"Terms\",\n    \"Ship Via\",\n    \"Vendor Name\",\n    \"Vendor Address\",\n    \"Vendor Contact\",\n    \"Vendor Phone\",\n    \"Vendor ID\",\n    \"Buyer Name\",\n    \"Buyer Title\",\n    \"Buyer Phone\",\n    \"Buyer Email\",\n    \"Special Instructions\",\n    \"Authorised By Name\",\n    \"Authorised By Title\",\n    \"Buyer Signature Name\",\n    \"Buyer Signature Title\",\n    \"Buyer Signature Email\",\n    \"Buyer Signature Phone\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Items\",\n      \"columns\": [\n        \"Item / Description\",\n        \"Qty\",\n        \"Unit\",\n        \"Unit Cost\",\n        \"Total\"\n      ],\n      \"row_count\": 3\n    }\n  ],\n  \"totals\": [\n    \"Subtotal\",\n    \"Freight\",\n    \"Tax (exempt)\",\n    \"ORDER TOTAL\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "purchase_order",
+   "title": "Purchase Order",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company Phone",
+    "Company Tax ID",
+    "PO Number",
+    "Date",
+    "Required By",
+    "Terms",
+    "Ship Via",
+    "Vendor Name",
+    "Vendor Address",
+    "Vendor Contact",
+    "Vendor Phone",
+    "Vendor ID",
+    "Buyer Name",
+    "Buyer Title",
+    "Buyer Phone",
+    "Buyer Email",
+    "Special Instructions",
+    "Authorised By Name",
+    "Authorised By Title",
+    "Buyer Signature Name",
+    "Buyer Signature Title",
+    "Buyer Signature Email",
+    "Buyer Signature Phone"
+   ],
+   "tables": [
+    {
+     "name": "Items",
+     "columns": [
+      "Item / Description",
+      "Qty",
+      "Unit",
+      "Unit Cost",
+      "Total"
+     ],
+     "row_count": 3
+    }
+   ],
+   "totals": [
+    "Subtotal",
+    "Freight",
+    "Tax (exempt)",
+    "ORDER TOTAL"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1822,
+  "success": true,
+  "error": ""
+ }
+}
