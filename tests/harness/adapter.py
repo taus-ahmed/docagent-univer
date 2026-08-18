@@ -41,16 +41,19 @@ _SKIP_KEYS = {"extracted_data", "extracted_fields", "layout_sections",
 
 
 # ── widening switches ────────────────────────────────────────────────────────
-# Every mapping rule that is looser than "the names are the same" lives behind
-# one of these, so the harness can report the ADAPTED number and the RAW number
-# (all widenings off) side by side in every run. A number that only exists with
-# widenings on is a number that needs explaining.
+# Every mapping rule looser than "the names are the same" lives behind one of
+# these, so the harness reports the ADAPTED number and the RAW number (all off)
+# side by side in every run.
+#
+# Three earlier rules — identify a table by its row content, map leftover
+# columns by position, and "if gold has one table, anything unmatched is it" —
+# were replaced by a single ELIMINATION rule. Those three expressed a
+# preference; elimination only fires when the correspondence is forced, with
+# exactly one unmatched candidate on each side. It measures the same 97.9%.
 WIDENINGS = {
-    "W1_fuzzy_names": True,      # exact -> substring -> token overlap
-    "W2_table_by_content": True, # identify a table by the rows it holds
-    "W3_positional_columns": True,
+    "W1_fuzzy_names": True,      # exact -> UNAMBIGUOUS substring / token overlap
     "W4_kv_rows_as_fields": True,
-    "W5_single_table": True,
+    "E_elimination": True,       # a correspondence that is forced, not preferred
 }
 
 
@@ -107,49 +110,6 @@ def _match_name(pred_name: str, gold_names: list) -> Optional[str]:
         return None
     tied = [g for s, g in scored if s == best_score]
     return tied[0] if len(tied) == 1 else None
-
-
-def _row_labels(rows: list) -> set:
-    """The identifying text of each row — its first non-numeric cell."""
-    out = set()
-    for r in rows or []:
-        if not isinstance(r, dict):
-            continue
-        for k, v in r.items():
-            if str(k).startswith("_") or is_empty(v):
-                continue
-            s = str(v).strip()
-            if re.search(r"[A-Za-z]{3}", s):
-                out.add(_norm(s))
-                break
-    return out
-
-
-def _match_by_content(pred_rows: list, gold_tables: dict, taken: set):
-    """Map a predicted table to a gold table by which rows it actually holds.
-
-    A template gives its bands no names — the engine can only call them
-    "table_1", "table_2" — but gold names them ("current_assets"). Matching on
-    the row labels the two have in common is how a nameless band is identified.
-    This is a naming impedance mismatch between the engine's output and the
-    labels' vocabulary, which is exactly what this adapter exists to absorb.
-    """
-    if not WIDENINGS["W2_table_by_content"]:
-        return None
-    pl = _row_labels(pred_rows)
-    if not pl:
-        return None
-    best, best_score = None, 0.0
-    for name, gold_rows in (gold_tables or {}).items():
-        if name in taken:
-            continue
-        gl = _row_labels(gold_rows)
-        if not gl:
-            continue
-        score = len(pl & gl) / len(gl)
-        if score > best_score:
-            best, best_score = name, score
-    return best if best_score >= 0.5 else None
 
 
 def _cell_value(v: Any) -> Any:
@@ -232,11 +192,6 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
 
     def put_table(name, rows):
         g = _match_name(name, gold_table_names)
-        if g is None:
-            g = _match_by_content(rows, label.get("tables") or {}, set(tables))
-            if g:
-                notes.append(f"table '{name}' identified as gold table '{g}' "
-                             f"by row content (the template names no bands)")
         key = g or str(name)
         tables.setdefault(key, []).extend(rows)
         if g is None and rows:
@@ -307,14 +262,20 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
             # to be known first: by name, then by the rows it actually holds,
             # then — only if gold describes a single table — by elimination.
             g = _match_name(base, gold_table_names)
-            if g is None:
-                g = _match_by_content(raw_rows, label.get("tables") or {}, set(tables))
-                if g:
-                    notes.append(f"table '{base}' identified as gold table "
-                                 f"'{g}' by row content (the template names "
-                                 f"no bands)")
-            if g is None and WIDENINGS["W5_single_table"] and len(gold_table_names) == 1:
-                g = gold_table_names[0]
+            if g is None and WIDENINGS["E_elimination"]:
+                # ELIMINATION. Exactly one unmatched predicted table and exactly
+                # one unmatched gold table can only correspond to each other —
+                # there is no other candidate for either. This is a forced
+                # correspondence, not a preferred one: with two of anything
+                # unmatched it does not fire at all.
+                free_gold = [t for t in gold_table_names if t not in tables]
+                n_pred = sum(1 for k in ed
+                             if isinstance(ed.get(k), list) and k not in _SKIP_KEYS
+                             and (k == "table_rows" or k.endswith("_rows")))
+                if len(free_gold) == 1 and n_pred == 1:
+                    g = free_gold[0]
+                    notes.append(f"table '{base}' -> gold table '{g}' by "
+                                 f"elimination (one unmatched on each side)")
             cols = list((label.get("table_types", {}) or {}).get(g, {}).keys()) if g else []
 
             out_rows = []
@@ -326,16 +287,17 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
                     if gc:
                         by_name[ck] = gc
                         used.add(gc)
-                # 2. by position for the rest. A band's first column header is
-                #    often the SECTION title ("CURRENT ASSETS") where the labels
-                #    call that column "Label" — no name match is possible, but
-                #    the column order is the same, and order is what a table
-                #    means. The export writes by position too.
-                free = ([c for c in cols if c not in used]
-                        if WIDENINGS["W3_positional_columns"] else [])
-                for ck in pred_keys:
-                    if ck not in by_name and free:
-                        by_name[ck] = free.pop(0)
+                # 2. ELIMINATION, same rule as for tables. A band's label
+                #    column is headed with the template's own text ("CURRENT
+                #    ASSETS") where the labels call it "Label", so no name match
+                #    is possible — but if it is the only unmatched column on
+                #    each side, it is the only thing it can be. Two unmatched on
+                #    either side and this does not fire.
+                free = [c for c in cols if c not in used]
+                unmatched = [ck for ck in pred_keys if ck not in by_name]
+                if (WIDENINGS["E_elimination"]
+                        and len(free) == 1 and len(unmatched) == 1):
+                    by_name[unmatched[0]] = free[0]
                 mapped = {by_name.get(ck, str(ck)): _cell_value(row[ck])
                           for ck in pred_keys}
                 if any(not is_empty(v) for v in mapped.values()):

@@ -371,10 +371,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
             # RAW — the same extraction scored with every adapter widening off.
             # Reported alongside the adapted number in every run, so a number
             # that depends on mapping leniency is visible as such.
-            prev = set_widenings(**{k: False for k in
-                                    ("W1_fuzzy_names", "W2_table_by_content",
-                                     "W3_positional_columns", "W4_kv_rows_as_fields",
-                                     "W5_single_table")})
+            from tests.harness.adapter import WIDENINGS
+            prev = set_widenings(**{k: False for k in WIDENINGS})
             try:
                 raw_adapted = adapt(results, label, grid_i if no_template else grid)
                 raw_score = score_document(label, raw_adapted, doc_text=text)

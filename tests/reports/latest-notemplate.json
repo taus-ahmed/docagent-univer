@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-18 03:39:13",
- "git_commit": "c50b2b9",
+ "run_id": "2026-08-18 03:54:35",
+ "git_commit": "cc8428d",
  "config": {
-  "mode": "record",
+  "mode": "replay",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -81,8 +81,8 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "table 'Assets' identified as gold table 'current_assets' by row content (the template names no bands)",
-    "table 'Liabilities' identified as gold table 'current_liabilities' by row content (the template names no bands)"
+    "extracted table/section 'Assets' matches no gold table — all its rows will score as hallucinated",
+    "extracted table/section 'Liabilities' matches no gold table — all its rows will score as hallucinated"
    ],
    "adapted": {
     "fields": {
@@ -102,128 +102,128 @@
      "TOTAL LIABILITIES & EQUITY": "$1,248,704"
     },
     "tables": {
-     "current_assets": [
+     "Assets": [
       {
-       "Label": "CURRENT ASSETS",
+       "Asset Type": "CURRENT ASSETS",
        "Description": "",
        "Amount": ""
       },
       {
-       "Label": "Cash & Cash Equivalents",
+       "Asset Type": "Cash & Cash Equivalents",
        "Description": "",
        "Amount": "$143,803"
       },
       {
-       "Label": "Accounts Receivable (net)",
+       "Asset Type": "Accounts Receivable (net)",
        "Description": "",
        "Amount": "$348,200"
       },
       {
-       "Label": "Inventory",
+       "Asset Type": "Inventory",
        "Description": "",
        "Amount": "$612,000"
       },
       {
-       "Label": "Prepaid Expenses",
+       "Asset Type": "Prepaid Expenses",
        "Description": "",
        "Amount": "$16,200"
       },
       {
-       "Label": "Other Current Assets",
+       "Asset Type": "Other Current Assets",
        "Description": "",
        "Amount": "$8,800"
       },
       {
-       "Label": "NON-CURRENT ASSETS",
+       "Asset Type": "NON-CURRENT ASSETS",
        "Description": "",
        "Amount": ""
       },
       {
-       "Label": "Property & Equipment (gross)",
+       "Asset Type": "Property & Equipment (gross)",
        "Description": "",
        "Amount": "$240,000"
       },
       {
-       "Label": "Less: Accum. Depreciation",
+       "Asset Type": "Less: Accum. Depreciation",
        "Description": "",
        "Amount": "$108,500"
       },
       {
-       "Label": "Security Deposits",
+       "Asset Type": "Security Deposits",
        "Description": "",
        "Amount": "$85,000"
       },
       {
-       "Label": "Intangibles (net)",
+       "Asset Type": "Intangibles (net)",
        "Description": "",
        "Amount": "$20,000"
       }
      ],
-     "current_liabilities": [
+     "Liabilities": [
       {
-       "Label": "CURRENT LIABILITIES",
+       "Liability Type": "CURRENT LIABILITIES",
        "Description": "",
        "Amount": ""
       },
       {
-       "Label": "Accounts Payable",
+       "Liability Type": "Accounts Payable",
        "Description": "",
        "Amount": "$254,800"
       },
       {
-       "Label": "Accrued Liabilities",
+       "Liability Type": "Accrued Liabilities",
        "Description": "",
        "Amount": "$44,200"
       },
       {
-       "Label": "Short-term Loan — First National Bank",
+       "Liability Type": "Short-term Loan — First National Bank",
        "Description": "",
        "Amount": "$80,000"
       },
       {
-       "Label": "Deferred Revenue",
+       "Liability Type": "Deferred Revenue",
        "Description": "",
        "Amount": "$18,200"
       },
       {
-       "Label": "Current Portion of Long-term Debt",
+       "Liability Type": "Current Portion of Long-term Debt",
        "Description": "",
        "Amount": "$24,000"
       },
       {
-       "Label": "LONG-TERM LIABILITIES",
+       "Liability Type": "LONG-TERM LIABILITIES",
        "Description": "",
        "Amount": ""
       },
       {
-       "Label": "Long-term Loan — First National Bank",
+       "Liability Type": "Long-term Loan — First National Bank",
        "Description": "",
        "Amount": "$121,000"
       },
       {
-       "Label": "Deferred Tax Liability",
+       "Liability Type": "Deferred Tax Liability",
        "Description": "",
        "Amount": "$8,400"
       }
      ],
      "shareholders_equity": [
       {
-       "Label": "SHAREHOLDERS' EQUITY",
+       "Equity Type": "SHAREHOLDERS' EQUITY",
        "Description": "",
        "Amount": ""
       },
       {
-       "Label": "Common Stock (100 shares @ $1,000 par)",
+       "Equity Type": "Common Stock (100 shares @ $1,000 par)",
        "Description": "",
        "Amount": "$100,000"
       },
       {
-       "Label": "Retained Earnings",
+       "Equity Type": "Retained Earnings",
        "Description": "",
        "Amount": "$550,751"
       },
       {
-       "Label": "Net Income YTD Q1",
+       "Equity Type": "Net Income YTD Q1",
        "Description": "",
        "Amount": "$47,353"
       }
@@ -329,253 +329,140 @@
      "current_assets": {
       "table": "current_assets",
       "gold_row_count": 5,
-      "pred_row_count": 11,
-      "row_count_mismatch": 6,
-      "matched_rows": 5,
-      "row_precision": 0.45454545454545453,
-      "row_recall": 1.0,
-      "cell_accuracy": 1.0,
-      "missed_rows": [],
-      "hallucinated_rows": [
+      "pred_row_count": 0,
+      "row_count_mismatch": -5,
+      "matched_rows": 0,
+      "row_precision": null,
+      "row_recall": 0.0,
+      "cell_accuracy": null,
+      "missed_rows": [
        {
-        "pred_row": 0,
-        "pred": {
-         "Label": "CURRENT ASSETS",
-         "Description": "",
-         "Amount": ""
+        "row": 0,
+        "gold": {
+         "Label": "Cash & Cash Equivalents",
+         "Amount": 143803
         }
        },
        {
-        "pred_row": 6,
-        "pred": {
-         "Label": "NON-CURRENT ASSETS",
-         "Description": "",
-         "Amount": ""
+        "row": 1,
+        "gold": {
+         "Label": "Accounts Receivable (net)",
+         "Amount": 348200
         }
        },
        {
-        "pred_row": 7,
-        "pred": {
-         "Label": "Property & Equipment (gross)",
-         "Description": "",
-         "Amount": "$240,000"
+        "row": 2,
+        "gold": {
+         "Label": "Inventory",
+         "Amount": 612000
         }
        },
        {
-        "pred_row": 8,
-        "pred": {
-         "Label": "Less: Accum. Depreciation",
-         "Description": "",
-         "Amount": "$108,500"
+        "row": 3,
+        "gold": {
+         "Label": "Prepaid Expenses",
+         "Amount": 16200
         }
        },
        {
-        "pred_row": 9,
-        "pred": {
-         "Label": "Security Deposits",
-         "Description": "",
-         "Amount": "$85,000"
-        }
-       },
-       {
-        "pred_row": 10,
-        "pred": {
-         "Label": "Intangibles (net)",
-         "Description": "",
-         "Amount": "$20,000"
+        "row": 4,
+        "gold": {
+         "Label": "Other Current Assets",
+         "Amount": 8800
         }
        }
       ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Cash & Cash Equivalents",
-        "actual": "Cash & Cash Equivalents"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 143803,
-        "actual": "$143,803"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Accounts Receivable (net)",
-        "actual": "Accounts Receivable (net)"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 348200,
-        "actual": "$348,200"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Inventory",
-        "actual": "Inventory"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 612000,
-        "actual": "$612,000"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Prepaid Expenses",
-        "actual": "Prepaid Expenses"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 16200,
-        "actual": "$16,200"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Other Current Assets",
-        "actual": "Other Current Assets"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 8800,
-        "actual": "$8,800"
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "CURRENT ASSETS",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 6,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "NON-CURRENT ASSETS",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 7,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Property & Equipment (gross)",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 7,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$240,000",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Less: Accum. Depreciation",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$108,500",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 9,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Security Deposits",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 9,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$85,000",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 10,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Intangibles (net)",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 10,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$20,000",
-        "grounded": true
+        "actual": null
        }
       ]
      },
@@ -697,197 +584,140 @@
      "current_liabilities": {
       "table": "current_liabilities",
       "gold_row_count": 5,
-      "pred_row_count": 9,
-      "row_count_mismatch": 4,
-      "matched_rows": 5,
-      "row_precision": 0.5555555555555556,
-      "row_recall": 1.0,
-      "cell_accuracy": 1.0,
-      "missed_rows": [],
-      "hallucinated_rows": [
+      "pred_row_count": 0,
+      "row_count_mismatch": -5,
+      "matched_rows": 0,
+      "row_precision": null,
+      "row_recall": 0.0,
+      "cell_accuracy": null,
+      "missed_rows": [
        {
-        "pred_row": 0,
-        "pred": {
-         "Label": "CURRENT LIABILITIES",
-         "Description": "",
-         "Amount": ""
+        "row": 0,
+        "gold": {
+         "Label": "Accounts Payable",
+         "Amount": 254800
         }
        },
        {
-        "pred_row": 6,
-        "pred": {
-         "Label": "LONG-TERM LIABILITIES",
-         "Description": "",
-         "Amount": ""
+        "row": 1,
+        "gold": {
+         "Label": "Accrued Liabilities",
+         "Amount": 44200
         }
        },
        {
-        "pred_row": 7,
-        "pred": {
-         "Label": "Long-term Loan — First National Bank",
-         "Description": "",
-         "Amount": "$121,000"
+        "row": 2,
+        "gold": {
+         "Label": "Short-term Loan – First National Bank",
+         "Amount": 80000
         }
        },
        {
-        "pred_row": 8,
-        "pred": {
-         "Label": "Deferred Tax Liability",
-         "Description": "",
-         "Amount": "$8,400"
+        "row": 3,
+        "gold": {
+         "Label": "Deferred Revenue",
+         "Amount": 18200
+        }
+       },
+       {
+        "row": 4,
+        "gold": {
+         "Label": "Current Portion of Long-term Debt",
+         "Amount": 24000
         }
        }
       ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Accounts Payable",
-        "actual": "Accounts Payable"
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 254800,
-        "actual": "$254,800"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Accrued Liabilities",
-        "actual": "Accrued Liabilities"
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 44200,
-        "actual": "$44,200"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Short-term Loan – First National Bank",
-        "actual": "Short-term Loan — First National Bank"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 3,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 80000,
-        "actual": "$80,000"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Deferred Revenue",
-        "actual": "Deferred Revenue"
+        "actual": null
        },
        {
         "row": 3,
-        "pred_row": 4,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 18200,
-        "actual": "$18,200"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Current Portion of Long-term Debt",
-        "actual": "Current Portion of Long-term Debt"
+        "actual": null
        },
        {
         "row": 4,
-        "pred_row": 5,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 24000,
-        "actual": "$24,000"
-       },
-       {
-        "row": null,
-        "pred_row": 0,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "CURRENT LIABILITIES",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 6,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "LONG-TERM LIABILITIES",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 7,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Long-term Loan — First National Bank",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 7,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$121,000",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Label",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Deferred Tax Liability",
-        "grounded": true
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$8,400",
-        "grounded": true
+        "actual": null
        }
       ]
      },
@@ -964,13 +794,13 @@
       "matched_rows": 3,
       "row_precision": 0.75,
       "row_recall": 1.0,
-      "cell_accuracy": 1.0,
+      "cell_accuracy": 0.5,
       "missed_rows": [],
       "hallucinated_rows": [
        {
         "pred_row": 0,
         "pred": {
-         "Label": "SHAREHOLDERS' EQUITY",
+         "Equity Type": "SHAREHOLDERS' EQUITY",
          "Description": "",
          "Amount": ""
         }
@@ -982,9 +812,9 @@
         "pred_row": 1,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Common Stock (100 shares @ $1,000 par)",
-        "actual": "Common Stock (100 shares @ $1,000 par)"
+        "actual": null
        },
        {
         "row": 0,
@@ -996,13 +826,23 @@
         "actual": "$100,000"
        },
        {
+        "row": 0,
+        "pred_row": 1,
+        "column": "Equity Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Common Stock (100 shares @ $1,000 par)",
+        "grounded": true
+       },
+       {
         "row": 1,
         "pred_row": 2,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Retained Earnings",
-        "actual": "Retained Earnings"
+        "actual": null
        },
        {
         "row": 1,
@@ -1014,13 +854,23 @@
         "actual": "$550,751"
        },
        {
+        "row": 1,
+        "pred_row": 2,
+        "column": "Equity Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Retained Earnings",
+        "grounded": true
+       },
+       {
         "row": 2,
         "pred_row": 3,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Net Income YTD Q1",
-        "actual": "Net Income YTD Q1"
+        "actual": null
        },
        {
         "row": 2,
@@ -1032,9 +882,19 @@
         "actual": "$47,353"
        },
        {
+        "row": 2,
+        "pred_row": 3,
+        "column": "Equity Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Net Income YTD Q1",
+        "grounded": true
+       },
+       {
         "row": null,
         "pred_row": 0,
-        "column": "Label",
+        "column": "Equity Type",
         "type": "string",
         "outcome": "hallucinated",
         "expected": null,
@@ -1042,16 +902,566 @@
         "grounded": true
        }
       ]
+     },
+     "Assets": {
+      "table": "Assets",
+      "gold_row_count": 0,
+      "pred_row_count": 11,
+      "row_count_mismatch": 11,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Asset Type": "CURRENT ASSETS",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Asset Type": "Cash & Cash Equivalents",
+         "Description": "",
+         "Amount": "$143,803"
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Asset Type": "Accounts Receivable (net)",
+         "Description": "",
+         "Amount": "$348,200"
+        }
+       },
+       {
+        "pred_row": 3,
+        "pred": {
+         "Asset Type": "Inventory",
+         "Description": "",
+         "Amount": "$612,000"
+        }
+       },
+       {
+        "pred_row": 4,
+        "pred": {
+         "Asset Type": "Prepaid Expenses",
+         "Description": "",
+         "Amount": "$16,200"
+        }
+       },
+       {
+        "pred_row": 5,
+        "pred": {
+         "Asset Type": "Other Current Assets",
+         "Description": "",
+         "Amount": "$8,800"
+        }
+       },
+       {
+        "pred_row": 6,
+        "pred": {
+         "Asset Type": "NON-CURRENT ASSETS",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 7,
+        "pred": {
+         "Asset Type": "Property & Equipment (gross)",
+         "Description": "",
+         "Amount": "$240,000"
+        }
+       },
+       {
+        "pred_row": 8,
+        "pred": {
+         "Asset Type": "Less: Accum. Depreciation",
+         "Description": "",
+         "Amount": "$108,500"
+        }
+       },
+       {
+        "pred_row": 9,
+        "pred": {
+         "Asset Type": "Security Deposits",
+         "Description": "",
+         "Amount": "$85,000"
+        }
+       },
+       {
+        "pred_row": 10,
+        "pred": {
+         "Asset Type": "Intangibles (net)",
+         "Description": "",
+         "Amount": "$20,000"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "CURRENT ASSETS",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Cash & Cash Equivalents",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$143,803",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Accounts Receivable (net)",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$348,200",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Inventory",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$612,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Prepaid Expenses",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$16,200",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Other Current Assets",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$8,800",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "NON-CURRENT ASSETS",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Property & Equipment (gross)",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$240,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Less: Accum. Depreciation",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$108,500",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 9,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Security Deposits",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 9,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$85,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 10,
+        "column": "Asset Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Intangibles (net)",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 10,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$20,000",
+        "grounded": true
+       }
+      ]
+     },
+     "Liabilities": {
+      "table": "Liabilities",
+      "gold_row_count": 0,
+      "pred_row_count": 9,
+      "row_count_mismatch": 9,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Liability Type": "CURRENT LIABILITIES",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Liability Type": "Accounts Payable",
+         "Description": "",
+         "Amount": "$254,800"
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Liability Type": "Accrued Liabilities",
+         "Description": "",
+         "Amount": "$44,200"
+        }
+       },
+       {
+        "pred_row": 3,
+        "pred": {
+         "Liability Type": "Short-term Loan — First National Bank",
+         "Description": "",
+         "Amount": "$80,000"
+        }
+       },
+       {
+        "pred_row": 4,
+        "pred": {
+         "Liability Type": "Deferred Revenue",
+         "Description": "",
+         "Amount": "$18,200"
+        }
+       },
+       {
+        "pred_row": 5,
+        "pred": {
+         "Liability Type": "Current Portion of Long-term Debt",
+         "Description": "",
+         "Amount": "$24,000"
+        }
+       },
+       {
+        "pred_row": 6,
+        "pred": {
+         "Liability Type": "LONG-TERM LIABILITIES",
+         "Description": "",
+         "Amount": ""
+        }
+       },
+       {
+        "pred_row": 7,
+        "pred": {
+         "Liability Type": "Long-term Loan — First National Bank",
+         "Description": "",
+         "Amount": "$121,000"
+        }
+       },
+       {
+        "pred_row": 8,
+        "pred": {
+         "Liability Type": "Deferred Tax Liability",
+         "Description": "",
+         "Amount": "$8,400"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "CURRENT LIABILITIES",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Accounts Payable",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$254,800",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Accrued Liabilities",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$44,200",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Short-term Loan — First National Bank",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$80,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Deferred Revenue",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$18,200",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Current Portion of Long-term Debt",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$24,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 6,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "LONG-TERM LIABILITIES",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Long-term Loan — First National Bank",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$121,000",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Liability Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Deferred Tax Liability",
+        "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$8,400",
+        "grounded": true
+       }
+      ]
      }
     },
     "counts": {
-     "correct": 34,
-     "hallucinated": 23,
-     "missed": 12
+     "correct": 11,
+     "hallucinated": 46,
+     "missed": 35
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.7391304347826086,
-    "hallucination_rate": 0.40350877192982454,
+    "accuracy": 0.2391304347826087,
+    "hallucination_rate": 0.8070175438596491,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -10702,31 +11112,31 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 333,
-    "hallucinated": 49,
-    "missed": 45,
+    "correct": 310,
+    "hallucinated": 72,
+    "missed": 68,
     "empty_ok": 12
    },
    "gold_valued": 378,
-   "accuracy": 0.8809523809523809,
+   "accuracy": 0.8201058201058201,
    "near_rate": 0.0,
-   "hallucinated": 49,
-   "hallucination_rate": 0.12827225130890052,
+   "hallucinated": 72,
+   "hallucination_rate": 0.18848167539267016,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0
   },
   "by_document_type": {
    "balance_sheet": {
     "counts": {
-     "correct": 34,
-     "hallucinated": 23,
-     "missed": 12
+     "correct": 11,
+     "hallucinated": 46,
+     "missed": 35
     },
     "gold_valued": 46,
-    "accuracy": 0.7391304347826086,
+    "accuracy": 0.2391304347826087,
     "near_rate": 0.0,
-    "hallucinated": 23,
-    "hallucination_rate": 0.40350877192982454,
+    "hallucinated": 46,
+    "hallucination_rate": 0.8070175438596491,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -10842,16 +11252,16 @@
    },
    "money": {
     "counts": {
-     "correct": 152,
-     "hallucinated": 9,
-     "missed": 9,
+     "correct": 142,
+     "missed": 19,
+     "hallucinated": 3,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.9440993788819876,
+    "accuracy": 0.8819875776397516,
     "near_rate": 0.0,
-    "hallucinated": 9,
-    "hallucination_rate": 0.055900621118012424,
+    "hallucinated": 3,
+    "hallucination_rate": 0.020689655172413793,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    },
@@ -10869,15 +11279,15 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 40,
-     "correct": 143,
-     "missed": 32
+     "hallucinated": 69,
+     "missed": 45,
+     "correct": 130
     },
     "gold_valued": 175,
-    "accuracy": 0.8171428571428572,
+    "accuracy": 0.7428571428571429,
     "near_rate": 0.0,
-    "hallucinated": 40,
-    "hallucination_rate": 0.2185792349726776,
+    "hallucinated": 69,
+    "hallucination_rate": 0.34673366834170855,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    }

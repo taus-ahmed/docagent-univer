@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-18 03:36:27",
- "git_commit": "c50b2b9",
+ "run_id": "2026-08-18 03:53:45",
+ "git_commit": "cc8428d",
  "config": {
-  "mode": "record",
+  "mode": "replay",
   "repeat": 1,
   "no_template": false,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 9,
-  "recorded": 1,
+  "hits": 10,
+  "recorded": 0,
   "live": 0,
   "misses": 0
  },
@@ -1481,7 +1481,7 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "table 'table' identified as gold table 'expenses' by row content (the template names no bands)"
+    "table 'table' -> gold table 'expenses' by elimination (one unmatched on each side)"
    ],
    "adapted": {
     "fields": {
@@ -3203,7 +3203,7 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "table 'table' identified as gold table 'line_items' by row content (the template names no bands)"
+    "table 'table' -> gold table 'line_items' by elimination (one unmatched on each side)"
    ],
    "adapted": {
     "fields": {
@@ -4144,7 +4144,7 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "table 'table' identified as gold table 'line_items' by row content (the template names no bands)"
+    "table 'table' -> gold table 'line_items' by elimination (one unmatched on each side)"
    ],
    "adapted": {
     "fields": {
@@ -7074,7 +7074,7 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "table 'table' identified as gold table 'line_items' by row content (the template names no bands)"
+    "table 'table' -> gold table 'line_items' by elimination (one unmatched on each side)"
    ],
    "adapted": {
     "fields": {
@@ -7887,7 +7887,7 @@
     "replay_cache_miss": false
    },
    "adapter_notes": [
-    "table 'table' identified as gold table 'transactions' by row content (the template names no bands)"
+    "table 'table' -> gold table 'transactions' by elimination (one unmatched on each side)"
    ],
    "adapted": {
     "fields": {
@@ -10619,5 +10619,6 @@
   }
  },
  "unstable_total": 0,
- "diff": []
+ "diff": [],
+ "diff_against": "2026-08-18 03:36:27"
 }
