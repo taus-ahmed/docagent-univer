@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 
 from tests.harness import bootstrap as bs
-from tests.harness.adapter import adapt
+from tests.harness.adapter import adapt, set_widenings
 from tests.harness.llm_cache import LLMCache
 from tests.harness.scoring import normalize_string, score_document, summarize
 
@@ -195,6 +195,7 @@ def _pct(x):
 
 def write_markdown(report: dict, path: Path):
     s = report["summary"]
+    s_raw = report.get("summary_raw", {}).get("overall", {"accuracy": None})
     lines = []
     add = lines.append
     add(f"# Accuracy report — {report['run_id']}")
@@ -209,6 +210,7 @@ def write_markdown(report: dict, path: Path):
     add(f"| metric | value |")
     add(f"|---|---|")
     add(f"| **accuracy (correct / gold-valued)** | **{_pct(o['accuracy'])}** |")
+    add(f"| **accuracy RAW (all adapter widenings off)** | **{_pct(s_raw['accuracy'])}** |")
     add(f"| **hallucination rate (hallucinated / extracted)** | **{_pct(o['hallucination_rate'])}** |")
     add(f"| **└ invention rate (value found NOWHERE in the PDF)** | **{_pct(o['invention_rate'])}** |")
     add(f"| └ misplacement (real content, slot gold leaves empty) | {_pct((o['hallucinated'] - o['hallucinated_ungrounded']) / max(1, o['gold_valued'] + o['hallucinated']))} |")
@@ -240,8 +242,8 @@ def write_markdown(report: dict, path: Path):
     add("")
     add("## Per document")
     add("")
-    add("| document | type | accuracy | halluc. | invented | route | notes |")
-    add("|---|---|---|---|---|---|---|")
+    add("| document | type | accuracy | raw | halluc. | invented | route | notes |")
+    add("|---|---|---|---|---|---|---|---|")
     for doc_id, d in report["documents"].items():
         sc = d.get("score") or {}
         cnt = sc.get("counts", {})
@@ -256,6 +258,7 @@ def write_markdown(report: dict, path: Path):
             notes.append(f"{len(d['unstable'])} unstable")
         route = d["log"].get("route", "").replace("[ROUTE]", "").strip()
         add(f"| {doc_id} | {d['document_type']} | {_pct(sc.get('accuracy'))} | "
+            f"{_pct((d.get('score_raw') or {}).get('accuracy'))} | "
             f"{cnt.get('hallucinated', 0)} | {sc.get('hallucinated_ungrounded', 0)} | "
             f"{route[:60]} | {'; '.join(notes)} |")
     add("")
@@ -330,6 +333,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     cache.install()
     doc_reports = {}
     doc_scores = []
+    doc_scores_raw = []
     try:
         for label in labels:
             doc_id = label["document_id"]
@@ -362,10 +366,24 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                     results, log = results_i, log_i
             cache.mode = mode
 
+            text = pdf_text(bs.PDF_DIR / label["pdf"])
             adapted = adapted_runs[0]
-            score = score_document(label, adapted,
-                                   doc_text=pdf_text(bs.PDF_DIR / label["pdf"]))
+            score = score_document(label, adapted, doc_text=text)
+
+            # RAW — the same extraction scored with every adapter widening off.
+            # Reported alongside the adapted number in every run, so a number
+            # that depends on mapping leniency is visible as such.
+            prev = set_widenings(**{k: False for k in
+                                    ("W1_fuzzy_names", "W2_table_by_content",
+                                     "W3_positional_columns", "W4_kv_rows_as_fields",
+                                     "W5_single_table")})
+            try:
+                raw_adapted = adapt(results, label, grid_i if no_template else grid)
+                raw_score = score_document(label, raw_adapted, doc_text=text)
+            finally:
+                set_widenings(**prev)
             doc_scores.append(score)
+            doc_scores_raw.append(raw_score)
             unstable = find_unstable(adapted_runs)
             inferred = None
             if no_template and results:
@@ -384,10 +402,11 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                 "adapted": {"fields": adapted["fields"],
                             "tables": adapted["tables"]},
                 "score": score,
+                "score_raw": raw_score,
                 "unstable": unstable,
             }
-            acc = score.get("accuracy")
-            print(f"[RUN]   accuracy={_pct(acc)} counts={score['counts']}",
+            print(f"[RUN]   adapted={_pct(score.get('accuracy'))}  "
+                  f"raw={_pct(raw_score.get('accuracy'))}  counts={score['counts']}",
                   flush=True)
     finally:
         cache.uninstall()
@@ -404,6 +423,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         "cache_stats": cache.stats,
         "documents": doc_reports,
         "summary": summarize(doc_scores),
+        "summary_raw": summarize(doc_scores_raw),
         "unstable_total": sum(len(d["unstable"]) for d in doc_reports.values()),
     }
 
@@ -432,8 +452,11 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
 
     # console summary
     o = report["summary"]["overall"]
+    ro = report.get("summary_raw", {}).get("overall", {}) or {}
     print("\n=== SUMMARY ===")
-    print(f"accuracy            : {_pct(o['accuracy'])}")
+    print(f"accuracy  ADAPTED   : {_pct(o['accuracy'])}")
+    print(f"accuracy  RAW       : {_pct(ro.get('accuracy'))}"
+          f"   (all adapter widenings off)")
     print(f"hallucination rate  : {_pct(o['hallucination_rate'])} "
           f"({o['hallucinated']} values in slots gold leaves empty)")
     print(f"  of which INVENTED : {_pct(o['invention_rate'])} "

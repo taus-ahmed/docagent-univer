@@ -40,6 +40,27 @@ _SKIP_KEYS = {"extracted_data", "extracted_fields", "layout_sections",
               "raw_llm_responses", "unguided_content"}
 
 
+# ── widening switches ────────────────────────────────────────────────────────
+# Every mapping rule that is looser than "the names are the same" lives behind
+# one of these, so the harness can report the ADAPTED number and the RAW number
+# (all widenings off) side by side in every run. A number that only exists with
+# widenings on is a number that needs explaining.
+WIDENINGS = {
+    "W1_fuzzy_names": True,      # exact -> substring -> token overlap
+    "W2_table_by_content": True, # identify a table by the rows it holds
+    "W3_positional_columns": True,
+    "W4_kv_rows_as_fields": True,
+    "W5_single_table": True,
+}
+
+
+def set_widenings(**kw):
+    """Enable/disable widenings. Returns the previous state (for restore)."""
+    prev = dict(WIDENINGS)
+    WIDENINGS.update(kw)
+    return prev
+
+
 def _norm(s: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(s or "").casefold())
 
@@ -56,6 +77,8 @@ def _match_name(pred_name: str, gold_names: list) -> Optional[str]:
     for g in gold_names:
         if _norm(g) == pn:
             return g
+    if not WIDENINGS["W1_fuzzy_names"]:
+        return None
     for g in gold_names:
         gn = _norm(g)
         if len(gn) >= 4 and len(pn) >= 4 and (gn in pn or pn in gn):
@@ -97,6 +120,8 @@ def _match_by_content(pred_rows: list, gold_tables: dict, taken: set):
     This is a naming impedance mismatch between the engine's output and the
     labels' vocabulary, which is exactly what this adapter exists to absorb.
     """
+    if not WIDENINGS["W2_table_by_content"]:
+        return None
     pl = _row_labels(pred_rows)
     if not pl:
         return None
@@ -274,7 +299,7 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
                     notes.append(f"table '{base}' identified as gold table "
                                  f"'{g}' by row content (the template names "
                                  f"no bands)")
-            if g is None and len(gold_table_names) == 1:
+            if g is None and WIDENINGS["W5_single_table"] and len(gold_table_names) == 1:
                 g = gold_table_names[0]
             cols = list((label.get("table_types", {}) or {}).get(g, {}).keys()) if g else []
 
@@ -292,7 +317,8 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
                 #    call that column "Label" — no name match is possible, but
                 #    the column order is the same, and order is what a table
                 #    means. The export writes by position too.
-                free = [c for c in cols if c not in used]
+                free = ([c for c in cols if c not in used]
+                        if WIDENINGS["W3_positional_columns"] else [])
                 for ck in pred_keys:
                     if ck not in by_name and free:
                         by_name[ck] = free.pop(0)
@@ -313,7 +339,8 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
     # This cannot hide an error: a row whose label does NOT match a gold field
     # stays a table row and still scores as hallucinated, and a row with the
     # right label but the wrong value becomes a field scored `wrong`.
-    for tname in [t for t in list(tables) if t not in gold_table_names]:
+    for tname in ([t for t in list(tables) if t not in gold_table_names]
+                  if WIDENINGS["W4_kv_rows_as_fields"] else []):
         rows = tables.get(tname) or []
         cols = [c for c in (rows[0].keys() if rows else [])
                 if not str(c).startswith("_")]

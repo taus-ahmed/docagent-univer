@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-18 02:47:57
+# Accuracy report — 2026-08-18 03:29:36
 
-- git: `2533afc`  mode: **replay**  repeat: 1
+- git: `69e19e7`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -8,6 +8,7 @@
 | metric | value |
 |---|---|
 | **accuracy (correct / gold-valued)** | **97.9%** |
+| **accuracy RAW (all adapter widenings off)** | **44.2%** |
 | **hallucination rate (hallucinated / extracted)** | **0.0%** |
 | **└ invention rate (value found NOWHERE in the PDF)** | **0.0%** |
 | └ misplacement (real content, slot gold leaves empty) | 0.0% |
@@ -39,18 +40,18 @@
 
 ## Per document
 
-| document | type | accuracy | halluc. | invented | route | notes |
-|---|---|---|---|---|---|---|
-| BS-2024-Q1 | balance_sheet | 100.0% | 0 | 0 | BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242 |  |
-| CHQ-001847 | cheque | 81.8% | 0 | 0 | CHQ-001847.pdf: file_type=digital_pdf pages=1 text_len=501 |  |
-| EXP-2024-0081 | expense_report | 100.0% | 0 | 0 | EXP-2024-0081.pdf: file_type=digital_pdf pages=1 text_len=11 |  |
-| INV-2024-0031 | sales_invoice | 97.0% | 0 | 0 | INV-2024-0031.pdf: file_type=digital_pdf pages=1 text_len=97 |  |
-| INV-2024-0047 | sales_invoice | 97.4% | 0 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
-| IS-2024-Q4 | income_statement | 100.0% | 0 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
-| PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 0 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
-| PAYSLIP-EMP-0012-APR2024 | payslip | 97.0% | 0 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
-| PO-2024-0018 | purchase_order | 96.8% | 0 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
-| STMT-2024-01 | bank_statement | 100.0% | 0 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
+| document | type | accuracy | raw | halluc. | invented | route | notes |
+|---|---|---|---|---|---|---|---|
+| BS-2024-Q1 | balance_sheet | 100.0% | 17.4% | 0 | 0 | BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242 |  |
+| CHQ-001847 | cheque | 81.8% | 81.8% | 0 | 0 | CHQ-001847.pdf: file_type=digital_pdf pages=1 text_len=501 |  |
+| EXP-2024-0081 | expense_report | 100.0% | 16.7% | 0 | 0 | EXP-2024-0081.pdf: file_type=digital_pdf pages=1 text_len=11 |  |
+| INV-2024-0031 | sales_invoice | 97.0% | 36.4% | 0 | 0 | INV-2024-0031.pdf: file_type=digital_pdf pages=1 text_len=97 |  |
+| INV-2024-0047 | sales_invoice | 97.4% | 31.6% | 0 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
+| IS-2024-Q4 | income_statement | 100.0% | 100.0% | 0 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
+| PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 94.6% | 0 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PAYSLIP-EMP-0012-APR2024 | payslip | 97.0% | 97.0% | 0 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PO-2024-0018 | purchase_order | 96.8% | 48.4% | 0 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
+| STMT-2024-01 | bank_statement | 100.0% | 14.3% | 0 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
 
 ## Mismatches (everything not correct)
 
