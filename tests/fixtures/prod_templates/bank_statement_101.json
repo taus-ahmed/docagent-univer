@@ -1,0 +1,481 @@
+{
+ "_source": {
+  "template_id": 29,
+  "name": "Bank-Statement-101",
+  "document_type": "bank_statement"
+ },
+ "grid": {
+  "cells": {
+   "1,0": {
+    "style": {
+     "align": "center",
+     "borderAll": true,
+     "borderOuter": false,
+     "bgColor": "#f9cb9c"
+    },
+    "value": "Account Info"
+   },
+   "2,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Bank Name "
+   },
+   "3,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Acct Holder"
+   },
+   "4,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Stmt No"
+   },
+   "5,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Acct Type"
+   },
+   "2,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "ABA"
+   },
+   "3,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Acct No"
+   },
+   "4,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Period"
+   },
+   "6,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false,
+     "align": "center",
+     "bgColor": "#ffe599"
+    },
+    "value": "Summary ",
+    "mergeSpan": {
+     "rows": 1,
+     "cols": 4
+    }
+   },
+   "7,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Opening Bal"
+   },
+   "8,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Total Credits"
+   },
+   "8,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Total Debits"
+   },
+   "7,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Closing Bal"
+   },
+   "10,0": {
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    },
+    "value": ""
+   },
+   "10,1": {
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    },
+    "value": ""
+   },
+   "10,2": {
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    },
+    "value": ""
+   },
+   "10,3": {
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    },
+    "value": ""
+   },
+   "5,1": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "5,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    }
+   },
+   "5,3": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    }
+   },
+   "1,1": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    }
+   },
+   "1,2": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    }
+   },
+   "1,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    }
+   },
+   "2,1": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "2,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "3,1": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "3,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "4,1": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "4,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "6,1": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "mergeParent": [
+     6,
+     0
+    ]
+   },
+   "6,2": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "mergeParent": [
+     6,
+     0
+    ]
+   },
+   "6,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "mergeParent": [
+     6,
+     0
+    ]
+   },
+   "7,1": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "7,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "8,1": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "8,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": true,
+    "repeatRow": false
+   },
+   "9,0": {
+    "value": "",
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    }
+   },
+   "9,1": {
+    "value": "",
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    }
+   },
+   "9,2": {
+    "value": "",
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    }
+   },
+   "9,3": {
+    "value": "",
+    "style": {
+     "borderAll": false,
+     "borderOuter": true
+    }
+   },
+   "11,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Txn DT"
+   },
+   "11,1": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Type "
+   },
+   "11,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Description"
+   },
+   "11,3": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Debit"
+   },
+   "9,4": {
+    "value": "",
+    "style": {
+     "borderOuter": true,
+     "borderAll": false
+    }
+   },
+   "10,4": {
+    "value": "",
+    "style": {
+     "borderOuter": true,
+     "borderAll": false
+    }
+   }
+  },
+  "colWidths": [
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {
+   "1,0": {
+    "rows": 1,
+    "cols": 4
+   },
+   "6,0": {
+    "rows": 1,
+    "cols": 4
+   }
+  },
+  "extractTargets": [
+   {
+    "r": 5,
+    "c": 1,
+    "label": "Acct Type",
+    "isRepeat": false
+   },
+   {
+    "r": 2,
+    "c": 1,
+    "label": "Bank Name",
+    "isRepeat": false
+   },
+   {
+    "r": 2,
+    "c": 3,
+    "label": "ABA",
+    "isRepeat": false
+   },
+   {
+    "r": 3,
+    "c": 1,
+    "label": "Acct Holder",
+    "isRepeat": false
+   },
+   {
+    "r": 3,
+    "c": 3,
+    "label": "Acct No",
+    "isRepeat": false
+   },
+   {
+    "r": 4,
+    "c": 1,
+    "label": "Stmt No",
+    "isRepeat": false
+   },
+   {
+    "r": 4,
+    "c": 3,
+    "label": "Period",
+    "isRepeat": false
+   },
+   {
+    "r": 7,
+    "c": 1,
+    "label": "Opening Bal",
+    "isRepeat": false
+   },
+   {
+    "r": 7,
+    "c": 3,
+    "label": "Closing Bal",
+    "isRepeat": false
+   },
+   {
+    "r": 8,
+    "c": 1,
+    "label": "Total Credits",
+    "isRepeat": false
+   },
+   {
+    "r": 8,
+    "c": 3,
+    "label": "Total Debits",
+    "isRepeat": false
+   }
+  ],
+  "repeatRows": [],
+  "docType": "bank_statement",
+  "savedAt": "2026-05-16T23:17:18.646Z"
+ }
+}

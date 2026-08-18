@@ -1,0 +1,1418 @@
+{
+ "_source": {
+  "template_id": 31,
+  "name": "BS Luq",
+  "document_type": "Balance Sheet"
+ },
+ "grid": {
+  "cells": {
+   "4,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Current assets Total"
+   },
+   "0,0": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Current assets "
+   },
+   "0,1": {
+    "style": {
+     "wrap": false,
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Amount",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "0,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Non current assets ",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "0,3": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Amount ",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "1,0": {
+    "style": {},
+    "value": ""
+   },
+   "9,0": {
+    "style": {},
+    "value": ""
+   },
+   "9,1": {
+    "style": {
+     "wrap": false
+    },
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "9,2": {
+    "style": {},
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "9,3": {
+    "style": {},
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "1,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "2,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "3,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "4,1": {
+    "style": {
+     "wrap": false,
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "5,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "6,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "7,1": {
+    "style": {
+     "wrap": false
+    },
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "8,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "10,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "11,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "12,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "13,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "14,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "15,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "16,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "17,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "18,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "19,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "20,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "21,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "22,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "23,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "24,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "25,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "26,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "27,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "28,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "29,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "30,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "31,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "32,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "33,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "34,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "35,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "36,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "37,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "38,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "39,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "40,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "41,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "42,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "43,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "44,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "45,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "46,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "47,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "48,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "49,1": {
+    "value": "",
+    "style": {
+     "wrap": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "1,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "2,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "3,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "4,3": {
+    "value": "",
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "5,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "6,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "7,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "8,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "10,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "11,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "12,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "13,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "14,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "15,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "16,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "17,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "18,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "19,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "20,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "21,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "22,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "23,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "24,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "25,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "26,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "27,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "28,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "29,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "30,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "31,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "32,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "33,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "34,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "35,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "36,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "37,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "38,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "39,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "40,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "41,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "42,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "43,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "44,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "45,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "46,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "47,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "48,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "49,3": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "10,0": {
+    "style": {},
+    "value": "Current liabilities Total"
+   },
+   "10,2": {
+    "style": {},
+    "value": "Non current liabilities Total",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "20,0": {
+    "style": {},
+    "value": ""
+   },
+   "20,2": {
+    "style": {},
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "9,4": {
+    "style": {},
+    "value": ""
+   },
+   "9,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "20,4": {
+    "style": {},
+    "value": ""
+   },
+   "20,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "1,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "2,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "3,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "4,2": {
+    "style": {
+     "borderAll": true,
+     "borderOuter": false
+    },
+    "value": "Non Current assets Total",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "5,2": {
+    "style": {},
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "6,2": {
+    "style": {},
+    "value": "Non current liabilities ",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "7,2": {
+    "style": {},
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "8,2": {
+    "style": {},
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "11,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "12,2": {
+    "style": {},
+    "value": "",
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "13,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "14,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "15,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "16,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "17,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "18,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "19,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "21,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "22,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "23,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "24,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "25,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "26,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "27,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "28,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "29,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "30,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "31,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "32,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "33,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "34,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "35,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "36,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "37,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "38,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "39,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "40,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "41,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "42,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "43,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "44,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "45,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "46,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "47,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "48,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "49,2": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "0,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "1,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "2,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "3,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "4,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "5,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "6,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "7,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "8,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "10,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "11,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "12,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "13,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "14,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "15,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "16,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "17,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "18,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "19,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "21,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "22,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "23,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "24,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "25,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "26,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "27,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "28,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "29,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "30,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "31,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "32,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "33,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "34,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "35,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "36,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "37,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "38,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "39,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "40,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "41,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "42,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "43,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "44,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "45,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "46,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "47,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "48,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "49,5": {
+    "value": "",
+    "style": {},
+    "extractTarget": false,
+    "repeatRow": false
+   },
+   "7,0": {
+    "style": {},
+    "value": ""
+   },
+   "8,0": {
+    "style": {},
+    "value": ""
+   },
+   "12,0": {
+    "style": {},
+    "value": ""
+   },
+   "5,0": {
+    "style": {},
+    "value": ""
+   },
+   "6,0": {
+    "style": {},
+    "value": "Current liabilities "
+   }
+  },
+  "colWidths": [
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "docType": "Balance Sheet",
+  "savedAt": "2026-07-06T10:26:15.224Z"
+ }
+}

@@ -37,6 +37,9 @@ import re
 
 SHAPE_VERSION = 1
 
+# Rows a bottom-of-grid band starts with; the writer expands it as needed.
+_EDGE_BAND_ROWS = 10
+
 
 def _matrix(grid):
     """{(row, col): text} for every present cell; '' for present-but-empty."""
@@ -115,15 +118,28 @@ def compute_shape(grid, log=None):
         header_candidates[r] = cols
 
     bands = []
+
     for hr, cols in sorted(header_candidates.items()):
         later = [r for r in rows
                  if r > hr and any((r, c) in static for c in range(max_col + 1))]
         end = (min(later) - 1) if later else max(rows)
         if end <= hr:
-            _say(f"row {hr} looks like a band header "
-                 f"({', '.join(m[(hr, c)] for c in cols)}) but has no empty rows "
-                 f"beneath it — not treated as a repeating band")
-            continue
+            # A header row at the very bottom of the grid, with nothing drawn
+            # beneath it. Three or more adjacent headings can only be a table —
+            # nobody writes a three-cell label/value pair — so it becomes a
+            # band and the writer expands it to the document's row count. Two
+            # cells stay ambiguous ("Date | Amount" could be a pair) and are
+            # skipped out loud rather than guessed at.
+            if len(cols) >= 3:
+                end = hr + _EDGE_BAND_ROWS
+                _say(f"row {hr} is a band header at the bottom of the grid "
+                     f"({len(cols)} columns, no rows beneath) — treated as a "
+                     f"band; the writer expands it to the document's rows")
+            else:
+                _say(f"row {hr} looks like a band header "
+                     f"({', '.join(m[(hr, c)] for c in cols)}) but has no empty "
+                     f"rows beneath it — not treated as a repeating band")
+                continue
         section = _section_for(m, static, hr)
         headers_raw = [m[(hr, c)] for c in cols]
 
@@ -171,7 +187,7 @@ def compute_shape(grid, log=None):
     band_rows = set()
     for b in bands:
         band_rows.update(range(b["start_row"], b["end_row"] + 1))
-    header_rows = [b["header_row"] for b in bands]
+    header_rows = sorted({b["header_row"] for b in bands})
 
     # ── field slots: a static label with an empty cell beside it ──
     field_slots, label_cols, value_cols = [], set(), set()
