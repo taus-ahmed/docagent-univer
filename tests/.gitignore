@@ -1,0 +1,3 @@
+reports/history/
+reports/*.log
+__pycache__/
