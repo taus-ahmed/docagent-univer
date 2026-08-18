@@ -1,0 +1,126 @@
+{
+ "key": "cafc514b63c5afe7c72dce02940f7ca0c08ad89ecf18c52c88570b98922e8951",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2179,
+  "captured_at": "2026-08-17 22:52:51",
+  "prompt_preview": "Analyze this entire document carefully across all pages.\n\n=== EXTRACTED TEXT (for reference) ===\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nBalance Sheet — Q1 2024\nAs of March 31, 2024 | Doc No: BS-2024-Q1\nCURRENT ASSETS\nCash & Cash Equivalents $1"
+ },
+ "response": {
+  "raw_text": "{\n  \"file_type\": \"digital_pdf\",\n  \"total_documents\": 1,\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"doc_type\": \"balance_sheet\",\n      \"pages\": [\n        0,\n        1\n      ],\n      \"identifier\": \"BS-2024-Q1\",\n      \"sections\": [\n        {\n          \"heading\": \"CURRENT ASSETS\",\n          \"page\": 0,\n          \"item_count\": 5,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Total Current Assets\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"NON-CURRENT ASSETS\",\n          \"page\": 0,\n          \"item_count\": 4,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Total Non-Current Assets\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"TOTAL ASSETS\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"CURRENT LIABILITIES\",\n          \"page\": 0,\n          \"item_count\": 5,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Total Current Liabilities\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"LONG-TERM LIABILITIES\",\n          \"page\": 0,\n          \"item_count\": 2,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Total Long-Term Liabilities\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"TOTAL LIABILITIES\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"SHAREHOLDERS' EQUITY\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Retained Earnings\",\n          \"page\": 1,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Net Income YTD Q1\",\n          \"page\": 1,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Total Equity\",\n          \"page\": 1,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"TOTAL LIABILITIES & EQUITY\",\n          \"page\": 1,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        }\n      ]\n    }\n  ]\n}",
+  "parsed_json": {
+   "file_type": "digital_pdf",
+   "total_documents": 1,
+   "documents": [
+    {
+     "doc_index": 0,
+     "doc_type": "balance_sheet",
+     "pages": [
+      0,
+      1
+     ],
+     "identifier": "BS-2024-Q1",
+     "sections": [
+      {
+       "heading": "CURRENT ASSETS",
+       "page": 0,
+       "item_count": 5,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Total Current Assets",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "NON-CURRENT ASSETS",
+       "page": 0,
+       "item_count": 4,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Total Non-Current Assets",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "TOTAL ASSETS",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "CURRENT LIABILITIES",
+       "page": 0,
+       "item_count": 5,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Total Current Liabilities",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "LONG-TERM LIABILITIES",
+       "page": 0,
+       "item_count": 2,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Total Long-Term Liabilities",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "TOTAL LIABILITIES",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "SHAREHOLDERS' EQUITY",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Retained Earnings",
+       "page": 1,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Net Income YTD Q1",
+       "page": 1,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Total Equity",
+       "page": 1,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "TOTAL LIABILITIES & EQUITY",
+       "page": 1,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      }
+     ]
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2179,
+  "success": true,
+  "error": ""
+ }
+}

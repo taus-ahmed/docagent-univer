@@ -1,0 +1,83 @@
+{
+ "key": "6c594a8c6da092c4d56ea584b03154b798f5fd644cb4d7aa2c7b562c0ebdd59a",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1205,
+  "captured_at": "2026-08-17 22:54:16",
+  "prompt_preview": "Extract ALL content from the 'Description' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"description\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \""
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"description\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Steel Wire Coils Grade A 500m\",\n          \"value\": \"40 pcs $185.00 $7,400.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"Industrial Lubricant 5L Drum\",\n          \"value\": \"25 drums $68.00 $1,700.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Safety Gloves Heavy Duty Box/12\",\n          \"value\": \"60 boxes $22.50 $1,350.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 6,\n          \"label\": \"Hex Bolt Set M10 Qty-500\",\n          \"value\": \"30 sets $14.75 $442.50\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 8,\n          \"label\": \"Subtotal:\",\n          \"value\": \"10,892.50\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 9,\n          \"label\": \"Shipping & Handling:\",\n          \"value\": \"320.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 10,\n          \"label\": \"Sales Tax (8.88%):\",\n          \"value\": \"966.71\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 11,\n          \"label\": \"TOTAL DUE:\",\n          \"value\": \"12,179.21\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "description": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Steel Wire Coils Grade A 500m",
+       "value": "40 pcs $185.00 $7,400.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "Industrial Lubricant 5L Drum",
+       "value": "25 drums $68.00 $1,700.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Safety Gloves Heavy Duty Box/12",
+       "value": "60 boxes $22.50 $1,350.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 6,
+       "label": "Hex Bolt Set M10 Qty-500",
+       "value": "30 sets $14.75 $442.50"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 8,
+       "label": "Subtotal:",
+       "value": "10,892.50"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 9,
+       "label": "Shipping & Handling:",
+       "value": "320.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 10,
+       "label": "Sales Tax (8.88%):",
+       "value": "966.71"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 11,
+       "label": "TOTAL DUE:",
+       "value": "12,179.21"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1205,
+  "success": true,
+  "error": ""
+ }
+}

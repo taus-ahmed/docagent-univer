@@ -1,0 +1,65 @@
+{
+ "key": "64c964d98ada89ebc92945bb4736e8928ca040999ea46217eda58c13ce11f73d",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2019,
+  "captured_at": "2026-08-17 22:52:54",
+  "prompt_preview": "Extract the 'CURRENT ASSETS' section from this document page.\n\nThis section contains approximately 5 line items.\n\nExtract each key-value pair. One pair per row.\n\nTemplate placement:\n- Item labels -> column A\n- Item values -> column B\n- Rows: 2 to 6 (expand beyond 6 if more items than template rows)\n"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"currentassets\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Cash & Cash Equivalents\",\n          \"value\": \"143,803\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Accounts Receivable (net)\",\n          \"value\": \"348,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Inventory\",\n          \"value\": \"612,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"Prepaid Expenses\",\n          \"value\": \"16,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Other Current Assets\",\n          \"value\": \"8,800\"\n        }\n      ]\n    }\n  },\n  \"extracted_fields\": {\n    \"B7\": \"1,129,003\"\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "currentassets": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Cash & Cash Equivalents",
+       "value": "143,803"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Accounts Receivable (net)",
+       "value": "348,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Inventory",
+       "value": "612,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "Prepaid Expenses",
+       "value": "16,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Other Current Assets",
+       "value": "8,800"
+      }
+     ]
+    }
+   },
+   "extracted_fields": {
+    "B7": "1,129,003"
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2019,
+  "success": true,
+  "error": ""
+ }
+}

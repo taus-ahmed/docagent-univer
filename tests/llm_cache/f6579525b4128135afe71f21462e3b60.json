@@ -1,0 +1,69 @@
+{
+ "key": "f6579525b4128135afe71f21462e3b60f0e8f5b321ab6554d5d9bd48ead46ea7",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1872,
+  "captured_at": "2026-08-17 22:53:07",
+  "prompt_preview": "Extract ALL content from the 'Total Current Liabilities' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"totalcurrentliabilities\": { \"rows\": [\n    {\"label_col\": \"A\", \"va"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"totalcurrentliabilities\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 58,\n          \"label\": \"Accounts Payable\",\n          \"value\": \"254,800\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 59,\n          \"label\": \"Accrued Liabilities\",\n          \"value\": \"44,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 60,\n          \"label\": \"Short-term Loan \\u2014 First National Bank\",\n          \"value\": \"80,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 61,\n          \"label\": \"Deferred Revenue\",\n          \"value\": \"18,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 62,\n          \"label\": \"Current Portion of Long-term Debt\",\n          \"value\": \"24,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 63,\n          \"label\": \"Total Current Liabilities\",\n          \"value\": \"421,200\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "totalcurrentliabilities": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 58,
+       "label": "Accounts Payable",
+       "value": "254,800"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 59,
+       "label": "Accrued Liabilities",
+       "value": "44,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 60,
+       "label": "Short-term Loan — First National Bank",
+       "value": "80,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 61,
+       "label": "Deferred Revenue",
+       "value": "18,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 62,
+       "label": "Current Portion of Long-term Debt",
+       "value": "24,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 63,
+       "label": "Total Current Liabilities",
+       "value": "421,200"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1872,
+  "success": true,
+  "error": ""
+ }
+}

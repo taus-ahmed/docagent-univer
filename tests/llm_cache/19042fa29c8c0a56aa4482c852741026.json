@@ -1,0 +1,48 @@
+{
+ "key": "19042fa29c8c0a56aa4482c8527410268c0424e41584ed93fb05be827164dd2a",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1691,
+  "captured_at": "2026-08-17 22:53:18",
+  "prompt_preview": "Extract ALL content from the 'Net Income YTD Q1' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"netincomeytdq1\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"r"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"netincomeytdq1\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Retained Earnings\",\n          \"value\": \"550,751\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Net Income YTD Q1\",\n          \"value\": \"47,353\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Total Equity\",\n          \"value\": \"698,104\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "netincomeytdq1": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Retained Earnings",
+       "value": "550,751"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Net Income YTD Q1",
+       "value": "47,353"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Total Equity",
+       "value": "698,104"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1691,
+  "success": true,
+  "error": ""
+ }
+}

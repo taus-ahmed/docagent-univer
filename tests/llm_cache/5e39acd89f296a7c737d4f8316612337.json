@@ -1,0 +1,92 @@
+{
+ "key": "5e39acd89f296a7c737d4f83166123373292f227cb49265f0ebaa6f7551dfd3b",
+ "meta": {
+  "method": "extract",
+  "context": "CHQ-001847",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1667,
+  "captured_at": "2026-08-17 22:53:23",
+  "prompt_preview": "You are analyzing a spreadsheet template. The user has designed this template to extract data from business documents.\n\nHere is the complete template grid (cell reference -> contents; \"empty\" means a blank cell, \"merge\" means a merged region anchored at that cell):\n{\"A1\": {\"text\": \"Cheque Number\"}, "
+ },
+ "response": {
+  "raw_text": "{\n  \"extract_cells\": {\n    \"B1\": {\n      \"label\": \"Cheque Number\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"cheque_number\"\n    },\n    \"B2\": {\n      \"label\": \"Date\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"date\"\n    },\n    \"B3\": {\n      \"label\": \"Bank Name\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"bank_name\"\n    },\n    \"B4\": {\n      \"label\": \"Payer Name\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"person_name\"\n    },\n    \"B5\": {\n      \"label\": \"Payee\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"person_name\"\n    },\n    \"B6\": {\n      \"label\": \"Amount\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B7\": {\n      \"label\": \"Amount in Words\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency_words\"\n    },\n    \"B8\": {\n      \"label\": \"Memo\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"memo\"\n    },\n    \"B9\": {\n      \"label\": \"Authorized By\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"person_name\"\n    },\n    \"B10\": {\n      \"label\": \"Routing Number\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"routing_number\"\n    },\n    \"B11\": {\n      \"label\": \"Account Number\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"account_number\"\n    }\n  },\n  \"tables\": [],\n  \"static_cells\": [],\n  \"sections\": []\n}",
+  "parsed_json": {
+   "extract_cells": {
+    "B1": {
+     "label": "Cheque Number",
+     "section": null,
+     "type": "single_value",
+     "data_type": "cheque_number"
+    },
+    "B2": {
+     "label": "Date",
+     "section": null,
+     "type": "single_value",
+     "data_type": "date"
+    },
+    "B3": {
+     "label": "Bank Name",
+     "section": null,
+     "type": "single_value",
+     "data_type": "bank_name"
+    },
+    "B4": {
+     "label": "Payer Name",
+     "section": null,
+     "type": "single_value",
+     "data_type": "person_name"
+    },
+    "B5": {
+     "label": "Payee",
+     "section": null,
+     "type": "single_value",
+     "data_type": "person_name"
+    },
+    "B6": {
+     "label": "Amount",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B7": {
+     "label": "Amount in Words",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency_words"
+    },
+    "B8": {
+     "label": "Memo",
+     "section": null,
+     "type": "single_value",
+     "data_type": "memo"
+    },
+    "B9": {
+     "label": "Authorized By",
+     "section": null,
+     "type": "single_value",
+     "data_type": "person_name"
+    },
+    "B10": {
+     "label": "Routing Number",
+     "section": null,
+     "type": "single_value",
+     "data_type": "routing_number"
+    },
+    "B11": {
+     "label": "Account Number",
+     "section": null,
+     "type": "single_value",
+     "data_type": "account_number"
+    }
+   },
+   "tables": [],
+   "static_cells": [],
+   "sections": []
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1667,
+  "success": true,
+  "error": ""
+ }
+}

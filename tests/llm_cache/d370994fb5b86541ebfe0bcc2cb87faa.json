@@ -1,0 +1,62 @@
+{
+ "key": "d370994fb5b86541ebfe0bcc2cb87faa009629dd534dec1325d7a9594c16b5c5",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1806,
+  "captured_at": "2026-08-17 22:53:00",
+  "prompt_preview": "Extract ALL content from the 'Total Non-Current Assets' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"totalnoncurrentassets\": { \"rows\": [\n    {\"label_col\": \"A\", \"value"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"totalnoncurrentassets\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Property & Equipment (gross)\",\n          \"value\": \"240,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Less: Accum. Depreciation\",\n          \"value\": \"108,500\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Security Deposits\",\n          \"value\": \"85,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"Intangibles (net)\",\n          \"value\": \"20,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Total Non-Current Assets\",\n          \"value\": \"236,500\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "totalnoncurrentassets": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Property & Equipment (gross)",
+       "value": "240,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Less: Accum. Depreciation",
+       "value": "108,500"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Security Deposits",
+       "value": "85,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "Intangibles (net)",
+       "value": "20,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Total Non-Current Assets",
+       "value": "236,500"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1806,
+  "success": true,
+  "error": ""
+ }
+}

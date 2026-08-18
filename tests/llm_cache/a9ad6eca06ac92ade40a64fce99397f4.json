@@ -1,0 +1,34 @@
+{
+ "key": "a9ad6eca06ac92ade40a64fce99397f426b5185a150037cf463cd2296fb3b05b",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 744,
+  "captured_at": "2026-08-17 22:54:21",
+  "prompt_preview": "Extract ALL content from the 'Notes' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"notes\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label\": \"fie"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"notes\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Payment received via wire transfer Feb 10, 2024. Ref:\",\n          \"value\": \"WT-20240210-4421.\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "notes": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Payment received via wire transfer Feb 10, 2024. Ref:",
+       "value": "WT-20240210-4421."
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 744,
+  "success": true,
+  "error": ""
+ }
+}

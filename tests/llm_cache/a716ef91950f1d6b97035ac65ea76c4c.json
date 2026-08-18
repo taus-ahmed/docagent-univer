@@ -1,0 +1,594 @@
+{
+ "key": "a716ef91950f1d6b97035ac65ea76c4cd494aade68332f28643c4b4ce0de0ff8",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 6286,
+  "captured_at": "2026-08-17 22:56:26",
+  "prompt_preview": "Extract ALL content from the 'FIRST NATIONAL BANK OF NEW YORK' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"firstnationalbankofnewyork\": { \"rows\": [\n    {\"label_col\":"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"firstnationalbankofnewyork\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"FIRST NATIONAL BANK OF NEW YORK\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"ACCOUNT STATEMENT\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"Account Holder: Nexus Global Trading LLC\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 6,\n          \"label\": \"EIN: 47-3821654\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 7,\n          \"label\": \"Statement No: STMT-2024-01\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 8,\n          \"label\": \"Period: January 2024\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 9,\n          \"label\": \"Account No: ****7743\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 10,\n          \"label\": \"Type: Business Checking\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 11,\n          \"label\": \"Opening Balance\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 11,\n          \"label\": \"Credits\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 11,\n          \"label\": \"Debits\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 11,\n          \"label\": \"Closing Balance\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 12,\n          \"label\": \"$184,320.55\",\n          \"value\": \"184,320.55\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 12,\n          \"label\": \"$46,841.68\",\n          \"value\": \"46,841.68\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 12,\n          \"label\": \"$105,804.97\",\n          \"value\": \"105,804.97\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 12,\n          \"label\": \"$125,357.26\",\n          \"value\": \"125,357.26\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 13,\n          \"label\": \"01/03\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 13,\n          \"label\": \"DEP\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 13,\n          \"label\": \"Wire deposit — Summit Retail Group\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 13,\n          \"label\": \"$15,000.00\",\n          \"value\": \"15,000.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 13,\n          \"label\": \"$199,320.55\",\n          \"value\": \"199,320.55\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 14,\n          \"label\": \"01/05\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 14,\n          \"label\": \"ACH\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 14,\n          \"label\": \"Payroll disbursement — January wk1\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 14,\n          \"label\": \"$18,450.00\",\n          \"value\": \"18,450.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 14,\n          \"label\": \"$180,870.55\",\n          \"value\": \"180,870.55\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 15,\n          \"label\": \"01/10\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 15,\n          \"label\": \"CHQ\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 15,\n          \"label\": \"Cheque #001831 — National Office Supplies\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 15,\n          \"label\": \"$5,682.75\",\n          \"value\": \"5,682.75\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 15,\n          \"label\": \"$175,187.80\",\n          \"value\": \"175,187.80\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 16,\n          \"label\": \"01/12\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 16,\n          \"label\": \"DEP\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 16,\n          \"label\": \"Wire deposit — Pinnacle Electronics Corp.\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 16,\n          \"label\": \"$22,934.50\",\n          \"value\": \"22,934.50\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 16,\n          \"label\": \"$198,122.30\",\n          \"value\": \"198,122.30\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 17,\n          \"label\": \"01/15\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 17,\n          \"label\": \"FEE\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 17,\n          \"label\": \"Monthly account maintenance fee\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 17,\n          \"label\": \"$25.00\",\n          \"value\": \"25.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 17,\n          \"label\": \"$198,097.30\",\n          \"value\": \"198,097.30\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 18,\n          \"label\": \"01/15\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 18,\n          \"label\": \"ACH\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 18,\n          \"label\": \"Payroll disbursement — January wk3\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 18,\n          \"label\": \"$18,450.00\",\n          \"value\": \"18,450.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 18,\n          \"label\": \"$179,647.30\",\n          \"value\": \"179,647.30\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 19,\n          \"label\": \"01/18\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 19,\n          \"label\": \"CHQ\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 19,\n          \"label\": \"Cheque #001832 — Con Edison utilities\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 19,\n          \"label\": \"$3,847.22\",\n          \"value\": \"3,847.22\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 19,\n          \"label\": \"$175,800.08\",\n          \"value\": \"175,800.08\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 20,\n          \"label\": \"01/22\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 20,\n          \"label\": \"DEP\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 20,\n          \"label\": \"Wire deposit — BlueLine Wholesale Group\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 20,\n          \"label\": \"$8,765.00\",\n          \"value\": \"8,765.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 20,\n          \"label\": \"$184,565.08\",\n          \"value\": \"184,565.08\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 21,\n          \"label\": \"01/25\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 21,\n          \"label\": \"ACH\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 21,\n          \"label\": \"Federal tax deposit — Q4 payroll\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 21,\n          \"label\": \"$12,400.00\",\n          \"value\": \"12,400.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 21,\n          \"label\": \"$172,165.08\",\n          \"value\": \"172,165.08\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 22,\n          \"label\": \"01/28\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 22,\n          \"label\": \"CHQ\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 22,\n          \"label\": \"Cheque #001833 — Manhattan Commercial Prop.\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 22,\n          \"label\": \"$28,500.00\",\n          \"value\": \"28,500.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 22,\n          \"label\": \"$143,665.08\",\n          \"value\": \"143,665.08\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 23,\n          \"label\": \"01/30\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 23,\n          \"label\": \"INT\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 23,\n          \"label\": \"Interest earned — savings component\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 23,\n          \"label\": \"$142.18\",\n          \"value\": \"142.18\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 23,\n          \"label\": \"$143,807.26\",\n          \"value\": \"143,807.26\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 24,\n          \"label\": \"01/31\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 24,\n          \"label\": \"ACH\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 24,\n          \"label\": \"Payroll disbursement — January wk4\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 24,\n          \"label\": \"$18,450.00\",\n          \"value\": \"18,450.00\"\n        },\n        {\n          \"label_col\": \"I\",\n          \"value_col\": \"J\",\n          \"row\": 24,\n          \"label\": \"$125,357.26\",\n          \"value\": \"125,357.26\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 25,\n          \"label\": \"Closing Balance:\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 25,\n          \"label\": \"$125,357.26\",\n          \"value\": \"125,357.26\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 26,\n          \"label\": \"Report discrepancies within 30 days. Customer Service: (800) 555-0100 | fnbny.com\",\n          \"value\": \"\"\n        }\n      ]\n    }\n  }\n}\n",
+  "parsed_json": {
+   "layout_sections": {
+    "firstnationalbankofnewyork": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "FIRST NATIONAL BANK OF NEW YORK",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "ACCOUNT STATEMENT",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "Account Holder: Nexus Global Trading LLC",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "142 West 57th Street, Suite 1800, New York, NY 10019",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 6,
+       "label": "EIN: 47-3821654",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 7,
+       "label": "Statement No: STMT-2024-01",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 8,
+       "label": "Period: January 2024",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 9,
+       "label": "Account No: ****7743",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 10,
+       "label": "Type: Business Checking",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 11,
+       "label": "Opening Balance",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 11,
+       "label": "Credits",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 11,
+       "label": "Debits",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 11,
+       "label": "Closing Balance",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 12,
+       "label": "$184,320.55",
+       "value": "184,320.55"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 12,
+       "label": "$46,841.68",
+       "value": "46,841.68"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 12,
+       "label": "$105,804.97",
+       "value": "105,804.97"
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 12,
+       "label": "$125,357.26",
+       "value": "125,357.26"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 13,
+       "label": "01/03",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 13,
+       "label": "DEP",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 13,
+       "label": "Wire deposit — Summit Retail Group",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 13,
+       "label": "$15,000.00",
+       "value": "15,000.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 13,
+       "label": "$199,320.55",
+       "value": "199,320.55"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 14,
+       "label": "01/05",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 14,
+       "label": "ACH",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 14,
+       "label": "Payroll disbursement — January wk1",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 14,
+       "label": "$18,450.00",
+       "value": "18,450.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 14,
+       "label": "$180,870.55",
+       "value": "180,870.55"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 15,
+       "label": "01/10",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 15,
+       "label": "CHQ",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 15,
+       "label": "Cheque #001831 — National Office Supplies",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 15,
+       "label": "$5,682.75",
+       "value": "5,682.75"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 15,
+       "label": "$175,187.80",
+       "value": "175,187.80"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 16,
+       "label": "01/12",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 16,
+       "label": "DEP",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 16,
+       "label": "Wire deposit — Pinnacle Electronics Corp.",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 16,
+       "label": "$22,934.50",
+       "value": "22,934.50"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 16,
+       "label": "$198,122.30",
+       "value": "198,122.30"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 17,
+       "label": "01/15",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 17,
+       "label": "FEE",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 17,
+       "label": "Monthly account maintenance fee",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 17,
+       "label": "$25.00",
+       "value": "25.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 17,
+       "label": "$198,097.30",
+       "value": "198,097.30"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 18,
+       "label": "01/15",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 18,
+       "label": "ACH",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 18,
+       "label": "Payroll disbursement — January wk3",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 18,
+       "label": "$18,450.00",
+       "value": "18,450.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 18,
+       "label": "$179,647.30",
+       "value": "179,647.30"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 19,
+       "label": "01/18",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 19,
+       "label": "CHQ",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 19,
+       "label": "Cheque #001832 — Con Edison utilities",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 19,
+       "label": "$3,847.22",
+       "value": "3,847.22"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 19,
+       "label": "$175,800.08",
+       "value": "175,800.08"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 20,
+       "label": "01/22",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 20,
+       "label": "DEP",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 20,
+       "label": "Wire deposit — BlueLine Wholesale Group",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 20,
+       "label": "$8,765.00",
+       "value": "8,765.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 20,
+       "label": "$184,565.08",
+       "value": "184,565.08"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 21,
+       "label": "01/25",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 21,
+       "label": "ACH",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 21,
+       "label": "Federal tax deposit — Q4 payroll",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 21,
+       "label": "$12,400.00",
+       "value": "12,400.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 21,
+       "label": "$172,165.08",
+       "value": "172,165.08"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 22,
+       "label": "01/28",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 22,
+       "label": "CHQ",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 22,
+       "label": "Cheque #001833 — Manhattan Commercial Prop.",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 22,
+       "label": "$28,500.00",
+       "value": "28,500.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 22,
+       "label": "$143,665.08",
+       "value": "143,665.08"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 23,
+       "label": "01/30",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 23,
+       "label": "INT",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 23,
+       "label": "Interest earned — savings component",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 23,
+       "label": "$142.18",
+       "value": "142.18"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 23,
+       "label": "$143,807.26",
+       "value": "143,807.26"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 24,
+       "label": "01/31",
+       "value": ""
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 24,
+       "label": "ACH",
+       "value": ""
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 24,
+       "label": "Payroll disbursement — January wk4",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 24,
+       "label": "$18,450.00",
+       "value": "18,450.00"
+      },
+      {
+       "label_col": "I",
+       "value_col": "J",
+       "row": 24,
+       "label": "$125,357.26",
+       "value": "125,357.26"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 25,
+       "label": "Closing Balance:",
+       "value": ""
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 25,
+       "label": "$125,357.26",
+       "value": "125,357.26"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 26,
+       "label": "Report discrepancies within 30 days. Customer Service: (800) 555-0100 | fnbny.com",
+       "value": ""
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 6286,
+  "success": true,
+  "error": ""
+ }
+}

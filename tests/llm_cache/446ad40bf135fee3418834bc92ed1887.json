@@ -1,0 +1,48 @@
+{
+ "key": "446ad40bf135fee3418834bc92ed1887d46f75a5eeae99baaa468de4925f98c2",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 842,
+  "captured_at": "2026-08-17 22:54:09",
+  "prompt_preview": "Extract ALL content from the 'Bill To:' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"billto\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label\": "
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"billto\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Bill To:\",\n          \"value\": \"Apex Industrial Supplies Inc.\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"\",\n          \"value\": \"500 Commerce Drive, Chicago, IL 60601\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"\",\n          \"value\": \"Mr. Robert Chen — rchen@apexindustrial.com\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "billto": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Bill To:",
+       "value": "Apex Industrial Supplies Inc."
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "",
+       "value": "500 Commerce Drive, Chicago, IL 60601"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "",
+       "value": "Mr. Robert Chen — rchen@apexindustrial.com"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 842,
+  "success": true,
+  "error": ""
+ }
+}

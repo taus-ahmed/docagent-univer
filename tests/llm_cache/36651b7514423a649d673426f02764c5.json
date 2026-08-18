@@ -1,0 +1,97 @@
+{
+ "key": "36651b7514423a649d673426f02764c5749ecf1060b7a8e6555a113c430efe92",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2116,
+  "captured_at": "2026-08-17 22:53:13",
+  "prompt_preview": "Extract ALL content from the 'TOTAL LIABILITIES' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"totalliabilities\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", "
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"totalliabilities\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 57,\n          \"label\": \"Accounts Payable\",\n          \"value\": \"254,800\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 59,\n          \"label\": \"Accrued Liabilities\",\n          \"value\": \"44,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 61,\n          \"label\": \"Short-term Loan \\u2014 First National Bank\",\n          \"value\": \"80,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 63,\n          \"label\": \"Deferred Revenue\",\n          \"value\": \"18,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 65,\n          \"label\": \"Current Portion of Long-term Debt\",\n          \"value\": \"24,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 67,\n          \"label\": \"Total Current Liabilities\",\n          \"value\": \"421,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 71,\n          \"label\": \"Long-term Loan \\u2014 First National Bank\",\n          \"value\": \"121,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 73,\n          \"label\": \"Deferred Tax Liability\",\n          \"value\": \"8,400\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 75,\n          \"label\": \"Total Long-Term Liabilities\",\n          \"value\": \"129,400\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 77,\n          \"label\": \"TOTAL LIABILITIES\",\n          \"value\": \"550,600\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "totalliabilities": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 57,
+       "label": "Accounts Payable",
+       "value": "254,800"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 59,
+       "label": "Accrued Liabilities",
+       "value": "44,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 61,
+       "label": "Short-term Loan — First National Bank",
+       "value": "80,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 63,
+       "label": "Deferred Revenue",
+       "value": "18,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 65,
+       "label": "Current Portion of Long-term Debt",
+       "value": "24,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 67,
+       "label": "Total Current Liabilities",
+       "value": "421,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 71,
+       "label": "Long-term Loan — First National Bank",
+       "value": "121,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 73,
+       "label": "Deferred Tax Liability",
+       "value": "8,400"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 75,
+       "label": "Total Long-Term Liabilities",
+       "value": "129,400"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 77,
+       "label": "TOTAL LIABILITIES",
+       "value": "550,600"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2116,
+  "success": true,
+  "error": ""
+ }
+}

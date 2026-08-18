@@ -4,12 +4,15 @@ chokepoint: ``LLMRouter.extract`` / ``LLMRouter.classify`` (every extraction
 call, Gemini or Groq, template understanding included, returns through them).
 
 Modes:
-  record — call the live provider; persist every successful response to
-           tests/llm_cache/<key>.json (raw_text, parsed_json, tokens, model).
+  record — serve from cache when present, else call the live provider and
+           persist the response to tests/llm_cache/<key>.json.
   replay — never touch the network. A cache miss raises CacheMiss: either the
            document was never recorded, or a code change altered the prompt
            (re-record in that case).
-  live   — call the provider, don't persist (used by --repeat stability runs).
+  live   — always call the provider; never read the cache, never write it.
+           This is what --repeat stability runs use: reading the cache would
+           return the identical answer every time and report every field as
+           stable regardless of how much the model actually varies.
 
 The key is a sha256 over the full request: method, text, prompt,
 system_instruction, model override, and a hash of each page image. Prompts
@@ -121,11 +124,15 @@ class LLMCache:
                           prompt=kwargs.get("prompt", ""),
                           system_instruction=kwargs.get("system_instruction", ""),
                           model=kwargs.get("model"))
-        cached = self._load(key)
-        if cached is not None:
-            self.stats["hits"] += 1
-            self.calls.append((method, key, "cache"))
-            return self._to_response(cached)
+        # 'live' deliberately does NOT consult the cache. Stability runs exist
+        # to observe the model's nondeterminism; serving them a cached answer
+        # would report every field as stable no matter how much it varies.
+        if self.mode != "live":
+            cached = self._load(key)
+            if cached is not None:
+                self.stats["hits"] += 1
+                self.calls.append((method, key, "cache"))
+                return self._to_response(cached)
 
         if self.mode == "replay":
             self.stats["misses"] += 1

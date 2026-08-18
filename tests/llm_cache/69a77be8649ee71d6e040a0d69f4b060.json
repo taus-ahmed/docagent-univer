@@ -1,0 +1,195 @@
+{
+ "key": "69a77be8649ee71d6e040a0d69f4b0609b8d6e4396f56851b30d8e84e636730d",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2176,
+  "captured_at": "2026-08-17 22:54:07",
+  "prompt_preview": "Extract ALL content from the 'NEXUS GLOBAL TRADING LLC' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"nexusglobaltradingllc\": { \"rows\": [\n    {\"label_col\": \"A\", \"value"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"nexusglobaltradingllc\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 77,\n          \"label\": \"NEXUS GLOBAL TRADING LLC\",\n          \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 95,\n          \"label\": \"(212) 555-0148 | EIN: 47-3821654\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 437,\n          \"label\": \"Steel Wire Coils Grade A 500m\",\n          \"value\": \"40\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 437,\n          \"label\": \"pcs\",\n          \"value\": \"$185.00\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 437,\n          \"label\": \"\",\n          \"value\": \"7,400.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 460,\n          \"label\": \"Industrial Lubricant 5L Drum\",\n          \"value\": \"25\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 460,\n          \"label\": \"drums\",\n          \"value\": \"$68.00\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 460,\n          \"label\": \"\",\n          \"value\": \"1,700.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 483,\n          \"label\": \"Safety Gloves Heavy Duty Box/12\",\n          \"value\": \"60\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 483,\n          \"label\": \"boxes\",\n          \"value\": \"$22.50\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 483,\n          \"label\": \"\",\n          \"value\": \"1,350.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 506,\n          \"label\": \"Hex Bolt Set M10 Qty-500\",\n          \"value\": \"30\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 506,\n          \"label\": \"sets\",\n          \"value\": \"$14.75\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 506,\n          \"label\": \"\",\n          \"value\": \"442.50\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 550,\n          \"label\": \"Subtotal:\",\n          \"value\": \"10,892.50\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 573,\n          \"label\": \"Shipping & Handling:\",\n          \"value\": \"320.00\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 596,\n          \"label\": \"Sales Tax (8.88%):\",\n          \"value\": \"966.71\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 619,\n          \"label\": \"TOTAL DUE:\",\n          \"value\": \"12,179.21\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 697,\n          \"label\": \"Payment Instructions\",\n          \"value\": \"Wire: First National Bank of New York\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 719,\n          \"label\": \"ABA: 021000021 Account: 7743882201\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 742,\n          \"label\": \"Cheque payable to: Nexus Global Trading LLC\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 697,\n          \"label\": \"Notes\",\n          \"value\": \"Payment received via wire transfer Feb 10, 2024. Ref:\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 719,\n          \"label\": \"\",\n          \"value\": \"WT-20240210-4421.\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 777,\n          \"label\": \"Questions? ar@nexusglobaltrading.com | (212) 555-0148\",\n          \"value\": \"\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "nexusglobaltradingllc": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 77,
+       "label": "NEXUS GLOBAL TRADING LLC",
+       "value": "142 West 57th Street, Suite 1800, New York, NY 10019"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 95,
+       "label": "(212) 555-0148 | EIN: 47-3821654",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 437,
+       "label": "Steel Wire Coils Grade A 500m",
+       "value": "40"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 437,
+       "label": "pcs",
+       "value": "$185.00"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 437,
+       "label": "",
+       "value": "7,400.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 460,
+       "label": "Industrial Lubricant 5L Drum",
+       "value": "25"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 460,
+       "label": "drums",
+       "value": "$68.00"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 460,
+       "label": "",
+       "value": "1,700.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 483,
+       "label": "Safety Gloves Heavy Duty Box/12",
+       "value": "60"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 483,
+       "label": "boxes",
+       "value": "$22.50"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 483,
+       "label": "",
+       "value": "1,350.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 506,
+       "label": "Hex Bolt Set M10 Qty-500",
+       "value": "30"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 506,
+       "label": "sets",
+       "value": "$14.75"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 506,
+       "label": "",
+       "value": "442.50"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 550,
+       "label": "Subtotal:",
+       "value": "10,892.50"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 573,
+       "label": "Shipping & Handling:",
+       "value": "320.00"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 596,
+       "label": "Sales Tax (8.88%):",
+       "value": "966.71"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 619,
+       "label": "TOTAL DUE:",
+       "value": "12,179.21"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 697,
+       "label": "Payment Instructions",
+       "value": "Wire: First National Bank of New York"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 719,
+       "label": "ABA: 021000021 Account: 7743882201",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 742,
+       "label": "Cheque payable to: Nexus Global Trading LLC",
+       "value": ""
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 697,
+       "label": "Notes",
+       "value": "Payment received via wire transfer Feb 10, 2024. Ref:"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 719,
+       "label": "",
+       "value": "WT-20240210-4421."
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 777,
+       "label": "Questions? ar@nexusglobaltrading.com | (212) 555-0148",
+       "value": ""
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2176,
+  "success": true,
+  "error": ""
+ }
+}

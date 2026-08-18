@@ -1,0 +1,64 @@
+{
+ "key": "7866ce10cb072ec3ae3e7a95bbb259d2927ed697d6c948ef7a9b6f9ff741600b",
+ "meta": {
+  "method": "extract",
+  "context": "PO-2024-0018",
+  "model_requested": "gemini-2.5-flash",
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3162,
+  "captured_at": "2026-08-17 22:56:12",
+  "prompt_preview": "=== EXTRACTION TASK ===\nExtract data from this business document and fill ONLY the cells listed below.\n\nSINGLE VALUE CELLS — return each in extracted_fields keyed by the EXACT cell reference shown:\n  B1 = PO Number [string] — May appear as: PO Number, PO Ref, Purchase Order, Contract Number, Referen"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"purchase_order\",\n  \"overall_confidence\": \"high\",\n  \"extracted_fields\": {\n    \"B1\": \"PO-2024-0018\",\n    \"B2\": \"2024-01-10\",\n    \"B3\": \"2024-01-28\",\n    \"B4\": \"Net 30\",\n    \"B5\": \"Vendor's carrier\",\n    \"B6\": \"Pacific Steel & Metals Co.\",\n    \"B7\": \"2200 Harbor Drive, Los Angeles, CA 90021\",\n    \"B8\": \"Ms. Linda Zhao | (310) 555-0233\",\n    \"B9\": \"VND-0041\",\n    \"B10\": \"Marcus A. Thompson\",\n    \"B11\": \"Purchasing Manager\",\n    \"B12\": \"Janet Wu — VP Operations\",\n    \"B20\": \"12090.00\",\n    \"B21\": \"480.00\",\n    \"B22\": \"0.00\",\n    \"B23\": \"12570.00\"\n  },\n  \"table_rows\": [\n    {\n      \"Item / Description\": \"Steel Wire Coils Grade A 500m (SW-500A)\",\n      \"Qty\": \"50\",\n      \"Unit\": \"pcs\",\n      \"Unit Cost\": \"155.00\",\n      \"Total\": \"7750.00\"\n    },\n    {\n      \"Item / Description\": \"Steel Sheet 2mm 1200x2400 (SS-2MM)\",\n      \"Qty\": \"30\",\n      \"Unit\": \"sheets\",\n      \"Unit Cost\": \"88.00\",\n      \"Total\": \"2640.00\"\n    },\n    {\n      \"Item / Description\": \"Mild Steel Round Bar 20mm x 3m (RB-20)\",\n      \"Qty\": \"40\",\n      \"Unit\": \"lengths\",\n      \"Unit Cost\": \"42.50\",\n      \"Total\": \"1700.00\"\n    }\n  ]\n}",
+  "parsed_json": {
+   "document_type": "purchase_order",
+   "overall_confidence": "high",
+   "extracted_fields": {
+    "B1": "PO-2024-0018",
+    "B2": "2024-01-10",
+    "B3": "2024-01-28",
+    "B4": "Net 30",
+    "B5": "Vendor's carrier",
+    "B6": "Pacific Steel & Metals Co.",
+    "B7": "2200 Harbor Drive, Los Angeles, CA 90021",
+    "B8": "Ms. Linda Zhao | (310) 555-0233",
+    "B9": "VND-0041",
+    "B10": "Marcus A. Thompson",
+    "B11": "Purchasing Manager",
+    "B12": "Janet Wu — VP Operations",
+    "B20": "12090.00",
+    "B21": "480.00",
+    "B22": "0.00",
+    "B23": "12570.00"
+   },
+   "table_rows": [
+    {
+     "Item / Description": "Steel Wire Coils Grade A 500m (SW-500A)",
+     "Qty": "50",
+     "Unit": "pcs",
+     "Unit Cost": "155.00",
+     "Total": "7750.00"
+    },
+    {
+     "Item / Description": "Steel Sheet 2mm 1200x2400 (SS-2MM)",
+     "Qty": "30",
+     "Unit": "sheets",
+     "Unit Cost": "88.00",
+     "Total": "2640.00"
+    },
+    {
+     "Item / Description": "Mild Steel Round Bar 20mm x 3m (RB-20)",
+     "Qty": "40",
+     "Unit": "lengths",
+     "Unit Cost": "42.50",
+     "Total": "1700.00"
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3162,
+  "success": true,
+  "error": ""
+ }
+}

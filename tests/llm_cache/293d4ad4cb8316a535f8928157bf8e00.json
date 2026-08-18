@@ -1,0 +1,90 @@
+{
+ "key": "293d4ad4cb8316a535f8928157bf8e00847d883ee47dd6ad84e210293959a3dc",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1800,
+  "captured_at": "2026-08-17 22:53:56",
+  "prompt_preview": "Extract ALL content from the 'Date' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"date\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label\": \"field"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"date\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 36,\n          \"label\": \"03/15\",\n          \"value\": \"03/15\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 37,\n          \"label\": \"03/15\",\n          \"value\": \"03/15\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 38,\n          \"label\": \"03/15\",\n          \"value\": \"03/15\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 39,\n          \"label\": \"03/16\",\n          \"value\": \"03/16\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 40,\n          \"label\": \"03/16\",\n          \"value\": \"03/16\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 41,\n          \"label\": \"03/16\",\n          \"value\": \"03/16\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 42,\n          \"label\": \"03/17\",\n          \"value\": \"03/17\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 43,\n          \"label\": \"03/18\",\n          \"value\": \"03/18\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 44,\n          \"label\": \"03/18\",\n          \"value\": \"03/18\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "date": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 36,
+       "label": "03/15",
+       "value": "03/15"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 37,
+       "label": "03/15",
+       "value": "03/15"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 38,
+       "label": "03/15",
+       "value": "03/15"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 39,
+       "label": "03/16",
+       "value": "03/16"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 40,
+       "label": "03/16",
+       "value": "03/16"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 41,
+       "label": "03/16",
+       "value": "03/16"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 42,
+       "label": "03/17",
+       "value": "03/17"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 43,
+       "label": "03/18",
+       "value": "03/18"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 44,
+       "label": "03/18",
+       "value": "03/18"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1800,
+  "success": true,
+  "error": ""
+ }
+}

@@ -1,0 +1,37 @@
+{
+ "key": "7b12dbf5037010e0b1e16aefefdb725653074c2cc18482b2bc706cb2f528b5a0",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1803,
+  "captured_at": "2026-08-17 22:53:15",
+  "prompt_preview": "Extract the 'SHAREHOLDERS' EQUITY' section from this document page.\n\nThis section contains approximately 1 line items.\n\nExtract each key-value pair. One pair per row.\n\nTemplate placement:\n- Item labels -> column A\n- Item values -> column B\n- Rows: 34 to 36 (expand beyond 36 if more items than templa"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"shareholdersequity\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Common Stock (100 shares @ $1,000 par)\",\n          \"value\": \"100,000\"\n        }\n      ]\n    }\n  },\n  \"extracted_fields\": {\n    \"B37\": \"\"\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "shareholdersequity": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Common Stock (100 shares @ $1,000 par)",
+       "value": "100,000"
+      }
+     ]
+    }
+   },
+   "extracted_fields": {
+    "B37": ""
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1803,
+  "success": true,
+  "error": ""
+ }
+}

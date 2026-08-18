@@ -1,0 +1,205 @@
+{
+ "key": "303fb501644a6b084058d639f1f4c70fedbeddef3dfea071128de6741b7aef39",
+ "meta": {
+  "method": "extract",
+  "context": "IS-2024-Q4",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3444,
+  "captured_at": "2026-08-17 22:54:45",
+  "prompt_preview": "You are analyzing a spreadsheet template. The user has designed this template to extract data from business documents.\n\nHere is the complete template grid (cell reference -> contents; \"empty\" means a blank cell, \"merge\" means a merged region anchored at that cell):\n{\"A1\": {\"text\": \"Income Statement\""
+ },
+ "response": {
+  "raw_text": "{\n  \"extract_cells\": {\n    \"B2\": {\n      \"label\": \"Gross Sales\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B3\": {\n      \"label\": \"Less: Returns\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B4\": {\n      \"label\": \"Net Revenue\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B5\": {\n      \"label\": \"Opening Inventory\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B6\": {\n      \"label\": \"Purchases\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B7\": {\n      \"label\": \"Freight In\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B8\": {\n      \"label\": \"Less: Closing Inventory\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B9\": {\n      \"label\": \"Total COGS\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B10\": {\n      \"label\": \"Gross Profit\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B11\": {\n      \"label\": \"Salaries & Wages\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B12\": {\n      \"label\": \"Rent\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B13\": {\n      \"label\": \"Marketing\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B14\": {\n      \"label\": \"Utilities\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B15\": {\n      \"label\": \"Depreciation\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B16\": {\n      \"label\": \"Insurance\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B17\": {\n      \"label\": \"Office & Misc\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B18\": {\n      \"label\": \"Professional Fees\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B19\": {\n      \"label\": \"Bank Charges & Interest\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B20\": {\n      \"label\": \"Bad Debt\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B21\": {\n      \"label\": \"Total Operating Expenses\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B22\": {\n      \"label\": \"Operating Income (EBIT)\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B23\": {\n      \"label\": \"Interest Income\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B24\": {\n      \"label\": \"Net Income Before Tax\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B25\": {\n      \"label\": \"Income Tax Provision\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B26\": {\n      \"label\": \"Net Income After Tax\",\n      \"section\": \"Income Statement\",\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    }\n  },\n  \"tables\": [],\n  \"static_cells\": [\n    \"A1\",\n    \"A2\",\n    \"A3\",\n    \"A4\",\n    \"A5\",\n    \"A6\",\n    \"A7\",\n    \"A8\",\n    \"A9\",\n    \"A10\",\n    \"A11\",\n    \"A12\",\n    \"A13\",\n    \"A14\",\n    \"A15\",\n    \"A16\",\n    \"A17\",\n    \"A18\",\n    \"A19\",\n    \"A20\",\n    \"A21\",\n    \"A22\",\n    \"A23\",\n    \"A24\",\n    \"A25\",\n    \"A26\"\n  ],\n  \"sections\": [\n    \"Income Statement\"\n  ]\n}",
+  "parsed_json": {
+   "extract_cells": {
+    "B2": {
+     "label": "Gross Sales",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B3": {
+     "label": "Less: Returns",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B4": {
+     "label": "Net Revenue",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B5": {
+     "label": "Opening Inventory",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B6": {
+     "label": "Purchases",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B7": {
+     "label": "Freight In",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B8": {
+     "label": "Less: Closing Inventory",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B9": {
+     "label": "Total COGS",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B10": {
+     "label": "Gross Profit",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B11": {
+     "label": "Salaries & Wages",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B12": {
+     "label": "Rent",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B13": {
+     "label": "Marketing",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B14": {
+     "label": "Utilities",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B15": {
+     "label": "Depreciation",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B16": {
+     "label": "Insurance",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B17": {
+     "label": "Office & Misc",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B18": {
+     "label": "Professional Fees",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B19": {
+     "label": "Bank Charges & Interest",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B20": {
+     "label": "Bad Debt",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B21": {
+     "label": "Total Operating Expenses",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B22": {
+     "label": "Operating Income (EBIT)",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B23": {
+     "label": "Interest Income",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B24": {
+     "label": "Net Income Before Tax",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B25": {
+     "label": "Income Tax Provision",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B26": {
+     "label": "Net Income After Tax",
+     "section": "Income Statement",
+     "type": "single_value",
+     "data_type": "currency"
+    }
+   },
+   "tables": [],
+   "static_cells": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8",
+    "A9",
+    "A10",
+    "A11",
+    "A12",
+    "A13",
+    "A14",
+    "A15",
+    "A16",
+    "A17",
+    "A18",
+    "A19",
+    "A20",
+    "A21",
+    "A22",
+    "A23",
+    "A24",
+    "A25",
+    "A26"
+   ],
+   "sections": [
+    "Income Statement"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3444,
+  "success": true,
+  "error": ""
+ }
+}

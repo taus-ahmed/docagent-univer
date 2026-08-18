@@ -1,0 +1,55 @@
+{
+ "key": "5ff407696638fdfea96b0e05a91c111b541d1af20b8f49b143a10cd8bd8b39c0",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 911,
+  "captured_at": "2026-08-17 22:54:38",
+  "prompt_preview": "Extract ALL content from the 'Subtotal:' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"subtotal\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"subtotal\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 49,\n          \"label\": \"Subtotal:\",\n          \"value\": \"15,549.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 51,\n          \"label\": \"Shipping & Handling:\",\n          \"value\": \"580.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 53,\n          \"label\": \"Sales Tax (8.25%):\",\n          \"value\": \"1,282.79\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 55,\n          \"label\": \"TOTAL DUE:\",\n          \"value\": \"17,411.79\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "subtotal": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 49,
+       "label": "Subtotal:",
+       "value": "15,549.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 51,
+       "label": "Shipping & Handling:",
+       "value": "580.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 53,
+       "label": "Sales Tax (8.25%):",
+       "value": "1,282.79"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 55,
+       "label": "TOTAL DUE:",
+       "value": "17,411.79"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 911,
+  "success": true,
+  "error": ""
+ }
+}

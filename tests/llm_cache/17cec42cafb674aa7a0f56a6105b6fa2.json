@@ -1,0 +1,51 @@
+{
+ "key": "17cec42cafb674aa7a0f56a6105b6fa2ab90e5b0cfb91d78a12db75a149986b6",
+ "meta": {
+  "method": "extract",
+  "context": "IS-2024-Q4",
+  "model_requested": "gemini-2.5-flash",
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3195,
+  "captured_at": "2026-08-17 22:54:53",
+  "prompt_preview": "=== EXTRACTION TASK ===\nExtract data from this business document and fill ONLY the cells listed below.\n\nSINGLE VALUE CELLS — return each in extracted_fields keyed by the EXACT cell reference shown:\n  B2 = Gross Sales  (from the 'Income Statement' section) [currency]\n  B3 = Less: Returns  (from the '"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"Income Statement\",\n  \"overall_confidence\": \"high\",\n  \"extracted_fields\": {\n    \"B2\": \"1980000\",\n    \"B3\": \"28600\",\n    \"B4\": \"1951400\",\n    \"B5\": \"648000\",\n    \"B6\": \"1280000\",\n    \"B7\": \"52000\",\n    \"B8\": \"724000\",\n    \"B9\": \"1256000\",\n    \"B10\": \"695400\",\n    \"B11\": \"190000\",\n    \"B12\": \"85500\",\n    \"B13\": \"22400\",\n    \"B14\": \"12100\",\n    \"B15\": \"10300\",\n    \"B16\": \"7150\",\n    \"B17\": \"5800\",\n    \"B18\": \"18000\",\n    \"B19\": \"3800\",\n    \"B20\": \"4200\",\n    \"B21\": \"359250\",\n    \"B22\": \"336150\",\n    \"B23\": \"1240\",\n    \"B24\": \"337390\",\n    \"B25\": \"70852\",\n    \"B26\": \"266538\"\n  },\n  \"table_rows\": []\n}",
+  "parsed_json": {
+   "document_type": "Income Statement",
+   "overall_confidence": "high",
+   "extracted_fields": {
+    "B2": "1980000",
+    "B3": "28600",
+    "B4": "1951400",
+    "B5": "648000",
+    "B6": "1280000",
+    "B7": "52000",
+    "B8": "724000",
+    "B9": "1256000",
+    "B10": "695400",
+    "B11": "190000",
+    "B12": "85500",
+    "B13": "22400",
+    "B14": "12100",
+    "B15": "10300",
+    "B16": "7150",
+    "B17": "5800",
+    "B18": "18000",
+    "B19": "3800",
+    "B20": "4200",
+    "B21": "359250",
+    "B22": "336150",
+    "B23": "1240",
+    "B24": "337390",
+    "B25": "70852",
+    "B26": "266538"
+   },
+   "table_rows": []
+  },
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3195,
+  "success": true,
+  "error": ""
+ }
+}

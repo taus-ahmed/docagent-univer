@@ -1,0 +1,132 @@
+{
+ "extract_cells": {
+  "B1": {
+   "label": "Employer Name",
+   "section": null,
+   "type": "single_value",
+   "data_type": "company_name"
+  },
+  "B2": {
+   "label": "Employee Name",
+   "section": null,
+   "type": "single_value",
+   "data_type": "person_name"
+  },
+  "B3": {
+   "label": "Employee ID",
+   "section": null,
+   "type": "single_value",
+   "data_type": "employee_id"
+  },
+  "B4": {
+   "label": "Title / Department",
+   "section": null,
+   "type": "single_value",
+   "data_type": "string"
+  },
+  "B5": {
+   "label": "SSN",
+   "section": null,
+   "type": "single_value",
+   "data_type": "ssn"
+  },
+  "B6": {
+   "label": "Pay Period",
+   "section": null,
+   "type": "single_value",
+   "data_type": "date_range"
+  },
+  "B7": {
+   "label": "Pay Date",
+   "section": null,
+   "type": "single_value",
+   "data_type": "date"
+  },
+  "B8": {
+   "label": "Annual Salary",
+   "section": null,
+   "type": "single_value",
+   "data_type": "currency"
+  },
+  "B15": {
+   "label": "Total Earnings",
+   "section": null,
+   "type": "single_value",
+   "data_type": "currency"
+  },
+  "B17": {
+   "label": "Deductions",
+   "section": null,
+   "type": "single_value",
+   "data_type": "currency"
+  },
+  "B28": {
+   "label": "Total Deductions",
+   "section": null,
+   "type": "single_value",
+   "data_type": "currency"
+  },
+  "B30": {
+   "label": "Net Pay",
+   "section": null,
+   "type": "single_value",
+   "data_type": "currency"
+  },
+  "B31": {
+   "label": "YTD Gross Earnings",
+   "section": null,
+   "type": "single_value",
+   "data_type": "currency"
+  },
+  "B32": {
+   "label": "YTD Taxes Withheld",
+   "section": null,
+   "type": "single_value",
+   "data_type": "currency"
+  }
+ },
+ "tables": [
+  {
+   "table_id": "earnings_table",
+   "section": null,
+   "header_row": 11,
+   "data_start_row": 12,
+   "data_end_row": 14,
+   "columns": {
+    "A": "Description",
+    "B": "Amount"
+   }
+  },
+  {
+   "table_id": "deductions_table",
+   "section": null,
+   "header_row": 18,
+   "data_start_row": 19,
+   "data_end_row": 27,
+   "columns": {
+    "A": "Description",
+    "B": "Amount"
+   }
+  }
+ ],
+ "static_cells": [
+  "A1",
+  "A2",
+  "A3",
+  "A4",
+  "A5",
+  "A6",
+  "A7",
+  "A8",
+  "A10",
+  "A11",
+  "A15",
+  "A17",
+  "A18",
+  "A28",
+  "A30",
+  "A31",
+  "A32"
+ ],
+ "sections": []
+}

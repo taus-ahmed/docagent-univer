@@ -1,0 +1,58 @@
+{
+ "key": "2f95ee650edeeeb0a9fa074d2128c21cff2e77a4e55f6a4e657b47bcd6f55ea0",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1974,
+  "captured_at": "2026-08-17 22:52:58",
+  "prompt_preview": "Extract the 'NON-CURRENT ASSETS' section from this document page.\n\nThis section contains approximately 4 line items.\n\nExtract each key-value pair. One pair per row.\n\nTemplate placement:\n- Item labels -> column A\n- Item values -> column B\n- Rows: 10 to 13 (expand beyond 13 if more items than template"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"noncurrentassets\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Property & Equipment (gross)\",\n          \"value\": \"240,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Less: Accum. Depreciation\",\n          \"value\": \"108,500\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Security Deposits\",\n          \"value\": \"85,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"Intangibles (net)\",\n          \"value\": \"20,000\"\n        }\n      ]\n    }\n  },\n  \"extracted_fields\": {\n    \"B14\": \"236,500\"\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "noncurrentassets": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Property & Equipment (gross)",
+       "value": "240,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Less: Accum. Depreciation",
+       "value": "108,500"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Security Deposits",
+       "value": "85,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "Intangibles (net)",
+       "value": "20,000"
+      }
+     ]
+    }
+   },
+   "extracted_fields": {
+    "B14": "236,500"
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1974,
+  "success": true,
+  "error": ""
+ }
+}

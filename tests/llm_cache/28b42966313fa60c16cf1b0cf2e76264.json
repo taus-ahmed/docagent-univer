@@ -1,0 +1,44 @@
+{
+ "key": "28b42966313fa60c16cf1b0cf2e762640c286281b819b0c7e00d374324680391",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1862,
+  "captured_at": "2026-08-17 22:53:09",
+  "prompt_preview": "Extract the 'LONG-TERM LIABILITIES' section from this document page.\n\nThis section contains approximately 2 line items.\n\nExtract each key-value pair. One pair per row.\n\nTemplate placement:\n- Item labels -> column A\n- Item values -> column B\n- Rows: 27 to 28 (expand beyond 28 if more items than templ"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"longtermliabilities\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Long-term Loan — First National Bank\",\n          \"value\": \"121,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Deferred Tax Liability\",\n          \"value\": \"8,400\"\n        }\n      ]\n    }\n  },\n  \"extracted_fields\": {\n    \"B29\": \"129,400\"\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "longtermliabilities": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Long-term Loan — First National Bank",
+       "value": "121,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Deferred Tax Liability",
+       "value": "8,400"
+      }
+     ]
+    }
+   },
+   "extracted_fields": {
+    "B29": "129,400"
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1862,
+  "success": true,
+  "error": ""
+ }
+}

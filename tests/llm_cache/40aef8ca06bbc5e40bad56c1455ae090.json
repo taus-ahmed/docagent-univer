@@ -1,0 +1,48 @@
+{
+ "key": "40aef8ca06bbc5e40bad56c1455ae090f12ae37879cee4ce888a159b1b2dd87e",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 853,
+  "captured_at": "2026-08-17 22:54:40",
+  "prompt_preview": "Extract ALL content from the 'Payment Instructions' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"paymentinstructions\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\":"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"paymentinstructions\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 60,\n          \"label\": \"Wire: First National Bank of New York\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 61,\n          \"label\": \"ABA: 021000021 Account: 7743882201\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 62,\n          \"label\": \"Cheque payable to: Nexus Global Trading LLC\",\n          \"value\": \"\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "paymentinstructions": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 60,
+       "label": "Wire: First National Bank of New York",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 61,
+       "label": "ABA: 021000021 Account: 7743882201",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 62,
+       "label": "Cheque payable to: Nexus Global Trading LLC",
+       "value": ""
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 853,
+  "success": true,
+  "error": ""
+ }
+}

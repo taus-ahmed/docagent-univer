@@ -1,0 +1,55 @@
+{
+ "key": "7f5e083c5af0697f1397954168898b9cec1028ce5012ea82c892740043398636",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 901,
+  "captured_at": "2026-08-17 22:54:30",
+  "prompt_preview": "Extract ALL content from the 'Bill To:' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"billto\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label\": "
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"billto\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"A\",\n          \"row\": 15,\n          \"label\": \"Bill To:\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"A\",\n          \"row\": 16,\n          \"label\": \"Pinnacle Electronics Corp.\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"A\",\n          \"row\": 17,\n          \"label\": \"3800 Tech Boulevard Floor 5, Austin, TX 78701\",\n          \"value\": \"\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"A\",\n          \"row\": 18,\n          \"label\": \"Ms. Sarah Johnson — sjohnson@pinnacleelec.com\",\n          \"value\": \"\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "billto": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "A",
+       "row": 15,
+       "label": "Bill To:",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "A",
+       "row": 16,
+       "label": "Pinnacle Electronics Corp.",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "A",
+       "row": 17,
+       "label": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
+       "value": ""
+      },
+      {
+       "label_col": "A",
+       "value_col": "A",
+       "row": 18,
+       "label": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
+       "value": ""
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 901,
+  "success": true,
+  "error": ""
+ }
+}

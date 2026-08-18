@@ -1,0 +1,293 @@
+{
+ "key": "dc9be49e61601cba17c7cfebbb9bd0cbbf7077ca78012ba2e9eac4a3b319dc3e",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3455,
+  "captured_at": "2026-08-17 22:53:45",
+  "prompt_preview": "Extract ALL content from the 'NEXUS GLOBAL TRADING LLC' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"nexusglobaltradingllc\": { \"rows\": [\n    {\"label_col\": \"A\", \"value"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"nexusglobaltradingllc\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"MERCHANT NAME\",\n          \"value\": \"NEXUS GLOBAL TRADING LLC\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Address\",\n          \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Phone\",\n          \"value\": \"(212) 555-0148\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"EIN\",\n          \"value\": \"47-3821654\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Employee\",\n          \"value\": \"Marcus A. Thompson\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 6,\n          \"label\": \"Employee ID\",\n          \"value\": \"EMP-0012\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 7,\n          \"label\": \"Department\",\n          \"value\": \"Procurement\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 8,\n          \"label\": \"Manager\",\n          \"value\": \"Janet Wu\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 9,\n          \"label\": \"Period\",\n          \"value\": \"March 15\\u201322, 2024\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 10,\n          \"label\": \"Purpose\",\n          \"value\": \"Supplier site visit \\u2014 Pacific Steel, Los Angeles\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 12,\n          \"label\": \"03/15\",\n          \"value\": \"Airfare\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 12,\n          \"label\": \"Delta Airlines JFK\\u2013LAX round trip\",\n          \"value\": \"Travel\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 12,\n          \"label\": \"Amount\",\n          \"value\": \"842.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 13,\n          \"label\": \"03/15\",\n          \"value\": \"Taxi\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 13,\n          \"label\": \"Airport to hotel LAX\",\n          \"value\": \"Travel\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 13,\n          \"label\": \"Amount\",\n          \"value\": \"38.50\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 14,\n          \"label\": \"03/15\",\n          \"value\": \"Hotel\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 14,\n          \"label\": \"Hilton LAX \\u2014 2 nights\",\n          \"value\": \"Lodging\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 14,\n          \"label\": \"Amount\",\n          \"value\": \"389.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 15,\n          \"label\": \"03/16\",\n          \"value\": \"Meals\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 15,\n          \"label\": \"Hotel breakfast\",\n          \"value\": \"Meals\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 15,\n          \"label\": \"Amount\",\n          \"value\": \"24.75\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 16,\n          \"label\": \"03/16\",\n          \"value\": \"M&E;\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 16,\n          \"label\": \"Client lunch w/ Pacific Steel (4 pax)\",\n          \"value\": \"Meals & Entmt\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 16,\n          \"label\": \"Amount\",\n          \"value\": \"187.40\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 17,\n          \"label\": \"03/16\",\n          \"value\": \"Taxi\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 17,\n          \"label\": \"Hotel to Pacific Steel facility\",\n          \"value\": \"Travel\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 17,\n          \"label\": \"Amount\",\n          \"value\": \"22.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 18,\n          \"label\": \"03/17\",\n          \"value\": \"Meals\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 18,\n          \"label\": \"Team dinner (2 pax)\",\n          \"value\": \"Meals\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 18,\n          \"label\": \"Amount\",\n          \"value\": \"95.60\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 19,\n          \"label\": \"03/18\",\n          \"value\": \"Taxi\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 19,\n          \"label\": \"Hotel to LAX\",\n          \"value\": \"Travel\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 19,\n          \"label\": \"Amount\",\n          \"value\": \"41.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 20,\n          \"label\": \"03/18\",\n          \"value\": \"Parking\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 20,\n          \"label\": \"JFK long-term parking 3 days\",\n          \"value\": \"Travel\"\n        },\n        {\n          \"label_col\": \"F\",\n          \"value_col\": \"G\",\n          \"row\": 20,\n          \"label\": \"Amount\",\n          \"value\": \"87.00\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 22,\n          \"label\": \"TOTAL CLAIMED\",\n          \"value\": \"1,727.25\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "nexusglobaltradingllc": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "MERCHANT NAME",
+       "value": "NEXUS GLOBAL TRADING LLC"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Address",
+       "value": "142 West 57th Street, Suite 1800, New York, NY 10019"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Phone",
+       "value": "(212) 555-0148"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "EIN",
+       "value": "47-3821654"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Employee",
+       "value": "Marcus A. Thompson"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 6,
+       "label": "Employee ID",
+       "value": "EMP-0012"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 7,
+       "label": "Department",
+       "value": "Procurement"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 8,
+       "label": "Manager",
+       "value": "Janet Wu"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 9,
+       "label": "Period",
+       "value": "March 15–22, 2024"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 10,
+       "label": "Purpose",
+       "value": "Supplier site visit — Pacific Steel, Los Angeles"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 12,
+       "label": "03/15",
+       "value": "Airfare"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 12,
+       "label": "Delta Airlines JFK–LAX round trip",
+       "value": "Travel"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 12,
+       "label": "Amount",
+       "value": "842.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 13,
+       "label": "03/15",
+       "value": "Taxi"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 13,
+       "label": "Airport to hotel LAX",
+       "value": "Travel"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 13,
+       "label": "Amount",
+       "value": "38.50"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 14,
+       "label": "03/15",
+       "value": "Hotel"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 14,
+       "label": "Hilton LAX — 2 nights",
+       "value": "Lodging"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 14,
+       "label": "Amount",
+       "value": "389.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 15,
+       "label": "03/16",
+       "value": "Meals"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 15,
+       "label": "Hotel breakfast",
+       "value": "Meals"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 15,
+       "label": "Amount",
+       "value": "24.75"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 16,
+       "label": "03/16",
+       "value": "M&E;"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 16,
+       "label": "Client lunch w/ Pacific Steel (4 pax)",
+       "value": "Meals & Entmt"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 16,
+       "label": "Amount",
+       "value": "187.40"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 17,
+       "label": "03/16",
+       "value": "Taxi"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 17,
+       "label": "Hotel to Pacific Steel facility",
+       "value": "Travel"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 17,
+       "label": "Amount",
+       "value": "22.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 18,
+       "label": "03/17",
+       "value": "Meals"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 18,
+       "label": "Team dinner (2 pax)",
+       "value": "Meals"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 18,
+       "label": "Amount",
+       "value": "95.60"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 19,
+       "label": "03/18",
+       "value": "Taxi"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 19,
+       "label": "Hotel to LAX",
+       "value": "Travel"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 19,
+       "label": "Amount",
+       "value": "41.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 20,
+       "label": "03/18",
+       "value": "Parking"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 20,
+       "label": "JFK long-term parking 3 days",
+       "value": "Travel"
+      },
+      {
+       "label_col": "F",
+       "value_col": "G",
+       "row": 20,
+       "label": "Amount",
+       "value": "87.00"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 22,
+       "label": "TOTAL CLAIMED",
+       "value": "1,727.25"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3455,
+  "success": true,
+  "error": ""
+ }
+}

@@ -1,0 +1,159 @@
+{
+ "key": "2457fc15b8ab88e00a79bf94f7f879acf2d88e81233e7dcc70ca049b53ccdac3",
+ "meta": {
+  "method": "extract",
+  "context": "PO-2024-0018",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3818,
+  "captured_at": "2026-08-17 22:56:03",
+  "prompt_preview": "You are analyzing a spreadsheet template. The user has designed this template to extract data from business documents.\n\nHere is the complete template grid (cell reference -> contents; \"empty\" means a blank cell, \"merge\" means a merged region anchored at that cell):\n{\"A1\": {\"text\": \"PO Number\"}, \"B1\""
+ },
+ "response": {
+  "raw_text": "{\n  \"extract_cells\": {\n    \"B1\": {\"label\": \"PO Number\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"string\"},\n    \"B2\": {\"label\": \"Date\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"date\"},\n    \"B3\": {\"label\": \"Required By\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"date\"},\n    \"B4\": {\"label\": \"Terms\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"string\"},\n    \"B5\": {\"label\": \"Ship Via\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"string\"},\n    \"B6\": {\"label\": \"Vendor Name\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"company_name\"},\n    \"B7\": {\"label\": \"Vendor Address\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"string\"},\n    \"B8\": {\"label\": \"Vendor Contact\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"string\"},\n    \"B9\": {\"label\": \"Vendor ID\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"string\"},\n    \"B10\": {\"label\": \"Buyer Name\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"person_name\"},\n    \"B11\": {\"label\": \"Buyer Title\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"string\"},\n    \"B12\": {\"label\": \"Authorised By\", \"section\": null, \"type\": \"single_value\", \"data_type\": \"person_name\"},\n    \"B20\": {\"label\": \"Subtotal\", \"section\": \"Summary\", \"type\": \"single_value\", \"data_type\": \"currency\"},\n    \"B21\": {\"label\": \"Freight\", \"section\": \"Summary\", \"type\": \"single_value\", \"data_type\": \"currency\"},\n    \"B22\": {\"label\": \"Tax\", \"section\": \"Summary\", \"type\": \"single_value\", \"data_type\": \"currency\"},\n    \"B23\": {\"label\": \"Order Total\", \"section\": \"Summary\", \"type\": \"single_value\", \"data_type\": \"currency\"}\n  },\n  \"tables\": [\n    {\n      \"table_id\": \"line_items\",\n      \"section\": null,\n      \"header_row\": 14,\n      \"data_start_row\": 15,\n      \"data_end_row\": 19,\n      \"columns\": {\n        \"A\": \"Item / Description\",\n        \"B\": \"Qty\",\n        \"C\": \"Unit\",\n        \"D\": \"Unit Cost\",\n        \"E\": \"Total\"\n      }\n    }\n  ],\n  \"static_cells\": [\"A1\", \"A2\", \"A3\", \"A4\", \"A5\", \"A6\", \"A7\", \"A8\", \"A9\", \"A10\", \"A11\", \"A12\", \"A14\", \"B14\", \"C14\", \"D14\", \"E14\", \"A20\", \"A21\", \"A22\", \"A23\"],\n  \"sections\": []\n}",
+  "parsed_json": {
+   "extract_cells": {
+    "B1": {
+     "label": "PO Number",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B2": {
+     "label": "Date",
+     "section": null,
+     "type": "single_value",
+     "data_type": "date"
+    },
+    "B3": {
+     "label": "Required By",
+     "section": null,
+     "type": "single_value",
+     "data_type": "date"
+    },
+    "B4": {
+     "label": "Terms",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B5": {
+     "label": "Ship Via",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B6": {
+     "label": "Vendor Name",
+     "section": null,
+     "type": "single_value",
+     "data_type": "company_name"
+    },
+    "B7": {
+     "label": "Vendor Address",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B8": {
+     "label": "Vendor Contact",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B9": {
+     "label": "Vendor ID",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B10": {
+     "label": "Buyer Name",
+     "section": null,
+     "type": "single_value",
+     "data_type": "person_name"
+    },
+    "B11": {
+     "label": "Buyer Title",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B12": {
+     "label": "Authorised By",
+     "section": null,
+     "type": "single_value",
+     "data_type": "person_name"
+    },
+    "B20": {
+     "label": "Subtotal",
+     "section": "Summary",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B21": {
+     "label": "Freight",
+     "section": "Summary",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B22": {
+     "label": "Tax",
+     "section": "Summary",
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B23": {
+     "label": "Order Total",
+     "section": "Summary",
+     "type": "single_value",
+     "data_type": "currency"
+    }
+   },
+   "tables": [
+    {
+     "table_id": "line_items",
+     "section": null,
+     "header_row": 14,
+     "data_start_row": 15,
+     "data_end_row": 19,
+     "columns": {
+      "A": "Item / Description",
+      "B": "Qty",
+      "C": "Unit",
+      "D": "Unit Cost",
+      "E": "Total"
+     }
+    }
+   ],
+   "static_cells": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8",
+    "A9",
+    "A10",
+    "A11",
+    "A12",
+    "A14",
+    "B14",
+    "C14",
+    "D14",
+    "E14",
+    "A20",
+    "A21",
+    "A22",
+    "A23"
+   ],
+   "sections": []
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3818,
+  "success": true,
+  "error": ""
+ }
+}

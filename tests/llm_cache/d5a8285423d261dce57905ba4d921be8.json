@@ -1,0 +1,65 @@
+{
+ "key": "d5a8285423d261dce57905ba4d921be8e54086e7f631d58ebf7aaea0d5201cfa",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1362,
+  "captured_at": "2026-08-17 22:53:38",
+  "prompt_preview": "Analyze this entire document carefully across all pages.\n\n=== EXTRACTED TEXT (for reference) ===\nNEXUS GLOBAL TRADING LLC EXPENSE REPORT\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nEmployee: Marcus A. Thompson Report No:\nAPPROVED\nEXP-2024-0081\nEmployee ID: E"
+ },
+ "response": {
+  "raw_text": "{\n  \"file_type\": \"digital_pdf\",\n  \"total_documents\": 1,\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"doc_type\": \"receipt\",\n      \"pages\": [\n        0\n      ],\n      \"identifier\": \"EXP-2024-0081\",\n      \"sections\": [\n        {\n          \"heading\": \"NEXUS GLOBAL TRADING LLC\",\n          \"page\": 0,\n          \"item_count\": 3,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Employee:\",\n          \"page\": 0,\n          \"item_count\": 6,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Date\",\n          \"page\": 0,\n          \"item_count\": 9,\n          \"structure\": \"table\"\n        },\n        {\n          \"heading\": \"TOTAL CLAIMED:\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Employee:\",\n          \"page\": 0,\n          \"item_count\": 3,\n          \"structure\": \"kv_pairs\"\n        }\n      ]\n    }\n  ]\n}",
+  "parsed_json": {
+   "file_type": "digital_pdf",
+   "total_documents": 1,
+   "documents": [
+    {
+     "doc_index": 0,
+     "doc_type": "receipt",
+     "pages": [
+      0
+     ],
+     "identifier": "EXP-2024-0081",
+     "sections": [
+      {
+       "heading": "NEXUS GLOBAL TRADING LLC",
+       "page": 0,
+       "item_count": 3,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Employee:",
+       "page": 0,
+       "item_count": 6,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Date",
+       "page": 0,
+       "item_count": 9,
+       "structure": "table"
+      },
+      {
+       "heading": "TOTAL CLAIMED:",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Employee:",
+       "page": 0,
+       "item_count": 3,
+       "structure": "kv_pairs"
+      }
+     ]
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1362,
+  "success": true,
+  "error": ""
+ }
+}

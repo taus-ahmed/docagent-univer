@@ -1,0 +1,71 @@
+{
+ "key": "6b6065928be2c515f9b442e4bdb71535dc61193c71be4626b07b293515d46e89",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1679,
+  "captured_at": "2026-08-17 22:56:16",
+  "prompt_preview": "Analyze this entire document carefully across all pages.\n\n=== EXTRACTED TEXT (for reference) ===\nFIRST NATIONAL BANK OF NEW ACCOUNT STATEMENT\nYORK\n330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC\nAccount Holder: Nexus Global Trading LLC Statement No: STMT-2024-01\n142 West 57th S"
+ },
+ "response": {
+  "raw_text": "{\n  \"file_type\": \"scanned_pdf\",\n  \"total_documents\": 1,\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"doc_type\": \"balance_sheet\",\n      \"pages\": [\n        0\n      ],\n      \"identifier\": \"STMT-2024-01\",\n      \"sections\": [\n        {\n          \"heading\": \"FIRST NATIONAL BANK OF NEW YORK\",\n          \"page\": 0,\n          \"item_count\": 3,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"ACCOUNT STATEMENT\",\n          \"page\": 0,\n          \"item_count\": 4,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Account Holder: Nexus Global Trading LLC\",\n          \"page\": 0,\n          \"item_count\": 4,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Opening Balance Credits Debits Closing Balance\",\n          \"page\": 0,\n          \"item_count\": 4,\n          \"structure\": \"kv_pairs\"\n        },\n        {\n          \"heading\": \"Date Type Description Debit Credit Balance\",\n          \"page\": 0,\n          \"item_count\": 12,\n          \"structure\": \"table\"\n        },\n        {\n          \"heading\": \"Closing Balance:\",\n          \"page\": 0,\n          \"item_count\": 1,\n          \"structure\": \"kv_pairs\"\n        }\n      ]\n    }\n  ]\n}",
+  "parsed_json": {
+   "file_type": "scanned_pdf",
+   "total_documents": 1,
+   "documents": [
+    {
+     "doc_index": 0,
+     "doc_type": "balance_sheet",
+     "pages": [
+      0
+     ],
+     "identifier": "STMT-2024-01",
+     "sections": [
+      {
+       "heading": "FIRST NATIONAL BANK OF NEW YORK",
+       "page": 0,
+       "item_count": 3,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "ACCOUNT STATEMENT",
+       "page": 0,
+       "item_count": 4,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Account Holder: Nexus Global Trading LLC",
+       "page": 0,
+       "item_count": 4,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Opening Balance Credits Debits Closing Balance",
+       "page": 0,
+       "item_count": 4,
+       "structure": "kv_pairs"
+      },
+      {
+       "heading": "Date Type Description Debit Credit Balance",
+       "page": 0,
+       "item_count": 12,
+       "structure": "table"
+      },
+      {
+       "heading": "Closing Balance:",
+       "page": 0,
+       "item_count": 1,
+       "structure": "kv_pairs"
+      }
+     ]
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1679,
+  "success": true,
+  "error": ""
+ }
+}

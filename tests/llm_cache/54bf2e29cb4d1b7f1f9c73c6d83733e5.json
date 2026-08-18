@@ -1,0 +1,34 @@
+{
+ "key": "54bf2e29cb4d1b7f1f9c73c6d83733e53c430717d1519a0720f17ef92a064675",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 734,
+  "captured_at": "2026-08-17 22:54:41",
+  "prompt_preview": "Extract ALL content from the 'Notes' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"notes\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label\": \"fie"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"notes\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Balance due March 4, 2024. Late payments subject to 1.5%\",\n          \"value\": \"monthly interest.\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "notes": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Balance due March 4, 2024. Late payments subject to 1.5%",
+       "value": "monthly interest."
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 734,
+  "success": true,
+  "error": ""
+ }
+}

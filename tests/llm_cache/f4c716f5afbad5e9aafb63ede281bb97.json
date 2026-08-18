@@ -1,0 +1,83 @@
+{
+ "key": "f4c716f5afbad5e9aafb63ede281bb97fc59389d2f8aa370804dcb545556ce33",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2013,
+  "captured_at": "2026-08-17 22:56:38",
+  "prompt_preview": "Extract ALL content from the 'Account Holder: Nexus Global Trading LLC' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"accountholdernexusglobaltradingllc\": { \"rows\": [\n"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"accountholdernexusglobaltradingllc\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Account Holder\",\n          \"value\": \"Nexus Global Trading LLC\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Address\",\n          \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"EIN\",\n          \"value\": \"47-3821654\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Opening Balance\",\n          \"value\": \"184,320.55\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 5,\n          \"label\": \"Credits\",\n          \"value\": \"46,841.68\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 5,\n          \"label\": \"Debits\",\n          \"value\": \"105,804.97\"\n        },\n        {\n          \"label_col\": \"G\",\n          \"value_col\": \"H\",\n          \"row\": 5,\n          \"label\": \"Closing Balance\",\n          \"value\": \"125,357.26\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 13,\n          \"label\": \"Closing Balance:\",\n          \"value\": \"125,357.26\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "accountholdernexusglobaltradingllc": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Account Holder",
+       "value": "Nexus Global Trading LLC"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Address",
+       "value": "142 West 57th Street, Suite 1800, New York, NY 10019"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "EIN",
+       "value": "47-3821654"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Opening Balance",
+       "value": "184,320.55"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 5,
+       "label": "Credits",
+       "value": "46,841.68"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 5,
+       "label": "Debits",
+       "value": "105,804.97"
+      },
+      {
+       "label_col": "G",
+       "value_col": "H",
+       "row": 5,
+       "label": "Closing Balance",
+       "value": "125,357.26"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 13,
+       "label": "Closing Balance:",
+       "value": "125,357.26"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2013,
+  "success": true,
+  "error": ""
+ }
+}

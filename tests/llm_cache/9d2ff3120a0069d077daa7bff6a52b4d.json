@@ -1,0 +1,62 @@
+{
+ "key": "9d2ff3120a0069d077daa7bff6a52b4d9a6349e7fff0afdc85bdb422c74bf3cd",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1818,
+  "captured_at": "2026-08-17 22:56:40",
+  "prompt_preview": "Extract ALL content from the 'Opening Balance Credits Debits Closing Balance' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"openingbalancecreditsdebitsclosingbalance\":"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"openingbalancecreditsdebitsclosingbalance\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"A\",\n          \"row\": 2,\n          \"label\": \"Opening Balance\",\n          \"value\": \"184,320.55\"\n        },\n        {\n          \"label_col\": \"B\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Credits\",\n          \"value\": \"46,841.68\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"C\",\n          \"row\": 2,\n          \"label\": \"Debits\",\n          \"value\": \"105,804.97\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"D\",\n          \"row\": 2,\n          \"label\": \"Closing Balance\",\n          \"value\": \"125,357.26\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"A\",\n          \"row\": 10,\n          \"label\": \"Closing Balance:\",\n          \"value\": \"125,357.26\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "openingbalancecreditsdebitsclosingbalance": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "A",
+       "row": 2,
+       "label": "Opening Balance",
+       "value": "184,320.55"
+      },
+      {
+       "label_col": "B",
+       "value_col": "B",
+       "row": 2,
+       "label": "Credits",
+       "value": "46,841.68"
+      },
+      {
+       "label_col": "C",
+       "value_col": "C",
+       "row": 2,
+       "label": "Debits",
+       "value": "105,804.97"
+      },
+      {
+       "label_col": "D",
+       "value_col": "D",
+       "row": 2,
+       "label": "Closing Balance",
+       "value": "125,357.26"
+      },
+      {
+       "label_col": "A",
+       "value_col": "A",
+       "row": 10,
+       "label": "Closing Balance:",
+       "value": "125,357.26"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1818,
+  "success": true,
+  "error": ""
+ }
+}

@@ -1,0 +1,34 @@
+{
+ "key": "efc4a086a5717a294650dd3c4c112265c6f799cd6adff22812e5a35f97c7b921",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1334,
+  "captured_at": "2026-08-17 22:53:58",
+  "prompt_preview": "Extract ALL content from the 'TOTAL CLAIMED:' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"totalclaimed\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": "
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"totalclaimed\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 645,\n          \"label\": \"TOTAL CLAIMED:\",\n          \"value\": \"1,727.25\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "totalclaimed": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 645,
+       "label": "TOTAL CLAIMED:",
+       "value": "1,727.25"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1334,
+  "success": true,
+  "error": ""
+ }
+}

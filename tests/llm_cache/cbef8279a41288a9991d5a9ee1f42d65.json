@@ -1,0 +1,48 @@
+{
+ "key": "cbef8279a41288a9991d5a9ee1f42d657deec66fa3997284edda0dc828bf685d",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1701,
+  "captured_at": "2026-08-17 22:53:10",
+  "prompt_preview": "Extract ALL content from the 'Total Long-Term Liabilities' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"totallongtermliabilities\": { \"rows\": [\n    {\"label_col\": \"A\", "
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"totallongtermliabilities\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Long-term Loan \\u2014 First National Bank\",\n          \"value\": \"121,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Deferred Tax Liability\",\n          \"value\": \"8,400\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Total Long-Term Liabilities\",\n          \"value\": \"129,400\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "totallongtermliabilities": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Long-term Loan — First National Bank",
+       "value": "121,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Deferred Tax Liability",
+       "value": "8,400"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Total Long-Term Liabilities",
+       "value": "129,400"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1701,
+  "success": true,
+  "error": ""
+ }
+}

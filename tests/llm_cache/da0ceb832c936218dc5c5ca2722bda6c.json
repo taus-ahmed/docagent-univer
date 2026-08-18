@@ -1,0 +1,90 @@
+{
+ "key": "da0ceb832c936218dc5c5ca2722bda6c4bfa698d1208dd12a76032cfd0cac323",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1295,
+  "captured_at": "2026-08-17 22:54:36",
+  "prompt_preview": "Extract ALL content from the 'Description' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"description\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \""
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"description\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 31,\n          \"label\": \"USB-C Hub 7-Port Model HB-720\",\n          \"value\": \"150 units $34.50 $5,175.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 32,\n          \"label\": \"Wireless Mouse M300 Series\",\n          \"value\": \"200 units $18.75 $3,750.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 33,\n          \"label\": \"Laptop Cooling Stand Aluminium\",\n          \"value\": \"80 units $27.00 $2,160.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 34,\n          \"label\": \"HDMI 2.1 Cable 2m Pack/5\",\n          \"value\": \"120 packs $16.20 $1,944.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 35,\n          \"label\": \"Webcam HD 1080p w/ Mic\",\n          \"value\": \"60 units $42.00 $2,520.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 38,\n          \"label\": \"Subtotal:\",\n          \"value\": \"15,549.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 39,\n          \"label\": \"Shipping & Handling:\",\n          \"value\": \"580.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 40,\n          \"label\": \"Sales Tax (8.25%):\",\n          \"value\": \"1,282.79\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 41,\n          \"label\": \"TOTAL DUE:\",\n          \"value\": \"17,411.79\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "description": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 31,
+       "label": "USB-C Hub 7-Port Model HB-720",
+       "value": "150 units $34.50 $5,175.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 32,
+       "label": "Wireless Mouse M300 Series",
+       "value": "200 units $18.75 $3,750.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 33,
+       "label": "Laptop Cooling Stand Aluminium",
+       "value": "80 units $27.00 $2,160.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 34,
+       "label": "HDMI 2.1 Cable 2m Pack/5",
+       "value": "120 packs $16.20 $1,944.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 35,
+       "label": "Webcam HD 1080p w/ Mic",
+       "value": "60 units $42.00 $2,520.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 38,
+       "label": "Subtotal:",
+       "value": "15,549.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 39,
+       "label": "Shipping & Handling:",
+       "value": "580.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 40,
+       "label": "Sales Tax (8.25%):",
+       "value": "1,282.79"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 41,
+       "label": "TOTAL DUE:",
+       "value": "17,411.79"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1295,
+  "success": true,
+  "error": ""
+ }
+}

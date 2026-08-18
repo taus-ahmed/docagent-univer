@@ -1,0 +1,37 @@
+{
+ "key": "74d4306fe19d57038bbf274c9a60bf8ba50133dad44d452106ce4859fbc94d70",
+ "meta": {
+  "method": "extract",
+  "context": "CHQ-001847",
+  "model_requested": "gemini-2.5-flash",
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3143,
+  "captured_at": "2026-08-17 22:53:34",
+  "prompt_preview": "=== EXTRACTION TASK ===\nExtract data from this business document and fill ONLY the cells listed below.\n\nSINGLE VALUE CELLS — return each in extracted_fields keyed by the EXACT cell reference shown:\n  B1 = Cheque Number [cheque_number]\n  B2 = Date [date]\n  B3 = Bank Name [bank_name]\n  B4 = Payer Name"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"cheque\",\n  \"overall_confidence\": \"high\",\n  \"extracted_fields\": {\n    \"B1\": \"CHQ-001847\",\n    \"B2\": \"2024-01-31\",\n    \"B3\": \"FIRST NATIONAL BANK OF NEW YORK\",\n    \"B4\": \"Nexus Global Trading LLC\",\n    \"B5\": \"Pacific Steel & Metals Co.\",\n    \"B6\": \"8410.00\",\n    \"B7\": \"Eight Thousand Four Hundred Ten and 00/100\",\n    \"B8\": \"Payment for PO-2024-0018 — Steel materials\",\n    \"B9\": \"Janet Wu\",\n    \"B10\": \"A021000021A\",\n    \"B11\": \"C7743882201C\"\n  },\n  \"table_rows\": []\n}",
+  "parsed_json": {
+   "document_type": "cheque",
+   "overall_confidence": "high",
+   "extracted_fields": {
+    "B1": "CHQ-001847",
+    "B2": "2024-01-31",
+    "B3": "FIRST NATIONAL BANK OF NEW YORK",
+    "B4": "Nexus Global Trading LLC",
+    "B5": "Pacific Steel & Metals Co.",
+    "B6": "8410.00",
+    "B7": "Eight Thousand Four Hundred Ten and 00/100",
+    "B8": "Payment for PO-2024-0018 — Steel materials",
+    "B9": "Janet Wu",
+    "B10": "A021000021A",
+    "B11": "C7743882201C"
+   },
+   "table_rows": []
+  },
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3143,
+  "success": true,
+  "error": ""
+ }
+}

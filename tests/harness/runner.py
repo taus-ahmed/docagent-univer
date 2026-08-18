@@ -185,7 +185,11 @@ def diff_runs(prev: dict, cur: dict) -> list:
         a, b = p.get(key), c.get(key)
         if a == b:
             continue
-        regression = (a == "correct" and b not in (None, "correct"))
+        # 'correct' -> anything else is a regression, INCLUDING the field
+        # vanishing from the report (b is None): a value that used to be
+        # measured correct and is now not measured at all is the quietest
+        # possible way to lose coverage, so it must be loud.
+        regression = (a == "correct" and b != "correct")
         changes.append({"key": key, "before": a, "after": b,
                         "regression": regression})
     return changes

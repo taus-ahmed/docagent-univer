@@ -1,0 +1,68 @@
+{
+ "key": "0883f8965f01a1d3f33053cc16864614c2974c217b4773ada15c1584645f68e1",
+ "meta": {
+  "method": "extract",
+  "context": "PAYSLIP-EMP-0007-APR2024",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 4570,
+  "captured_at": "2026-08-17 22:55:52",
+  "prompt_preview": "=== EXTRACTION TASK (LAYOUT MODE) ===\nThis template provides a LAYOUT, not a fixed field list. The line-item rows are BLANK. Read the document, extract ALL line items (both the item NAME and its AMOUNT) for EACH section below, and place them into the grid. Each section has its OWN row range and colu"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"payslip\",\n  \"overall_confidence\": \"high\",\n  \"documents\": [\n    {\n      \"doc_index\": 0,\n      \"layout_sections\": {\n        \"A12\": {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row_start\": 12,\n          \"row_end\": 14,\n          \"rows\": [\n            {\n              \"A12\": {\n                \"value\": \"Base Salary\",\n                \"confidence\": \"high\"\n              },\n              \"B12\": {\n                \"value\": \"12083.33\",\n                \"confidence\": \"high\"\n              }\n            },\n            {\n              \"A13\": {\n                \"value\": \"Car Allowance\",\n                \"confidence\": \"high\"\n              },\n              \"B13\": {\n                \"value\": \"500.00\",\n                \"confidence\": \"high\"\n              }\n            },\n            {\n              \"A14\": {\n                \"value\": \"Executive Bonus\",\n                \"confidence\": \"high\"\n                },\n              \"B14\": {\n                \"value\": \"2000.00\",\n                \"confidence\": \"high\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  ]\n}",
+  "parsed_json": {
+   "document_type": "payslip",
+   "overall_confidence": "high",
+   "documents": [
+    {
+     "doc_index": 0,
+     "layout_sections": {
+      "A12": {
+       "label_col": "A",
+       "value_col": "B",
+       "row_start": 12,
+       "row_end": 14,
+       "rows": [
+        {
+         "A12": {
+          "value": "Base Salary",
+          "confidence": "high"
+         },
+         "B12": {
+          "value": "12083.33",
+          "confidence": "high"
+         }
+        },
+        {
+         "A13": {
+          "value": "Car Allowance",
+          "confidence": "high"
+         },
+         "B13": {
+          "value": "500.00",
+          "confidence": "high"
+         }
+        },
+        {
+         "A14": {
+          "value": "Executive Bonus",
+          "confidence": "high"
+         },
+         "B14": {
+          "value": "2000.00",
+          "confidence": "high"
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 4570,
+  "success": true,
+  "error": ""
+ }
+}

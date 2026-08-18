@@ -1,0 +1,174 @@
+{
+ "key": "af233535a5458939c9d0f999849b981fb568c2d7f38823b83d5659fc85e66dd8",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1874,
+  "captured_at": "2026-08-17 22:54:13",
+  "prompt_preview": "Extract ALL content from the 'Invoice:' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"invoice\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label\":"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"invoice\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Invoice:\",\n          \"value\": \"INV-2024-0031\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Date:\",\n          \"value\": \"January 15, 2024\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Due:\",\n          \"value\": \"February 14, 2024\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"PO Ref:\",\n          \"value\": \"PO-2024-0018\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Terms:\",\n          \"value\": \"Net 30\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 7,\n          \"label\": \"Steel Wire Coils Grade A 500m\",\n          \"value\": \"40\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 7,\n          \"label\": \"pcs\",\n          \"value\": \"185.00\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 7,\n          \"label\": \"\",\n          \"value\": \"7,400.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 8,\n          \"label\": \"Industrial Lubricant 5L Drum\",\n          \"value\": \"25\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 8,\n          \"label\": \"drums\",\n          \"value\": \"68.00\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 8,\n          \"label\": \"\",\n          \"value\": \"1,700.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 9,\n          \"label\": \"Safety Gloves Heavy Duty Box/12\",\n          \"value\": \"60\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 9,\n          \"label\": \"boxes\",\n          \"value\": \"22.50\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 9,\n          \"label\": \"\",\n          \"value\": \"1,350.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 10,\n          \"label\": \"Hex Bolt Set M10 Qty-500\",\n          \"value\": \"30\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 10,\n          \"label\": \"sets\",\n          \"value\": \"14.75\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 10,\n          \"label\": \"\",\n          \"value\": \"442.50\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 11,\n          \"label\": \"Subtotal:\",\n          \"value\": \"10,892.50\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 12,\n          \"label\": \"Shipping & Handling:\",\n          \"value\": \"320.00\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 13,\n          \"label\": \"Sales Tax (8.88%):\",\n          \"value\": \"966.71\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"E\",\n          \"row\": 14,\n          \"label\": \"TOTAL DUE:\",\n          \"value\": \"12,179.21\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "invoice": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Invoice:",
+       "value": "INV-2024-0031"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Date:",
+       "value": "January 15, 2024"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Due:",
+       "value": "February 14, 2024"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "PO Ref:",
+       "value": "PO-2024-0018"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Terms:",
+       "value": "Net 30"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 7,
+       "label": "Steel Wire Coils Grade A 500m",
+       "value": "40"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 7,
+       "label": "pcs",
+       "value": "185.00"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 7,
+       "label": "",
+       "value": "7,400.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 8,
+       "label": "Industrial Lubricant 5L Drum",
+       "value": "25"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 8,
+       "label": "drums",
+       "value": "68.00"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 8,
+       "label": "",
+       "value": "1,700.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 9,
+       "label": "Safety Gloves Heavy Duty Box/12",
+       "value": "60"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 9,
+       "label": "boxes",
+       "value": "22.50"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 9,
+       "label": "",
+       "value": "1,350.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 10,
+       "label": "Hex Bolt Set M10 Qty-500",
+       "value": "30"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 10,
+       "label": "sets",
+       "value": "14.75"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 10,
+       "label": "",
+       "value": "442.50"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 11,
+       "label": "Subtotal:",
+       "value": "10,892.50"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 12,
+       "label": "Shipping & Handling:",
+       "value": "320.00"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 13,
+       "label": "Sales Tax (8.88%):",
+       "value": "966.71"
+      },
+      {
+       "label_col": "D",
+       "value_col": "E",
+       "row": 14,
+       "label": "TOTAL DUE:",
+       "value": "12,179.21"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1874,
+  "success": true,
+  "error": ""
+ }
+}

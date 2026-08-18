@@ -1,0 +1,93 @@
+{
+ "key": "973f562d0f6823fc47d23e9771cc016710df4c5147ab6efb9327ae9d74988d02",
+ "meta": {
+  "method": "extract",
+  "context": "PAYSLIP-EMP-0007-APR2024",
+  "model_requested": "gemini-2.5-flash",
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3901,
+  "captured_at": "2026-08-17 22:55:04",
+  "prompt_preview": "=== EXTRACTION TASK ===\nExtract data from this business document and fill ONLY the cells listed below.\n\nSINGLE VALUE CELLS — return each in extracted_fields keyed by the EXACT cell reference shown:\n  B1 = Employer Name [company_name] — May appear as: Company, Organization, Firm, Business, Corp, LLC,"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"payslip\",\n  \"overall_confidence\": \"high\",\n  \"extracted_fields\": {\n    \"B1\": \"NEXUS GLOBAL TRADING LLC\",\n    \"B2\": \"Janet L. Wu\",\n    \"B3\": \"EMP-0007\",\n    \"B4\": \"VP Operations – Executive\",\n    \"B5\": \"***-**-3317\",\n    \"B6\": \"2024-04-01 - 2024-04-30\",\n    \"B7\": \"2024-04-30\",\n    \"B8\": \"145000.00\",\n    \"B15\": \"14583.33\",\n    \"B17\": \"\",\n    \"B28\": \"-7070.30\",\n    \"B30\": \"7513.03\",\n    \"B31\": \"58333.33\",\n    \"B32\": \"22716.00\"\n  },\n  \"table_rows\": {\n    \"earnings_table\": [\n      {\n        \"Description\": \"Base Salary\",\n        \"Amount\": \"12083.33\"\n      },\n      {\n        \"Description\": \"Car Allowance\",\n        \"Amount\": \"500.00\"\n      },\n      {\n        \"Description\": \"Executive Bonus\",\n        \"Amount\": \"2000.00\"\n      }\n    ],\n    \"deductions_table\": [\n      {\n        \"Description\": \"Federal Income Tax\",\n        \"Amount\": \"-3240.00\"\n      },\n      {\n        \"Description\": \"Social Security (6.2%)\",\n        \"Amount\": \"-904.17\"\n      },\n      {\n        \"Description\": \"Medicare (1.45%)\",\n        \"Amount\": \"-211.46\"\n      },\n      {\n        \"Description\": \"NY State Income Tax\",\n        \"Amount\": \"-880.00\"\n      },\n      {\n        \"Description\": \"NY City Tax\",\n        \"Amount\": \"-395.00\"\n      },\n      {\n        \"Description\": \"Health Insurance (Family)\",\n        \"Amount\": \"-380.00\"\n      },\n      {\n        \"Description\": \"401(k) Contribution (8%)\",\n        \"Amount\": \"-966.67\"\n      },\n      {\n        \"Description\": \"Dental & Vision\",\n        \"Amount\": \"-65.00\"\n      },\n      {\n        \"Description\": \"Life Insurance\",\n        \"Amount\": \"-28.00\"\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "document_type": "payslip",
+   "overall_confidence": "high",
+   "extracted_fields": {
+    "B1": "NEXUS GLOBAL TRADING LLC",
+    "B2": "Janet L. Wu",
+    "B3": "EMP-0007",
+    "B4": "VP Operations – Executive",
+    "B5": "***-**-3317",
+    "B6": "2024-04-01 - 2024-04-30",
+    "B7": "2024-04-30",
+    "B8": "145000.00",
+    "B15": "14583.33",
+    "B17": "",
+    "B28": "-7070.30",
+    "B30": "7513.03",
+    "B31": "58333.33",
+    "B32": "22716.00"
+   },
+   "table_rows": {
+    "earnings_table": [
+     {
+      "Description": "Base Salary",
+      "Amount": "12083.33"
+     },
+     {
+      "Description": "Car Allowance",
+      "Amount": "500.00"
+     },
+     {
+      "Description": "Executive Bonus",
+      "Amount": "2000.00"
+     }
+    ],
+    "deductions_table": [
+     {
+      "Description": "Federal Income Tax",
+      "Amount": "-3240.00"
+     },
+     {
+      "Description": "Social Security (6.2%)",
+      "Amount": "-904.17"
+     },
+     {
+      "Description": "Medicare (1.45%)",
+      "Amount": "-211.46"
+     },
+     {
+      "Description": "NY State Income Tax",
+      "Amount": "-880.00"
+     },
+     {
+      "Description": "NY City Tax",
+      "Amount": "-395.00"
+     },
+     {
+      "Description": "Health Insurance (Family)",
+      "Amount": "-380.00"
+     },
+     {
+      "Description": "401(k) Contribution (8%)",
+      "Amount": "-966.67"
+     },
+     {
+      "Description": "Dental & Vision",
+      "Amount": "-65.00"
+     },
+     {
+      "Description": "Life Insurance",
+      "Amount": "-28.00"
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash",
+  "tokens_used": 3901,
+  "success": true,
+  "error": ""
+ }
+}

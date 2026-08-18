@@ -1,0 +1,195 @@
+{
+ "key": "556067ab05072e52dfa156fe821050b045bbcd8196aef054dc3859f3b12be123",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2051,
+  "captured_at": "2026-08-17 22:54:34",
+  "prompt_preview": "Extract ALL content from the 'Invoice:' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"invoice\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, \"label\":"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"invoice\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Invoice:\",\n          \"value\": \"INV-2024-0047\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Date:\",\n          \"value\": \"February 3, 2024\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Due:\",\n          \"value\": \"March 4, 2024\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"PO Ref:\",\n          \"value\": \"PO-2024-0029\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Terms:\",\n          \"value\": \"Net 30\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 7,\n          \"label\": \"USB-C Hub 7-Port Model HB-720\",\n          \"value\": \"150\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 7,\n          \"label\": \"units\",\n          \"value\": \"$34.50\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 7,\n          \"label\": \"\",\n          \"value\": \"$5,175.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 8,\n          \"label\": \"Wireless Mouse M300 Series\",\n          \"value\": \"200\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 8,\n          \"label\": \"units\",\n          \"value\": \"$18.75\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 8,\n          \"label\": \"\",\n          \"value\": \"$3,750.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 9,\n          \"label\": \"Laptop Cooling Stand Aluminium\",\n          \"value\": \"80\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 9,\n          \"label\": \"units\",\n          \"value\": \"$27.00\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 9,\n          \"label\": \"\",\n          \"value\": \"$2,160.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 10,\n          \"label\": \"HDMI 2.1 Cable 2m Pack/5\",\n          \"value\": \"120\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 10,\n          \"label\": \"packs\",\n          \"value\": \"$16.20\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 10,\n          \"label\": \"\",\n          \"value\": \"$1,944.00\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 11,\n          \"label\": \"Webcam HD 1080p w/ Mic\",\n          \"value\": \"60\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 11,\n          \"label\": \"units\",\n          \"value\": \"$42.00\"\n        },\n        {\n          \"label_col\": \"E\",\n          \"value_col\": \"F\",\n          \"row\": 11,\n          \"label\": \"\",\n          \"value\": \"$2,520.00\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"F\",\n          \"row\": 13,\n          \"label\": \"Subtotal:\",\n          \"value\": \"15,549.00\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"F\",\n          \"row\": 14,\n          \"label\": \"Shipping & Handling:\",\n          \"value\": \"580.00\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"F\",\n          \"row\": 15,\n          \"label\": \"Sales Tax (8.25%):\",\n          \"value\": \"1,282.79\"\n        },\n        {\n          \"label_col\": \"D\",\n          \"value_col\": \"F\",\n          \"row\": 16,\n          \"label\": \"TOTAL DUE:\",\n          \"value\": \"17,411.79\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "invoice": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Invoice:",
+       "value": "INV-2024-0047"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Date:",
+       "value": "February 3, 2024"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Due:",
+       "value": "March 4, 2024"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "PO Ref:",
+       "value": "PO-2024-0029"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Terms:",
+       "value": "Net 30"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 7,
+       "label": "USB-C Hub 7-Port Model HB-720",
+       "value": "150"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 7,
+       "label": "units",
+       "value": "$34.50"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 7,
+       "label": "",
+       "value": "$5,175.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 8,
+       "label": "Wireless Mouse M300 Series",
+       "value": "200"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 8,
+       "label": "units",
+       "value": "$18.75"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 8,
+       "label": "",
+       "value": "$3,750.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 9,
+       "label": "Laptop Cooling Stand Aluminium",
+       "value": "80"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 9,
+       "label": "units",
+       "value": "$27.00"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 9,
+       "label": "",
+       "value": "$2,160.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 10,
+       "label": "HDMI 2.1 Cable 2m Pack/5",
+       "value": "120"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 10,
+       "label": "packs",
+       "value": "$16.20"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 10,
+       "label": "",
+       "value": "$1,944.00"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 11,
+       "label": "Webcam HD 1080p w/ Mic",
+       "value": "60"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 11,
+       "label": "units",
+       "value": "$42.00"
+      },
+      {
+       "label_col": "E",
+       "value_col": "F",
+       "row": 11,
+       "label": "",
+       "value": "$2,520.00"
+      },
+      {
+       "label_col": "D",
+       "value_col": "F",
+       "row": 13,
+       "label": "Subtotal:",
+       "value": "15,549.00"
+      },
+      {
+       "label_col": "D",
+       "value_col": "F",
+       "row": 14,
+       "label": "Shipping & Handling:",
+       "value": "580.00"
+      },
+      {
+       "label_col": "D",
+       "value_col": "F",
+       "row": 15,
+       "label": "Sales Tax (8.25%):",
+       "value": "1,282.79"
+      },
+      {
+       "label_col": "D",
+       "value_col": "F",
+       "row": 16,
+       "label": "TOTAL DUE:",
+       "value": "17,411.79"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2051,
+  "success": true,
+  "error": ""
+ }
+}

@@ -1,0 +1,112 @@
+{
+ "key": "5541caf7e9de23a5ebfd8c57833ee901b7d56a6d0e805ae50262cdca79b7cde0",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2490,
+  "captured_at": "2026-08-17 22:56:43",
+  "prompt_preview": "Extract the 'Date Type Description Debit Credit Balance' section from this document page.\n\nThis section contains approximately 12 line items.\n\nExtract each line item as a separate row. Do NOT combine items. Do NOT skip items. Number rows from 1 sequentially.\n\nTemplate placement:\n- Item labels -> col"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"datetypedescriptiondebitcreditbalance\": {\n      \"rows\": [\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 1,\n          \"label\": \"01/03\",\n          \"value\": \"199,320.55\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 2,\n          \"label\": \"01/05\",\n          \"value\": \"180,870.55\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 3,\n          \"label\": \"01/10\",\n          \"value\": \"175,187.80\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 4,\n          \"label\": \"01/12\",\n          \"value\": \"198,122.30\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 5,\n          \"label\": \"01/15\",\n          \"value\": \"198,097.30\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 6,\n          \"label\": \"01/15\",\n          \"value\": \"179,647.30\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 7,\n          \"label\": \"01/18\",\n          \"value\": \"175,800.08\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 8,\n          \"label\": \"01/22\",\n          \"value\": \"184,565.08\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 9,\n          \"label\": \"01/25\",\n          \"value\": \"172,165.08\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 10,\n          \"label\": \"01/28\",\n          \"value\": \"143,665.08\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 11,\n          \"label\": \"01/30\",\n          \"value\": \"143,807.26\"\n        },\n        {\n          \"label_col\": \"C\",\n          \"value_col\": \"D\",\n          \"row\": 12,\n          \"label\": \"01/31\",\n          \"value\": \"125,357.26\"\n        }\n      ]\n    }\n  },\n  \"extracted_fields\": {}\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "datetypedescriptiondebitcreditbalance": {
+     "rows": [
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 1,
+       "label": "01/03",
+       "value": "199,320.55"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 2,
+       "label": "01/05",
+       "value": "180,870.55"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 3,
+       "label": "01/10",
+       "value": "175,187.80"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 4,
+       "label": "01/12",
+       "value": "198,122.30"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 5,
+       "label": "01/15",
+       "value": "198,097.30"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 6,
+       "label": "01/15",
+       "value": "179,647.30"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 7,
+       "label": "01/18",
+       "value": "175,800.08"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 8,
+       "label": "01/22",
+       "value": "184,565.08"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 9,
+       "label": "01/25",
+       "value": "172,165.08"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 10,
+       "label": "01/28",
+       "value": "143,665.08"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 11,
+       "label": "01/30",
+       "value": "143,807.26"
+      },
+      {
+       "label_col": "C",
+       "value_col": "D",
+       "row": 12,
+       "label": "01/31",
+       "value": "125,357.26"
+      }
+     ]
+    }
+   },
+   "extracted_fields": {}
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2490,
+  "success": true,
+  "error": ""
+ }
+}

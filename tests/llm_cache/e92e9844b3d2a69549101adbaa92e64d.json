@@ -1,0 +1,151 @@
+{
+ "key": "e92e9844b3d2a69549101adbaa92e64d5cdeefb64414936757cdb514c8f25605",
+ "meta": {
+  "method": "extract",
+  "context": "PAYSLIP-EMP-0007-APR2024",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3008,
+  "captured_at": "2026-08-17 22:54:55",
+  "prompt_preview": "You are analyzing a spreadsheet template. The user has designed this template to extract data from business documents.\n\nHere is the complete template grid (cell reference -> contents; \"empty\" means a blank cell, \"merge\" means a merged region anchored at that cell):\n{\"A1\": {\"text\": \"Employer Name\"}, "
+ },
+ "response": {
+  "raw_text": "{\n  \"extract_cells\": {\n    \"B1\": {\n      \"label\": \"Employer Name\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"company_name\"\n    },\n    \"B2\": {\n      \"label\": \"Employee Name\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"person_name\"\n    },\n    \"B3\": {\n      \"label\": \"Employee ID\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"employee_id\"\n    },\n    \"B4\": {\n      \"label\": \"Title / Department\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"string\"\n    },\n    \"B5\": {\n      \"label\": \"SSN\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"ssn\"\n    },\n    \"B6\": {\n      \"label\": \"Pay Period\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"date_range\"\n    },\n    \"B7\": {\n      \"label\": \"Pay Date\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"date\"\n    },\n    \"B8\": {\n      \"label\": \"Annual Salary\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B15\": {\n      \"label\": \"Total Earnings\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B17\": {\n      \"label\": \"Deductions\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B28\": {\n      \"label\": \"Total Deductions\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B30\": {\n      \"label\": \"Net Pay\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B31\": {\n      \"label\": \"YTD Gross Earnings\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    },\n    \"B32\": {\n      \"label\": \"YTD Taxes Withheld\",\n      \"section\": null,\n      \"type\": \"single_value\",\n      \"data_type\": \"currency\"\n    }\n  },\n  \"tables\": [\n    {\n      \"table_id\": \"earnings_table\",\n      \"section\": null,\n      \"header_row\": 11,\n      \"data_start_row\": 12,\n      \"data_end_row\": 14,\n      \"columns\": {\n        \"A\": \"Description\",\n        \"B\": \"Amount\"\n      }\n    },\n    {\n      \"table_id\": \"deductions_table\",\n      \"section\": null,\n      \"header_row\": 18,\n      \"data_start_row\": 19,\n      \"data_end_row\": 27,\n      \"columns\": {\n        \"A\": \"Description\",\n        \"B\": \"Amount\"\n      }\n    }\n  ],\n  \"static_cells\": [\n    \"A1\",\n    \"A2\",\n    \"A3\",\n    \"A4\",\n    \"A5\",\n    \"A6\",\n    \"A7\",\n    \"A8\",\n    \"A10\",\n    \"A11\",\n    \"A15\",\n    \"A17\",\n    \"A18\",\n    \"A28\",\n    \"A30\",\n    \"A31\",\n    \"A32\"\n  ],\n  \"sections\": []\n}",
+  "parsed_json": {
+   "extract_cells": {
+    "B1": {
+     "label": "Employer Name",
+     "section": null,
+     "type": "single_value",
+     "data_type": "company_name"
+    },
+    "B2": {
+     "label": "Employee Name",
+     "section": null,
+     "type": "single_value",
+     "data_type": "person_name"
+    },
+    "B3": {
+     "label": "Employee ID",
+     "section": null,
+     "type": "single_value",
+     "data_type": "employee_id"
+    },
+    "B4": {
+     "label": "Title / Department",
+     "section": null,
+     "type": "single_value",
+     "data_type": "string"
+    },
+    "B5": {
+     "label": "SSN",
+     "section": null,
+     "type": "single_value",
+     "data_type": "ssn"
+    },
+    "B6": {
+     "label": "Pay Period",
+     "section": null,
+     "type": "single_value",
+     "data_type": "date_range"
+    },
+    "B7": {
+     "label": "Pay Date",
+     "section": null,
+     "type": "single_value",
+     "data_type": "date"
+    },
+    "B8": {
+     "label": "Annual Salary",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B15": {
+     "label": "Total Earnings",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B17": {
+     "label": "Deductions",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B28": {
+     "label": "Total Deductions",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B30": {
+     "label": "Net Pay",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B31": {
+     "label": "YTD Gross Earnings",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    },
+    "B32": {
+     "label": "YTD Taxes Withheld",
+     "section": null,
+     "type": "single_value",
+     "data_type": "currency"
+    }
+   },
+   "tables": [
+    {
+     "table_id": "earnings_table",
+     "section": null,
+     "header_row": 11,
+     "data_start_row": 12,
+     "data_end_row": 14,
+     "columns": {
+      "A": "Description",
+      "B": "Amount"
+     }
+    },
+    {
+     "table_id": "deductions_table",
+     "section": null,
+     "header_row": 18,
+     "data_start_row": 19,
+     "data_end_row": 27,
+     "columns": {
+      "A": "Description",
+      "B": "Amount"
+     }
+    }
+   ],
+   "static_cells": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8",
+    "A10",
+    "A11",
+    "A15",
+    "A17",
+    "A18",
+    "A28",
+    "A30",
+    "A31",
+    "A32"
+   ],
+   "sections": []
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3008,
+  "success": true,
+  "error": ""
+ }
+}

@@ -1,0 +1,111 @@
+{
+ "key": "4f06a4512dc002fce43f913cab5dc8015366f5d467b4a03c011b9b3a1c19cb32",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2212,
+  "captured_at": "2026-08-17 22:53:03",
+  "prompt_preview": "Extract ALL content from the 'TOTAL ASSETS' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"totalassets\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, "
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"totalassets\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Cash & Cash Equivalents\",\n          \"value\": \"143,803\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Accounts Receivable (net)\",\n          \"value\": \"348,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Inventory\",\n          \"value\": \"612,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 4,\n          \"label\": \"Prepaid Expenses\",\n          \"value\": \"16,200\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 5,\n          \"label\": \"Other Current Assets\",\n          \"value\": \"8,800\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 6,\n          \"label\": \"Total Current Assets\",\n          \"value\": \"1,129,003\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 8,\n          \"label\": \"Property & Equipment (gross)\",\n          \"value\": \"240,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 9,\n          \"label\": \"Less: Accum. Depreciation\",\n          \"value\": \"108,500\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 10,\n          \"label\": \"Security Deposits\",\n          \"value\": \"85,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 11,\n          \"label\": \"Intangibles (net)\",\n          \"value\": \"20,000\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 12,\n          \"label\": \"Total Non-Current Assets\",\n          \"value\": \"236,500\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 14,\n          \"label\": \"TOTAL ASSETS\",\n          \"value\": \"1,365,503\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "totalassets": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Cash & Cash Equivalents",
+       "value": "143,803"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Accounts Receivable (net)",
+       "value": "348,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Inventory",
+       "value": "612,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 4,
+       "label": "Prepaid Expenses",
+       "value": "16,200"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 5,
+       "label": "Other Current Assets",
+       "value": "8,800"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 6,
+       "label": "Total Current Assets",
+       "value": "1,129,003"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 8,
+       "label": "Property & Equipment (gross)",
+       "value": "240,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 9,
+       "label": "Less: Accum. Depreciation",
+       "value": "108,500"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 10,
+       "label": "Security Deposits",
+       "value": "85,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 11,
+       "label": "Intangibles (net)",
+       "value": "20,000"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 12,
+       "label": "Total Non-Current Assets",
+       "value": "236,500"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 14,
+       "label": "TOTAL ASSETS",
+       "value": "1,365,503"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2212,
+  "success": true,
+  "error": ""
+ }
+}

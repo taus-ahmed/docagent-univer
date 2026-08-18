@@ -1,0 +1,48 @@
+{
+ "key": "073cf8865edeb2588381ece1c61dc9226071a93ebc635fde91cd3eb6ba9f1f8b",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1683,
+  "captured_at": "2026-08-17 22:53:19",
+  "prompt_preview": "Extract ALL content from the 'Total Equity' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"totalequity\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\": \"B\", \"row\": 1, "
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"totalequity\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 1,\n          \"label\": \"Retained Earnings\",\n          \"value\": \"550,751\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 2,\n          \"label\": \"Net Income YTD Q1\",\n          \"value\": \"47,353\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 3,\n          \"label\": \"Total Equity\",\n          \"value\": \"698,104\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "totalequity": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 1,
+       "label": "Retained Earnings",
+       "value": "550,751"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 2,
+       "label": "Net Income YTD Q1",
+       "value": "47,353"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 3,
+       "label": "Total Equity",
+       "value": "698,104"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1683,
+  "success": true,
+  "error": ""
+ }
+}

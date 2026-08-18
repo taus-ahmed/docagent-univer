@@ -1,0 +1,48 @@
+{
+ "key": "487af44966c65023da32970b31a232486b04be90b6198058af88e502dacaca87",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 901,
+  "captured_at": "2026-08-17 22:54:19",
+  "prompt_preview": "Extract ALL content from the 'Payment Instructions' section of this document.\n\nReturn each item as a row with: label (the field name or item description) and value (the corresponding value).\n\nReturn ONLY:\n{\n  \"layout_sections\": { \"paymentinstructions\": { \"rows\": [\n    {\"label_col\": \"A\", \"value_col\":"
+ },
+ "response": {
+  "raw_text": "{\n  \"layout_sections\": {\n    \"paymentinstructions\": {\n      \"rows\": [\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 574,\n          \"label\": \"Wire: First National Bank of New York\",\n          \"value\": \"Wire: First National Bank of New York\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 587,\n          \"label\": \"ABA: 021000021 Account: 7743882201\",\n          \"value\": \"ABA: 021000021 Account: 7743882201\"\n        },\n        {\n          \"label_col\": \"A\",\n          \"value_col\": \"B\",\n          \"row\": 600,\n          \"label\": \"Cheque payable to: Nexus Global Trading LLC\",\n          \"value\": \"Cheque payable to: Nexus Global Trading LLC\"\n        }\n      ]\n    }\n  }\n}",
+  "parsed_json": {
+   "layout_sections": {
+    "paymentinstructions": {
+     "rows": [
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 574,
+       "label": "Wire: First National Bank of New York",
+       "value": "Wire: First National Bank of New York"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 587,
+       "label": "ABA: 021000021 Account: 7743882201",
+       "value": "ABA: 021000021 Account: 7743882201"
+      },
+      {
+       "label_col": "A",
+       "value_col": "B",
+       "row": 600,
+       "label": "Cheque payable to: Nexus Global Trading LLC",
+       "value": "Cheque payable to: Nexus Global Trading LLC"
+      }
+     ]
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 901,
+  "success": true,
+  "error": ""
+ }
+}
