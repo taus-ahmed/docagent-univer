@@ -40,9 +40,22 @@ PRODUCTION_PARITY_ENV = {
 _bootstrapped = False
 
 
+def chdir_backend() -> None:
+    """Make relative paths (./storage, debug_output/) resolve as they do in
+    production, where the process runs from backend/.
+
+    Deliberately NOT done inside bootstrap(): bootstrap runs at pytest
+    collection time, and changing the working directory there breaks the
+    rootdir-relative ``testpaths`` in pytest.ini. Only code that actually
+    executes the pipeline needs this.
+    """
+    if Path.cwd().resolve() != BACKEND_DIR.resolve():
+        os.chdir(BACKEND_DIR)
+
+
 def bootstrap(production_parity: bool = True) -> None:
     """Idempotent. Load backend/.env, force production-parity extraction
-    config, put engine/backend on sys.path, chdir to backend/."""
+    config, put engine/backend on sys.path. Does not change directory."""
     global _bootstrapped
     if _bootstrapped:
         return
@@ -68,8 +81,5 @@ def bootstrap(production_parity: bool = True) -> None:
     for p in (str(ENGINE_DIR), str(BACKEND_DIR), str(REPO_DIR)):
         if p not in sys.path:
             sys.path.insert(0, p)
-
-    # 4. Relative paths (./storage, debug_output/) resolve as in production.
-    os.chdir(BACKEND_DIR)
 
     _bootstrapped = True

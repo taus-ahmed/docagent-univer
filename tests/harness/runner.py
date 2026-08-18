@@ -42,6 +42,18 @@ def _schema_path() -> str:
     return str(p)
 
 
+def pdf_text(pdf_path) -> str:
+    """Source-document text, read INDEPENDENTLY of the pipeline (same way the
+    gold labels were produced). Used only to tell an invented value from a
+    misplaced one."""
+    try:
+        import pdfplumber
+        with pdfplumber.open(str(pdf_path)) as pdf:
+            return "\n".join((pg.extract_text() or "") for pg in pdf.pages)
+    except Exception:
+        return ""
+
+
 def load_labels(only=None) -> list:
     labels = []
     for f in sorted(bs.LABELS_DIR.glob("*.json")):
@@ -203,34 +215,38 @@ def write_markdown(report: dict, path: Path):
     add(f"|---|---|")
     add(f"| **accuracy (correct / gold-valued)** | **{_pct(o['accuracy'])}** |")
     add(f"| **hallucination rate (hallucinated / extracted)** | **{_pct(o['hallucination_rate'])}** |")
-    add(f"| hallucinated values | {o['hallucinated']} |")
+    add(f"| **└ invention rate (value found NOWHERE in the PDF)** | **{_pct(o['invention_rate'])}** |")
+    add(f"| └ misplacement (real content, slot gold leaves empty) | {_pct((o['hallucinated'] - o['hallucinated_ungrounded']) / max(1, o['gold_valued'] + o['hallucinated']))} |")
+    add(f"| hallucinated values | {o['hallucinated']} (invented {o['hallucinated_ungrounded']}, misplaced {o['hallucinated'] - o['hallucinated_ungrounded']}) |")
     add(f"| near misses | {o['counts'].get('near', 0)} |")
     add(f"| outcome counts | {json.dumps(o['counts'])} |")
     add("")
     add("## By document type")
     add("")
-    add("| document type | accuracy | halluc. rate | correct | near | wrong | missed | halluc. |")
-    add("|---|---|---|---|---|---|---|---|")
+    add("| document type | accuracy | halluc. rate | invented | correct | near | wrong | missed | halluc. |")
+    add("|---|---|---|---|---|---|---|---|---|")
     for k, v in s["by_document_type"].items():
         c = v["counts"]
         add(f"| {k} | {_pct(v['accuracy'])} | {_pct(v['hallucination_rate'])} | "
+            f"{v['hallucinated_ungrounded']} | "
             f"{c.get('correct', 0)} | {c.get('near', 0)} | {c.get('wrong', 0)} | "
             f"{c.get('missed', 0)} | {c.get('hallucinated', 0)} |")
     add("")
     add("## By field type")
     add("")
-    add("| field type | accuracy | halluc. rate | correct | near | wrong | missed | halluc. |")
-    add("|---|---|---|---|---|---|---|---|")
+    add("| field type | accuracy | halluc. rate | invented | correct | near | wrong | missed | halluc. |")
+    add("|---|---|---|---|---|---|---|---|---|")
     for k, v in s["by_field_type"].items():
         c = v["counts"]
         add(f"| {k} | {_pct(v['accuracy'])} | {_pct(v['hallucination_rate'])} | "
+            f"{v['hallucinated_ungrounded']} | "
             f"{c.get('correct', 0)} | {c.get('near', 0)} | {c.get('wrong', 0)} | "
             f"{c.get('missed', 0)} | {c.get('hallucinated', 0)} |")
     add("")
     add("## Per document")
     add("")
-    add("| document | type | accuracy | halluc. | route | notes |")
-    add("|---|---|---|---|---|---|")
+    add("| document | type | accuracy | halluc. | invented | route | notes |")
+    add("|---|---|---|---|---|---|---|")
     for doc_id, d in report["documents"].items():
         sc = d.get("score") or {}
         cnt = sc.get("counts", {})
@@ -245,7 +261,8 @@ def write_markdown(report: dict, path: Path):
             notes.append(f"{len(d['unstable'])} unstable")
         route = d["log"].get("route", "").replace("[ROUTE]", "").strip()
         add(f"| {doc_id} | {d['document_type']} | {_pct(sc.get('accuracy'))} | "
-            f"{cnt.get('hallucinated', 0)} | {route[:60]} | {'; '.join(notes)} |")
+            f"{cnt.get('hallucinated', 0)} | {sc.get('hallucinated_ungrounded', 0)} | "
+            f"{route[:60]} | {'; '.join(notes)} |")
     add("")
     add("## Mismatches (everything not correct)")
     add("")
@@ -260,7 +277,10 @@ def write_markdown(report: dict, path: Path):
         for name, r in (sc.get("fields") or {}).items():
             if r["outcome"] in ("correct", "empty_ok"):
                 continue
-            add(f"| {doc_id} | {esc(name)} | {r['outcome']} | "
+            oc = r["outcome"]
+            if oc == "hallucinated":
+                oc = "INVENTED" if not r.get("grounded") else "hallucinated (misplaced)"
+            add(f"| {doc_id} | {esc(name)} | {oc} | "
                 f"{esc(r['expected'])} | {esc(r['actual'])} |")
         for tname, t in (sc.get("tables") or {}).items():
             for c in t.get("cells", []):
@@ -268,8 +288,11 @@ def write_markdown(report: dict, path: Path):
                     continue
                 row = c.get("row")
                 loc = f"[row {row}]" if row is not None else f"[pred_row {c.get('pred_row')}]"
+                oc = c["outcome"]
+                if oc == "hallucinated":
+                    oc = "INVENTED" if not c.get("grounded") else "hallucinated (misplaced)"
                 add(f"| {doc_id} | {esc(tname + loc + '.' + c['column'])} | "
-                    f"{c['outcome']} | {esc(c['expected'])} | {esc(c['actual'])} |")
+                    f"{oc} | {esc(c['expected'])} | {esc(c['actual'])} |")
     add("")
     if report.get("unstable_total"):
         add("## Unstable fields (varied across --repeat runs)")
@@ -295,6 +318,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         report_dir: Path = None, do_diff: bool = True) -> dict:
     bs.bootstrap()
     report_dir = report_dir or bs.REPORTS_DIR
+    bs.chdir_backend()  # pipeline writes relative paths as production does
     labels = load_labels(only)
     if not labels:
         raise SystemExit("no gold labels matched")
@@ -334,7 +358,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
             cache.mode = mode
 
             adapted = adapted_runs[0]
-            score = score_document(label, adapted)
+            score = score_document(label, adapted,
+                                   doc_text=pdf_text(bs.PDF_DIR / label["pdf"]))
             doc_scores.append(score)
             unstable = find_unstable(adapted_runs)
             doc_reports[doc_id] = {
@@ -398,7 +423,11 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     print("\n=== SUMMARY ===")
     print(f"accuracy            : {_pct(o['accuracy'])}")
     print(f"hallucination rate  : {_pct(o['hallucination_rate'])} "
-          f"({o['hallucinated']} hallucinated values)")
+          f"({o['hallucinated']} values in slots gold leaves empty)")
+    print(f"  of which INVENTED : {_pct(o['invention_rate'])} "
+          f"({o['hallucinated_ungrounded']} values found nowhere in the PDF)")
+    print(f"  of which misplaced: {o['hallucinated'] - o['hallucinated_ungrounded']} "
+          f"(real document content, wrong slot)")
     print(f"outcome counts      : {o['counts']}")
     print(f"cache               : {report['cache_stats']}")
     if report["unstable_total"]:

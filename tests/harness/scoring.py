@@ -187,6 +187,45 @@ def compare_values(expected: Any, actual: Any, ftype: str) -> str:
     return "wrong"
 
 
+def value_in_text(value: Any, doc_text: str, ftype: str = "string") -> bool:
+    """Is this extracted value present in the source document at all?
+
+    Grounding check for hallucinations. A value the document never contains is
+    an INVENTION (the model made it up). A value that is in the document but
+    landed in a slot gold leaves empty is a MISPLACEMENT — damaging, but a
+    different defect with a different fix. Both are counted as hallucinated
+    per the required contract; this flag is what lets a reader tell them apart.
+    """
+    if is_empty(value) or not doc_text:
+        return False
+
+    # Numeric grounding is attempted whenever the value READS as a number,
+    # not only when it is typed as one: cells in predicted tables that matched
+    # no gold table carry no column types, and comparing 7750.0 to a printed
+    # "$7,750.00" as strings fails on the thousands separator alone.
+    n = parse_money(value)
+    if n is not None:
+        clean = doc_text
+        for ch in _CURRENCY:
+            clean = clean.replace(ch, "")  # "($1,245.00)" -> "(1,245.00)"
+        for tok in re.findall(r"\(?-?[\d,]*\.?\d+\)?", clean):
+            t = parse_money(tok)
+            if t is not None and round(abs(t), 2) == round(abs(n), 2):
+                return True
+        if ftype in ("money", "number"):
+            return False
+
+    v = normalize_string(value)
+    if len(v) < 2:
+        return False
+    t = normalize_string(doc_text)
+    if v in t:
+        return True
+    # tolerate line-wrap/word-order noise: all words of the value present
+    words = [w for w in re.findall(r"[a-z0-9]+", v) if len(w) > 2]
+    return bool(words) and all(w in t for w in words)
+
+
 def classify_field(expected: Any, actual: Any, ftype: str) -> str:
     """Full 4(+1) outcome classification for one field.
 
@@ -343,9 +382,10 @@ def _tally(counter: dict, outcome: str):
     counter[outcome] = counter.get(outcome, 0) + 1
 
 
-def score_document(label: dict, adapted: dict) -> dict:
+def score_document(label: dict, adapted: dict, doc_text: str = "") -> dict:
     """label: gold label dict. adapted: {'fields': {...}, 'tables': {...}} from
-    the adapter. Returns the full per-document scoring result."""
+    the adapter. doc_text: the source document's text (pdfplumber), used only
+    to split hallucinations into inventions vs misplacements."""
     field_results = score_fields(label.get("fields", {}),
                                  label.get("field_types", {}),
                                  adapted.get("fields", {}))
@@ -361,12 +401,30 @@ def score_document(label: dict, adapted: dict) -> dict:
     for tname, pred_rows in pred_tables.items():
         table_results[tname] = score_table([], pred_rows, {}, tname)
 
+    # grounding: split hallucinations into inventions and misplacements
+    def ground(entry):
+        if entry.get("outcome") != "hallucinated":
+            return
+        entry["grounded"] = value_in_text(entry.get("actual"), doc_text,
+                                          entry.get("type", "string"))
+
+    for r in field_results.values():
+        ground(r)
+    for t in table_results.values():
+        for c in t["cells"]:
+            ground(c)
+
     counts = {}
+    ungrounded = 0
     for r in field_results.values():
         _tally(counts, r["outcome"])
+        if r.get("outcome") == "hallucinated" and not r.get("grounded"):
+            ungrounded += 1
     for t in table_results.values():
         for c in t["cells"]:
             _tally(counts, c["outcome"])
+            if c.get("outcome") == "hallucinated" and not c.get("grounded"):
+                ungrounded += 1
 
     gold_valued = sum(counts.get(k, 0) for k in ("correct", "near", "wrong", "missed"))
     extracted = sum(counts.get(k, 0) for k in ("correct", "near", "wrong", "hallucinated"))
@@ -376,8 +434,10 @@ def score_document(label: dict, adapted: dict) -> dict:
         "fields": field_results,
         "tables": table_results,
         "counts": counts,
+        "hallucinated_ungrounded": ungrounded,
         "accuracy": (counts.get("correct", 0) / gold_valued) if gold_valued else None,
         "hallucination_rate": (counts.get("hallucinated", 0) / extracted) if extracted else None,
+        "invention_rate": (ungrounded / extracted) if extracted else None,
     }
 
 
@@ -390,20 +450,24 @@ def summarize(doc_results: list) -> dict:
     def add(counter, outcome, n=1):
         counter[outcome] = counter.get(outcome, 0) + n
 
+    def add_entry(counters, e):
+        for c in counters:
+            add(c, e["outcome"])
+            if e.get("outcome") == "hallucinated" and not e.get("grounded"):
+                add(c, "_ungrounded")
+
     for d in doc_results:
         dt = d.get("document_type") or "unknown"
         bt = by_type.setdefault(dt, {})
         for r in d["fields"].values():
-            add(total, r["outcome"])
-            add(bt, r["outcome"])
-            add(by_ftype.setdefault(r.get("type", "string"), {}), r["outcome"])
+            add_entry([total, bt, by_ftype.setdefault(r.get("type", "string"), {})], r)
         for t in d["tables"].values():
             for c in t["cells"]:
-                add(total, c["outcome"])
-                add(bt, c["outcome"])
-                add(by_ftype.setdefault(c.get("type", "string"), {}), c["outcome"])
+                add_entry([total, bt, by_ftype.setdefault(c.get("type", "string"), {})], c)
 
     def rates(c):
+        c = dict(c)
+        ungrounded = c.pop("_ungrounded", 0)
         gold_valued = sum(c.get(k, 0) for k in ("correct", "near", "wrong", "missed"))
         extracted = sum(c.get(k, 0) for k in ("correct", "near", "wrong", "hallucinated"))
         return {
@@ -413,6 +477,8 @@ def summarize(doc_results: list) -> dict:
             "near_rate": (c.get("near", 0) / gold_valued) if gold_valued else None,
             "hallucinated": c.get("hallucinated", 0),
             "hallucination_rate": (c.get("hallucinated", 0) / extracted) if extracted else None,
+            "hallucinated_ungrounded": ungrounded,
+            "invention_rate": (ungrounded / extracted) if extracted else None,
         }
 
     return {

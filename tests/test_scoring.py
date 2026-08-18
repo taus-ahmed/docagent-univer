@@ -1,8 +1,42 @@
 """Unit tests for the type-aware scorer. Offline, no LLM, always green."""
 from tests.harness.scoring import (
     classify_field, compare_values, parse_date_candidates, parse_money,
-    score_document, score_table, summarize,
+    score_document, score_table, summarize, value_in_text,
 )
+
+
+DOC_TEXT = """NEXUS GLOBAL TRADING LLC EXPENSE REPORT
+Steel Wire Coils Grade A 500m (SW-500A) 50 pcs $155.00 $7,750.00
+Federal Income Tax ($1,245.00)
+Accounts Receivable (net) $348,200
+Employee: Marcus A. Thompson"""
+
+
+class TestGrounding:
+    """A hallucination metric must tell an INVENTED value from a MISPLACED
+    one, or it reports shape bugs as fabrication and stops being believed."""
+
+    def test_plain_number_with_separators(self):
+        assert value_in_text("7750.0", DOC_TEXT, "money") is True
+        assert value_in_text(7750, DOC_TEXT, "string") is True  # untyped cell
+
+    def test_parenthesised_currency(self):
+        assert value_in_text("-1245.0", DOC_TEXT, "money") is True
+        assert value_in_text("1245.00", DOC_TEXT, "string") is True
+
+    def test_absent_number_is_invented(self):
+        assert value_in_text("999999.99", DOC_TEXT, "money") is False
+
+    def test_string_present_and_absent(self):
+        assert value_in_text("Marcus A. Thompson", DOC_TEXT, "string") is True
+        assert value_in_text("MERCHANT NAME", DOC_TEXT, "string") is False
+
+    def test_wrapped_string_matches_by_words(self):
+        assert value_in_text("Accounts Receivable net", DOC_TEXT, "string") is True
+
+    def test_empty_never_grounded(self):
+        assert value_in_text("", DOC_TEXT, "string") is False
+        assert value_in_text("x", "", "string") is False
 
 
 class TestMoney:
@@ -177,3 +211,20 @@ class TestAggregation:
         assert s["overall"]["hallucinated"] == 1
         assert s["by_document_type"]["cheque"]["counts"]["correct"] == 1
         assert s["by_field_type"]["money"]["counts"]["correct"] == 1
+
+    def test_invention_split_from_misplacement(self):
+        label = self._label()
+        adapted = {"fields": {"Amount": "100.00", "Payee": "Pacific Steel",
+                              "Memo": "Marcus A. Thompson"}, "tables": {}}
+        # 'Memo' is empty in gold -> hallucinated; but the value IS in the
+        # document, so it is a misplacement, not an invention.
+        d = score_document(label, adapted, doc_text=DOC_TEXT)
+        assert d["counts"]["hallucinated"] == 1
+        assert d["hallucinated_ungrounded"] == 0
+        assert d["invention_rate"] == 0.0
+
+        adapted["fields"]["Memo"] = "Totally Fabricated Payee Ltd"
+        d2 = score_document(label, adapted, doc_text=DOC_TEXT)
+        assert d2["counts"]["hallucinated"] == 1
+        assert d2["hallucinated_ungrounded"] == 1
+        assert summarize([d2])["overall"]["hallucinated_ungrounded"] == 1

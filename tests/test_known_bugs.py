@@ -133,6 +133,7 @@ def _run_structural_pipeline():
     from orchestrator import Orchestrator
     from tests.harness.runner import _schema_path
 
+    bs.chdir_backend()
     grid = json.loads(FIXTURE_TEMPLATE.read_text(encoding="utf-8"))
     tpl = ColumnTemplate(name="bs_unlabeled", document_type="balance_sheet",
                          description=json.dumps(grid), columns_json="[]")
