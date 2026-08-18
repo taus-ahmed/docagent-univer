@@ -165,17 +165,11 @@ class ColumnTemplate(Base):
     columns_json = Column(Text, nullable=False)       # ["field1", "field2", ...]
     column_order_json = Column(Text, nullable=True)   # explicit ordering
 
-    # Gemini-based template understanding, computed ONCE at save/update time.
-    # JSON string: {extract_cells, tables, static_cells, sections}. NULL = legacy
-    # template (extraction falls back to compute_binding_map). Stored as TEXT for
-    # SQLite/PostgreSQL parity, matching extraction_json / columns_json.
-    cell_binding_map = Column(Text, nullable=True)
-
-    # Template shape (Phase 2a), computed at save from the one rule "text =
-    # static label, empty = slot". JSON string: {header_rows, label_columns,
-    # value_columns, repeat_bands, field_slots, required_columns}. NULL = saved
-    # before shape existed; it is inferred and persisted on first load.
-    shape_json = Column(Text, nullable=True)
+    # NOTE: this model deliberately stores NO derived structure. A template's
+    # shape is a pure function of its grid and is computed fresh on every run
+    # (~0.2 ms). Two earlier artifacts stored here — cell_binding_map and
+    # shape_json — were both removed because a stored copy can silently
+    # disagree with a grid that changed, and only a re-save would fix it.
 
     is_default = Column(Boolean, default=False)       # visible to all users
     is_shared = Column(Boolean, default=False)        # shared within client org
@@ -191,30 +185,6 @@ class ColumnTemplate(Base):
             return json.loads(self.columns_json)
         except Exception:
             return []
-
-    def get_cell_binding_map(self) -> Optional[dict]:
-        if not self.cell_binding_map:
-            return None
-        try:
-            data = json.loads(self.cell_binding_map)
-            return data if isinstance(data, dict) else None
-        except Exception:
-            return None
-
-    def set_cell_binding_map(self, data: Optional[dict]):
-        self.cell_binding_map = json.dumps(data, default=str) if data else None
-
-    def get_shape(self) -> Optional[dict]:
-        if not self.shape_json:
-            return None
-        try:
-            data = json.loads(self.shape_json)
-            return data if isinstance(data, dict) else None
-        except Exception:
-            return None
-
-    def set_shape(self, data: Optional[dict]):
-        self.shape_json = json.dumps(data, default=str) if data else None
 
     def get_column_order(self) -> list[str] | None:
         if not self.column_order_json:

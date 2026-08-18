@@ -113,8 +113,6 @@ def create_template(
         column_order_json=None,
         is_shared=payload.is_shared and current_user.role in ("admin", "company_admin"),
     )
-    # Template shape (2a) — computed once at save time, best-effort.
-    _compute_and_store_shape(tpl)
     db.add(tpl)
     db.commit()
     db.refresh(tpl)
@@ -147,12 +145,6 @@ def update_template(
     if payload.is_shared is not None:
         tpl.is_shared = payload.is_shared and current_user.role in ("admin", "company_admin")
 
-    # Re-derive the shape only when the grid layout changed.
-    if description_changed:
-        print(f"[TEMPLATE] shape regenerated on template update (id={tpl.id})",
-              flush=True)
-        _compute_and_store_shape(tpl)
-
     tpl.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(tpl)
@@ -173,42 +165,21 @@ def delete_template(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _compute_and_store_shape(tpl: ColumnTemplate) -> None:
-    """
-    Phase 2a — derive the template's shape once, at save, and persist it.
+def template_shape_of(tpl: ColumnTemplate):
+    """The template's shape, computed FRESH from its grid.
 
-    The shape comes from one rule: a cell with text is a static label, an empty
-    cell is a slot. Extraction then reads the stored shape instead of
-    re-deriving structure from cell text on every run.
-
-    Never raises: a template that fails to yield a shape still saves, and
-    extraction falls back to inferring the shape at load.
+    Nothing is stored: shape is a pure function of the grid, costs ~0.2 ms, and
+    a stored copy could disagree with a grid that changed. Never raises.
     """
     try:
         raw = json.loads(tpl.description) if tpl.description else None
         if not (isinstance(raw, dict) and "cells" in raw):
-            tpl.set_shape(None)      # not a grid template
-            return
-    except Exception:
-        tpl.set_shape(None)
-        return
-
-    try:
+            return None
         from app.api.routes.extract import _compute_shape_for_grid
-        shape = _compute_shape_for_grid(raw)
-        tpl.set_shape(shape)
-        from template_shape import describe
-        print(f"[TEMPLATE] shape: {describe(shape)}", flush=True)
-        mig = (shape or {}).get("migration") or {}
-        if mig.get("extract_target_cells_with_text"):
-            print(f"[TEMPLATE] migration: "
-                  f"{mig['extract_target_cells_with_text']} cell(s) were marked "
-                  f"'extract here' AND contain text; under the one rule (text = "
-                  f"static label) they are now static labels", flush=True)
+        return _compute_shape_for_grid(raw)
     except Exception as e:
-        tpl.set_shape(None)
-        print(f"[TEMPLATE] shape computation failed ({e}) — will infer at load",
-              flush=True)
+        print(f"[TEMPLATE] shape unavailable ({e})", flush=True)
+        return None
 
 
 
@@ -258,5 +229,5 @@ def _to_response(t: ColumnTemplate) -> TemplateResponse:
         is_default=t.is_default,
         is_shared=t.is_shared,
         created_at=t.created_at,
-        shape=t.get_shape() if hasattr(t, "get_shape") else None,
+        shape=template_shape_of(t),
     )

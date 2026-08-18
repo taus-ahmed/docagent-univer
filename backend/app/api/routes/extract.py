@@ -254,22 +254,6 @@ async def upload_and_extract(
 # TEMPLATE PARSING & REGION ANALYSIS
 # ==============================================================================
 
-def _persist_inferred_shape(tpl: ColumnTemplate) -> None:
-    """Write a freshly-inferred shape back to the row it came from, so the
-    inference happens once per template rather than once per extraction.
-    Best-effort: a detached or read-only session must never fail extraction."""
-    try:
-        from sqlalchemy.orm import object_session
-        sess = object_session(tpl)
-        if sess is None:
-            return
-        sess.add(tpl)
-        sess.commit()
-        print(f"[TEMPLATE] inferred shape persisted (id={getattr(tpl, 'id', '?')})",
-              flush=True)
-    except Exception as e:
-        print(f"[TEMPLATE] could not persist inferred shape ({e}) — "
-              f"it will be re-inferred next load", flush=True)
 
 
 def _compute_shape_for_grid(grid: dict) -> Optional[dict]:
@@ -321,16 +305,14 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                         template_data["regions"], tpl.document_type or "other"
                     )
                 )
-                # Phase 2a — template shape. Use the stored one; for templates
-                # saved before shape existed, infer it ONCE here and persist so
-                # the next load is a read, not another inference.
+                # Template shape, computed FRESH from the grid on every run.
+                # It is a pure function of the grid and costs ~0.2 ms against a
+                # multi-second model call, so there is nothing to gain by
+                # storing it — and a stored copy can silently disagree with a
+                # grid that changed, which is the failure this codebase already
+                # had once with the template-understanding artifact.
                 try:
-                    shape = tpl.get_shape() if hasattr(tpl, "get_shape") else None
-                    if not shape:
-                        shape = _compute_shape_for_grid(raw)
-                        if shape and hasattr(tpl, "set_shape"):
-                            tpl.set_shape(shape)
-                            _persist_inferred_shape(tpl)
+                    shape = _compute_shape_for_grid(raw)
                     if shape:
                         template_data["shape"] = shape
                 except Exception as shape_err:
@@ -1291,10 +1273,6 @@ def _slug(s: str) -> str:
 # ==============================================================================
 # GEMINI-BASED TEMPLATE UNDERSTANDING (computed once at SAVE time)
 # ==============================================================================
-# Replaces the Python rule-based compute_binding_map for templates that have a
-# stored map. The result is a reviewable {extract_cells, tables, static_cells,
-# sections} JSON persisted on ColumnTemplate.cell_binding_map. Templates with no
-# stored map fall back to compute_binding_map at extraction time (legacy path).
 
 _TEMPLATE_UNDERSTANDING_SYSTEM = (
     "You are an expert at analyzing spreadsheet templates that users design to "
@@ -1379,123 +1357,6 @@ def _field_alias_note(label: str, data_type: str) -> str:
     return ""
 
 
-def _build_cbm_prompt(cbm: dict, doc_text: str = "") -> str:
-    """Build the extraction user-prompt directly from a stored cell_binding_map.
-    Asks for extracted_fields (cell-ref keyed) + table_rows (column-name keyed,
-    matching the existing _process_vision_result / writer contract)."""
-    extract_cells = cbm.get("extract_cells") if isinstance(cbm, dict) else None
-    extract_cells = extract_cells if isinstance(extract_cells, dict) else {}
-    tables        = cbm.get("tables") if isinstance(cbm, dict) else None
-    tables        = tables if isinstance(tables, list) else []
-    static_cells  = cbm.get("static_cells") if isinstance(cbm, dict) else None
-    static_cells  = static_cells if isinstance(static_cells, list) else []
-
-    lines = ["=== EXTRACTION TASK ===",
-             "Extract data from this business document and fill ONLY the cells "
-             "listed below.", ""]
-
-    # FIX 3 — fully defensive: no None ever reaches .get()/.strip(); a cell with no
-    # usable label is skipped (we can't tell the model what to extract there).
-    single = []
-    for cell_ref, info in extract_cells.items():
-        if not cell_ref or not isinstance(info, dict):
-            continue
-        label = (info.get("label") or "").strip()
-        section = (info.get("section") or "").strip()
-        data_type = (info.get("data_type") or "").strip()
-        if not label:
-            continue
-        single.append((cell_ref, label, section, data_type))
-    if single:
-        lines.append("SINGLE VALUE CELLS — return each in extracted_fields keyed by "
-                     "the EXACT cell reference shown:")
-        for cell_ref, label, section, data_type in single:
-            seg = f"  (from the '{section}' section)" if section else ""
-            dt = f" [{data_type}]" if data_type else ""
-            # L1 — semantic alias hint for commonly re-labeled fields
-            alias = _field_alias_note(label, data_type)
-            alias_seg = f" — {alias}" if alias else ""
-            lines.append(f"  {cell_ref} = {label}{seg}{dt}{alias_seg}")
-        lines.append("")
-        # B2 — company-name cells must receive an ORGANIZATION name, never a
-        # contact person. Generic: applies to any cell typed company_name.
-        company_cells = [ref for ref, _l, _s, dt in single
-                         if "company" in dt.lower() or "organization" in dt.lower()]
-        if company_cells:
-            lines.append(
-                f"COMPANY NAME CELLS ({', '.join(company_cells)}): Extract the "
-                "COMPANY or ORGANIZATION name here. If only a person's name is "
-                "visible, look for the company they represent. A 'Bill to' field "
-                "should contain a company name, not a person's name.")
-            lines.append("")
-
-    # Skip any non-dict / empty table entries (a malformed map must never crash).
-    valid_tables = [t for t in tables if isinstance(t, dict) and (t.get("columns") or {})]
-    if valid_tables:
-        lines.append("TABLES — return rows in table_rows. Use the COLUMN NAMES below "
-                     "as the keys in each row object (one object per line item):")
-        for t in valid_tables:
-            tid     = t.get("table_id", "table")
-            section = t.get("section", "")
-            cols    = t.get("columns") or {}
-            colnames = [cols[k] for k in sorted(cols.keys()) if cols.get(k)]
-            start = t.get("data_start_row")
-            sec_seg = f" (section: {section})" if section else ""
-            lines.append(f"  Table '{tid}'{sec_seg}:")
-            lines.append(f"    Columns: {', '.join(str(x) for x in colnames)}")
-            lines.append("    Extract EVERY line-item row of this table from the "
-                         "document — do not stop early.")
-            if start:
-                lines.append(f"    (template data starts at row {start}; return as "
-                             "many rows as the document actually has)")
-        lines.append("")
-
-    statics = [str(x) for x in static_cells if x]
-    if statics:
-        lines.append("DO NOT write to these static label/header cells — they are "
-                     "template text, not data:")
-        lines.append("  " + ", ".join(statics))
-        lines.append("")
-
-    lines += [
-        "CRITICAL RULES:",
-        "1. Only fill the cells / tables listed above. Do NOT invent cell "
-        "references that are not listed.",
-        "2. Match document data to template fields BY MEANING — labels may differ "
-        "(e.g. 'Rcpt No' = 'Receipt Number').",
-        "3. NUMBERS: return the COMPLETE numeric amount including all digits "
-        "(e.g. 320.00, 12179.21). Remove thousands commas. \"(2.85)\" means -2.85. "
-        "NEVER return only a currency symbol like \"$\" with no digits — if a cell "
-        "shows a currency sign next to an amount, return the AMOUNT, not the sign.",
-        "4. DATES: always YYYY-MM-DD.",
-        "5. MISSING values: use \"\" (never 'N/A', 'null', or a lone currency symbol).",
-        "6. FIELD SEPARATION RULE: Each cell must contain ONE piece of information "
-        "only. Never combine a company name and address in one cell. Never combine "
-        "a person's name and their contact details in one cell. If a document field "
-        "contains multiple pieces of information, put each piece in its designated "
-        "separate cell.",
-        "7. TABLE COMPLETENESS: table_rows must contain ONE object per line item in "
-        "the document. If the document shows 4 line items, return exactly 4 row "
-        "objects — never merge, summarize, or stop early.",
-        "",
-        "=== OUTPUT FORMAT ===",
-        "Return ONLY this JSON:",
-        "{",
-        '  "document_type": "detected type",',
-        '  "overall_confidence": "high",',
-        '  "extracted_fields": { "B2": "value", "D2": "value" },',
-        '  "table_rows": [ { "ColumnName1": "value", "ColumnName2": "value" } ]',
-        "}",
-        "",
-        "MULTIPLE DOCUMENTS: if this file contains MORE THAN ONE separate document "
-        "(e.g. two different invoices), return instead:",
-        '{ "documents": [ { "document_type": "...", "extracted_fields": {...}, '
-        '"table_rows": [...] }, ... ] }',
-        "— one entry per document, each with its OWN fields and its OWN table_rows.",
-    ]
-    if doc_text:
-        lines += ["", "=== DOCUMENT TEXT ===", doc_text[:8000]]
-    return "\n".join(lines)
 
 
 def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
@@ -4437,20 +4298,6 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
             isinstance(s, dict) and s.get("rows") for s in ls.values()
         )
 
-    # cell_binding_map table path — extraction used a stored, Gemini-understood
-    # table definition. Write deterministically: the form writer lays down the
-    # static template cells + single-value extracted_fields, then _write_form_excel
-    # places each table_row by the cbm definition (data_start_row + columns). This
-    # bypasses the region-analysis primary_mode routing, which can mis-classify a
-    # table template as a plain form and silently drop every data row.
-    if any(isinstance(d.get_extracted_data(), dict)
-           and d.get_extracted_data().get("cbm_tables")
-           for d in doc_results):
-        print("[EXPORT] routing: cell_binding_map tables -> form writer + cbm table rows",
-              flush=True)
-        _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
-        return
-
     template_type = ""
     for d in doc_results:
         ed = d.get_extracted_data()
@@ -5336,14 +5183,10 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
         if _dyn_written:
             print(f"[EXPORT] form dynamic pass: {_dyn_written} extra cells written", flush=True)
 
-        # ── table rows (FIX 4) ───────────────────────────────────────────────────
-        # The form loop above only handles single-value cells. If the document has
-        # table_rows, write them now: by the cell_binding_map table definition when
-        # present (exact data_start_row + columns), else as a generic A/B/C... fallback
-        # placed after the template block so table data is never silently dropped.
-        if extracted_data.get("cbm_tables"):
-            _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod)
-        elif extracted_data.get("table_rows"):
+        # ── table rows ───────────────────────────────────────────────────────────
+        # The form loop above only handles single-value cells. Table rows go
+        # after the template block so table data is never silently dropped.
+        if extracted_data.get("table_rows"):
             _write_table_rows_fallback(ws, extracted_data,
                                        row_offset + max_r + 2, openpyxl_mod)
 
@@ -5368,87 +5211,6 @@ def _col_to_index(letter: str) -> int:
     return n - 1
 
 
-def _write_cbm_tables(ws, extracted_data, row_offset, openpyxl_mod):
-    """
-    Write table_rows using the cell_binding_map table definitions. Generic for any
-    template with any table: for each table, each extracted row is placed at
-    data_start_row + i (1-based) into the cbm-defined columns (letter -> column
-    name), expanding past data_end_row when there are more rows than the template
-    reserved. Independent of region analysis. Skips merged-cell children.
-    """
-    from openpyxl.cell import MergedCell
-    from openpyxl.styles import Alignment
-    tables = extracted_data.get("cbm_tables") or []
-    # Prefer the raw (column-name keyed) rows captured at extraction; fall back to
-    # the normalized table_rows if absent.
-    all_rows = extracted_data.get("cbm_table_rows")
-    if not isinstance(all_rows, list):
-        all_rows = extracted_data.get("table_rows") or []
-    all_rows = [r for r in all_rows if isinstance(r, dict)]
-
-    valid_tables = [t for t in tables if isinstance(t, dict) and (t.get("columns") or {})]
-
-    # A5 — assign each row to exactly ONE table (by _table_source id, else by the
-    # greatest column-name overlap, else table 0). The old per-table filter dropped
-    # any row that matched neither table and could duplicate rows matching both.
-    if len(valid_tables) <= 1:
-        assignment = {0: all_rows} if valid_tables else {}
-    else:
-        assignment = {i: [] for i in range(len(valid_tables))}
-        for r in all_rows:
-            src = _slug(str(r.get("_table_source", "")))
-            best_i, best_ov = 0, -1
-            for i, t in enumerate(valid_tables):
-                if src and _slug(str(t.get("table_id", ""))) == src:
-                    best_i = i
-                    break
-                cols_t = [str(v) for v in (t.get("columns") or {}).values()]
-                ov = sum(1 for cn in cols_t if cn in r)
-                if ov > best_ov:
-                    best_i, best_ov = i, ov
-            assignment[best_i].append(r)
-
-    written_total = 0
-    for t_idx, t in enumerate(valid_tables):
-        cols = t.get("columns") or {}            # {"A": "Item", "B": "Qty", ...}
-        try:
-            data_start = int(t.get("data_start_row")
-                             or (int(t.get("header_row", 0)) + 1))
-        except (ValueError, TypeError):
-            continue
-
-        rows = assignment.get(t_idx, [])
-
-        for i, row in enumerate(rows):
-            out_row = row_offset + data_start + i   # data_start is 1-based
-            for letter, name in cols.items():
-                c_idx = _col_to_index(letter)
-                if c_idx < 0:
-                    continue
-                val = row.get(name, "")
-                if isinstance(val, dict):
-                    val = val.get("value", "")
-                xl = ws.cell(row=out_row, column=c_idx + 1)
-                if isinstance(xl, MergedCell):
-                    continue
-                # numeric coercion (strip currency / thousands separators)
-                sval = "" if val is None else str(val)
-                clean = sval.replace(",", "").replace("$", "").replace("£", "") \
-                            .replace("€", "").replace("₹", "").strip()
-                if clean and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
-                    xl.value = float(clean) if "." in clean else int(clean)
-                elif sval:
-                    xl.value = sval
-                # L2 — reset to default alignment so ALL table rows render
-                # consistently (template styles gave some rows explicit left
-                # alignment while overflow rows inherited the default).
-                xl.alignment = Alignment()
-            written_total += 1
-
-    # A5 diagnostic — always log rows-in vs rows-written so a dropped line item
-    # is visible in the export logs, not silent.
-    print(f"[EXPORT] cbm tables: {written_total}/{len(all_rows)} data rows written "
-          f"({len(tables)} table(s))", flush=True)
 
 
 def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod):
@@ -5555,17 +5317,6 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
     from openpyxl.cell import MergedCell
-
-    # FIX 4 — cell_binding_map table docs use ABSOLUTE positions (data_start_row).
-    # The mixed writer repositions rows dynamically and would misplace them, so it
-    # delegates such docs to the fixed-position form writer. Keeps the CBM path and
-    # the legacy mixed path from crossing.
-    if any(isinstance(d.get_extracted_data(), dict)
-           and d.get_extracted_data().get("cbm_tables")
-           for d in doc_results):
-        print("[EXPORT] mixed: cbm_tables present -> delegating to form writer", flush=True)
-        _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
-        return
 
     merges_tpl   = sheet_data.get("merges", {})
     table_regions = (template_regions or {}).get("table_regions", [])

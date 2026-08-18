@@ -65,22 +65,20 @@ def load_labels(only=None) -> list:
 
 
 def build_template_data(label: dict, mode: str, orchestrator=None):
-    """Template grid -> template_data, mirroring the production save+load flow.
+    """Template grid -> template_data, mirroring the production load flow.
 
-    The shape is computed once at save (2a) and read back at load, so the
-    harness measures the stored-shape path rather than a per-run inference the
-    product would never do.
+    Shape is computed fresh from the grid on every run, exactly as production
+    does — nothing is stored, so there is no stored/actual divergence to
+    measure around.
     """
     import json as _json
     from app.api.routes.extract import _parse_template
-    from app.api.routes.templates import _compute_and_store_shape
     from app.models.models import ColumnTemplate
 
     grid = _json.loads((bs.TEMPLATES_DIR / label["template"]).read_text(encoding="utf-8"))
     tpl = ColumnTemplate(name=Path(label["template"]).stem,
                          document_type=label["document_type"],
                          description=_json.dumps(grid), columns_json="[]")
-    _compute_and_store_shape(tpl)
     td = _parse_template(tpl)
     shape = (td or {}).get("shape") or {}
     return td, grid, f"needs {shape.get('required_columns', 0)} columns"

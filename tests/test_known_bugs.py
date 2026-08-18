@@ -106,14 +106,12 @@ def _run_and_export():
                                         _write_excel)
     from app.models.models import ColumnTemplate, DocumentResult
     from orchestrator import Orchestrator
-    from app.api.routes.templates import _compute_and_store_shape
     from tests.harness.runner import _schema_path
 
     bs.chdir_backend()
     grid = json.loads(FIXTURE_TEMPLATE.read_text(encoding="utf-8"))
     tpl = ColumnTemplate(name="bs_unlabeled", document_type="balance_sheet",
                          description=json.dumps(grid), columns_json="[]")
-    _compute_and_store_shape(tpl)
     template_data = _parse_template(tpl)
 
     log = io.StringIO()
