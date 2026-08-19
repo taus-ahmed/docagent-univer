@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-18 04:05:32",
- "git_commit": "4e634e0",
+ "run_id": "2026-08-18 17:11:41",
+ "git_commit": "6430bdc",
  "config": {
-  "mode": "record",
+  "mode": "replay",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 1,
-  "recorded": 19,
+  "hits": 20,
+  "recorded": 0,
   "live": 0,
   "misses": 0
  },
