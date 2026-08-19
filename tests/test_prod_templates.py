@@ -12,9 +12,16 @@ database, and both were found broken by verification C:
   BS Luq (id 31) cannot extract liabilities, because its section headers sit
   at columns 0 and 2 with a gap, which the band detector does not recognise.
 
-The first is fixed and locked in below. The second is NOT fixed — the test
-records the current behaviour and says so, so that whatever is decided about
-it is a deliberate change rather than a silent drift.
+Both are now fixed. Bank-Statement-101 by the edge-header rule, BS Luq by
+DECLARATION: the template says its four sections are tables instead of leaving
+the detector to work it out from where the labels landed. The detector's
+failure on the undeclared grid is still asserted below, so it stays visible
+rather than becoming folklore.
+
+NOTE: the production copy of BS Luq carries no declarations yet — nothing here
+writes to the production database. Its owner gets the fix by opening it in the
+template editor, selecting each section (heading row included) and clicking
+"Table ↓", then saving. These tests prove that is enough.
 """
 import json
 
@@ -86,20 +93,79 @@ class TestBsLuq:
         assert "Current assets Total" in labels
         assert "Non Current assets Total" in labels
 
-    @pytest.mark.xfail(strict=True, reason=(
-        "KNOWN, UNFIXED. The liabilities sections are headed 'Current "
-        "liabilities' at column 0 and 'Non current liabilities' at column 2, "
-        "with a gap between them. The band detector only recognises ADJACENT "
-        "static cells as a header, so those two sections yield single field "
-        "slots and their line-item rows are unreachable. A rule that treats a "
-        "gapped label row as a section header was written and reverted: it "
-        "cannot be distinguished from an ordinary two-up key/value row, and "
-        "it broke four other production templates when tried. Awaiting a "
-        "decision — see the Phase 4 report."))
-    def test_the_liabilities_sections_are_bands(self):
+    def test_undeclared_the_liabilities_sections_are_still_not_detected(self):
+        """The detector's limit, recorded rather than hidden.
+
+        'Current liabilities' sits at column 0 and 'Non current liabilities' at
+        column 2, with an empty cell between them. A band header must be
+        ADJACENT static cells, so this row is not one, and the four line-item
+        rows beneath are unreachable. The rule that would catch it — a gapped
+        label row is a section header — cannot be told apart from an ordinary
+        two-up key/value row, and broke four other production templates when
+        tried. Detection is not going to fix this; declaration is.
+        """
         shape, _ = _shape("bs_luq")
         names = [b["name"] for b in shape["repeat_bands"]]
-        assert any("liabilit" in n.casefold() for n in names), names
+        assert not any("liabilit" in n.casefold() for n in names), names
+
+    # What the user draws in the editor: each of the four sections selected as
+    # the table it is, heading row included. Rows 0-3 are the two asset
+    # sections side by side; rows 6-9 the two liability sections.
+    DECLARED = [
+        {"type": "table", "r1": 0, "c1": 0, "r2": 3, "c2": 1, "orientation": "rows"},
+        {"type": "table", "r1": 0, "c1": 2, "r2": 3, "c2": 3, "orientation": "rows"},
+        {"type": "table", "r1": 6, "c1": 0, "r2": 9, "c2": 1, "orientation": "rows"},
+        {"type": "table", "r1": 6, "c1": 2, "r2": 9, "c2": 3, "orientation": "rows"},
+    ]
+
+    def _declared(self):
+        data = json.loads((FIXTURES / "bs_luq.json").read_text(encoding="utf-8"))
+        grid = dict(data["grid"])
+        grid["regions"] = self.DECLARED
+        return compute_shape(grid)
+
+    def test_declaring_the_sections_gives_all_four_bands(self):
+        """The fix. The template says what its tables are; nothing has to be
+        inferred from where the labels happen to sit."""
+        shape = self._declared()
+        names = [b["name"] for b in shape["repeat_bands"]]
+        assert names == ["Current assets", "Non current assets",
+                         "Current liabilities", "Non current liabilities"], names
+        assert all(b["declared"] for b in shape["repeat_bands"])
+
+    def test_each_liability_section_gets_its_own_line_item_rows(self):
+        """Not just detected — reachable. Three data rows each, under the
+        section's own heading, in its own two columns."""
+        shape = self._declared()
+        by_name = {b["name"]: b for b in shape["repeat_bands"]}
+        for name, col in [("Current liabilities", 0),
+                          ("Non current liabilities", 2)]:
+            b = by_name[name]
+            assert (b["header_row"], b["start_row"], b["end_row"]) == (6, 7, 9)
+            assert [c["col"] for c in b["columns"]] == [col, col + 1]
+
+    def test_the_two_asset_sections_stop_being_one_four_column_band(self):
+        """Undeclared, both asset sections share one header row, so they are
+        read as a single 4-column table — 'Non current assets' becomes a COLUMN
+        of the current-assets table rather than a section of its own."""
+        undeclared, _ = _shape("bs_luq")
+        assert len(undeclared["repeat_bands"]) == 1
+        assert len(undeclared["repeat_bands"][0]["columns"]) == 4
+
+        shape = self._declared()
+        assets = [b for b in shape["repeat_bands"] if "assets" in b["name"]]
+        assert len(assets) == 2
+        assert all(len(b["columns"]) == 2 for b in assets)
+
+    def test_the_totals_rows_are_still_field_slots(self):
+        """Declaring the sections must not swallow the totals that sit
+        directly beneath them."""
+        shape = self._declared()
+        labels = [f["row_label"] for f in shape["field_slots"]]
+        for expected in ["Current assets Total", "Non Current assets Total",
+                         "Current liabilities Total",
+                         "Non current liabilities Total"]:
+            assert expected in labels, (expected, labels)
 
 
 class TestNoProductionTemplateIsUnusable:

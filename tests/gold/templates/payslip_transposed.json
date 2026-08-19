@@ -1,0 +1,297 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Employer Name",
+   "style": {
+    "bold": true
+   }
+  },
+  "0,1": {
+   "value": "",
+   "style": {}
+  },
+  "1,0": {
+   "value": "Employee Name",
+   "style": {
+    "bold": true
+   }
+  },
+  "1,1": {
+   "value": "",
+   "style": {}
+  },
+  "2,0": {
+   "value": "Employee ID",
+   "style": {
+    "bold": true
+   }
+  },
+  "2,1": {
+   "value": "",
+   "style": {}
+  },
+  "3,0": {
+   "value": "Title / Department",
+   "style": {
+    "bold": true
+   }
+  },
+  "3,1": {
+   "value": "",
+   "style": {}
+  },
+  "4,0": {
+   "value": "SSN",
+   "style": {
+    "bold": true
+   }
+  },
+  "4,1": {
+   "value": "",
+   "style": {}
+  },
+  "5,0": {
+   "value": "Pay Period",
+   "style": {
+    "bold": true
+   }
+  },
+  "5,1": {
+   "value": "",
+   "style": {}
+  },
+  "6,0": {
+   "value": "Pay Date",
+   "style": {
+    "bold": true
+   }
+  },
+  "6,1": {
+   "value": "",
+   "style": {}
+  },
+  "7,0": {
+   "value": "Annual Salary",
+   "style": {
+    "bold": true
+   }
+  },
+  "7,1": {
+   "value": "",
+   "style": {}
+  },
+  "9,0": {
+   "value": "Earnings",
+   "style": {
+    "bold": true
+   }
+  },
+  "10,0": {
+   "value": "Description",
+   "style": {
+    "bold": true
+   }
+  },
+  "11,0": {
+   "value": "Amount",
+   "style": {
+    "bold": true
+   }
+  },
+  "10,1": {
+   "value": "",
+   "style": {}
+  },
+  "11,1": {
+   "value": "",
+   "style": {}
+  },
+  "10,2": {
+   "value": "",
+   "style": {}
+  },
+  "11,2": {
+   "value": "",
+   "style": {}
+  },
+  "10,3": {
+   "value": "",
+   "style": {}
+  },
+  "11,3": {
+   "value": "",
+   "style": {}
+  },
+  "10,4": {
+   "value": "",
+   "style": {}
+  },
+  "11,4": {
+   "value": "",
+   "style": {}
+  },
+  "10,5": {
+   "value": "",
+   "style": {}
+  },
+  "11,5": {
+   "value": "",
+   "style": {}
+  },
+  "10,6": {
+   "value": "",
+   "style": {}
+  },
+  "11,6": {
+   "value": "",
+   "style": {}
+  },
+  "13,0": {
+   "value": "Total Earnings",
+   "style": {
+    "bold": true
+   }
+  },
+  "13,1": {
+   "value": "",
+   "style": {}
+  },
+  "15,0": {
+   "value": "Deductions",
+   "style": {
+    "bold": true
+   }
+  },
+  "16,0": {
+   "value": "Description",
+   "style": {
+    "bold": true
+   }
+  },
+  "17,0": {
+   "value": "Amount",
+   "style": {
+    "bold": true
+   }
+  },
+  "16,1": {
+   "value": "",
+   "style": {}
+  },
+  "17,1": {
+   "value": "",
+   "style": {}
+  },
+  "16,2": {
+   "value": "",
+   "style": {}
+  },
+  "17,2": {
+   "value": "",
+   "style": {}
+  },
+  "16,3": {
+   "value": "",
+   "style": {}
+  },
+  "17,3": {
+   "value": "",
+   "style": {}
+  },
+  "16,4": {
+   "value": "",
+   "style": {}
+  },
+  "17,4": {
+   "value": "",
+   "style": {}
+  },
+  "16,5": {
+   "value": "",
+   "style": {}
+  },
+  "17,5": {
+   "value": "",
+   "style": {}
+  },
+  "16,6": {
+   "value": "",
+   "style": {}
+  },
+  "17,6": {
+   "value": "",
+   "style": {}
+  },
+  "19,0": {
+   "value": "Total Deductions",
+   "style": {
+    "bold": true
+   }
+  },
+  "19,1": {
+   "value": "",
+   "style": {}
+  },
+  "21,0": {
+   "value": "Net Pay",
+   "style": {
+    "bold": true
+   }
+  },
+  "21,1": {
+   "value": "",
+   "style": {}
+  },
+  "22,0": {
+   "value": "YTD Gross Earnings",
+   "style": {
+    "bold": true
+   }
+  },
+  "22,1": {
+   "value": "",
+   "style": {}
+  },
+  "23,0": {
+   "value": "YTD Taxes Withheld",
+   "style": {
+    "bold": true
+   }
+  },
+  "23,1": {
+   "value": "",
+   "style": {}
+  }
+ },
+ "colWidths": [
+  190,
+  130,
+  130,
+  130,
+  130,
+  130,
+  130
+ ],
+ "merges": {},
+ "repeatRows": [],
+ "regions": [
+  {
+   "type": "table",
+   "r1": 10,
+   "c1": 0,
+   "r2": 11,
+   "c2": 6,
+   "orientation": "columns",
+   "name": "earnings"
+  },
+  {
+   "type": "table",
+   "r1": 16,
+   "c1": 0,
+   "r2": 17,
+   "c2": 6,
+   "orientation": "columns",
+   "name": "deductions"
+  }
+ ]
+}

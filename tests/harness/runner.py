@@ -64,7 +64,8 @@ def load_labels(only=None) -> list:
     return labels
 
 
-def build_template_data(label: dict, mode: str, orchestrator=None):
+def build_template_data(label: dict, mode: str, orchestrator=None,
+                        template_override=None):
     """Template grid -> template_data, mirroring the production load flow.
 
     Shape is computed fresh from the grid on every run, exactly as production
@@ -75,8 +76,14 @@ def build_template_data(label: dict, mode: str, orchestrator=None):
     from app.api.routes.extract import _parse_template
     from app.models.models import ColumnTemplate
 
-    grid = _json.loads((bs.TEMPLATES_DIR / label["template"]).read_text(encoding="utf-8"))
-    tpl = ColumnTemplate(name=Path(label["template"]).stem,
+    # A template override runs a labeled document through a DIFFERENT template
+    # shape, scored against the same gold. Gold labels are keyed by field label
+    # and table name, not by cell address, so the same answers are expected
+    # however the sheet is arranged — which is exactly what makes a transposed
+    # template testable without inventing a second set of labels.
+    name = template_override or label["template"]
+    grid = _json.loads((bs.TEMPLATES_DIR / name).read_text(encoding="utf-8"))
+    tpl = ColumnTemplate(name=Path(name).stem,
                          document_type=label["document_type"],
                          description=_json.dumps(grid), columns_json="[]")
     td = _parse_template(tpl)
@@ -416,7 +423,7 @@ def write_markdown(report: dict, path: Path):
 
 def run(mode: str = "replay", only=None, repeat: int = 1,
         report_dir: Path = None, do_diff: bool = True,
-        no_template: bool = False) -> dict:
+        no_template: bool = False, template: str = None) -> dict:
     bs.bootstrap()
     report_dir = report_dir or bs.REPORTS_DIR
     bs.chdir_backend()  # pipeline writes relative paths as production does
@@ -453,7 +460,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                 # gold. The engine must infer the document's structure itself.
                 td, grid, ttype = None, {"cells": {}}, NO_TEMPLATE
             else:
-                td, grid, ttype = build_template_data(label, mode)
+                td, grid, ttype = build_template_data(label, mode,
+                                                      template_override=template)
             adapted_runs = []
             log = ""
             results = []
@@ -652,13 +660,18 @@ def main():
                     help="run each document N times (record/live only) and "
                          "flag fields whose value varies as unstable")
     ap.add_argument("--no-diff", action="store_true")
+    ap.add_argument("--template", default=None,
+                    help="run every selected document through THIS template "
+                         "file from tests/gold/templates/ instead of the one "
+                         "its labels name, scored against the same gold")
     ap.add_argument("--no-template", action="store_true",
                     help="extract with NO template — the engine infers the "
                          "shape (Phase 3) — and score against the same gold")
     args = ap.parse_args()
     only = set(args.docs.split(",")) if args.docs else None
     run(mode=args.mode, only=only, repeat=args.repeat,
-        do_diff=not args.no_diff, no_template=args.no_template)
+        do_diff=not args.no_diff, no_template=args.no_template,
+        template=args.template)
 
 
 if __name__ == "__main__":

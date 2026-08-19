@@ -61,11 +61,48 @@ def read_sheet(ws, shape):
         for c in b["columns"]:
             if _txt(c.get("header")):
                 stops.add(_norm(c["header"]))
+        for f in b.get("fields") or []:
+            if _txt(f.get("header")):
+                stops.add(_norm(f["header"]))
 
     # ── bands: find the header row by its printed headings ──
     band_rows = set()
     for band in shape.get("repeat_bands") or []:
+        if band.get("orientation") == "columns":
+            # A TRANSPOSED band runs sideways: its headings are printed down a
+            # column and each record is a column. Read it the same way — locate
+            # each heading by its text, then walk across — so the file is still
+            # checked against gold that knows nothing about orientation.
+            hcol = band["header_col"]
+            rows_for = {}
+            for f in band.get("fields") or []:
+                want = _norm(f.get("header"))
+                if not want:
+                    continue
+                for r in sorted(rows):
+                    if r in band_rows or r in rows_for.values():
+                        continue
+                    if _norm(rows[r].get(hcol)) == want:
+                        rows_for[f["header"]] = r
+                        break
+            if not rows_for:
+                continue
+            band_rows.update(rows_for.values())
+            # A record may be blank in one field, so the record columns are the
+            # union across every heading row, not just the first.
+            cols = sorted({c for r in rows_for.values() for c in rows[r]
+                           if c > hcol})
+            out = []
+            for c in cols:
+                rec = {h: rows[r].get(c, "") for h, r in rows_for.items()}
+                if any(_txt(v) for v in rec.values()):
+                    out.append(rec)
+            if out:
+                tables[band["name"]] = out
+            continue
         headers = [(c["col"], _txt(c["header"])) for c in band["columns"]]
+        if not headers:
+            continue
         hdr_row = None
         for r in sorted(rows):
             if r in band_rows:
