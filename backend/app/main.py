@@ -194,10 +194,18 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS
+    # CORS — from configuration, not hardcoded. allow_credentials stays False
+    # because the frontend authenticates with a Bearer token from localStorage,
+    # not a cookie; turning it on would be a behaviour change, not a fix.
+    origins = settings.cors_origins
+    if origins == ["*"]:
+        logger.warning("CORS: allowing ALL origins. Set CORS_ORIGINS to the "
+                       "frontend URL to restrict it.")
+    else:
+        logger.info(f"CORS: allowing {len(origins)} configured origin(s)")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=origins,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],

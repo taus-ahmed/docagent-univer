@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -67,10 +68,46 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
 
     # â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    ALLOWED_ORIGINS: list[str] = ["*"]
+    # Accepts either name. Production sets CORS_ORIGINS; the codebase has
+    # always declared ALLOWED_ORIGINS, and pydantic's extra="ignore" meant the
+    # mismatch was silent — the variable looked set and did nothing.
+    #
+    # Typed as a plain STRING on purpose. pydantic-settings JSON-decodes a
+    # list-typed field straight from the environment, BEFORE any validator
+    # runs, so `CORS_ORIGINS=https://app.example.com` raises SettingsError at
+    # import and the service never boots. Parsing happens in `cors_origins`.
+    ALLOWED_ORIGINS: str = Field(
+        default="*",
+        validation_alias=AliasChoices("ALLOWED_ORIGINS", "CORS_ORIGINS"),
+    )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Allowed origins as a list. Accepts a JSON array, a comma-separated
+        string, or a single origin. Never raises: a malformed value falls back
+        to the permissive default rather than stopping the service."""
+        raw = (self.ALLOWED_ORIGINS or "").strip()
+        if not raw:
+            return ["*"]
+        if raw.startswith("["):
+            try:
+                import json as _json
+                parsed = _json.loads(raw)
+                if isinstance(parsed, list) and parsed:
+                    return [str(x).strip() for x in parsed if str(x).strip()]
+            except Exception:
+                pass
+        parts = [p.strip() for p in raw.split(",") if p.strip()]
+        return parts or ["*"]
 
     # â”€â”€ File Limits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    MAX_UPLOAD_SIZE_MB: int = 50
+    # Accepts either name, for the same reason as ALLOWED_ORIGINS above:
+    # production sets MAX_FILE_SIZE_MB and the code read MAX_UPLOAD_SIZE_MB, so
+    # the production value was ignored and the code default happened to match.
+    MAX_UPLOAD_SIZE_MB: int = Field(
+        default=50,
+        validation_alias=AliasChoices("MAX_UPLOAD_SIZE_MB", "MAX_FILE_SIZE_MB"),
+    )
     MAX_FILES_PER_BATCH: int = 100
 
     @property
