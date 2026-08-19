@@ -54,6 +54,12 @@ WIDENINGS = {
     "W1_fuzzy_names": True,      # exact -> UNAMBIGUOUS substring / token overlap
     "W4_kv_rows_as_fields": True,
     "E_elimination": True,       # a correspondence that is forced, not preferred
+    # OFF for templated extraction, ON for no-template. With a template the
+    # engine and the labels describe the same table count, so elimination is
+    # enough. Without one, inference legitimately describes a balance sheet as
+    # 3 tables where the labels name 5, and nothing but the rows themselves can
+    # align 3 to 5 — that is a structural difference, not leniency.
+    "W2_table_by_content": False,
 }
 
 
@@ -110,6 +116,49 @@ def _match_name(pred_name: str, gold_names: list) -> Optional[str]:
         return None
     tied = [g for s, g in scored if s == best_score]
     return tied[0] if len(tied) == 1 else None
+
+
+def _row_labels(rows: list) -> set:
+    """The identifying text of each row — its first cell containing words."""
+    out = set()
+    for r in rows or []:
+        if not isinstance(r, dict):
+            continue
+        for k, v in r.items():
+            if str(k).startswith("_") or is_empty(v):
+                continue
+            sv = str(v).strip()
+            if re.search(r"[A-Za-z]{3}", sv):
+                out.add(_norm(sv))
+                break
+    return out
+
+
+def _match_by_content(pred_rows: list, gold_tables: dict, taken: set):
+    """Identify a table by the rows it actually holds.
+
+    Used only where the table COUNTS differ — inference describing a balance
+    sheet as 3 tables against 5 named ones — because then no counting rule can
+    pair them and only the rows themselves carry the identity. It cannot excuse
+    a bad value: identifying the table decides which gold row a value is
+    compared against, and a wrong value still scores wrong.
+    """
+    if not WIDENINGS["W2_table_by_content"]:
+        return None
+    pl = _row_labels(pred_rows)
+    if not pl:
+        return None
+    best, best_score = None, 0.0
+    for name, gold_rows in (gold_tables or {}).items():
+        if name in taken:
+            continue
+        gl = _row_labels(gold_rows)
+        if not gl:
+            continue
+        score = len(pl & gl) / len(gl)
+        if score > best_score:
+            best, best_score = name, score
+    return best if best_score >= 0.5 else None
 
 
 def _cell_value(v: Any) -> Any:
@@ -262,6 +311,12 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
             # to be known first: by name, then by the rows it actually holds,
             # then — only if gold describes a single table — by elimination.
             g = _match_name(base, gold_table_names)
+            if g is None:
+                g = _match_by_content(raw_rows, label.get("tables") or {},
+                                      set(tables))
+                if g:
+                    notes.append(f"table '{base}' -> gold table '{g}' by row "
+                                 f"content (table counts differ)")
             if g is None and WIDENINGS["E_elimination"]:
                 # ELIMINATION. Exactly one unmatched predicted table and exactly
                 # one unmatched gold table can only correspond to each other —

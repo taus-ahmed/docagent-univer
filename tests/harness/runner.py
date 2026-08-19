@@ -327,6 +327,10 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     except OSError:
         git_commit = "unknown"
 
+    # W2 (identify a table by its rows) is a no-template-only rule: see the
+    # note on WIDENINGS. Templated extraction runs without it.
+    set_widenings(W2_table_by_content=bool(no_template))
+
     cache = LLMCache(mode=mode)
     cache.install()
     doc_reports = {}
