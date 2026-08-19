@@ -106,6 +106,48 @@ def run_pipeline(label: dict, template_data: dict):
     return results, buf.getvalue()
 
 
+def build_export(results, grid, no_template):
+    """Build the workbook exactly as the download endpoint does, then read it
+    back. Returns (worksheet_or_None, shape_used)."""
+    import openpyxl
+    from app.api.routes.extract import (_analyse_template_regions, _write_excel,
+                                        _write_inferred_sheets, _write_flat_table)
+    from app.models.models import DocumentResult
+
+    docs, shape = [], None
+    for r in results:
+        ed = getattr(r, "extracted_data", None) or {}
+        docs.append(DocumentResult(
+            filename=getattr(r, "filename", "x.pdf"),
+            document_type=getattr(r, "document_type", "") or "x",
+            extraction_json=json.dumps(ed, default=str)))
+    if not docs:
+        return None, None
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            if no_template:
+                use_grid = (getattr(results[0], "extracted_data", None)
+                            or {}).get("inferred_grid") or {}
+                if not _write_inferred_sheets(wb, ws, docs, openpyxl):
+                    _write_flat_table(ws, docs, openpyxl)
+                ws = wb.worksheets[0]
+            else:
+                use_grid = grid
+                _write_excel(ws, docs, grid, _analyse_template_regions(grid),
+                             openpyxl)
+        from app.api.routes.extract import _compute_shape_for_grid
+        with contextlib.redirect_stdout(io.StringIO()):
+            shape = _compute_shape_for_grid(use_grid) if use_grid else None
+    except Exception as e:
+        print(f"[EXPORT] could not build workbook: {e}", flush=True)
+        return None, None
+    return ws, shape
+
+
 def _log_findings(log: str) -> dict:
     route = next((ln.strip() for ln in log.splitlines() if "[ROUTE]" in ln), "")
     return {
@@ -336,6 +378,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     doc_reports = {}
     doc_scores = []
     doc_scores_raw = []
+    doc_scores_export = []
     try:
         for label in labels:
             doc_id = label["document_id"]
@@ -372,6 +415,23 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
             adapted = adapted_runs[0]
             score = score_document(label, adapted, doc_text=text)
 
+            # EXPORT — score the .xlsx that a user actually receives, read
+            # back from the file. Extraction accuracy and export accuracy
+            # diverging means the WRITER is wrong; the export bug of
+            # 2026-08-18 produced 34 correct values and 34 empty cells and
+            # nothing caught it, because only the in-memory result was scored.
+            export_score = None
+            try:
+                from tests.harness.sheet_reader import sheet_as_result
+                ws_out, out_shape = build_export(results, grid_i if no_template
+                                                 else grid, no_template)
+                if ws_out is not None and out_shape:
+                    exported = adapt([sheet_as_result(ws_out, out_shape)],
+                                     label, grid_i if no_template else grid)
+                    export_score = score_document(label, exported, doc_text=text)
+            except Exception as e:
+                print(f"[EXPORT] scoring failed: {e}", flush=True)
+
             # RAW — the same extraction scored with every adapter widening off.
             # Reported alongside the adapted number in every run, so a number
             # that depends on mapping leniency is visible as such.
@@ -384,6 +444,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                 set_widenings(**prev)
             doc_scores.append(score)
             doc_scores_raw.append(raw_score)
+            if export_score:
+                doc_scores_export.append(export_score)
             unstable = find_unstable(adapted_runs)
             inferred = None
             if no_template and results:
@@ -403,10 +465,17 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                             "tables": adapted["tables"]},
                 "score": score,
                 "score_raw": raw_score,
+                "score_export": export_score,
                 "unstable": unstable,
             }
-            print(f"[RUN]   adapted={_pct(score.get('accuracy'))}  "
-                  f"raw={_pct(raw_score.get('accuracy'))}  counts={score['counts']}",
+            ex = _pct((export_score or {}).get("accuracy"))
+            flag = ""
+            if export_score and score.get("accuracy") is not None:
+                if abs((export_score.get("accuracy") or 0)
+                       - (score.get("accuracy") or 0)) > 0.001:
+                    flag = "   <-- WRITER: export != extraction"
+            print(f"[RUN]   extraction={_pct(score.get('accuracy'))}  "
+                  f"export={ex}  raw={_pct(raw_score.get('accuracy'))}{flag}",
                   flush=True)
     finally:
         cache.uninstall()
@@ -424,6 +493,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         "documents": doc_reports,
         "summary": summarize(doc_scores),
         "summary_raw": summarize(doc_scores_raw),
+        "summary_export": summarize(doc_scores_export) if doc_scores_export else None,
         "unstable_total": sum(len(d["unstable"]) for d in doc_reports.values()),
     }
 
@@ -454,7 +524,13 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     o = report["summary"]["overall"]
     ro = report.get("summary_raw", {}).get("overall", {}) or {}
     print("\n=== SUMMARY ===")
-    print(f"accuracy  ADAPTED   : {_pct(o['accuracy'])}")
+    eo = (report.get("summary_export") or {}).get("overall") or {}
+    print(f"accuracy  EXTRACTION: {_pct(o['accuracy'])}")
+    if eo:
+        div = ("   <-- WRITER BUG: the file does not match the extraction"
+               if abs((eo.get('accuracy') or 0) - (o.get('accuracy') or 0)) > 0.001
+               else "   (matches extraction)")
+        print(f"accuracy  EXPORT    : {_pct(eo.get('accuracy'))}{div}")
     print(f"accuracy  RAW       : {_pct(ro.get('accuracy'))}"
           f"   (all adapter widenings off)")
     print(f"hallucination rate  : {_pct(o['hallucination_rate'])} "

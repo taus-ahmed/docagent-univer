@@ -1,0 +1,127 @@
+"""
+Read a written .xlsx back into the flat gold shape.
+
+The harness scored the engine's in-memory result and nothing read the file the
+user actually receives. That gap hid a real bug: an export that produced 34
+correct labels and 34 empty cells while extraction held all 34 values. Scoring
+the FILE closes it — if extraction accuracy and export accuracy diverge, the
+writer is wrong, and it shows up in the same run.
+
+The reader deliberately takes nothing from the engine's output. It is given the
+template's shape (where labels and bands are meant to be) and then reads what is
+actually in the cells, locating rows by their printed label text rather than by
+coordinate, so a band that pushed rows down is still read correctly.
+"""
+from __future__ import annotations
+
+import re
+from types import SimpleNamespace
+
+
+def _txt(v):
+    return "" if v is None else str(v).strip()
+
+
+def _norm(s):
+    return re.sub(r"[^a-z0-9]+", "", str(s or "").casefold())
+
+
+def _label_column(shape):
+    """The column the template puts row labels in (usually A)."""
+    cols = shape.get("label_columns") or [0]
+    return min(cols) if cols else 0
+
+
+def read_sheet(ws, shape):
+    """Worksheet + template shape -> {"fields": {...}, "tables": {...}}.
+
+    Fields are located by their label text, not by row number, so the reader
+    survives a band that expanded and pushed everything below it down.
+    """
+    fields, tables = {}, {}
+    if not shape:
+        return {"fields": fields, "tables": tables}
+
+    # index every cell by row
+    rows = {}
+    for row in ws.iter_rows():
+        for c in row:
+            if c.value is not None and _txt(c.value) != "":
+                rows.setdefault(c.row - 1, {})[c.column - 1] = c.value
+
+    # Where each band must STOP. The writer lays sections out contiguously, so
+    # a band runs until the sheet shows something that is not one of its rows:
+    # a blank line, the next band's heading, or a labelled field such as a
+    # section total. Reading to the next blank line alone would let the first
+    # band swallow the rest of the sheet.
+    lcol0 = _label_column(shape)
+    stops = {_norm(f["row_label"]) for f in (shape.get("field_slots") or [])
+             if _txt(f.get("row_label"))}
+    for b in shape.get("repeat_bands") or []:
+        for c in b["columns"]:
+            if _txt(c.get("header")):
+                stops.add(_norm(c["header"]))
+
+    # ── bands: find the header row by its printed headings ──
+    band_rows = set()
+    for band in shape.get("repeat_bands") or []:
+        headers = [(c["col"], _txt(c["header"])) for c in band["columns"]]
+        hdr_row = None
+        for r in sorted(rows):
+            if r in band_rows:
+                continue
+            if all(_norm(rows[r].get(col)) == _norm(h) for col, h in headers if h):
+                hdr_row = r
+                break
+        if hdr_row is None:
+            continue
+        band_rows.add(hdr_row)
+        out = []
+        r = hdr_row + 1
+        while r <= max(rows):
+            cells = rows.get(r)
+            if not cells:
+                break                                   # blank line ends the band
+            first = _norm(cells.get(headers[0][0], cells.get(lcol0)))
+            if first in stops:
+                break                                   # a total, or the next band
+            vals = {}
+            for col, h in headers:
+                key = next((c.get("key") or c["header"] for c in band["columns"]
+                            if c["col"] == col), h)
+                vals[key] = cells.get(col, "")
+            if any(_txt(v) for v in vals.values()):
+                out.append(vals)
+                band_rows.add(r)
+            r += 1
+        if out:
+            tables[band["name"]] = out
+
+    # ── field slots: locate the printed label, read the cell beside it ──
+    for slot in shape.get("field_slots") or []:
+        want = _norm(slot["row_label"])
+        if not want:
+            continue
+        for r in sorted(rows):
+            if r in band_rows:
+                continue
+            here = rows[r]
+            if _norm(here.get(slot["col"] - 1)) != want and \
+                    _norm(here.get(lcol0)) != want:
+                continue
+            v = here.get(slot["col"], "")
+            if _txt(v):
+                fields[slot["row_label"]] = v
+            break
+    return {"fields": fields, "tables": tables}
+
+
+def sheet_as_result(ws, shape):
+    """Wrap a read sheet as a DocumentExtractionResult-shaped object, so the
+    SAME adapter and scorer run over it as over the engine's output."""
+    flat = read_sheet(ws, shape)
+    ed = {"extracted_data": {k: {"value": v} for k, v in flat["fields"].items()}}
+    for name, rows in flat["tables"].items():
+        ed[f"{name}_rows"] = rows
+    return SimpleNamespace(extracted_data=ed, filename="export.xlsx",
+                           document_type="")
