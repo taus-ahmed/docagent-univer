@@ -14,13 +14,38 @@ interface Cell {
   style: CellStyle;
   mergeParent?: [number, number];
   mergeSpan?: { rows: number; cols: number };
+  /** LEGACY. Written by the old "Repeat row" control, read by nothing: no
+   *  backend module ever looked at repeatRows, and `extraction_type:
+   *  "lineitem"` (derived from it) is declared in the API schema and never
+   *  consumed. It is left on the type so old saved grids still parse; the
+   *  editor no longer writes or renders it. Tables are declared instead. */
   repeatRow?: boolean;
+}
+/** A region the TEMPLATE declares, rather than one the engine has to guess.
+ *  Coordinates are inclusive and include the heading line, so the region is
+ *  visually identical to the table the user selected.
+ *
+ *  orientation "rows"    headings across the FIRST ROW, one record per row.
+ *  orientation "columns" headings down the FIRST COLUMN, one record per
+ *                        column — a transposed table, which the detector
+ *                        cannot see at all.
+ *
+ *  ⚠ These are ABSOLUTE coordinates. Adding insert/delete row or column MUST
+ *  shift them in the same change, or a declaration silently points at the
+ *  wrong cells. See the matching note in backend/engine/template_shape.py
+ *  (_declared_bands) for the exact rules. */
+export interface TableRegion {
+  type: "table";
+  r1: number; c1: number; r2: number; c2: number;
+  orientation: "rows" | "columns";
+  name?: string;
 }
 export interface SheetSaveData {
   cells: Record<string, Cell>;
   colWidths: number[];
   merges: Record<string, { rows: number; cols: number }>;
   repeatRows: number[];
+  regions?: TableRegion[];
 }
 
 interface Props {
@@ -70,6 +95,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const [cells, setCells] = useState<Record<string, Cell>>(initCells);
   const [colWidths, setColWidths] = useState<number[]>(() => initialData?.colWidths ?? Array(COLS).fill(DCW));
   const [merges, setMerges] = useState<Record<string, { rows: number; cols: number }>>(() => initialData?.merges ?? {});
+  const [regions, setRegions] = useState<TableRegion[]>(() => initialData?.regions ?? []);
 
   // FIX: Sync state when initialData arrives after mount.
   // useState initializer only runs once — if initialData is null on first render
@@ -86,6 +112,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     setCells(initialData.cells ?? {});
     setMerges(initialData.merges ?? {});
     setColWidths(initialData.colWidths ?? Array(COLS).fill(DCW));
+    setRegions(initialData.regions ?? []);
     // Notify parent so sheetDataRef is populated — but only with the loaded data
     // NOT called again after user edits (notify is called by upd/markExtract etc.)
     onSheetsChange?.(initialData);
@@ -106,23 +133,28 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const clipboard = useRef<Record<string, Cell> | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
-  const buildSaveData = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[]): SheetSaveData => {
+  const buildSaveData = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[], rg?: TableRegion[]): SheetSaveData => {
     // THE ONE RULE (Phase 2a): a cell with text is a static label, an empty
     // cell is a slot. There is no separate "extract here" marker any more —
     // it was a second way of saying the same thing, and the two could
     // disagree. The server derives the template's shape from this grid alone.
-    const repeatRowsSet = new Set<number>();
-    Object.entries(c).forEach(([key, cell]) => {
-      if (!cell) return;
-      const [r] = key.split(",").map(Number);
-      if (cell.repeatRow) repeatRowsSet.add(r);
+    //
+    // `repeatRows` is now derived from the DECLARED tables rather than from a
+    // per-cell flag, so it still describes the line-item rows for anything
+    // reading the saved shape — but there is only one place that decides what
+    // a table is.
+    const rows = new Set<number>();
+    (rg ?? []).forEach(g => {
+      if (g.orientation !== "rows") return;
+      for (let r = Math.min(g.r1, g.r2) + 1; r <= Math.max(g.r1, g.r2); r++) rows.add(r);
     });
-    return { cells: c, colWidths: cw, merges: m, repeatRows: [...repeatRowsSet].sort((a, b) => a - b) };
+    return { cells: c, colWidths: cw, merges: m,
+             repeatRows: [...rows].sort((a, b) => a - b), regions: rg ?? [] };
   }, []);
 
-  const notify = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[]) => {
-    onSheetsChange?.(buildSaveData(c, m, cw));
-  }, [onSheetsChange, buildSaveData]);
+  const notify = useCallback((c: Record<string, Cell>, m: Record<string, { rows: number; cols: number }>, cw: number[], rg?: TableRegion[]) => {
+    onSheetsChange?.(buildSaveData(c, m, cw, rg ?? regions));
+  }, [onSheetsChange, buildSaveData, regions]);
 
   const cs: CellStyle = useMemo(() => cells[ck(selR, selC)]?.style ?? {}, [cells, selR, selC]);
   const curCell = useMemo(() => cells[ck(selR, selC)], [cells, selR, selC]);
@@ -159,35 +191,48 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     return keys;
   }, [rng, ctrlSel]);
 
-  const markRepeat = useCallback(() => {
-    ph();
-    const r1 = Math.min(rng.r1, rng.r2);
-    const r2 = Math.max(rng.r1, rng.r2);
-    // Also include rows from ctrl-selected cells
-    const ctrlRows = new Set<number>();
-    ctrlSel.forEach(k => { const [r] = k.split(",").map(Number); ctrlRows.add(r); });
-    const next = { ...cells };
-    const alreadyRepeat = Object.entries(next).some(([k, cell]) => {
-      const [r] = k.split(",").map(Number);
-      return (r >= r1 && r <= r2 || ctrlRows.has(r)) && cell.repeatRow;
-    });
-    // Apply to range rows
-    for (let r = r1; r <= r2; r++) for (let c = 0; c < COLS; c++) {
-      const k = ck(r, c);
-      next[k] = { ...(next[k] ?? { value: "", style: {} }), repeatRow: !alreadyRepeat };
-    }
-    // Apply to ctrl-selected rows
-    ctrlRows.forEach(r => {
-      if (r < r1 || r > r2) {
-        for (let c = 0; c < COLS; c++) {
-          const k = ck(r, c);
-          next[k] = { ...(next[k] ?? { value: "", style: {} }), repeatRow: !alreadyRepeat };
-        }
-      }
-    });
-    upd(next);
-    setCtrlSel(new Set());
-  }, [cells, selR, selC, rng, ctrlSel, ph, upd]);
+  // ── DECLARING A TABLE ──────────────────────────────────────────────────────
+  // This replaces "Repeat row", which wrote a `repeatRow` flag across all 26
+  // columns of a row that no part of the extraction pipeline ever read — a
+  // second, silent source of truth about what a table is.
+  //
+  // A declaration is the table AS SELECTED, heading line included, plus which
+  // way its records run. The engine reads it instead of inferring; everything
+  // not declared is still inferred, so nothing that works today changes.
+
+  const setRegionsAndNotify = useCallback((next: TableRegion[]) => {
+    setRegions(next);
+    onSheetsChange?.(buildSaveData(cells, merges, colWidths, next));
+  }, [cells, merges, colWidths, onSheetsChange, buildSaveData]);
+
+  const regionAt = useCallback((r: number, c: number) =>
+    regions.findIndex(g => r >= Math.min(g.r1, g.r2) && r <= Math.max(g.r1, g.r2)
+                        && c >= Math.min(g.c1, g.c2) && c <= Math.max(g.c1, g.c2)),
+    [regions]);
+
+  const selBox = useMemo(() => ({
+    r1: Math.min(rng.r1, rng.r2), r2: Math.max(rng.r1, rng.r2),
+    c1: Math.min(rng.c1, rng.c2), c2: Math.max(rng.c1, rng.c2),
+  }), [rng]);
+
+  const markTable = useCallback((orientation: "rows" | "columns") => {
+    const { r1, r2, c1, c2 } = selBox;
+    // A one-line selection cannot be a table: rows-orientation needs a heading
+    // row plus data rows beneath, columns-orientation a heading column plus
+    // record columns beside it. Refuse rather than declare something empty.
+    if (orientation === "rows" ? r2 <= r1 : c2 <= c1) return;
+    // Replace any region the selection overlaps — one declaration per area.
+    const kept = regions.filter(g =>
+      Math.max(g.r1, g.r2) < r1 || Math.min(g.r1, g.r2) > r2 ||
+      Math.max(g.c1, g.c2) < c1 || Math.min(g.c1, g.c2) > c2);
+    setRegionsAndNotify([...kept, { type: "table", r1, c1, r2, c2, orientation }]);
+  }, [selBox, regions, setRegionsAndNotify]);
+
+  const clearTable = useCallback(() => {
+    const i = regionAt(selR, selC);
+    if (i < 0) return;
+    setRegionsAndNotify(regions.filter((_, j) => j !== i));
+  }, [regionAt, selR, selC, regions, setRegionsAndNotify]);
 
   const doUndo = useCallback(() => {
     if (!hist.length) return;
@@ -451,7 +496,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const d = await templatesApi.shape({ cells, colWidths, merges, repeatRows: [] });
+        const d = await templatesApi.shape({ cells, colWidths, merges, repeatRows: [], regions });
         if (cancelled) return;
         setSlotKeys(new Set(d.field_cells ?? []));
         setBandKeys(new Set(d.band_cells ?? []));
@@ -463,14 +508,17 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       }
     }, 400);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [cells, colWidths, merges]);
+  }, [cells, colWidths, merges, regions]);
 
   const isSlot = useCallback(
     (r: number, c: number) => slotKeys.has(`${r},${c}`) || bandKeys.has(`${r},${c}`),
     [slotKeys, bandKeys]);
   const slotCount = slotKeys.size + bandKeys.size;
 
-  const repeatRowCount = useMemo(() => new Set(Object.entries(cells).filter(([, c]) => c?.repeatRow).map(([k]) => k.split(",")[0])).size, [cells]);
+  const curRegion = useMemo(() => {
+    const i = regionAt(selR, selC);
+    return i < 0 ? null : regions[i];
+  }, [regionAt, selR, selC, regions]);
 
   const tb = (active = false): React.CSSProperties => ({
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -495,7 +543,6 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     </div>
   );
 
-  const isRepeatRow = (r: number) => Array.from({ length: 3 }, (_, c) => cells[ck(r, c)]?.repeatRow).some(Boolean);
   const formulaVal = editR !== null ? editVal : (cells[ck(selR, selC)]?.value ?? "");
 
   return (
@@ -564,13 +611,36 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           </span>
         </button>
         <div style={sep} />
-        <button
-          style={{ ...tb(!!curCell?.repeatRow), background: curCell?.repeatRow ? "#dbeafe" : "transparent", border: `1px solid ${curCell?.repeatRow ? "#2563eb" : "#e5e7eb"}`, color: "#1d4ed8", gap: 5, padding: "3px 10px", minWidth: "auto" }}
-          onClick={markRepeat} title="Repeat row for each line item"
-        >
-          <IconRepeat />
-          <span style={{ fontSize: 11, fontWeight: 600 }}>Repeat row</span>
-        </button>
+        {curRegion ? (
+          <button
+            style={{ ...tb(true), background: "#dbeafe", border: "1px solid #2563eb",
+                     color: "#1d4ed8", gap: 5, padding: "3px 10px", minWidth: "auto" }}
+            onClick={clearTable}
+            title={`This is a declared table (records run ${curRegion.orientation === "columns" ? "across" : "down"}). Click to undeclare it.`}
+          >
+            <IconRepeat />
+            <span style={{ fontSize: 11, fontWeight: 600 }}>
+              Table {curRegion.orientation === "columns" ? "→" : "↓"} · remove
+            </span>
+          </button>
+        ) : (
+          <>
+            <button
+              style={{ ...tb(), border: "1px solid #e5e7eb", color: selBox.r2 > selBox.r1 ? "#1d4ed8" : "#9ca3af", gap: 5, padding: "3px 10px", minWidth: "auto" }}
+              onClick={() => markTable("rows")}
+              title="Select the table including its heading row, then click: headings across the top, one record per row"
+            >
+              <span style={{ fontSize: 11, fontWeight: 600 }}>Table ↓</span>
+            </button>
+            <button
+              style={{ ...tb(), border: "1px solid #e5e7eb", color: selBox.c2 > selBox.c1 ? "#1d4ed8" : "#9ca3af", gap: 5, padding: "3px 10px", minWidth: "auto" }}
+              onClick={() => markTable("columns")}
+              title="Select the table including its heading column, then click: headings down the left, one record per column"
+            >
+              <span style={{ fontSize: 11, fontWeight: 600 }}>Table →</span>
+            </button>
+          </>
+        )}
         <div style={sep} />
         <button style={{ ...tb(), color: "#6b7280", fontSize: 11 }}
           onClick={() => applyStyle({ bold: false, italic: false, underline: false, strike: false, fontColor: undefined, bgColor: undefined, align: undefined, borderAll: false, borderOuter: false, wrap: false, fontSize: 11, fontFamily: undefined })}
@@ -617,11 +687,13 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           style={{ flex: 1, height: "100%", border: "none", outline: "none", padding: "0 10px", fontSize: 12, color: "#374151", background: "transparent", fontFamily: "inherit" }}
           placeholder="Click a cell to edit..."
         />
-        {(curCell?.repeatRow || isSlot(selR, selC)) && (
+        {(curRegion || isSlot(selR, selC)) && (
           <div style={{ flexShrink: 0, padding: "0 12px", borderLeft: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: curCell?.repeatRow ? "#2563eb" : "#16a34a", display: "inline-block" }} />
-            <span style={{ fontSize: 11, color: curCell?.repeatRow ? "#1d4ed8" : "#15803d", fontWeight: 600 }}>
-              {curCell?.repeatRow ? "Repeat row" : "Slot — the AI fills this cell"}
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: curRegion ? "#2563eb" : "#16a34a", display: "inline-block" }} />
+            <span style={{ fontSize: 11, color: curRegion ? "#1d4ed8" : "#15803d", fontWeight: 600 }}>
+              {curRegion
+                ? `Declared table — one record per ${curRegion.orientation === "columns" ? "column" : "row"}`
+                : "Slot — the AI fills this cell"}
             </span>
           </div>
         )}
@@ -647,7 +719,8 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
           </thead>
           <tbody>
             {Array.from({ length: ROWS }, (_, r) => {
-              const rowIsRepeat = isRepeatRow(r);
+              const rowIsRepeat = regions.some(g =>
+                g.orientation === "rows" && r > Math.min(g.r1, g.r2) && r <= Math.max(g.r1, g.r2));
               return (
                 <tr key={r} style={{ height: DRH }}>
                   <td
@@ -669,8 +742,10 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                     const isSel = selR === r && selC === c;
                     const ir = inRange(r, c);
                     const isCtrlSel = ctrlSel.has(ck(r, c));
-                    const isExtract = showSlots && isSlot(r, c) && !cell?.repeatRow;
-                    const isRepeat = cell?.repeatRow;
+                    const isExtract = showSlots && isSlot(r, c);
+                    // Inside a DECLARED table: outlined so the declaration is
+                    // visible as the region the user drew, heading line included.
+                    const isRepeat = regionAt(r, c) >= 0;
                     const tw = Array.from({ length: cs2 }, (_, i) => colWidths[c + i] ?? DCW).reduce((a, b) => a + b, 0);
                     const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.06)" : isCtrlSel ? "rgba(79,70,229,0.12)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
                     const bd = isSel ? "2px solid #4f46e5" : isCtrlSel ? "2px solid #7c3aed" : isRepeat ? "1px solid #93c5fd" : isExtract ? "1px solid #86efac" : ir ? "1px solid #a5b4fc" : "1px solid #e5e7eb";
@@ -705,7 +780,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                         onMouseDown={e => { if (e.button !== 0) return; mouseDown.current = true; setSelR(r); setSelC(c); setRng({ r1: r, c1: c, r2: r, c2: c }); }}
                         onMouseEnter={() => { if (mouseDown.current) setRng(p => ({ ...p, r2: r, c2: c })); }}
                       >
-                        {(isExtract || isRepeat) && (
+                        {isExtract && (
                           <div style={{ position: "absolute", top: 2, right: 3, width: 6, height: 6, borderRadius: "50%", background: isRepeat ? "#2563eb" : "#16a34a", zIndex: 2 }} />
                         )}
                         {isEdit ? (
@@ -755,8 +830,9 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
-          <span style={{ color: repeatRowCount > 0 ? "#1d4ed8" : "#9ca3af", fontWeight: repeatRowCount > 0 ? 600 : 400 }}>
-            {repeatRowCount} repeat row{repeatRowCount !== 1 ? "s" : ""}
+          <span style={{ color: regions.length > 0 ? "#1d4ed8" : "#9ca3af", fontWeight: regions.length > 0 ? 600 : 400 }}
+            title="Tables this template declares. Anything not declared is still detected from the layout.">
+            {regions.length} declared table{regions.length !== 1 ? "s" : ""}
           </span>
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#d1d5db" }}>

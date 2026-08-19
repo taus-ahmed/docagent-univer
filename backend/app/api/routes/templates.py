@@ -114,13 +114,25 @@ def preview_shape(payload: dict, current_user: User = Depends(get_current_user))
     field_cells = [f"{f['row']},{f['col']}" for f in shape.get("field_slots") or []]
     band_cells, bands = [], []
     for b in shape.get("repeat_bands") or []:
-        cells = [f"{r},{c['col']}"
-                 for r in range(b["start_row"], b["end_row"] + 1)
-                 for c in b["columns"]]
-        band_cells.extend(cells)
-        bands.append({"name": b["name"], "header_row": b["header_row"],
+        if b.get("orientation") == "columns":
+            # Transposed: the fillable cells are the record COLUMNS, one row
+            # per declared field. The heading column stays static.
+            band_cells.extend(
+                f"{f['row']},{c}"
+                for f in b.get("fields") or []
+                for c in range(b["start_col"], b["end_col"] + 1))
+            headers = [f["header"] for f in b.get("fields") or []]
+        else:
+            band_cells.extend(
+                f"{r},{c['col']}"
+                for r in range(b["start_row"], b["end_row"] + 1)
+                for c in b["columns"])
+            headers = [c["header"] for c in b["columns"]]
+        bands.append({"name": b["name"], "header_row": b.get("header_row", 0),
                       "start_row": b["start_row"], "end_row": b["end_row"],
-                      "columns": [c["header"] for c in b["columns"]]})
+                      "orientation": b.get("orientation", "rows"),
+                      "declared": bool(b.get("declared")),
+                      "columns": headers})
     return {
         "field_cells": field_cells,
         "band_cells": band_cells,

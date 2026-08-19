@@ -88,6 +88,136 @@ def _section_for(m, static, row):
     return ""
 
 
+def _declared_bands(grid, m, say):
+    """Read `grid["regions"]` — the template declaring its own tables.
+
+    A declared region is the table AS THE USER SEES IT, heading line included,
+    so what is selected on screen is exactly what is declared. `orientation`
+    says which way the records run:
+
+        "rows"     headings across the region's FIRST ROW; one record per row.
+        "columns"  headings down the region's FIRST COLUMN; one record per
+                   column — a transposed table. Detection cannot express this
+                   shape at all: it looks for headings with empty rows beneath,
+                   finds none, and silently reads the headings as unrelated
+                   single fields.
+
+    Detection still runs for everything not declared, so the 19 templates in
+    production are unaffected.
+
+    ┌──────────────────────────────────────────────────────────────────────────┐
+    │ COORDINATE STALENESS — READ BEFORE ADDING ROW OR COLUMN INSERTION.       │
+    │                                                                          │
+    │ A region is stored as absolute coordinates (r1,c1,r2,c2). Today the      │
+    │ editor can only edit cells in place, so those coordinates cannot move    │
+    │ and a declaration cannot go stale.                                       │
+    │                                                                          │
+    │ Insert/delete row or column ends that, and a stale declaration is worse  │
+    │ than none: it points confidently at the wrong cells. Whoever adds        │
+    │ insertion MUST shift declarations in the SAME commit:                    │
+    │                                                                          │
+    │   insert row at R  ->  r1 += 1 if r1 >= R ;  r2 += 1 if r2 >= R          │
+    │   delete row at R  ->  r1 -= 1 if r1 >  R ;  r2 -= 1 if r2 >  R          │
+    │                        then DROP the region if r2 <= r1                  │
+    │   columns: the same against c1/c2                                        │
+    │                                                                          │
+    │ Note this is unlike `shape`, which is deliberately never stored because  │
+    │ it can be recomputed from the grid. A declaration is user INTENT — it    │
+    │ CANNOT be recomputed, so it has to be maintained instead.                │
+    └──────────────────────────────────────────────────────────────────────────┘
+    """
+    out = []
+    regions = (grid or {}).get("regions")
+    if not isinstance(regions, list):
+        return out
+
+    for i, reg in enumerate(regions):
+        if not isinstance(reg, dict) or reg.get("type") != "table":
+            continue
+        try:
+            r1, r2 = int(reg["r1"]), int(reg["r2"])
+            c1, c2 = int(reg["c1"]), int(reg["c2"])
+        except (KeyError, TypeError, ValueError):
+            say(f"declared region {i + 1} is malformed — ignored")
+            continue
+        r1, r2 = min(r1, r2), max(r1, r2)
+        c1, c2 = min(c1, c2), max(c1, c2)
+        orient = "columns" if str(reg.get("orientation")) == "columns" else "rows"
+        name = str(reg.get("name") or "").strip()
+
+        if orient == "rows":
+            if r2 <= r1 or c2 < c1:
+                say(f"declared region {i + 1} has no data rows beneath its "
+                    f"heading row — ignored")
+                continue
+            heads = [str(m.get((r1, c), "") or "").strip()
+                     for c in range(c1, c2 + 1)]
+            columns = []
+            for c, h in zip(range(c1, c2 + 1), heads):
+                label = h or f"Column {_col_letter(c)}"
+                key = label if heads.count(h) == 1 else f"{label} ({_col_letter(c)})"
+                columns.append({
+                    "col": c, "header": label, "key": key,
+                    # A two-column table is a label/value pair by construction.
+                    "role": "label" if (c == c1 and len(heads) == 2) else "value",
+                })
+            out.append({
+                "name": name or (heads[0] if len(heads) == 2 and heads[0]
+                                 else f"Table {len(out) + 1}"),
+                "orientation": "rows", "declared": True,
+                "header_row": r1, "start_row": r1 + 1, "end_row": r2,
+                "columns": columns, "section": name,
+            })
+            say(f"declared table: rows {r1 + 2}-{r2 + 1}, "
+                f"{len(columns)} columns, one record per row")
+        else:
+            if c2 <= c1 or r2 < r1:
+                say(f"declared region {i + 1} has no data columns beside its "
+                    f"heading column — ignored")
+                continue
+            fields = []
+            for r in range(r1, r2 + 1):
+                h = str(m.get((r, c1), "") or "").strip()
+                if h:
+                    fields.append({"row": r, "header": h, "key": h})
+            if not fields:
+                say(f"declared region {i + 1} has no headings down its first "
+                    f"column — ignored")
+                continue
+            out.append({
+                "name": name or f"Table {len(out) + 1}",
+                "orientation": "columns", "declared": True,
+                "header_col": c1, "start_col": c1 + 1, "end_col": c2,
+                "start_row": r1, "end_row": r2,
+                "fields": fields,
+                "columns": [],          # row-oriented callers see no columns
+                "header_row": r1, "section": name,
+            })
+            say(f"declared TRANSPOSED table: headings down column "
+                f"{_col_letter(c1)}, records in columns "
+                f"{_col_letter(c1 + 1)}-{_col_letter(c2)}, {len(fields)} fields")
+    return out
+
+
+def _band_width(band):
+    """How many columns a band needs from the writer."""
+    if band.get("orientation") == "columns":
+        # heading column + one column per record
+        return band["end_col"] - band["header_col"] + 1
+    return len(band.get("columns") or [])
+
+
+def declared_cells(band):
+    """Every grid cell a declared band owns, heading line included."""
+    if band.get("orientation") == "columns":
+        return {(r, c)
+                for r in range(band["start_row"], band["end_row"] + 1)
+                for c in range(band["header_col"], band["end_col"] + 1)}
+    return {(r, col["col"])
+            for r in range(band["header_row"], band["end_row"] + 1)
+            for col in band["columns"]}
+
+
 def compute_shape(grid, log=None):
     """Grid -> shape dict. Never raises; an unusable grid yields an empty shape."""
     def _say(msg):
@@ -105,9 +235,20 @@ def compute_shape(grid, log=None):
     max_col = max(c for _, c in m)
     static = {rc for rc, txt in m.items() if txt}
 
+    # ── what the template DECLARES comes first ────────────────────────────────
+    # Detection stays — it is what every template in production relies on — but
+    # it is no longer the only answer available for a shape it cannot express.
+    bands = _declared_bands(grid, m, _say)
+    claimed = set()
+    for b in bands:
+        claimed |= declared_cells(b)
+    claimed_rows = {r for r, _ in claimed}
+
     # ── repeating bands: >= 2 adjacent static cells with empty rows beneath ──
     header_candidates = {}
     for r in rows:
+        if r in claimed_rows:
+            continue                                    # inside a declared table
         cols = sorted(c for c in range(max_col + 1) if (r, c) in static)
         if len(cols) < 2:
             continue
@@ -116,8 +257,6 @@ def compute_shape(grid, log=None):
         if any((r + 1, c) in static for c in cols):
             continue                                    # a stack of labels
         header_candidates[r] = cols
-
-    bands = []
 
     for hr, cols in sorted(header_candidates.items()):
         later = [r for r in rows
@@ -200,10 +339,13 @@ def compute_shape(grid, log=None):
         # right-hand half of the sheet.
         c = 0
         while c <= max_col:
-            if (r, c) not in static:
+            if (r, c) not in static or (r, c) in claimed:
                 c += 1
                 continue
             cc = c + 1
+            if (r, cc) in claimed:      # the slot belongs to a declared table
+                c += 1
+                continue
             if (r, cc) in m and (r, cc) not in static:   # present and empty -> slot
                 field_slots.append({
                     "slot_id": f"F{len(field_slots) + 1}",
@@ -218,10 +360,14 @@ def compute_shape(grid, log=None):
                 c += 1
 
     for b in bands:
-        label_cols.add(b["columns"][0]["col"])
-        value_cols.update(c["col"] for c in b["columns"][1:])
+        if b.get("orientation") == "columns":
+            label_cols.add(b["header_col"])
+            value_cols.update(range(b["start_col"], b["end_col"] + 1))
+        elif b["columns"]:
+            label_cols.add(b["columns"][0]["col"])
+            value_cols.update(c["col"] for c in b["columns"][1:])
 
-    required = max([len(b["columns"]) for b in bands] + [2 if field_slots else 0])
+    required = max([_band_width(b) for b in bands] + [2 if field_slots else 0])
 
     shape = {
         "version": SHAPE_VERSION,
@@ -337,8 +483,15 @@ def describe(shape):
     b = shape.get("repeat_bands") or []
     parts = [f"{len(shape.get('field_slots') or [])} field slots"]
     for band in b:
-        cols = ", ".join(c["header"] for c in band["columns"])
-        parts.append(f'band "{band["name"]}" rows {band["start_row"] + 1}-'
-                     f'{band["end_row"] + 1} [{cols}]')
+        kind = "declared " if band.get("declared") else ""
+        if band.get("orientation") == "columns":
+            fields = ", ".join(f["header"] for f in band.get("fields") or [])
+            parts.append(f'{kind}transposed band "{band["name"]}" columns '
+                         f'{_col_letter(band["start_col"])}-'
+                         f'{_col_letter(band["end_col"])} [{fields}]')
+        else:
+            cols = ", ".join(c["header"] for c in band["columns"])
+            parts.append(f'{kind}band "{band["name"]}" rows '
+                         f'{band["start_row"] + 1}-{band["end_row"] + 1} [{cols}]')
     parts.append(f"needs {shape.get('required_columns', 0)} columns")
     return "; ".join(parts)

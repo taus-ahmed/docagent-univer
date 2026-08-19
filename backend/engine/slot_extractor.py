@@ -74,6 +74,31 @@ def slots_from_shape(shape):
             "tables": list((shape or {}).get("repeat_bands") or [])}
 
 
+def table_headers(t):
+    """The keys the model answers a table with, whichever way it runs.
+
+    A transposed table's headings live down its first COLUMN, so its "columns"
+    for answering purposes are its field names — one answer object per record
+    (per document column) instead of per row. Everything downstream then treats
+    both orientations identically; only the writer has to transpose.
+    """
+    if t.get("orientation") == "columns":
+        return [f["header"] for f in t.get("fields") or []]
+    return [c.get("key") or c["header"] for c in t.get("columns") or []]
+
+
+def _table_map(t):
+    """The geometry the writer needs to place a table's answers."""
+    m = {"name": t["name"], "header_row": t.get("header_row", t.get("start_row", 0)),
+         "start_row": t["start_row"], "end_row": t["end_row"],
+         "columns": t.get("columns") or []}
+    if t.get("orientation") == "columns":
+        m.update({"orientation": "columns", "header_col": t["header_col"],
+                  "start_col": t["start_col"], "end_col": t["end_col"],
+                  "fields": t.get("fields") or []})
+    return m
+
+
 def enumerate_slots(grid, shape=None):
     """Addressed slots for a template.
 
@@ -120,7 +145,20 @@ def build_prompt(slots, page_texts, doc_type=""):
         p.append("")
 
     for t in tables:
-        cols = " | ".join(c.get("key") or c["header"] for c in t["columns"])
+        cols = " | ".join(table_headers(t))
+        if t.get("orientation") == "columns":
+            # A transposed table is answered exactly like any other — one object
+            # per record — so the model never has to think in columns. Only the
+            # writer transposes.
+            p.append(f'TABLE "{t["name"]}" — one object per record present in the document.')
+            if t.get("section"):
+                p.append(f'  section: "{t["section"]}"')
+            p.append(f"  columns (use EXACTLY these keys): {cols}")
+            p.append(f'  the sheet has room for {t["end_col"] - t["start_col"] + 1} '
+                     f"records; return as many as the document actually has, not "
+                     f"that number.")
+            p.append("")
+            continue
         p.append(f'TABLE "{t["name"]}" — one object per row present in the document.')
         if t["section"]:
             p.append(f'  section: "{t["section"]}"')
@@ -137,8 +175,7 @@ def build_prompt(slots, page_texts, doc_type=""):
         p.append("  },")
     if tables:
         t0 = tables[0]
-        keys = ", ".join(f'"{c.get("key") or c["header"]}": "..."'
-                         for c in t0["columns"][:3])
+        keys = ", ".join(f'"{h}": "..."' for h in table_headers(t0)[:3])
         p.append('  "tables": {')
         p.append(f'    "{t0["name"]}": [')
         p.append(f'      {{"cells": {{{keys}, ...}}, '
@@ -315,7 +352,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 raw = next(iter(resp_tables.values()))  # model renamed the table
             if not isinstance(raw, list):
                 continue
-            headers = [c.get("key") or c["header"] for c in t["columns"]]
+            headers = table_headers(t)
             seen_sources, rows_out = set(), []
             for r in raw:
                 if not isinstance(r, dict):
@@ -402,9 +439,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         "slot_map": {
             "fields": [{k: f[k] for k in ("slot_id", "ref", "row_label", "section")}
                        for f in slots["fields"]],
-            "tables": [{"name": t["name"], "header_row": t["header_row"],
-                        "start_row": t["start_row"], "end_row": t["end_row"],
-                        "columns": t["columns"]} for t in slots["tables"]],
+            "tables": [_table_map(t) for t in slots["tables"]],
         },
         "validation": {
             "flagged_count": len(flagged),

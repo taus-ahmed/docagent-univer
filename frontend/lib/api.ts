@@ -248,7 +248,12 @@ export interface ShapePreview {
   field_count: number;
   band_count: number;
   bands: Array<{ name: string; header_row: number; start_row: number;
-                 end_row: number; columns: string[] }>;
+                 end_row: number; columns: string[];
+                 /** "rows" = records run down; "columns" = transposed. */
+                 orientation?: "rows" | "columns";
+                 /** true when the template declared it rather than the engine
+                  *  inferring it from the layout. */
+                 declared?: boolean }>;
   required_columns: number;
   summary: string;
 }

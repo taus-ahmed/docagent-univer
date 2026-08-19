@@ -4490,6 +4490,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 max_r, max_c = max(max_r, rc[0]), max(max_c, rc[1])
         for t in sm.get("tables") or []:
             max_r = max(max_r, int(t.get("end_row", 0)))
+            if t.get("orientation") == "columns":
+                # A transposed table overflows SIDEWAYS: more records than the
+                # template drew columns for widens the sheet instead of
+                # lengthening it.
+                records = len(ed.get(f"{t['name']}_rows") or [])
+                max_c = max(max_c, int(t.get("start_col", 0)) + max(records - 1, 0),
+                            int(t.get("end_col", 0)))
             for col in t.get("columns") or []:
                 max_c = max(max_c, int(col.get("col", 0)))
 
@@ -4523,9 +4530,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         tables = slot_map.get("tables") or []
         fields = ed.get("extracted_fields") or {}
 
-        # how far each template row moves down, given table overflow
+        # how far each template row moves down, given table overflow. A
+        # transposed table never pushes rows down — it grows to the right — so
+        # it contributes no shift.
         shifts = []
         for t in tables:
+            if t.get("orientation") == "columns":
+                continue
             rows = ed.get(f"{t['name']}_rows") or []
             band = t["end_row"] - t["start_row"] + 1
             shifts.append((t["end_row"], max(0, len(rows) - band)))
@@ -4533,9 +4544,18 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         def out_row(tr):
             return tr + sum(ov for end, ov in shifts if tr > end)
 
-        band_rows = set()
+        # Cells the table itself will fill, which must not also get static text.
+        # A row-oriented band owns whole rows; a transposed one owns only its
+        # record columns — its heading column IS the template's static labels
+        # and has to survive.
+        band_rows, band_cells = set(), set()
         for t in tables:
-            band_rows.update(range(t["start_row"], t["end_row"] + 1))
+            if t.get("orientation") == "columns":
+                band_cells.update(
+                    (r, c) for r in range(t["start_row"], t["end_row"] + 1)
+                    for c in range(t["start_col"], max_c + 1))
+            else:
+                band_rows.update(range(t["start_row"], t["end_row"] + 1))
 
         # 1. static template text, at its shifted position
         for key, cell_def in cells_tpl.items():
@@ -4546,6 +4566,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             except ValueError:
                 continue
             if tr > max_r or tc > max_c or tr in band_rows:
+                continue
+            if (tr, tc) in band_cells:
                 continue
             text = str(cell_def.get("value") or "").strip()
             if text:
@@ -4564,6 +4586,14 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         # 3. table rows, in their band, by column header address
         for t in tables:
             rows = ed.get(f"{t['name']}_rows") or []
+            if t.get("orientation") == "columns":
+                # Transposed: record i is a COLUMN, each field a fixed row.
+                for i, rec in enumerate(rows):
+                    c = t["start_col"] + i
+                    for f in t.get("fields") or []:
+                        put(doc_offset + out_row(f["row"]), c,
+                            rec.get(f["header"], ""))
+                continue
             for i, row in enumerate(rows):
                 r = doc_offset + out_row(t["start_row"]) + i
                 for col in t["columns"]:
