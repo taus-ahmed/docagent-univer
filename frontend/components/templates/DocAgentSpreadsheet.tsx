@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { templatesApi } from "@/lib/api";
 
 interface CellStyle {
   bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean;
@@ -433,27 +434,42 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   };
 
   // All currently selected cell keys (range + ctrl-selected)
-  // Slots = empty cells inside the used region. This IS the rule, applied live,
-  // so the editor shows the same thing the engine will derive on save.
-  const usedBox = useMemo(() => {
-    let mr = -1, mc = -1;
-    Object.entries(cells).forEach(([k, cell]) => {
-      if (!cell?.value?.trim()) return;
-      const [r, c] = k.split(",").map(Number);
-      if (r > mr) mr = r;
-      if (c > mc) mc = c;
-    });
-    return { mr, mc };
-  }, [cells]);
-  const isSlot = useCallback((r: number, c: number) => {
-    if (r > usedBox.mr || c > usedBox.mc) return false;
-    return !cells[ck(r, c)]?.value?.trim();
-  }, [cells, usedBox]);
-  const slotCount = useMemo(() => {
-    let n = 0;
-    for (let r = 0; r <= usedBox.mr; r++) for (let c = 0; c <= usedBox.mc; c++) if (isSlot(r, c)) n++;
-    return n;
-  }, [usedBox, isSlot]);
+
+  // WHICH CELLS ARE SLOTS is answered by the engine, not re-derived here.
+  // Highlighting every empty cell in the bounding box painted a wall of green
+  // — one template showed 54 slots where about 15 were intended — because a
+  // single label parked out in column G stretched the box across everything to
+  // its left. A cell is a slot only when it sits beside a static label or
+  // inside a detected band, and that rule lives in template_shape.compute_shape.
+  // Asking the server keeps ONE implementation and guarantees the highlight
+  // matches what will actually be extracted.
+  const [slotKeys, setSlotKeys] = useState<Set<string>>(new Set());
+  const [bandKeys, setBandKeys] = useState<Set<string>>(new Set());
+  const [showSlots, setShowSlots] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const d = await templatesApi.shape({ cells, colWidths, merges, repeatRows: [] });
+        if (cancelled) return;
+        setSlotKeys(new Set(d.field_cells ?? []));
+        setBandKeys(new Set(d.band_cells ?? []));
+      } catch {
+        // On failure highlight NOTHING rather than guessing. A wrong highlight
+        // is worse than none: it tells the user a cell will be filled when it
+        // will not.
+        if (!cancelled) { setSlotKeys(new Set()); setBandKeys(new Set()); }
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [cells, colWidths, merges]);
+
+  const isSlot = useCallback(
+    (r: number, c: number) => slotKeys.has(`${r},${c}`) || bandKeys.has(`${r},${c}`),
+    [slotKeys, bandKeys]);
+  const slotCount = slotKeys.size + bandKeys.size;
+
   const repeatRowCount = useMemo(() => new Set(Object.entries(cells).filter(([, c]) => c?.repeatRow).map(([k]) => k.split(",")[0])).size, [cells]);
 
   const tb = (active = false): React.CSSProperties => ({
@@ -532,6 +548,21 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         <button style={tb()} onClick={splitCells} title="Split merged"><span style={{ fontSize: 11, fontWeight: 500 }}>Split</span></button>
         <div style={sep} />
         <button style={tb(!!cs.wrap)} onClick={() => applyStyle({ wrap: !cs.wrap })} title="Wrap text"><IconWrap /></button>
+        <div style={sep} />
+        <button
+          style={{ ...tb(showSlots), background: showSlots ? "#dcfce7" : "transparent",
+                   border: `1px solid ${showSlots ? "#16a34a" : "#e5e7eb"}`,
+                   color: showSlots ? "#15803d" : "#6b7280", gap: 5,
+                   padding: "3px 10px", minWidth: "auto" }}
+          onClick={() => setShowSlots(v => !v)}
+          title={showSlots
+            ? `Hide slot highlighting (${slotCount} cell${slotCount !== 1 ? "s" : ""} will be filled)`
+            : "Show which cells the AI will fill"}
+        >
+          <span style={{ fontSize: 11, fontWeight: 600 }}>
+            {showSlots ? `Slots: ${slotCount}` : "Show slots"}
+          </span>
+        </button>
         <div style={sep} />
         <button
           style={{ ...tb(!!curCell?.repeatRow), background: curCell?.repeatRow ? "#dbeafe" : "transparent", border: `1px solid ${curCell?.repeatRow ? "#2563eb" : "#e5e7eb"}`, color: "#1d4ed8", gap: 5, padding: "3px 10px", minWidth: "auto" }}
@@ -638,7 +669,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                     const isSel = selR === r && selC === c;
                     const ir = inRange(r, c);
                     const isCtrlSel = ctrlSel.has(ck(r, c));
-                    const isExtract = isSlot(r, c) && !cell?.repeatRow;
+                    const isExtract = showSlots && isSlot(r, c) && !cell?.repeatRow;
                     const isRepeat = cell?.repeatRow;
                     const tw = Array.from({ length: cs2 }, (_, i) => colWidths[c + i] ?? DCW).reduce((a, b) => a + b, 0);
                     const bg = s.bgColor ?? (isRepeat ? "rgba(37,99,235,0.06)" : isCtrlSel ? "rgba(79,70,229,0.12)" : ir ? "rgba(79,70,229,0.06)" : "#fff");
@@ -717,7 +748,8 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         )}
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
-          <span style={{ color: slotCount > 0 ? "#15803d" : "#9ca3af", fontWeight: slotCount > 0 ? 600 : 400 }}>
+          <span style={{ color: slotCount > 0 ? "#15803d" : "#9ca3af", fontWeight: slotCount > 0 ? 600 : 400 }}
+                title={`${slotKeys.size} field slot(s) + ${bandKeys.size} table cell(s)`}>
             {slotCount} slot{slotCount !== 1 ? "s" : ""}
           </span>
         </span>

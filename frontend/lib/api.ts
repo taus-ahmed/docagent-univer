@@ -242,7 +242,25 @@ export const schemasApi = {
 
 // --- Templates API ---
 
+export interface ShapePreview {
+  field_cells: string[];   // "row,col" keys the engine will fill as fields
+  band_cells: string[];    // "row,col" keys inside a detected table band
+  field_count: number;
+  band_count: number;
+  bands: Array<{ name: string; header_row: number; start_row: number;
+                 end_row: number; columns: string[] }>;
+  required_columns: number;
+  summary: string;
+}
+
 export const templatesApi = {
+  /** Ask the engine which cells it will actually fill for this grid.
+   *  The editor highlights exactly these, so what you see is what gets
+   *  extracted — the rule has one implementation, on the server. */
+  shape: async (grid: unknown): Promise<ShapePreview> => {
+    const res = await api.post<ShapePreview>("/api/templates/shape", { grid });
+    return res.data;
+  },
   list: async (documentType?: string, q?: string): Promise<ColumnTemplate[]> => {
     const params: Record<string, string> = {};
     if (documentType) params.document_type = documentType;

@@ -81,6 +81,57 @@ def get_template(
     raise HTTPException(status_code=403, detail="Access denied")
 
 
+@router.post("/shape")
+def preview_shape(payload: dict, current_user: User = Depends(get_current_user)):
+    """Return the shape the engine derives from a grid, without saving it.
+
+    The editor calls this so the cells it highlights are exactly the cells the
+    engine will fill — no more, no less. Re-implementing the rule in the
+    frontend would give two answers to the same question, which is what
+    removing `extractTarget` was about; this keeps ONE implementation and lets
+    the editor show its result.
+
+    Returns the cells as "row,col" keys, matching the grid's own addressing.
+    """
+    grid = payload.get("grid") if isinstance(payload, dict) else None
+    if isinstance(grid, str):
+        try:
+            grid = json.loads(grid)
+        except Exception:
+            grid = None
+    if not (isinstance(grid, dict) and isinstance(grid.get("cells"), dict)):
+        return {"field_cells": [], "band_cells": [], "field_count": 0,
+                "band_count": 0, "summary": "", "error": "not a grid"}
+
+    try:
+        from app.api.routes.extract import _compute_shape_for_grid
+        shape = _compute_shape_for_grid(grid) or {}
+    except Exception as e:
+        print(f"[TEMPLATE] shape preview failed: {e}", flush=True)
+        return {"field_cells": [], "band_cells": [], "field_count": 0,
+                "band_count": 0, "summary": "", "error": str(e)[:200]}
+
+    field_cells = [f"{f['row']},{f['col']}" for f in shape.get("field_slots") or []]
+    band_cells, bands = [], []
+    for b in shape.get("repeat_bands") or []:
+        cells = [f"{r},{c['col']}"
+                 for r in range(b["start_row"], b["end_row"] + 1)
+                 for c in b["columns"]]
+        band_cells.extend(cells)
+        bands.append({"name": b["name"], "header_row": b["header_row"],
+                      "start_row": b["start_row"], "end_row": b["end_row"],
+                      "columns": [c["header"] for c in b["columns"]]})
+    return {
+        "field_cells": field_cells,
+        "band_cells": band_cells,
+        "field_count": len(field_cells),
+        "band_count": len(band_cells),
+        "bands": bands,
+        "required_columns": shape.get("required_columns", 0),
+        "summary": shape.get("summary", ""),
+    }
+
+
 @router.post("", response_model=TemplateResponse, status_code=201)
 def create_template(
     payload: TemplateCreate,
