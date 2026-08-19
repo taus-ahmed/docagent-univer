@@ -1,6 +1,6 @@
 {
- "run_id": "2026-08-18 17:22:16",
- "git_commit": "deec967",
+ "run_id": "2026-08-18 17:31:35",
+ "git_commit": "1a64dd8",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -46,87 +46,106 @@
      "current_assets": [
       {
        "Label": "Cash & Cash Equivalents",
-       "Amount": "143,803"
+       "Amount": "143,803",
+       "_confidence": "high"
       },
       {
        "Label": "Accounts Receivable (net)",
-       "Amount": "348,200"
+       "Amount": "348,200",
+       "_confidence": "high"
       },
       {
        "Label": "Inventory",
-       "Amount": "612,000"
+       "Amount": "612,000",
+       "_confidence": "high"
       },
       {
        "Label": "Prepaid Expenses",
-       "Amount": "16,200"
+       "Amount": "16,200",
+       "_confidence": "high"
       },
       {
        "Label": "Other Current Assets",
-       "Amount": "8,800"
+       "Amount": "8,800",
+       "_confidence": "high"
       }
      ],
      "non_current_assets": [
       {
        "Label": "Property & Equipment (gross)",
-       "Amount": "240,000"
+       "Amount": "240,000",
+       "_confidence": "high"
       },
       {
        "Label": "Less: Accum. Depreciation",
-       "Amount": "108,500"
+       "Amount": "108,500",
+       "_confidence": "high"
       },
       {
        "Label": "Security Deposits",
-       "Amount": "85,000"
+       "Amount": "85,000",
+       "_confidence": "high"
       },
       {
        "Label": "Intangibles (net)",
-       "Amount": "20,000"
+       "Amount": "20,000",
+       "_confidence": "high"
       }
      ],
      "current_liabilities": [
       {
        "Label": "Accounts Payable",
-       "Amount": "254,800"
+       "Amount": "254,800",
+       "_confidence": "high"
       },
       {
        "Label": "Accrued Liabilities",
-       "Amount": "44,200"
+       "Amount": "44,200",
+       "_confidence": "high"
       },
       {
        "Label": "Short-term Loan — First National Bank",
-       "Amount": "80,000"
+       "Amount": "80,000",
+       "_confidence": "high"
       },
       {
        "Label": "Deferred Revenue",
-       "Amount": "18,200"
+       "Amount": "18,200",
+       "_confidence": "high"
       },
       {
        "Label": "Current Portion of Long-term Debt",
-       "Amount": "24,000"
+       "Amount": "24,000",
+       "_confidence": "high"
       }
      ],
      "long_term_liabilities": [
       {
        "Label": "Long-term Loan — First National Bank",
-       "Amount": "121,000"
+       "Amount": "121,000",
+       "_confidence": "high"
       },
       {
        "Label": "Deferred Tax Liability",
-       "Amount": "8,400"
+       "Amount": "8,400",
+       "_confidence": "high"
       }
      ],
      "shareholders_equity": [
       {
        "Label": "Common Stock (100 shares @ $1,000 par)",
-       "Amount": "100,000"
+       "Amount": "100,000",
+       "_confidence": "high"
       },
       {
        "Label": "Retained Earnings",
-       "Amount": "550,751"
+       "Amount": "550,751",
+       "_confidence": "high"
       },
       {
        "Label": "Net Income YTD Q1",
-       "Amount": "47,353"
+       "Amount": "47,353",
+       "_confidence": "high"
       }
      ]
     }
@@ -2058,63 +2077,72 @@
        "Type": "Airfare",
        "Description": "Delta Airlines JFK–LAX round trip",
        "Category": "Travel",
-       "Amount": "$842.00"
+       "Amount": "$842.00",
+       "_confidence": "high"
       },
       {
        "Date": "03/15",
        "Type": "Taxi",
        "Description": "Airport to hotel LAX",
        "Category": "Travel",
-       "Amount": "$38.50"
+       "Amount": "$38.50",
+       "_confidence": "high"
       },
       {
        "Date": "03/15",
        "Type": "Hotel",
        "Description": "Hilton LAX — 2 nights",
        "Category": "Lodging",
-       "Amount": "$389.00"
+       "Amount": "$389.00",
+       "_confidence": "high"
       },
       {
        "Date": "03/16",
        "Type": "Meals",
        "Description": "Hotel breakfast",
        "Category": "Meals",
-       "Amount": "$24.75"
+       "Amount": "$24.75",
+       "_confidence": "high"
       },
       {
        "Date": "03/16",
        "Type": "M&E;",
        "Description": "Client lunch w/ Pacific Steel (4 pax)",
        "Category": "Meals & Entmt",
-       "Amount": "$187.40"
+       "Amount": "$187.40",
+       "_confidence": "high"
       },
       {
        "Date": "03/16",
        "Type": "Taxi",
        "Description": "Hotel to Pacific Steel facility",
        "Category": "Travel",
-       "Amount": "$22.00"
+       "Amount": "$22.00",
+       "_confidence": "high"
       },
       {
        "Date": "03/17",
        "Type": "Meals",
        "Description": "Team dinner (2 pax)",
        "Category": "Meals",
-       "Amount": "$95.60"
+       "Amount": "$95.60",
+       "_confidence": "high"
       },
       {
        "Date": "03/18",
        "Type": "Taxi",
        "Description": "Hotel to LAX",
        "Category": "Travel",
-       "Amount": "$41.00"
+       "Amount": "$41.00",
+       "_confidence": "high"
       },
       {
        "Date": "03/18",
        "Type": "Parking",
        "Description": "JFK long-term parking 3 days",
        "Category": "Travel",
-       "Amount": "$87.00"
+       "Amount": "$87.00",
+       "_confidence": "high"
       }
      ]
     }
@@ -3195,7 +3223,8 @@
          "Type": "Airfare",
          "Description": "Delta Airlines JFK–LAX round trip",
          "Category": "Travel",
-         "Amount": "$842.00"
+         "Amount": "$842.00",
+         "_confidence": "high"
         }
        },
        {
@@ -3205,7 +3234,8 @@
          "Type": "Taxi",
          "Description": "Airport to hotel LAX",
          "Category": "Travel",
-         "Amount": "$38.50"
+         "Amount": "$38.50",
+         "_confidence": "high"
         }
        },
        {
@@ -3215,7 +3245,8 @@
          "Type": "Hotel",
          "Description": "Hilton LAX — 2 nights",
          "Category": "Lodging",
-         "Amount": "$389.00"
+         "Amount": "$389.00",
+         "_confidence": "high"
         }
        },
        {
@@ -3225,7 +3256,8 @@
          "Type": "Meals",
          "Description": "Hotel breakfast",
          "Category": "Meals",
-         "Amount": "$24.75"
+         "Amount": "$24.75",
+         "_confidence": "high"
         }
        },
        {
@@ -3235,7 +3267,8 @@
          "Type": "M&E;",
          "Description": "Client lunch w/ Pacific Steel (4 pax)",
          "Category": "Meals & Entmt",
-         "Amount": "$187.40"
+         "Amount": "$187.40",
+         "_confidence": "high"
         }
        },
        {
@@ -3245,7 +3278,8 @@
          "Type": "Taxi",
          "Description": "Hotel to Pacific Steel facility",
          "Category": "Travel",
-         "Amount": "$22.00"
+         "Amount": "$22.00",
+         "_confidence": "high"
         }
        },
        {
@@ -3255,7 +3289,8 @@
          "Type": "Meals",
          "Description": "Team dinner (2 pax)",
          "Category": "Meals",
-         "Amount": "$95.60"
+         "Amount": "$95.60",
+         "_confidence": "high"
         }
        },
        {
@@ -3265,7 +3300,8 @@
          "Type": "Taxi",
          "Description": "Hotel to LAX",
          "Category": "Travel",
-         "Amount": "$41.00"
+         "Amount": "$41.00",
+         "_confidence": "high"
         }
        },
        {
@@ -3275,7 +3311,8 @@
          "Type": "Parking",
          "Description": "JFK long-term parking 3 days",
          "Category": "Travel",
-         "Amount": "$87.00"
+         "Amount": "$87.00",
+         "_confidence": "high"
         }
        }
       ],
@@ -3332,6 +3369,16 @@
        },
        {
         "row": null,
+        "pred_row": 0,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 1,
         "column": "Date",
         "type": "string",
@@ -3379,6 +3426,16 @@
         "expected": null,
         "actual": "$38.50",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -3432,6 +3489,16 @@
        },
        {
         "row": null,
+        "pred_row": 2,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 3,
         "column": "Date",
         "type": "string",
@@ -3479,6 +3546,16 @@
         "expected": null,
         "actual": "$24.75",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -3532,6 +3609,16 @@
        },
        {
         "row": null,
+        "pred_row": 4,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 5,
         "column": "Date",
         "type": "string",
@@ -3579,6 +3666,16 @@
         "expected": null,
         "actual": "$22.00",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -3632,6 +3729,16 @@
        },
        {
         "row": null,
+        "pred_row": 6,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 7,
         "column": "Date",
         "type": "string",
@@ -3682,6 +3789,16 @@
        },
        {
         "row": null,
+        "pred_row": 7,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 8,
         "column": "Date",
         "type": "string",
@@ -3729,6 +3846,16 @@
         "expected": null,
         "actual": "$87.00",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        }
       ]
      }
@@ -3736,12 +3863,12 @@
     "counts": {
      "correct": 9,
      "missed": 45,
-     "hallucinated": 45
+     "hallucinated": 54
     },
-    "hallucinated_ungrounded": 0,
+    "hallucinated_ungrounded": 9,
     "accuracy": 0.16666666666666666,
-    "hallucination_rate": 0.8333333333333334,
-    "invention_rate": 0.0
+    "hallucination_rate": 0.8571428571428571,
+    "invention_rate": 0.14285714285714285
    },
    "score_export": {
     "document_id": "EXP-2024-0081",
@@ -4272,28 +4399,32 @@
        "Qty": "40",
        "Unit": "pcs",
        "Unit Price": "$185.00",
-       "Amount": "$7,400.00"
+       "Amount": "$7,400.00",
+       "_confidence": "high"
       },
       {
        "Description": "Industrial Lubricant 5L Drum",
        "Qty": "25",
        "Unit": "drums",
        "Unit Price": "$68.00",
-       "Amount": "$1,700.00"
+       "Amount": "$1,700.00",
+       "_confidence": "high"
       },
       {
        "Description": "Safety Gloves Heavy Duty Box/12",
        "Qty": "60",
        "Unit": "boxes",
        "Unit Price": "$22.50",
-       "Amount": "$1,350.00"
+       "Amount": "$1,350.00",
+       "_confidence": "high"
       },
       {
        "Description": "Hex Bolt Set M10 Qty-500",
        "Qty": "30",
        "Unit": "sets",
        "Unit Price": "$14.75",
-       "Amount": "$442.50"
+       "Amount": "$442.50",
+       "_confidence": "high"
       }
      ]
     }
@@ -4923,7 +5054,8 @@
          "Qty": "40",
          "Unit": "pcs",
          "Unit Price": "$185.00",
-         "Amount": "$7,400.00"
+         "Amount": "$7,400.00",
+         "_confidence": "high"
         }
        },
        {
@@ -4933,7 +5065,8 @@
          "Qty": "25",
          "Unit": "drums",
          "Unit Price": "$68.00",
-         "Amount": "$1,700.00"
+         "Amount": "$1,700.00",
+         "_confidence": "high"
         }
        },
        {
@@ -4943,7 +5076,8 @@
          "Qty": "60",
          "Unit": "boxes",
          "Unit Price": "$22.50",
-         "Amount": "$1,350.00"
+         "Amount": "$1,350.00",
+         "_confidence": "high"
         }
        },
        {
@@ -4953,7 +5087,8 @@
          "Qty": "30",
          "Unit": "sets",
          "Unit Price": "$14.75",
-         "Amount": "$442.50"
+         "Amount": "$442.50",
+         "_confidence": "high"
         }
        }
       ],
@@ -5010,6 +5145,16 @@
        },
        {
         "row": null,
+        "pred_row": 0,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 1,
         "column": "Description",
         "type": "string",
@@ -5057,6 +5202,16 @@
         "expected": null,
         "actual": "$1,700.00",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -5110,6 +5265,16 @@
        },
        {
         "row": null,
+        "pred_row": 2,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 3,
         "column": "Description",
         "type": "string",
@@ -5157,6 +5322,16 @@
         "expected": null,
         "actual": "$442.50",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        }
       ]
      }
@@ -5165,12 +5340,12 @@
      "correct": 12,
      "near": 1,
      "missed": 20,
-     "hallucinated": 20
+     "hallucinated": 24
     },
-    "hallucinated_ungrounded": 0,
+    "hallucinated_ungrounded": 4,
     "accuracy": 0.36363636363636365,
-    "hallucination_rate": 0.6060606060606061,
-    "invention_rate": 0.0
+    "hallucination_rate": 0.6486486486486487,
+    "invention_rate": 0.10810810810810811
    },
    "score_export": {
     "document_id": "INV-2024-0031",
@@ -5501,35 +5676,40 @@
        "Qty": "150",
        "Unit": "units",
        "Unit Price": "$34.50",
-       "Amount": "$5,175.00"
+       "Amount": "$5,175.00",
+       "_confidence": "high"
       },
       {
        "Description": "Wireless Mouse M300 Series",
        "Qty": "200",
        "Unit": "units",
        "Unit Price": "$18.75",
-       "Amount": "$3,750.00"
+       "Amount": "$3,750.00",
+       "_confidence": "high"
       },
       {
        "Description": "Laptop Cooling Stand Aluminium",
        "Qty": "80",
        "Unit": "units",
        "Unit Price": "$27.00",
-       "Amount": "$2,160.00"
+       "Amount": "$2,160.00",
+       "_confidence": "high"
       },
       {
        "Description": "HDMI 2.1 Cable 2m Pack/5",
        "Qty": "120",
        "Unit": "packs",
        "Unit Price": "$16.20",
-       "Amount": "$1,944.00"
+       "Amount": "$1,944.00",
+       "_confidence": "high"
       },
       {
        "Description": "Webcam HD 1080p w/ Mic",
        "Qty": "60",
        "Unit": "units",
        "Unit Price": "$42.00",
-       "Amount": "$2,520.00"
+       "Amount": "$2,520.00",
+       "_confidence": "high"
       }
      ]
     }
@@ -6259,7 +6439,8 @@
          "Qty": "150",
          "Unit": "units",
          "Unit Price": "$34.50",
-         "Amount": "$5,175.00"
+         "Amount": "$5,175.00",
+         "_confidence": "high"
         }
        },
        {
@@ -6269,7 +6450,8 @@
          "Qty": "200",
          "Unit": "units",
          "Unit Price": "$18.75",
-         "Amount": "$3,750.00"
+         "Amount": "$3,750.00",
+         "_confidence": "high"
         }
        },
        {
@@ -6279,7 +6461,8 @@
          "Qty": "80",
          "Unit": "units",
          "Unit Price": "$27.00",
-         "Amount": "$2,160.00"
+         "Amount": "$2,160.00",
+         "_confidence": "high"
         }
        },
        {
@@ -6289,7 +6472,8 @@
          "Qty": "120",
          "Unit": "packs",
          "Unit Price": "$16.20",
-         "Amount": "$1,944.00"
+         "Amount": "$1,944.00",
+         "_confidence": "high"
         }
        },
        {
@@ -6299,7 +6483,8 @@
          "Qty": "60",
          "Unit": "units",
          "Unit Price": "$42.00",
-         "Amount": "$2,520.00"
+         "Amount": "$2,520.00",
+         "_confidence": "high"
         }
        }
       ],
@@ -6356,6 +6541,16 @@
        },
        {
         "row": null,
+        "pred_row": 0,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 1,
         "column": "Description",
         "type": "string",
@@ -6403,6 +6598,16 @@
         "expected": null,
         "actual": "$3,750.00",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -6456,6 +6661,16 @@
        },
        {
         "row": null,
+        "pred_row": 2,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 3,
         "column": "Description",
         "type": "string",
@@ -6506,6 +6721,16 @@
        },
        {
         "row": null,
+        "pred_row": 3,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 4,
         "column": "Description",
         "type": "string",
@@ -6553,6 +6778,16 @@
         "expected": null,
         "actual": "$2,520.00",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 4,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        }
       ]
      }
@@ -6561,12 +6796,12 @@
      "correct": 12,
      "near": 1,
      "missed": 25,
-     "hallucinated": 25
+     "hallucinated": 30
     },
-    "hallucinated_ungrounded": 0,
+    "hallucinated_ungrounded": 5,
     "accuracy": 0.3157894736842105,
-    "hallucination_rate": 0.6578947368421053,
-    "invention_rate": 0.0
+    "hallucination_rate": 0.6976744186046512,
+    "invention_rate": 0.11627906976744186
    },
    "score_export": {
     "document_id": "INV-2024-0047",
@@ -7475,53 +7710,65 @@
      "earnings": [
       {
        "Description": "Base Salary",
-       "Amount": "$12,083.33"
+       "Amount": "$12,083.33",
+       "_confidence": "high"
       },
       {
        "Description": "Car Allowance",
-       "Amount": "$500.00"
+       "Amount": "$500.00",
+       "_confidence": "high"
       },
       {
        "Description": "Executive Bonus",
-       "Amount": "$2,000.00"
+       "Amount": "$2,000.00",
+       "_confidence": "high"
       }
      ],
      "deductions": [
       {
        "Description": "Federal Income Tax",
-       "Amount": "($3,240.00)"
+       "Amount": "($3,240.00)",
+       "_confidence": "high"
       },
       {
        "Description": "Social Security (6.2%)",
-       "Amount": "($904.17)"
+       "Amount": "($904.17)",
+       "_confidence": "high"
       },
       {
        "Description": "Medicare (1.45%)",
-       "Amount": "($211.46)"
+       "Amount": "($211.46)",
+       "_confidence": "high"
       },
       {
        "Description": "NY State Income Tax",
-       "Amount": "($880.00)"
+       "Amount": "($880.00)",
+       "_confidence": "high"
       },
       {
        "Description": "NY City Tax",
-       "Amount": "($395.00)"
+       "Amount": "($395.00)",
+       "_confidence": "high"
       },
       {
        "Description": "Health Insurance (Family)",
-       "Amount": "($380.00)"
+       "Amount": "($380.00)",
+       "_confidence": "high"
       },
       {
        "Description": "401(k) Contribution (8%)",
-       "Amount": "($966.67)"
+       "Amount": "($966.67)",
+       "_confidence": "high"
       },
       {
        "Description": "Dental & Vision",
-       "Amount": "($65.00)"
+       "Amount": "($65.00)",
+       "_confidence": "high"
       },
       {
        "Description": "Life Insurance",
-       "Amount": "($28.00)"
+       "Amount": "($28.00)",
+       "_confidence": "high"
       }
      ]
     }
@@ -8579,45 +8826,55 @@
      "earnings": [
       {
        "Description": "Base Salary",
-       "Amount": "$7,500.00"
+       "Amount": "$7,500.00",
+       "_confidence": "high"
       },
       {
        "Description": "Performance Bonus",
-       "Amount": "$800.00"
+       "Amount": "$800.00",
+       "_confidence": "high"
       }
      ],
      "deductions": [
       {
        "Description": "Federal Income Tax",
-       "Amount": "($1,245.00)"
+       "Amount": "($1,245.00)",
+       "_confidence": "high"
       },
       {
        "Description": "Social Security (6.2%)",
-       "Amount": "($515.00)"
+       "Amount": "($515.00)",
+       "_confidence": "high"
       },
       {
        "Description": "Medicare (1.45%)",
-       "Amount": "($120.35)"
+       "Amount": "($120.35)",
+       "_confidence": "high"
       },
       {
        "Description": "NY State Income Tax",
-       "Amount": "($412.00)"
+       "Amount": "($412.00)",
+       "_confidence": "high"
       },
       {
        "Description": "NY City Tax",
-       "Amount": "($185.00)"
+       "Amount": "($185.00)",
+       "_confidence": "high"
       },
       {
        "Description": "Health Insurance (Medical)",
-       "Amount": "($220.00)"
+       "Amount": "($220.00)",
+       "_confidence": "high"
       },
       {
        "Description": "401(k) Contribution (5%)",
-       "Amount": "($375.00)"
+       "Amount": "($375.00)",
+       "_confidence": "high"
       },
       {
        "Description": "Dental & Vision",
-       "Amount": "($45.00)"
+       "Amount": "($45.00)",
+       "_confidence": "high"
       }
      ]
     }
@@ -9572,21 +9829,24 @@
        "Qty": "50",
        "Unit": "pcs",
        "Unit Cost": "$155.00",
-       "Total": "$7,750.00"
+       "Total": "$7,750.00",
+       "_confidence": "high"
       },
       {
        "Item / Description": "Steel Sheet 2mm 1200x2400 (SS-2MM)",
        "Qty": "30",
        "Unit": "sheets",
        "Unit Cost": "$88.00",
-       "Total": "$2,640.00"
+       "Total": "$2,640.00",
+       "_confidence": "high"
       },
       {
        "Item / Description": "Mild Steel Round Bar 20mm x 3m (RB-20)",
        "Qty": "40",
        "Unit": "lengths",
        "Unit Cost": "$42.50",
-       "Total": "$1,700.00"
+       "Total": "$1,700.00",
+       "_confidence": "high"
       }
      ]
     }
@@ -10152,7 +10412,8 @@
          "Qty": "50",
          "Unit": "pcs",
          "Unit Cost": "$155.00",
-         "Total": "$7,750.00"
+         "Total": "$7,750.00",
+         "_confidence": "high"
         }
        },
        {
@@ -10162,7 +10423,8 @@
          "Qty": "30",
          "Unit": "sheets",
          "Unit Cost": "$88.00",
-         "Total": "$2,640.00"
+         "Total": "$2,640.00",
+         "_confidence": "high"
         }
        },
        {
@@ -10172,7 +10434,8 @@
          "Qty": "40",
          "Unit": "lengths",
          "Unit Cost": "$42.50",
-         "Total": "$1,700.00"
+         "Total": "$1,700.00",
+         "_confidence": "high"
         }
        }
       ],
@@ -10229,6 +10492,16 @@
        },
        {
         "row": null,
+        "pred_row": 0,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 1,
         "column": "Item / Description",
         "type": "string",
@@ -10279,6 +10552,16 @@
        },
        {
         "row": null,
+        "pred_row": 1,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 2,
         "column": "Item / Description",
         "type": "string",
@@ -10326,6 +10609,16 @@
         "expected": null,
         "actual": "$1,700.00",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        }
       ]
      }
@@ -10334,12 +10627,12 @@
      "correct": 15,
      "near": 1,
      "missed": 15,
-     "hallucinated": 15
+     "hallucinated": 18
     },
-    "hallucinated_ungrounded": 0,
+    "hallucinated_ungrounded": 3,
     "accuracy": 0.4838709677419355,
-    "hallucination_rate": 0.4838709677419355,
-    "invention_rate": 0.0
+    "hallucination_rate": 0.5294117647058824,
+    "invention_rate": 0.08823529411764706
    },
    "score_export": {
     "document_id": "PO-2024-0018",
@@ -10641,7 +10934,8 @@
        "Description": "Wire deposit — Summit Retail Group",
        "Debit": "",
        "Credit": "$15,000.00",
-       "Balance": "$199,320.55"
+       "Balance": "$199,320.55",
+       "_confidence": "high"
       },
       {
        "Date": "01/05",
@@ -10649,7 +10943,8 @@
        "Description": "Payroll disbursement — January wk1",
        "Debit": "$18,450.00",
        "Credit": "",
-       "Balance": "$180,870.55"
+       "Balance": "$180,870.55",
+       "_confidence": "high"
       },
       {
        "Date": "01/10",
@@ -10657,7 +10952,8 @@
        "Description": "Cheque #001831 — National Office Supplies",
        "Debit": "$5,682.75",
        "Credit": "",
-       "Balance": "$175,187.80"
+       "Balance": "$175,187.80",
+       "_confidence": "high"
       },
       {
        "Date": "01/12",
@@ -10665,7 +10961,8 @@
        "Description": "Wire deposit — Pinnacle Electronics Corp.",
        "Debit": "",
        "Credit": "$22,934.50",
-       "Balance": "$198,122.30"
+       "Balance": "$198,122.30",
+       "_confidence": "high"
       },
       {
        "Date": "01/15",
@@ -10673,7 +10970,8 @@
        "Description": "Monthly account maintenance fee",
        "Debit": "$25.00",
        "Credit": "",
-       "Balance": "$198,097.30"
+       "Balance": "$198,097.30",
+       "_confidence": "high"
       },
       {
        "Date": "01/15",
@@ -10681,7 +10979,8 @@
        "Description": "Payroll disbursement — January wk3",
        "Debit": "$18,450.00",
        "Credit": "",
-       "Balance": "$179,647.30"
+       "Balance": "$179,647.30",
+       "_confidence": "high"
       },
       {
        "Date": "01/18",
@@ -10689,7 +10988,8 @@
        "Description": "Cheque #001832 — Con Edison utilities",
        "Debit": "$3,847.22",
        "Credit": "",
-       "Balance": "$175,800.08"
+       "Balance": "$175,800.08",
+       "_confidence": "high"
       },
       {
        "Date": "01/22",
@@ -10697,7 +10997,8 @@
        "Description": "Wire deposit — BlueLine Wholesale Group",
        "Debit": "",
        "Credit": "$8,765.00",
-       "Balance": "$184,565.08"
+       "Balance": "$184,565.08",
+       "_confidence": "high"
       },
       {
        "Date": "01/25",
@@ -10705,7 +11006,8 @@
        "Description": "Federal tax deposit — Q4 payroll",
        "Debit": "$12,400.00",
        "Credit": "",
-       "Balance": "$172,165.08"
+       "Balance": "$172,165.08",
+       "_confidence": "high"
       },
       {
        "Date": "01/28",
@@ -10713,7 +11015,8 @@
        "Description": "Cheque #001833 — Manhattan Commercial Prop.",
        "Debit": "$28,500.00",
        "Credit": "",
-       "Balance": "$143,665.08"
+       "Balance": "$143,665.08",
+       "_confidence": "high"
       },
       {
        "Date": "01/30",
@@ -10721,7 +11024,8 @@
        "Description": "Interest earned — savings component",
        "Debit": "",
        "Credit": "$142.18",
-       "Balance": "$143,807.26"
+       "Balance": "$143,807.26",
+       "_confidence": "high"
       },
       {
        "Date": "01/31",
@@ -10729,7 +11033,8 @@
        "Description": "Payroll disbursement — January wk4",
        "Debit": "$18,450.00",
        "Credit": "",
-       "Balance": "$125,357.26"
+       "Balance": "$125,357.26",
+       "_confidence": "high"
       }
      ]
     }
@@ -12244,7 +12549,8 @@
          "Description": "Wire deposit — Summit Retail Group",
          "Debit": "",
          "Credit": "$15,000.00",
-         "Balance": "$199,320.55"
+         "Balance": "$199,320.55",
+         "_confidence": "high"
         }
        },
        {
@@ -12255,7 +12561,8 @@
          "Description": "Payroll disbursement — January wk1",
          "Debit": "$18,450.00",
          "Credit": "",
-         "Balance": "$180,870.55"
+         "Balance": "$180,870.55",
+         "_confidence": "high"
         }
        },
        {
@@ -12266,7 +12573,8 @@
          "Description": "Cheque #001831 — National Office Supplies",
          "Debit": "$5,682.75",
          "Credit": "",
-         "Balance": "$175,187.80"
+         "Balance": "$175,187.80",
+         "_confidence": "high"
         }
        },
        {
@@ -12277,7 +12585,8 @@
          "Description": "Wire deposit — Pinnacle Electronics Corp.",
          "Debit": "",
          "Credit": "$22,934.50",
-         "Balance": "$198,122.30"
+         "Balance": "$198,122.30",
+         "_confidence": "high"
         }
        },
        {
@@ -12288,7 +12597,8 @@
          "Description": "Monthly account maintenance fee",
          "Debit": "$25.00",
          "Credit": "",
-         "Balance": "$198,097.30"
+         "Balance": "$198,097.30",
+         "_confidence": "high"
         }
        },
        {
@@ -12299,7 +12609,8 @@
          "Description": "Payroll disbursement — January wk3",
          "Debit": "$18,450.00",
          "Credit": "",
-         "Balance": "$179,647.30"
+         "Balance": "$179,647.30",
+         "_confidence": "high"
         }
        },
        {
@@ -12310,7 +12621,8 @@
          "Description": "Cheque #001832 — Con Edison utilities",
          "Debit": "$3,847.22",
          "Credit": "",
-         "Balance": "$175,800.08"
+         "Balance": "$175,800.08",
+         "_confidence": "high"
         }
        },
        {
@@ -12321,7 +12633,8 @@
          "Description": "Wire deposit — BlueLine Wholesale Group",
          "Debit": "",
          "Credit": "$8,765.00",
-         "Balance": "$184,565.08"
+         "Balance": "$184,565.08",
+         "_confidence": "high"
         }
        },
        {
@@ -12332,7 +12645,8 @@
          "Description": "Federal tax deposit — Q4 payroll",
          "Debit": "$12,400.00",
          "Credit": "",
-         "Balance": "$172,165.08"
+         "Balance": "$172,165.08",
+         "_confidence": "high"
         }
        },
        {
@@ -12343,7 +12657,8 @@
          "Description": "Cheque #001833 — Manhattan Commercial Prop.",
          "Debit": "$28,500.00",
          "Credit": "",
-         "Balance": "$143,665.08"
+         "Balance": "$143,665.08",
+         "_confidence": "high"
         }
        },
        {
@@ -12354,7 +12669,8 @@
          "Description": "Interest earned — savings component",
          "Debit": "",
          "Credit": "$142.18",
-         "Balance": "$143,807.26"
+         "Balance": "$143,807.26",
+         "_confidence": "high"
         }
        },
        {
@@ -12365,7 +12681,8 @@
          "Description": "Payroll disbursement — January wk4",
          "Debit": "$18,450.00",
          "Credit": "",
-         "Balance": "$125,357.26"
+         "Balance": "$125,357.26",
+         "_confidence": "high"
         }
        }
       ],
@@ -12422,6 +12739,16 @@
        },
        {
         "row": null,
+        "pred_row": 0,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 1,
         "column": "Date",
         "type": "string",
@@ -12469,6 +12796,16 @@
         "expected": null,
         "actual": "$180,870.55",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -12522,6 +12859,16 @@
        },
        {
         "row": null,
+        "pred_row": 2,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 3,
         "column": "Date",
         "type": "string",
@@ -12569,6 +12916,16 @@
         "expected": null,
         "actual": "$198,122.30",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 3,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -12622,6 +12979,16 @@
        },
        {
         "row": null,
+        "pred_row": 4,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 5,
         "column": "Date",
         "type": "string",
@@ -12669,6 +13036,16 @@
         "expected": null,
         "actual": "$179,647.30",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 5,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -12722,6 +13099,16 @@
        },
        {
         "row": null,
+        "pred_row": 6,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 7,
         "column": "Date",
         "type": "string",
@@ -12769,6 +13156,16 @@
         "expected": null,
         "actual": "$184,565.08",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 7,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -12822,6 +13219,16 @@
        },
        {
         "row": null,
+        "pred_row": 8,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 9,
         "column": "Date",
         "type": "string",
@@ -12869,6 +13276,16 @@
         "expected": null,
         "actual": "$143,665.08",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 9,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        },
        {
         "row": null,
@@ -12922,6 +13339,16 @@
        },
        {
         "row": null,
+        "pred_row": 10,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
+       },
+       {
+        "row": null,
         "pred_row": 11,
         "column": "Date",
         "type": "string",
@@ -12969,6 +13396,16 @@
         "expected": null,
         "actual": "$125,357.26",
         "grounded": true
+       },
+       {
+        "row": null,
+        "pred_row": 11,
+        "column": "_confidence",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "high",
+        "grounded": false
        }
       ]
      }
@@ -12976,12 +13413,12 @@
     "counts": {
      "correct": 10,
      "missed": 60,
-     "hallucinated": 60
+     "hallucinated": 72
     },
-    "hallucinated_ungrounded": 0,
+    "hallucinated_ungrounded": 12,
     "accuracy": 0.14285714285714285,
-    "hallucination_rate": 0.8571428571428571,
-    "invention_rate": 0.0
+    "hallucination_rate": 0.8780487804878049,
+    "invention_rate": 0.14634146341463414
    },
    "score_export": {
     "document_id": "STMT-2024-01",
@@ -13905,17 +14342,17 @@
    "counts": {
     "correct": 186,
     "missed": 186,
-    "hallucinated": 184,
+    "hallucinated": 217,
     "near": 5,
     "wrong": 1
    },
    "gold_valued": 378,
    "accuracy": 0.49206349206349204,
    "near_rate": 0.013227513227513227,
-   "hallucinated": 184,
-   "hallucination_rate": 0.48936170212765956,
-   "hallucinated_ungrounded": 0,
-   "invention_rate": 0.0
+   "hallucinated": 217,
+   "hallucination_rate": 0.530562347188264,
+   "hallucinated_ungrounded": 33,
+   "invention_rate": 0.08068459657701711
   },
   "by_document_type": {
    "balance_sheet": {
@@ -13936,15 +14373,15 @@
     "counts": {
      "correct": 10,
      "missed": 60,
-     "hallucinated": 60
+     "hallucinated": 72
     },
     "gold_valued": 70,
     "accuracy": 0.14285714285714285,
     "near_rate": 0.0,
-    "hallucinated": 60,
-    "hallucination_rate": 0.8571428571428571,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0
+    "hallucinated": 72,
+    "hallucination_rate": 0.8780487804878049,
+    "hallucinated_ungrounded": 12,
+    "invention_rate": 0.14634146341463414
    },
    "cheque": {
     "counts": {
@@ -13963,15 +14400,15 @@
     "counts": {
      "correct": 9,
      "missed": 45,
-     "hallucinated": 45
+     "hallucinated": 54
     },
     "gold_valued": 54,
     "accuracy": 0.16666666666666666,
     "near_rate": 0.0,
-    "hallucinated": 45,
-    "hallucination_rate": 0.8333333333333334,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0
+    "hallucinated": 54,
+    "hallucination_rate": 0.8571428571428571,
+    "hallucinated_ungrounded": 9,
+    "invention_rate": 0.14285714285714285
    },
    "income_statement": {
     "counts": {
@@ -14004,30 +14441,30 @@
      "correct": 15,
      "near": 1,
      "missed": 15,
-     "hallucinated": 15
+     "hallucinated": 18
     },
     "gold_valued": 31,
     "accuracy": 0.4838709677419355,
     "near_rate": 0.03225806451612903,
-    "hallucinated": 15,
-    "hallucination_rate": 0.4838709677419355,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0
+    "hallucinated": 18,
+    "hallucination_rate": 0.5294117647058824,
+    "hallucinated_ungrounded": 3,
+    "invention_rate": 0.08823529411764706
    },
    "sales_invoice": {
     "counts": {
      "correct": 24,
      "near": 2,
      "missed": 45,
-     "hallucinated": 45
+     "hallucinated": 54
     },
     "gold_valued": 71,
     "accuracy": 0.3380281690140845,
     "near_rate": 0.028169014084507043,
-    "hallucinated": 45,
-    "hallucination_rate": 0.6338028169014085,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0
+    "hallucinated": 54,
+    "hallucination_rate": 0.675,
+    "hallucinated_ungrounded": 9,
+    "invention_rate": 0.1125
    }
   },
   "by_field_type": {
@@ -14073,17 +14510,17 @@
    "string": {
     "counts": {
      "missed": 96,
-     "hallucinated": 184,
+     "hallucinated": 217,
      "correct": 74,
      "near": 5
     },
     "gold_valued": 175,
     "accuracy": 0.4228571428571429,
     "near_rate": 0.02857142857142857,
-    "hallucinated": 184,
-    "hallucination_rate": 0.6996197718631179,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0
+    "hallucinated": 217,
+    "hallucination_rate": 0.7331081081081081,
+    "hallucinated_ungrounded": 33,
+    "invention_rate": 0.11148648648648649
    }
   }
  },
@@ -14261,6 +14698,24 @@
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0
    }
+  }
+ },
+ "calibration": {
+  "high": {
+   "n": 369,
+   "correct": 367,
+   "wrong": 0,
+   "missed": 0,
+   "near": 2,
+   "hallucinated": 0
+  },
+  "low": {
+   "n": 7,
+   "correct": 3,
+   "wrong": 1,
+   "missed": 0,
+   "near": 3,
+   "hallucinated": 0
   }
  },
  "unstable_total": 0,

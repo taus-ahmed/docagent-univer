@@ -148,6 +148,68 @@ def build_export(results, grid, no_template):
     return ws, shape
 
 
+def calibrate(label, adapted, score, results):
+    """Join each scored cell back to the confidence the engine gave it.
+
+    Confidence is only worth surfacing if it predicts correctness, so this
+    measures exactly that: of the cells the engine called high, what fraction
+    are actually right.
+    """
+    from tests.harness.adapter import _match_name
+    ed = (getattr(results[0], "extracted_data", None) or {}) if results else {}
+    conf_map = (ed.get("validation") or {}).get("confidence_map") or {}
+    slots = (ed.get("slot_map") or {}).get("fields") or []
+    gold_names = list((label.get("fields") or {}).keys())
+
+    by_gold = {}
+    for slot in slots:
+        c = conf_map.get(slot.get("ref"))
+        if not c:
+            continue
+        g = _match_name(slot.get("row_label"), gold_names) or slot.get("row_label")
+        by_gold[g] = c
+
+    out = {}
+
+    def add(level, outcome):
+        b = out.setdefault(level, {"n": 0, "correct": 0, "wrong": 0,
+                                   "missed": 0, "near": 0, "hallucinated": 0})
+        b["n"] += 1
+        if outcome in b:
+            b[outcome] += 1
+
+    for name, r in (score.get("fields") or {}).items():
+        if r["outcome"] == "empty_ok":
+            continue
+        lvl = by_gold.get(name)
+        if lvl:
+            add(lvl, r["outcome"])
+
+    for tname, t in (score.get("tables") or {}).items():
+        rows = (adapted.get("tables") or {}).get(tname) or []
+        for cell in t.get("cells", []):
+            if cell["outcome"] == "empty_ok":
+                continue
+            pi = cell.get("pred_row")
+            if pi is None or pi >= len(rows):
+                continue
+            lvl = rows[pi].get("_confidence")
+            if lvl:
+                add(lvl, cell["outcome"])
+    return out
+
+
+def merge_calibration(parts):
+    out = {}
+    for p in parts:
+        for lvl, b in (p or {}).items():
+            t = out.setdefault(lvl, {"n": 0, "correct": 0, "wrong": 0,
+                                     "missed": 0, "near": 0, "hallucinated": 0})
+            for k, v in b.items():
+                t[k] = t.get(k, 0) + v
+    return out
+
+
 def _log_findings(log: str) -> dict:
     route = next((ln.strip() for ln in log.splitlines() if "[ROUTE]" in ln), "")
     return {
@@ -379,6 +441,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     doc_scores = []
     doc_scores_raw = []
     doc_scores_export = []
+    calib = []
     try:
         for label in labels:
             doc_id = label["document_id"]
@@ -444,6 +507,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                 set_widenings(**prev)
             doc_scores.append(score)
             doc_scores_raw.append(raw_score)
+            calib.append(calibrate(label, adapted, score, results))
             if export_score:
                 doc_scores_export.append(export_score)
             unstable = find_unstable(adapted_runs)
@@ -494,6 +558,7 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         "summary": summarize(doc_scores),
         "summary_raw": summarize(doc_scores_raw),
         "summary_export": summarize(doc_scores_export) if doc_scores_export else None,
+        "calibration": merge_calibration(calib),
         "unstable_total": sum(len(d["unstable"]) for d in doc_reports.values()),
     }
 
@@ -540,6 +605,28 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     print(f"  of which misplaced: {o['hallucinated'] - o['hallucinated_ungrounded']} "
           f"(real document content, wrong slot)")
     print(f"outcome counts      : {o['counts']}")
+    cal = report.get("calibration") or {}
+    if cal:
+        print("\nCONFIDENCE CALIBRATION  (of cells at each level, % correct)")
+        print(f"  {'level':<8}{'cells':>7}{'judged':>8}{'correct':>9}"
+              f"{'precision':>11}   wrong/near/missed   halluc")
+        for lvl in ("high", "medium", "low"):
+            b = cal.get(lvl)
+            if not b:
+                continue
+            # Precision is measured over cells gold has an OPINION on. A
+            # hallucinated cell is one gold has no slot for — in no-template
+            # mode that is usually a field inference proposed and the labels
+            # never asked about, which says nothing about the confidence level.
+            judged = b["correct"] + b["near"] + b["wrong"] + b["missed"]
+            prec = (b["correct"] / judged) if judged else 0
+            print(f"  {lvl:<8}{b['n']:>7}{judged:>8}{b['correct']:>9}"
+                  f"{prec*100:>10.1f}%   {b['wrong']}/{b['near']}/{b['missed']}"
+                  f"        {b['hallucinated']}")
+        tot = sum(b["n"] for b in cal.values())
+        hi = (cal.get("high") or {}).get("n", 0)
+        print(f"  survival: {hi}/{tot} cells ({(hi/tot*100 if tot else 0):.1f}%) "
+              f"are high confidence")
     print(f"cache               : {report['cache_stats']}")
     if report["unstable_total"]:
         print(f"UNSTABLE fields     : {report['unstable_total']}")

@@ -323,6 +323,8 @@ def score_table(gold_rows: list, pred_rows: list, col_types: dict,
                           "outcome": out, "expected": g.get(col),
                           "actual": p.get(col)})
         for col in p:
+            if str(col).startswith("_"):
+                continue            # internal metadata, not an extracted value
             if col in g or is_empty(p.get(col)):
                 continue
             cells.append({"row": gi, "pred_row": pi, "column": col,

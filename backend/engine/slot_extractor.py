@@ -168,6 +168,49 @@ def build_prompt(slots, page_texts, doc_type=""):
 # GROUNDING
 # ══════════════════════════════════════════════════════════════════════════════
 
+_EMAIL = re.compile(r"[^\s@]+@[^\s@]+\.[A-Za-z]{2,}")
+_PHONE = re.compile(r"\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}")
+
+
+def _single_datum(value, label):
+    """One cell, one piece of information.
+
+    A value carrying an email, a phone number or a pipe alongside something
+    else is two data crammed into one cell — 'Mr. Robert Chen –
+    rchen@apex.com' where the slot asked for a contact name. It reads as
+    plausible, which is exactly why it must not be called high confidence.
+    A slot that ASKS for an email or a phone may of course contain one.
+    """
+    v = str(value or "")
+    lab = str(label or "").casefold()
+    if "|" in v:
+        return False
+    if _EMAIL.search(v) and not any(w in lab for w in ("email", "e-mail", "mail")):
+        return False
+    if _PHONE.search(v) and not any(w in lab for w in ("phone", "tel", "mobile",
+                                                       "fax", "contact no")):
+        return False
+    return True
+
+
+# NOTE: a rule requiring the value to be the whole span, or set off in it by a
+# separator, was tried and rejected. It was meant to catch a value truncated at
+# a line break ("NEXUS GLOBAL TRADING" where the letterhead continues "LLC").
+# It demoted 250 correct cells to reach 98.4% — worse than the 99.5% without
+# it — because a correct value read off a line ("First National Bank of New
+# York" from "...BANK OF NEW YORK ACCOUNT STATEMENT") is structurally identical
+# to a truncated one. Nothing in the span distinguishes them.
+
+
+def confidence_for(value, source, label, grounded):
+    """(level, reason). High means: we can stand behind this cell."""
+    if not grounded:
+        return "low", "value could not be grounded in the document"
+    if not _single_datum(value, label):
+        return "low", "cell carries more than one piece of information"
+    return "high", ""
+
+
 def verify_span(value, source, page, page_texts):
     """(grounded, reason). An empty answer needs no grounding."""
     if value is None or str(value).strip() == "":
@@ -249,11 +292,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if str(value).strip() == "":
                 continue
             ok, why = verify_span(value, source, page, pages)
+            lvl, reason = confidence_for(value, source, slot["row_label"], ok)
             extracted_fields[slot["ref"]] = value
-            conf_map[slot["ref"]] = "high" if ok else "low"
+            conf_map[slot["ref"]] = lvl
             if not ok:
                 ungrounded += 1
-                flagged.append(f'{slot["row_label"]}: {why}')
+            if lvl != "high":
+                flagged.append(f'{slot["row_label"]}: {reason or why}')
 
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:
@@ -293,11 +338,14 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         row[h] = ""
                         continue
                     ok, why = verify_span(v, source, page, pages)
+                    lvl, reason = confidence_for(v, source, h, ok)
                     row[h] = v
                     if not ok:
                         ungrounded += 1
+                    if lvl != "high":
                         row_conf = "low"
-                        flagged.append(f'{t["name"]}[{len(rows_out)}].{h}: {why}')
+                        flagged.append(
+                            f'{t["name"]}[{len(rows_out)}].{h}: {reason or why}')
                 if any(str(v).strip() for v in row.values()):
                     row["_confidence"] = row_conf
                     rows_out.append(row)
@@ -310,12 +358,27 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     _log("SLOT", f"filled {len(extracted_fields)}/{len(slots['fields'])} field slots, "
                  f"table rows {row_counts}, {ungrounded} ungrounded value(s)")
 
+    # DOCUMENT-LEVEL GATE — a document where more than 30% of cells are low
+    # confidence is sent for manual review as a whole, rather than handing the
+    # user a wall of per-cell warnings to work through.
+    low_cells = sum(1 for v in conf_map.values() if v == "low")
+    low_cells += sum(1 for rows in tables_out.values() for r in rows
+                     if r.get("_confidence") == "low")
+    graded = len(conf_map) + sum(len(r) for r in tables_out.values())
+    low_ratio = (low_cells / graded) if graded else 0.0
+    review_gate = low_ratio > 0.30
+    if review_gate:
+        notes.append(f"{low_cells} of {graded} cells ({low_ratio:.0%}) are low "
+                     f"confidence — this document needs manual review")
+
     overall = "high" if ungrounded == 0 else ("medium" if ungrounded <= 2 else "low")
+    if review_gate:
+        overall = "low"
     if file_type in ("scanned_pdf", "image") or len(doc_text.strip()) < 50:
         overall = "medium"
         notes.append("Scanned document — spans could not be verified against text")
         conf_map = {k: "medium" for k in conf_map}
-    needs_review = bool(ungrounded) or bool(unanswered)
+    needs_review = bool(ungrounded) or bool(unanswered) or review_gate
 
     r = DocumentExtractionResult(filename=file_path.name)
     r.document_type = default_doc_type
@@ -348,6 +411,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "flagged_fields": flagged,
             "confidence_map": conf_map,
             "ungrounded_count": ungrounded,
+            "low_confidence_cells": low_cells,
+            "graded_cells": graded,
+            "low_confidence_ratio": round(low_ratio, 4),
+            "document_needs_review": review_gate,
             "grounded_count": max(0, total_cells - ungrounded),
         },
         "validation_notes": notes,

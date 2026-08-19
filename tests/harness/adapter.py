@@ -355,6 +355,8 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
                     by_name[unmatched[0]] = free[0]
                 mapped = {by_name.get(ck, str(ck)): _cell_value(row[ck])
                           for ck in pred_keys}
+                if row.get("_confidence"):        # kept for calibration only
+                    mapped["_confidence"] = row["_confidence"]
                 if any(not is_empty(v) for v in mapped.values()):
                     out_rows.append(mapped)
             if out_rows:

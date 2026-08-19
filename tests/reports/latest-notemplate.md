@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-18 17:22:48
+# Accuracy report — 2026-08-18 17:31:53
 
-- git: `deec967`  mode: **replay**  repeat: 1
+- git: `1a64dd8`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -9,12 +9,12 @@
 |---|---|
 | **accuracy (correct / gold-valued)** | **86.5%** |
 | **accuracy RAW (all adapter widenings off)** | **78.0%** |
-| **hallucination rate (hallucinated / extracted)** | **22.2%** |
-| **└ invention rate (value found NOWHERE in the PDF)** | **0.0%** |
-| └ misplacement (real content, slot gold leaves empty) | 19.9% |
-| hallucinated values | 94 (invented 0, misplaced 94) |
+| **hallucination rate (hallucinated / extracted)** | **22.6%** |
+| **└ invention rate (value found NOWHERE in the PDF)** | **0.5%** |
+| └ misplacement (real content, slot gold leaves empty) | 19.8% |
+| hallucinated values | 96 (invented 2, misplaced 94) |
 | near misses | 1 |
-| outcome counts | {"wrong": 1, "correct": 327, "hallucinated": 94, "missed": 49, "near": 1, "empty_ok": 12} |
+| outcome counts | {"wrong": 1, "correct": 327, "hallucinated": 96, "missed": 49, "near": 1, "empty_ok": 12} |
 
 ## By document type
 
@@ -25,7 +25,7 @@
 | cheque | 63.6% | 58.8% | 0 | 7 | 0 | 0 | 4 | 10 |
 | expense_report | 98.1% | 8.6% | 0 | 53 | 0 | 0 | 1 | 5 |
 | income_statement | 100.0% | 21.9% | 0 | 25 | 0 | 0 | 0 | 7 |
-| payslip | 91.4% | 15.8% | 0 | 64 | 0 | 0 | 6 | 12 |
+| payslip | 91.4% | 17.9% | 2 | 64 | 0 | 0 | 6 | 14 |
 | purchase_order | 96.8% | 24.4% | 0 | 30 | 1 | 0 | 0 | 10 |
 | sales_invoice | 100.0% | 22.8% | 0 | 71 | 0 | 0 | 0 | 21 |
 
@@ -36,7 +36,7 @@
 | date | 100.0% | 0.0% | 0 | 30 | 0 | 0 | 0 | 0 |
 | money | 86.3% | 1.4% | 0 | 139 | 0 | 1 | 21 | 2 |
 | number | 100.0% | 0.0% | 0 | 12 | 0 | 0 | 0 | 0 |
-| string | 83.4% | 38.5% | 0 | 146 | 1 | 0 | 28 | 92 |
+| string | 83.4% | 39.0% | 2 | 146 | 1 | 0 | 28 | 94 |
 
 ## Per document
 
@@ -49,7 +49,7 @@
 | INV-2024-0047 | sales_invoice | 100.0% | 97.4% | 11 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 88.0% | 7 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
 | PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 86.5% | 4 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
-| PAYSLIP-EMP-0012-APR2024 | payslip | 87.9% | 87.9% | 8 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PAYSLIP-EMP-0012-APR2024 | payslip | 87.9% | 87.9% | 10 | 2 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PO-2024-0018 | purchase_order | 96.8% | 45.2% | 10 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
 | STMT-2024-01 | bank_statement | 100.0% | 95.7% | 4 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
 
@@ -185,8 +185,10 @@
 | PAYSLIP-EMP-0012-APR2024 | Title / Dept | hallucinated (misplaced) | None | Purchasing Manager – Procurement |
 | PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2].Description | hallucinated (misplaced) | None | Total |
 | PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2].Amount | hallucinated (misplaced) | None | $8,300.00 |
+| PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2]._confidence | INVENTED | None | high |
 | PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8].Description | hallucinated (misplaced) | None | Total |
 | PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8].Amount | hallucinated (misplaced) | None | ($3,117.35) |
+| PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8]._confidence | INVENTED | None | high |
 | PO-2024-0018 | Authorised By | near | Janet Wu – VP Operations | Janet Wu |
 | PO-2024-0018 | Company Name | hallucinated (misplaced) | None | NEXUS GLOBAL TRADING LLC |
 | PO-2024-0018 | Company Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
