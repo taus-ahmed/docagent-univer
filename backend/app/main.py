@@ -94,6 +94,17 @@ def _run_migrations():
             """ALTER TABLE document_results
                ADD COLUMN IF NOT EXISTS raw_llm_response TEXT""",
 
+            # column_templates.description holds the full spreadsheet grid as
+            # JSON and can run to tens of thousands of characters. An older
+            # create_all() made it VARCHAR(500); the ORM has said Text for a
+            # long time, and create_all NEVER alters an existing column. Any
+            # database created before that change silently rejects every real
+            # template with StringDataRightTruncation — a 500 on save, and no
+            # way to tell from the UI. Idempotent: a no-op where it is already
+            # text (production).
+            """ALTER TABLE column_templates
+               ALTER COLUMN description TYPE TEXT""",
+
             # Derived-structure artifacts, removed. A template's shape is now
             # computed fresh from its grid on every run, so there is nothing to
             # store and nothing that can go stale. Dropping is idempotent.

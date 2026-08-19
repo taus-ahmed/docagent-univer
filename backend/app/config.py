@@ -38,7 +38,11 @@ class Settings(BaseSettings):
     # â”€â”€ LLM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     GROQ_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
-    PRIMARY_LLM: str = "groq"
+    # Gemini, not Groq: every Groq model this codebase configures is
+    # decommissioned and the account is offered no vision model at all, so
+    # "groq" is a default that cannot extract anything. Production already
+    # overrides it; this makes a fresh checkout work too.
+    PRIMARY_LLM: str = "gemini"
 
     GROQ_CLASSIFICATION_MODEL: str = "llama-3.2-11b-vision-preview"
     GROQ_EXTRACTION_MODEL: str = "llama-3.3-70b-versatile"
