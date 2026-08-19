@@ -4470,7 +4470,29 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     """
     from openpyxl.cell import MergedCell
 
+    # The sheet's extent is the static text PLUS every slot the shape found.
+    # _find_template_dimensions counts only cells that carry text, which was
+    # right when an empty value cell was flagged extractTarget. Under the one
+    # rule (text = label, empty = slot) a value cell carries neither text nor a
+    # flag, so a template whose value column has no heading — a plain list of
+    # "Label | <empty>" rows — collapsed to column A and every extracted value
+    # was dropped at export. The slots say where the values go, so they define
+    # the extent alongside the labels.
     max_r, max_c = _find_template_dimensions(cells_tpl)
+    for doc in doc_results:
+        ed = doc.get_extracted_data()
+        if not isinstance(ed, dict):
+            continue
+        sm = ed.get("slot_map") or {}
+        for f in sm.get("fields") or []:
+            rc = _ref_to_rowcol(f.get("ref", ""))
+            if rc:
+                max_r, max_c = max(max_r, rc[0]), max(max_c, rc[1])
+        for t in sm.get("tables") or []:
+            max_r = max(max_r, int(t.get("end_row", 0)))
+            for col in t.get("columns") or []:
+                max_c = max(max_c, int(col.get("col", 0)))
+
     GAP_BETWEEN_DOCS = 2
     doc_offset = 0
 
