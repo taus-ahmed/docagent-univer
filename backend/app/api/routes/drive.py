@@ -10,6 +10,7 @@ DELETE /api/watch/{id}        — remove watch folder
 POST /api/watch/check         — manually trigger a watch check
 """
 
+import logging
 import sys
 import tempfile
 import shutil
@@ -29,17 +30,31 @@ from app.schemas.schemas import (
     ExtractUploadResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api", tags=["drive"])
 
 
 def _get_drive():
-    """Load the Google Drive connector from the engine."""
+    """Load the Google Drive connector from the engine.
+
+    Drive is an OPTIONAL integration. When its module or dependencies are not
+    installed, that is the server lacking a capability, not the request being
+    wrong — so it is 503, not the 500 these routes used to return. A 500 says
+    "we have a bug"; this is a deployment that simply has no Drive support.
+    """
     backend_dir = Path(__file__).resolve().parent.parent.parent.parent
     engine_dir = backend_dir / "engine"
     for p in [str(backend_dir), str(engine_dir)]:
         if p not in sys.path:
             sys.path.insert(0, p)
-    from gdrive import get_drive_connector
+    try:
+        from gdrive import get_drive_connector
+    except ImportError as e:
+        logger.warning("Google Drive connector unavailable: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail="Google Drive integration is not available on this server.")
     return get_drive_connector()
 
 
@@ -79,7 +94,11 @@ def drive_auth(current_user: User = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Never echo the raw exception: it has carried module paths and
+        # internal state to the client ("No module named 'gdrive'").
+        logger.exception("Google Drive request failed")
+        raise HTTPException(status_code=502,
+                            detail="Google Drive request failed.") from e
 
 
 # ─── Folder Browser ───────────────────────────────────────────────────────────
@@ -115,7 +134,11 @@ def list_drive_folder(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Never echo the raw exception: it has carried module paths and
+        # internal state to the client ("No module named 'gdrive'").
+        logger.exception("Google Drive request failed")
+        raise HTTPException(status_code=502,
+                            detail="Google Drive request failed.") from e
 
 
 # ─── Drive Extraction ─────────────────────────────────────────────────────────
