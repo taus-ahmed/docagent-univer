@@ -46,6 +46,19 @@ def export_combined(
     if not docs:
         raise HTTPException(status_code=404, detail="No extracted documents found for this job")
 
+    # Row filters. These were declared in ExportRequest and read by nothing, so
+    # a caller asking for one document type quietly received all of them.
+    if payload.doc_types:
+        wanted = {t.strip().casefold() for t in payload.doc_types if t}
+        docs = [d for d in docs
+                if (d.document_type or "").strip().casefold() in wanted]
+    if payload.include_needs_review_only:
+        docs = [d for d in docs if d.needs_review]
+    if not docs:
+        raise HTTPException(
+            status_code=404,
+            detail="No documents in this job match the requested filters.")
+
     # Load template if provided
     template_columns = None
     if payload.template_id:
@@ -63,7 +76,9 @@ def export_combined(
             except Exception:
                 pass
 
-    excel_bytes = _build_excel(job, docs, template_columns, per_file=False)
+    excel_bytes = _build_excel(job, docs, template_columns, per_file=False,
+                               selected_columns=payload.selected_columns,
+                               column_order=payload.column_order)
     filename = f"docagent_job{job.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(
         io.BytesIO(excel_bytes),
@@ -106,7 +121,8 @@ def export_perfile(
             except Exception:
                 pass
 
-    excel_bytes = _build_excel(job, docs, template_columns, per_file=True)
+    excel_bytes = _build_excel(job, docs, template_columns, per_file=True,
+                               selected_columns=payload.selected_columns)
     filename = f"docagent_perfile_job{job.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(
         io.BytesIO(excel_bytes),
@@ -115,7 +131,37 @@ def export_perfile(
     )
 
 
-def _build_excel(job, docs: list, template_columns: list | None, per_file: bool) -> bytes:
+def _norm_col(name) -> str:
+    """Column names are matched case- and spacing-insensitively, because a
+    caller typing "Invoice Number" should not miss "invoice number"."""
+    return " ".join(str(name or "").split()).casefold()
+
+
+def _apply_column_controls(col_names: list, selected: list | None,
+                           order: list | None) -> list:
+    """Filter then order the combined sheet's columns.
+
+    `selected` keeps only the named columns (unknown names are ignored rather
+    than erroring — a saved column set should survive a template gaining or
+    losing a field). `order` puts the columns it names first, in that order,
+    and leaves everything else in its natural order behind them.
+    """
+    out = list(col_names)
+    if selected is not None:
+        keep = {_norm_col(c) for c in selected}
+        out = [c for c in out if _norm_col(c) in keep]
+    if order:
+        rank = {_norm_col(c): i for i, c in enumerate(order)}
+        named = sorted((c for c in out if _norm_col(c) in rank),
+                       key=lambda c: rank[_norm_col(c)])
+        rest = [c for c in out if _norm_col(c) not in rank]
+        out = named + rest
+    return out
+
+
+def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
+                 selected_columns: list | None = None,
+                 column_order: list | None = None) -> bytes:
     """Build Excel using openpyxl directly — no dependency on engine ExcelWriter."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -149,6 +195,9 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool)
                 cols = [(c["name"], c["type"]) for c in template_columns]
             else:
                 cols = [(k, "Text") for k in ext_data.keys()]
+            if selected_columns is not None:
+                keep = {_norm_col(c) for c in selected_columns}
+                cols = [c for c in cols if _norm_col(c[0]) in keep]
 
             # Header row
             ws.append(["Field", "Value", "Confidence"])
@@ -198,6 +247,9 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool)
                         keys.append(k)
                         seen.add(k)
             col_names = keys
+
+        col_names = _apply_column_controls(col_names, selected_columns,
+                                           column_order)
 
         ws = wb.create_sheet(title="Extracted Data")
         headers = ["File", "Doc Type", "Confidence", "Status"] + col_names

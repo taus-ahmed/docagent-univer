@@ -151,15 +151,26 @@ class TemplateResponse(BaseModel):
 # ─── Export ───────────────────────────────────────────────────────────────────
 
 class ExportRequest(BaseModel):
+    """POST /api/export/combined — one row per document, fields as columns.
+
+    Every field here is READ. `include_line_items` used to sit alongside them
+    and was removed rather than implemented: this export is a flat table of
+    scalar fields and emits no line items at all, so the flag could only ever
+    describe something the writer cannot produce. The template-shaped export
+    (GET /api/jobs/{id}/export) is where line items live.
+    """
     job_id: int
     template_id: Optional[int] = None
+    # None = every column. Names that match nothing are ignored.
     selected_columns: Optional[list[str]] = None
+    # Columns named here lead, in this order; the rest follow unchanged.
     column_order: Optional[list[str]] = None
+    # None = every document type.
     doc_types: Optional[list[str]] = None
-    include_line_items: bool = True
     include_needs_review_only: bool = False
 
 class ExportPerFileRequest(BaseModel):
+    """POST /api/export/perfile — one sheet per document, Field/Value/Confidence."""
     job_id: int
     template_id: Optional[int] = None
     selected_columns: Optional[list[str]] = None

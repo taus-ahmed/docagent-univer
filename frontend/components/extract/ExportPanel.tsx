@@ -16,7 +16,10 @@ export default function ExportPanel({ jobId, results }: Props) {
   async function exportCombined() {
     setLoading("combined");
     try {
-      const blob = await exportApi.combined({ job_id: jobId, include_line_items: true });
+      // include_line_items was sent here and read by nothing: the combined
+      // sheet is a flat table of scalar fields and has no line items to
+      // include. The template-shaped export is where those live.
+      const blob = await exportApi.combined({ job_id: jobId });
       exportApi.downloadBlob(blob, `docagent_job${jobId}_combined.xlsx`);
       toast.success("Downloaded combined Excel");
     } catch {

@@ -392,13 +392,27 @@ export const exportApi = {
   combined: async (params: {
     job_id: number;
     template_id?: number;
-    include_line_items?: boolean;
+    /** Keep only these columns. Omit for all of them. */
+    selected_columns?: string[];
+    /** These columns lead, in this order; the rest follow. */
+    column_order?: string[];
+    /** Keep only these document types. Omit for all of them. */
+    doc_types?: string[];
+    /** Keep only documents flagged for review. */
+    include_needs_review_only?: boolean;
   }): Promise<Blob> => {
     const res = await api.post("/api/export/combined", params, { responseType: "blob" });
     return res.data;
   },
-  perFile: async (params: { job_id: number; template_id?: number }): Promise<Blob> => {
-    const res = await api.post("/api/export/per-file", params, { responseType: "blob" });
+  perFile: async (params: {
+    job_id: number;
+    template_id?: number;
+    selected_columns?: string[];
+    doc_ids?: number[];
+  }): Promise<Blob> => {
+    // The route is /perfile, not /per-file. It was called with a hyphen here,
+    // so every per-file download from the History page was a 404.
+    const res = await api.post("/api/export/perfile", params, { responseType: "blob" });
     return res.data;
   },
   templateExport: async (jobId: number): Promise<Blob> => {
