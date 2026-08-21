@@ -134,6 +134,10 @@ def extract_from_drive(
     if not drive.is_authenticated:
         raise HTTPException(status_code=401, detail="Google Drive not authenticated")
 
+    # Same rule as /api/extract/upload: the tenant comes from the token.
+    from app.api.routes.extract import resolve_client_id
+    client_id = resolve_client_id(current_user, client_id)
+
     schema_path = storage.get_schema_path(client_id)
     if not schema_path:
         raise HTTPException(status_code=404, detail=f"Schema not found for client '{client_id}'")
@@ -230,10 +234,15 @@ def add_watch_folder(
     storage=Depends(get_storage),
 ):
     """Add a new watch folder."""
+    # A watch folder feeds extraction jobs, so it is tagged with the tenant the
+    # token authorises, not the one the body names.
+    from app.api.routes.extract import resolve_client_id
+    client_id = resolve_client_id(current_user, payload.client_id)
+
     # Verify schema exists
-    schema_path = storage.get_schema_path(payload.client_id)
+    schema_path = storage.get_schema_path(client_id)
     if not schema_path:
-        raise HTTPException(status_code=404, detail=f"Schema not found for client '{payload.client_id}'")
+        raise HTTPException(status_code=404, detail=f"Schema not found for client '{client_id}'")
 
     # Check not already watching
     existing = db.query(WatchFolder).filter(
@@ -249,7 +258,7 @@ def add_watch_folder(
         folder_id=payload.folder_id,
         folder_name=payload.folder_name,
         folder_path=payload.folder_path,
-        client_id=payload.client_id,
+        client_id=client_id,
         auto_upload_results=payload.auto_upload_results,
         poll_interval_minutes=payload.poll_interval_minutes,
     )

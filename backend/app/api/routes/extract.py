@@ -161,6 +161,73 @@ async def get_pdf_page_count(
 
 
 # ==============================================================================
+# TENANCY — who a request is allowed to act as, and what it may use
+# ==============================================================================
+#
+# Both helpers exist because the upload endpoint trusted the request body for
+# two things it must not: which tenant the job belongs to, and which template
+# it may extract with. They are shared with drive.py, which had the same two
+# holes at its own doors.
+
+def resolve_client_id(current_user, requested: Optional[str]) -> str:
+    """The tenant a request acts as. From the token, not the body.
+
+    A user with a client_id acts as that client, full stop — whatever the form
+    says. The form value is not rejected, only ignored, and the difference is
+    logged. Rejecting would be stricter but would break the app today: the
+    Extract page derives its client_id from `schemas[0].client_id`, which is
+    the first schema in a list, not the signed-in user's tenant. A 403 there
+    would lock out exactly the tenanted users this is meant to protect.
+
+    A super-admin (role=admin with NO client_id of their own) is the one case
+    that may act for another tenant — they have no tenant to be pinned to, and
+    operating on behalf of a client is their job. Their body value is honoured.
+    """
+    own = getattr(current_user, "client_id", None)
+    if own:
+        if requested and requested != own:
+            print(f"[TENANCY] user {current_user.id} requested client_id="
+                  f"{requested!r}; using own {own!r} from token", flush=True)
+        return own
+    if getattr(current_user, "role", None) == "admin":
+        if not requested:
+            raise HTTPException(
+                status_code=400,
+                detail="client_id is required: a super-admin has no tenant of "
+                       "their own, so the request must name the client it is for.")
+        return requested
+    raise HTTPException(status_code=403,
+                        detail="This account is not assigned to a client.")
+
+
+def load_template_for_user(db: Session, template_id: Optional[int], current_user):
+    """A template the user is allowed to extract with, or an error.
+
+    Previously the upload endpoint loaded any template by id with no check at
+    all, and silently continued with NO template when the id did not exist —
+    so a wrong id quietly changed the extraction mode instead of failing.
+
+    Visibility matches GET /api/templates/{id} exactly, so a template usable
+    here is one the user can already see: their own, a default, or one shared
+    inside their own client.
+    """
+    if not template_id:
+        return None
+    tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id).first()
+    if not tpl:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if current_user.role == "admin" and not current_user.client_id:
+        return tpl                                   # super-admin sees all
+    if tpl.user_id == current_user.id:
+        return tpl                                   # owner
+    if tpl.is_default:
+        return tpl
+    if tpl.is_shared and tpl.client_id == current_user.client_id:
+        return tpl                                   # shared inside own client
+    raise HTTPException(status_code=403, detail="Not your template")
+
+
+# ==============================================================================
 # UPLOAD ENDPOINT
 # ==============================================================================
 
@@ -185,15 +252,16 @@ async def upload_and_extract(
         if error:
             raise HTTPException(status_code=400, detail=f"{f.filename}: {error}")
 
+    # The tenant and the template both come from the token's authority, never
+    # from the multipart body.
+    client_id = resolve_client_id(current_user, client_id)
+
     schema_path = storage.get_schema_path(client_id) or storage.get_schema_path("demo_001")
     if schema_path is None:
         raise HTTPException(status_code=404, detail="No schema found.")
 
-    template_data = None
-    if template_id:
-        tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id).first()
-        if tpl:
-            template_data = _parse_template(tpl)
+    tpl = load_template_for_user(db, template_id, current_user)
+    template_data = _parse_template(tpl) if tpl else None
 
     # Parse options
     selected_options: list = []
