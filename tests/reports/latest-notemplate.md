@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-19 03:55:20
+# Accuracy report — 2026-08-19 14:03:41
 
-- git: `520f5bc`  mode: **replay**  repeat: 1
+- git: `80fbf76`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -204,3 +204,25 @@
 | STMT-2024-01 | ABA Number | hallucinated (misplaced) | None | 021000021 |
 | STMT-2024-01 | Member FDIC | hallucinated (misplaced) | None | Member FDIC |
 | STMT-2024-01 | EIN | hallucinated (misplaced) | None | 47-3821654 |
+
+## Changes vs previous run
+
+- CHQ-001847 :: Authorized Signatory Name: hallucinated -> None
+- CHQ-001847 :: Authorized Signature Name: None -> hallucinated
+- CHQ-001847 :: Drawer City State Zip: None -> hallucinated
+- CHQ-001847 :: Drawer City, State, Zip: hallucinated -> None
+- CHQ-001847 :: Non-Negotiable Copy: None -> hallucinated
+- INV-2024-0031 :: Notes - Payment Received Date: hallucinated -> None
+- INV-2024-0031 :: Notes - Payment Reference: hallucinated -> None
+- INV-2024-0031 :: Notes Payment Received: None -> hallucinated
+- INV-2024-0031 :: Notes Reference: None -> hallucinated
+- INV-2024-0031 :: Payment Instructions - Cheque Payable To: hallucinated -> None
+- INV-2024-0031 :: Payment Instructions - Wire ABA: hallucinated -> None
+- INV-2024-0031 :: Payment Instructions - Wire Account: hallucinated -> None
+- INV-2024-0031 :: Payment Instructions - Wire Bank: hallucinated -> None
+- INV-2024-0031 :: Payment Instructions ABA: None -> hallucinated
+- INV-2024-0031 :: Payment Instructions Account Number: None -> hallucinated
+- INV-2024-0031 :: Payment Instructions Bank Name: None -> hallucinated
+- INV-2024-0031 :: Payment Instructions Cheque Payable To: None -> hallucinated
+- PAYSLIP-EMP-0012-APR2024 :: Employee Title / Dept: hallucinated -> None
+- PAYSLIP-EMP-0012-APR2024 :: Title / Dept: None -> hallucinated

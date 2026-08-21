@@ -1,6 +1,6 @@
 {
- "run_id": "2026-08-19 03:55:20",
- "git_commit": "520f5bc",
+ "run_id": "2026-08-19 14:03:41",
+ "git_commit": "80fbf76",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -15235,6 +15235,121 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-19 03:20:51"
+ "diff": [
+  {
+   "key": "CHQ-001847 :: Authorized Signatory Name",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Authorized Signature Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Drawer City State Zip",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Drawer City, State, Zip",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Non-Negotiable Copy",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Notes - Payment Received Date",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Notes - Payment Reference",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Notes Payment Received",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Notes Reference",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions - Cheque Payable To",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions - Wire ABA",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions - Wire Account",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions - Wire Bank",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions ABA",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions Account Number",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions Bank Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions Cheque Payable To",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee Title / Dept",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Title / Dept",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-08-19 13:57:06"
 }
