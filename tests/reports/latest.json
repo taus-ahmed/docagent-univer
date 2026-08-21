@@ -1,9 +1,9 @@
 {
- "run_id": "2026-08-19 13:52:53",
- "git_commit": "80fbf76",
+ "run_id": "2026-08-21 01:04:19",
+ "git_commit": "6b128f2",
  "config": {
-  "mode": "live",
-  "repeat": 3,
+  "mode": "replay",
+  "repeat": 1,
   "no_template": false,
   "env": {
    "PRIMARY_LLM": "gemini",
@@ -11,9 +11,9 @@
   }
  },
  "cache_stats": {
-  "hits": 0,
+  "hits": 10,
   "recorded": 0,
-  "live": 30,
+  "live": 0,
   "misses": 0
  },
  "documents": {
@@ -14720,5 +14720,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-08-19 03:55:02"
+ "diff_against": "2026-08-21 01:01:13"
 }

@@ -7,8 +7,19 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Every shipped placeholder for SECRET_KEY. They differ between config.py and
+# .env.example, so both are listed rather than compared against one constant —
+# a guard that only knows one of them is a guard with a hole in it.
+_PLACEHOLDER_SECRETS = frozenset({
+    "change-me-in-production-use-openssl-rand-hex-32",
+    "change-me-use-openssl-rand-hex-32",
+    "changeme",
+    "secret",
+    "your-secret-key-here",
+})
 
 
 class Settings(BaseSettings):
@@ -121,6 +132,47 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+
+    @model_validator(mode="after")
+    def _refuse_to_run_production_on_a_known_key(self):
+        """A production deployment must not boot on a published signing key.
+
+        SECRET_KEY signs every JWT. It has a default so that a fresh checkout
+        runs, and that default is in this repository — so a production deploy
+        that forgets the variable signs tokens with a key anyone can read, and
+        anyone can then mint an admin token. Nothing in the app's behaviour
+        would look wrong.
+
+        This fires at import, not at request time, and only when
+        ENVIRONMENT=production. Development and tests are untouched: a missing
+        key there is a convenience, not a vulnerability.
+
+        Deliberately NOT enforcing a minimum length. A short key is weaker than
+        a long one, but a length rule could refuse a deployment that is
+        currently working and secret, which is a worse failure than the one it
+        prevents. Weak-but-secret is warned about; published is refused.
+        """
+        if self.ENVIRONMENT != "production":
+            return self
+        key = (self.SECRET_KEY or "").strip()
+        if not key or key.casefold() in _PLACEHOLDER_SECRETS \
+                or "change-me" in key.casefold() or "changeme" in key.casefold():
+            raise ValueError(
+                "SECRET_KEY is missing or is the placeholder shipped in this "
+                "repository, and ENVIRONMENT=production.\n"
+                "Every JWT would be signed with a key that is public, so "
+                "anyone could mint an admin token.\n"
+                "Set a real one:  SECRET_KEY=$(openssl rand -hex 32)"
+            )
+        if len(key) < 32:
+            import warnings
+            warnings.warn(
+                f"SECRET_KEY is only {len(key)} characters. HS256 keys should "
+                f"be at least 32 (openssl rand -hex 32). Not refused, because "
+                f"it may be secret and in use — but it should be rotated.",
+                stacklevel=2,
+            )
+        return self
 
     def ensure_storage_dirs(self):
         """Create local storage directories if they don't exist."""
