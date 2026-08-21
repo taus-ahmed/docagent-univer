@@ -53,11 +53,31 @@ async def lifespan(app: FastAPI):
 
 def _run_migrations():
     """
-    Safe startup migrations — adds missing columns without breaking existing data.
-    Uses ADD COLUMN IF NOT EXISTS so it's idempotent — safe to run every boot.
+    Additive startup migrations. Idempotent — safe to run every boot.
+
+    THESE MUST FAIL LOUDLY. The previous version wrapped every statement in
+    `except Exception` and logged the failure at DEBUG — invisible at
+    production log level — then printed "Database migrations applied"
+    whether anything had applied or not. That is how
+    `column_templates.description` sat as VARCHAR(500) against an ORM that
+    said Text for months: every real template save failed, the repair never
+    ran, and the startup log said everything was fine.
+
+    So now: a statement that does not apply to this dialect is SKIPPED with a
+    reason, a statement that fails is an ERROR with the SQL and the exception,
+    the summary line reports real counts, and in production any failure raises
+    rather than serving on a schema nobody verified. On Railway that fails the
+    healthcheck and the previous deployment keeps serving, which is the
+    outcome you want from a migration that cannot run.
     """
     from app.models import SessionLocal
     from sqlalchemy import text
+
+    # Every statement below is PostgreSQL syntax: ADD COLUMN IF NOT EXISTS,
+    # ALTER COLUMN ... TYPE and DROP COLUMN IF EXISTS are all unsupported on
+    # SQLite. On SQLite create_all() has already produced the current schema,
+    # so skipping is correct — it just has to be SAID rather than swallowed.
+    PG_ONLY = {"postgresql"}
 
     db = SessionLocal()
     try:
@@ -114,20 +134,44 @@ def _run_migrations():
                DROP COLUMN IF EXISTS shape_json""",
         ]
 
-        for sql in migrations:
-            try:
-                db.execute(text(sql))
-                db.commit()
-            except Exception as e:
-                db.rollback()
-                # Log but don't crash — column may already exist in some DB flavours
-                # that don't support IF NOT EXISTS syntax
-                logger.debug(f"Migration skipped (likely already applied): {e}")
+        dialect = db.bind.dialect.name
+        applied, failures = 0, []
 
-        logger.info("Database migrations applied")
+        if dialect not in PG_ONLY:
+            logger.warning(
+                "Startup migrations SKIPPED: %d statements are PostgreSQL "
+                "syntax and this database is '%s'. create_all() supplies the "
+                "current schema here, but no drift repair runs on this "
+                "dialect.", len(migrations), dialect)
+        else:
+            for sql in migrations:
+                label = " ".join(sql.split())[:90]
+                try:
+                    db.execute(text(sql))
+                    db.commit()
+                    applied += 1
+                except Exception as e:
+                    db.rollback()
+                    failures.append((label, e))
+                    logger.error("MIGRATION FAILED: %s\n  %s: %s",
+                                 label, type(e).__name__, e)
 
-    except Exception as e:
-        logger.warning(f"Migration error: {e}")
+            if failures:
+                logger.error("Startup migrations: %d applied, %d FAILED",
+                             applied, len(failures))
+            else:
+                logger.info("Startup migrations: %d applied, 0 failed", applied)
+
+        if failures and settings.is_production:
+            raise RuntimeError(
+                f"{len(failures)} startup migration(s) failed and "
+                f"ENVIRONMENT=production. Refusing to serve on a schema that "
+                f"was not verified — the first failure was: "
+                f"{failures[0][0]} -> {failures[0][1]}"
+            )
+        return {"dialect": dialect, "applied": applied,
+                "failed": len(failures)}
+
     finally:
         db.close()
 
