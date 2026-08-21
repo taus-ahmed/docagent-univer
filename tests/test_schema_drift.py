@@ -9,10 +9,14 @@ the ORM declared `Text` and production held 15,873-character grids: every real
 template save failed with StringDataRightTruncation — a 500 with no clue in the
 UI, and no template ever stored.
 
-These tests run against whatever DATABASE_URL is configured and SKIP if it is
-unreachable, so they are useful locally and harmless in CI.
+These tests run against whatever DATABASE_URL is configured. If it is not
+reachable they FAIL, because a run that checked nothing must not look like a
+run that checked everything — see `_engine` below. Set DOCAGENT_DB_OPTIONAL=1
+to skip on purpose.
 """
 import json
+import os
+import warnings
 
 import pytest
 
@@ -20,8 +24,27 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
+# Opting out of the drift check must be a decision someone made, not a
+# side effect of not having Postgres running.
+_OPT_OUT = "DOCAGENT_DB_OPTIONAL"
+
 
 def _engine():
+    """The configured database, or a FAILURE saying the check did not run.
+
+    This used to `pytest.skip` when no database was reachable, which made a
+    run that verified nothing indistinguishable from a run that verified
+    everything: five green skips in a 300-test suite, scrolling past. In CI
+    without Postgres the drift check has never run at all and the build is
+    still green — which is the same shape of problem as the migrations that
+    logged their failures at DEBUG.
+
+    A skip is still available, but it has to be asked for:
+
+        DOCAGENT_DB_OPTIONAL=1 pytest
+
+    and it is reported at every level pytest offers.
+    """
     import sqlalchemy as sa
     from app.config import settings
     try:
@@ -30,7 +53,20 @@ def _engine():
             pass
         return e
     except Exception as exc:
-        pytest.skip(f"no reachable database: {type(exc).__name__}")
+        reason = (f"schema drift NOT CHECKED: no reachable database "
+                  f"({type(exc).__name__}: {str(exc)[:120]})")
+        if os.getenv(_OPT_OUT) == "1":
+            warnings.warn(reason, stacklevel=2)
+            print(f"\n!! {reason}", flush=True)
+            pytest.skip(reason)
+        pytest.fail(
+            reason + "\n\nThe ORM-vs-database check cannot run without a "
+            "database, and a run that checked nothing must not report "
+            "success — that is how column_templates.description stayed "
+            "VARCHAR(500) for months.\n"
+            "Either start the database (docker-compose up -d), point "
+            "DATABASE_URL at one, or opt out on purpose with "
+            f"{_OPT_OUT}=1.")
 
 
 def _norm(t):
