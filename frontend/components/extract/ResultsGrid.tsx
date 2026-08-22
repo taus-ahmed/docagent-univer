@@ -16,20 +16,43 @@ interface Props {
 
 // ── Cell renderers (React components, no innerHTML) ───────────────────────────
 
+// The confidence vocabulary. Mirrors backend/app/core/confidence.py — read
+// that module's docstring before changing a word here. In short:
+//   high       grounded in the document AND the user authored the slot label
+//   grounded   grounded, but the MODEL named the slot, so nothing independent
+//              says the value belongs there (no-template extraction)
+//   unverified no text layer existed to check any span against (image upload)
+//   low        checked and failed
+const CONFIDENCE_LABEL: Record<string, string> = {
+  high:       "High",
+  grounded:   "Verbatim from the document",
+  unverified: "Unverified — no text layer",
+  medium:     "Medium",
+  low:        "Low",
+  edited:     "Edited by hand",
+};
+
+const CONFIDENCE_COLOR: Record<string, string> = {
+  high:       "var(--green,#22c55e)",
+  grounded:   "var(--blue,#2563eb)",   // confident, but a DIFFERENT claim from high
+  unverified: "var(--text3,#6b7280)",  // not a judgement — nothing was measured
+  medium:     "var(--amber,#f59e0b)",
+  low:        "var(--red,#ef4444)",
+  edited:     "var(--accent,#4f46e5)",
+};
+
 function ConfidenceCell({ value }: ICellRendererParams) {
   if (!value) return null;
-  const colors: Record<string, string> = {
-    high:   "var(--green,#22c55e)",
-    medium: "var(--amber,#f59e0b)",
-    low:    "var(--red,#ef4444)",
-  };
+  const key = String(value);
   return (
-    <span style={{
-      fontSize: 11, fontWeight: 600,
-      color: colors[value] ?? "var(--text3)",
-      textTransform: "capitalize",
-    }}>
-      {value}
+    <span
+      title={CONFIDENCE_LABEL[key] ?? key}
+      style={{
+        fontSize: 11, fontWeight: 600,
+        color: CONFIDENCE_COLOR[key] ?? "var(--text3)",
+      }}
+    >
+      {CONFIDENCE_LABEL[key] ?? key}
     </span>
   );
 }
@@ -148,7 +171,8 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
       {
         field: "_confidence",
         headerName: "Confidence",
-        width: 112,
+        width: 190,   // fits "Verbatim from the document" without truncating
+
         editable: false,
         cellRenderer: ConfidenceCell,
       },
@@ -203,7 +227,10 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
     try {
       const updated = JSON.parse(JSON.stringify(doc.extracted_data ?? {}));
       if (!updated.extracted_data) updated.extracted_data = {};
-      updated.extracted_data[field] = { value: e.newValue ?? "", confidence: "high" };
+      // A human typed this. It is not a grounded extraction and must not
+      // inherit a grounding claim — "high" here would assert the engine
+      // verified a value the engine never saw.
+      updated.extracted_data[field] = { value: e.newValue ?? "", confidence: "edited" };
       await extractApi.updateDocument(jobId, docId, updated);
       toast.success("Saved");
     } catch {

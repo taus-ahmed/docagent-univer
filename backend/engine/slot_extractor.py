@@ -239,13 +239,35 @@ def _single_datum(value, label):
 # to a truncated one. Nothing in the span distinguishes them.
 
 
-def confidence_for(value, source, label, grounded):
-    """(level, reason). High means: we can stand behind this cell."""
+# ── the confidence vocabulary ────────────────────────────────────────────────
+#
+# Defined once in app/core/confidence.py — the engine, the API, the exporters
+# and the UI all say the same words. In short:
+#
+#   HIGH        grounded AND the slot's label was authored by the USER
+#   GROUNDED    grounded, but the slot's label was written by the model itself,
+#               so nothing independent says the value BELONGS there
+#   UNVERIFIED  no text layer existed to check any span against
+#   LOW         checked and failed
+#
+# Read that module's docstring before changing any of this.
+from app.core.confidence import (  # noqa: E402
+    CONFIDENT_LEVELS, GROUNDED, HIGH, LOW, MEDIUM, UNVERIFIED,
+)
+
+
+def confidence_for(value, source, label, grounded, inferred=False):
+    """(level, reason).
+
+    `inferred=True` when the template was designed by inference rather than by
+    the user — the value can then be GROUNDED at best, never HIGH, because
+    there is no user-authored slot for it to be the right answer to.
+    """
     if not grounded:
-        return "low", "value could not be grounded in the document"
+        return LOW, "value could not be grounded in the document"
     if not _single_datum(value, label):
-        return "low", "cell carries more than one piece of information"
-    return "high", ""
+        return LOW, "cell carries more than one piece of information"
+    return (GROUNDED if inferred else HIGH), ""
 
 
 def verify_span(value, source, page, page_texts):
@@ -301,6 +323,14 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     _log("SLOT", f"{file_path.name}: {len(slots['fields'])} field slots, "
                  f"{len(slots['tables'])} table(s), {n_tbl_cols} table columns")
 
+    # Was this template designed by inference rather than by the user? If so no
+    # cell can be HIGH — see the confidence vocabulary above.
+    inferred = bool((template_data or {}).get("inferred"))
+    confident = GROUNDED if inferred else HIGH
+    if inferred:
+        _log("SLOT", f"{file_path.name}: inferred template — cells can be "
+                     f"'{GROUNDED}' at best, never '{HIGH}'")
+
     pages = doc_text_pages or ([doc_text] if doc_text else [])
     prompt = build_prompt(slots, pages, default_doc_type)
     parsed, resp = _llm_json(orchestrator, prompt, _SYSTEM,
@@ -329,12 +359,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if str(value).strip() == "":
                 continue
             ok, why = verify_span(value, source, page, pages)
-            lvl, reason = confidence_for(value, source, slot["row_label"], ok)
+            lvl, reason = confidence_for(value, source, slot["row_label"], ok,
+                                         inferred=inferred)
             extracted_fields[slot["ref"]] = value
             conf_map[slot["ref"]] = lvl
             if not ok:
                 ungrounded += 1
-            if lvl != "high":
+            if lvl not in CONFIDENT_LEVELS:
                 flagged.append(f'{slot["row_label"]}: {reason or why}')
 
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
@@ -366,7 +397,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     continue
                 if key:
                     seen_sources.add(key)
-                row, row_conf = {}, "high"
+                row, row_conf = {}, confident
                 for h in headers:
                     v = cells.get(h, "")
                     if v is None:
@@ -375,12 +406,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         row[h] = ""
                         continue
                     ok, why = verify_span(v, source, page, pages)
-                    lvl, reason = confidence_for(v, source, h, ok)
+                    lvl, reason = confidence_for(v, source, h, ok,
+                                                 inferred=inferred)
                     row[h] = v
                     if not ok:
                         ungrounded += 1
-                    if lvl != "high":
-                        row_conf = "low"
+                    if lvl not in CONFIDENT_LEVELS:
+                        row_conf = LOW
                         flagged.append(
                             f'{t["name"]}[{len(rows_out)}].{h}: {reason or why}')
                 if any(str(v).strip() for v in row.values()):
@@ -398,9 +430,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # DOCUMENT-LEVEL GATE — a document where more than 30% of cells are low
     # confidence is sent for manual review as a whole, rather than handing the
     # user a wall of per-cell warnings to work through.
-    low_cells = sum(1 for v in conf_map.values() if v == "low")
+    low_cells = sum(1 for v in conf_map.values() if v == LOW)
     low_cells += sum(1 for rows in tables_out.values() for r in rows
-                     if r.get("_confidence") == "low")
+                     if r.get("_confidence") == LOW)
     graded = len(conf_map) + sum(len(r) for r in tables_out.values())
     low_ratio = (low_cells / graded) if graded else 0.0
     review_gate = low_ratio > 0.30
@@ -408,13 +440,20 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         notes.append(f"{low_cells} of {graded} cells ({low_ratio:.0%}) are low "
                      f"confidence — this document needs manual review")
 
-    overall = "high" if ungrounded == 0 else ("medium" if ungrounded <= 2 else "low")
+    # "medium" at DOCUMENT level is a genuine mixed state — mostly grounded, one
+    # or two values not — not a claim about a check that never ran. That is
+    # UNVERIFIED, below.
+    overall = confident if ungrounded == 0 else (MEDIUM if ungrounded <= 2 else LOW)
     if review_gate:
-        overall = "low"
+        overall = LOW
     if file_type in ("scanned_pdf", "image") or len(doc_text.strip()) < 50:
-        overall = "medium"
-        notes.append("Scanned document — spans could not be verified against text")
-        conf_map = {k: "medium" for k in conf_map}
+        # No text layer to check any span against. Every cell here was reported
+        # as "medium" before Phase 8, which implied a verification that never
+        # happened; UNVERIFIED says what is actually true.
+        overall = UNVERIFIED
+        notes.append("No text layer — spans could not be verified against the "
+                     "document; values are unverified, not low quality")
+        conf_map = {k: UNVERIFIED for k in conf_map}
     needs_review = bool(ungrounded) or bool(unanswered) or review_gate
 
     r = DocumentExtractionResult(filename=file_path.name)
@@ -426,7 +465,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     for ref, v in extracted_fields.items():
         slot = next((f for f in slots["fields"] if f["ref"] == ref), None)
         kv[slot["row_label"] if slot else ref] = {
-            "value": v, "confidence": conf_map.get(ref, "high"), "ref": ref}
+            "value": v, "confidence": conf_map.get(ref, confident), "ref": ref}
 
     ed = {
         "document_type": default_doc_type,

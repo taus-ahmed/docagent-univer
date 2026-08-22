@@ -72,6 +72,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth import get_current_user
+from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
 from app.schemas.schemas import (
@@ -3628,8 +3629,12 @@ def _extract_image_with_template(orchestrator, file_path: Path,
     """
     Extract from a single image file (JPG/PNG/WEBP/TIFF/BMP).
     Sends the image directly to Gemini Vision — no pdfplumber layer.
-    All field confidences are forced to 'medium'.
-    Always sets needs_review=True with a note about manual verification.
+
+    Every value here is UNVERIFIED, and that is the honest word for it: an
+    image has no text layer, so no span can be checked against anything and
+    no grounding runs at all. These cells were reported as "medium" before
+    Phase 8, which implied a measurement had been made and had come out
+    middling. Nothing was measured. Always sets needs_review=True.
     """
     import base64 as _b64
     import time as t
@@ -3648,7 +3653,7 @@ def _extract_image_with_template(orchestrator, file_path: Path,
             prompt = (
                 "Extract every key data field visible in this document image.\n"
                 "Return ONLY JSON:\n"
-                '{"document_type": "...", "overall_confidence": "medium", '
+                '{"document_type": "...", "overall_confidence": "unverified", '
                 '"extracted_fields": {"field_name": "value"}, "table_rows": []}'
             )
 
@@ -3680,10 +3685,10 @@ def _extract_image_with_template(orchestrator, file_path: Path,
             result.document_type = raw.get("document_type", doc_type)
             result.extracted_data = {
                 "document_type":    raw.get("document_type", doc_type),
-                "overall_confidence": "medium",
+                "overall_confidence": UNVERIFIED,
                 "extraction_method": "image_upload",
                 "extracted_data": {
-                    k: {"value": str(v) if v is not None else "", "confidence": "medium"}
+                    k: {"value": str(v) if v is not None else "", "confidence": UNVERIFIED}
                     for k, v in raw.get("extracted_fields", {}).items()
                 },
                 "table_rows": raw.get("table_rows", []),
@@ -3699,14 +3704,15 @@ def _extract_image_with_template(orchestrator, file_path: Path,
             result.processing_time_ms  = elapsed
             result.success             = True
 
-        # Force medium confidence + needs_review for ALL image uploads
+        # UNVERIFIED + needs_review for ALL image uploads. No text layer exists,
+        # so nothing was checked — see the docstring.
         if result.success and result.extracted_data:
-            result.extracted_data["overall_confidence"] = "medium"
+            result.extracted_data["overall_confidence"] = UNVERIFIED
             result.extracted_data["image_upload"] = True
             inner = result.extracted_data.get("extracted_data", {})
             for key in inner:
                 if isinstance(inner[key], dict):
-                    inner[key]["confidence"] = "medium"
+                    inner[key]["confidence"] = UNVERIFIED
             # Inject a validation flag so _run_extraction_sync sets needs_review=True
             val = result.extracted_data.setdefault("validation", {})
             val["flagged_count"] = max(1, val.get("flagged_count", 0))
@@ -3714,8 +3720,8 @@ def _extract_image_with_template(orchestrator, file_path: Path,
                 "ref": "image_upload",
                 "value": "",
                 "issue": (
-                    "Image upload — no text validation available, "
-                    "please verify extracted values manually"
+                    "Image upload — no text layer, so no value could be "
+                    "verified against the document; please check manually"
                 ),
             })
 

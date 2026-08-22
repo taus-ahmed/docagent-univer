@@ -15,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
+from app.core.confidence import display as confidence_display
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
 from app.schemas.schemas import ExportRequest, ExportPerFileRequest
 
@@ -221,7 +222,12 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
 
                 ws.cell(row=i, column=1, value=col_name).font = Font(name="Calibri", bold=True, size=10)
                 ws.cell(row=i, column=2, value=str(value) if value else "").font = DATA_FONT
-                ws.cell(row=i, column=3, value=confidence).font = DATA_FONT
+                # The stored level is an identifier ("grounded"); the sheet
+                # shows the claim spelled out ("Verbatim from the document"),
+                # so a reader never has to know our vocabulary to know what we
+                # are asserting.
+                ws.cell(row=i, column=3,
+                        value=confidence_display(confidence)).font = DATA_FONT
 
                 if i % 2 == 0:
                     for c in range(1, 4):
@@ -231,7 +237,7 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
 
             ws.column_dimensions["A"].width = 25
             ws.column_dimensions["B"].width = 40
-            ws.column_dimensions["C"].width = 12
+            ws.column_dimensions["C"].width = 28   # fits "Verbatim from the document"
     else:
         # One combined sheet — all docs as rows
         if template_columns:
@@ -271,7 +277,7 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
             row_data = [
                 doc.filename,
                 doc.document_type or "",
-                doc.overall_confidence or "",
+                confidence_display(doc.overall_confidence),
                 "Review" if doc.needs_review else "OK",
             ]
             for col_name in col_names:

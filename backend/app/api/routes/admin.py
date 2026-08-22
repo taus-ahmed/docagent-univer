@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.auth import get_current_user, require_admin, hash_password
+from app.core.confidence import CONFIDENT_LEVELS
 from app.models import get_db, User, ExtractionJob, DocumentResult
 from app.schemas.schemas import (
     UserCreate, UserUpdate, UserResponse, SystemStats,
@@ -134,8 +135,14 @@ def get_stats(
         DocumentResult.needs_review == True,
         DocumentResult.reviewed == False,
     ).count()
+    # Documents we can stand behind. Both HIGH (templated: grounded AND the
+    # user authored the slot) and GROUNDED (inferred: grounded, but the model
+    # named the slot) count here — the distinction matters per cell, in the UI
+    # and the export; at the document-stat level "confident" is the question.
+    # Testing == "high" here would have silently dropped every no-template
+    # document from the count the moment the vocabulary split.
     high_conf = db.query(DocumentResult).filter(
-        DocumentResult.overall_confidence == "high"
+        DocumentResult.overall_confidence.in_(CONFIDENT_LEVELS)
     ).count()
     jobs_7d = db.query(ExtractionJob).filter(
         ExtractionJob.created_at >= seven_days_ago

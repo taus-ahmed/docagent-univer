@@ -14,6 +14,9 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
+from app.core.confidence import (  # noqa: E402
+    CONFIDENT_LEVELS, GROUNDED, HIGH, LOW, UNVERIFIED,
+)
 from slot_extractor import (  # noqa: E402
     _single_datum, confidence_for, run_slot_extraction,
 )
@@ -55,25 +58,62 @@ class TestSingleDatum:
 class TestConfidenceFor:
     def test_ungrounded_is_never_high(self):
         lvl, why = confidence_for("anything", "some span", "Label", False)
-        assert lvl == "low" and "ground" in why
+        assert lvl == LOW and "ground" in why
 
     def test_grounded_single_datum_is_high(self):
         lvl, _ = confidence_for("125,357.26", "Closing Balance: $125,357.26",
                                 "Closing Balance", True)
-        assert lvl == "high"
+        assert lvl == HIGH
 
     def test_grounded_but_two_data_is_demoted(self):
         lvl, why = confidence_for("Mr. Robert Chen - rchen@apex.com",
                                   "Mr. Robert Chen - rchen@apex.com",
                                   "Bill To Contact", True)
-        assert lvl == "low"
+        assert lvl == LOW
         assert "more than one piece of information" in why
 
     def test_the_reason_is_always_stated(self):
         for args in (("x", "y", "L", False),
                      ("a | b", "a | b", "L", True)):
             lvl, why = confidence_for(*args)
-            assert lvl == "low" and why
+            assert lvl == LOW and why
+
+
+class TestInferredIsNeverHigh:
+    """Phase 8. Grounding proves the text came from the document; it never
+    proves the value belongs in the slot. With an inferred template the slot's
+    label was written by the same model chain that produced the value, so
+    "high" would assert something nothing checks."""
+
+    def test_an_inferred_cell_is_grounded_not_high(self):
+        lvl, _ = confidence_for("125,357.26", "Closing Balance: $125,357.26",
+                                "Closing Balance", True, inferred=True)
+        assert lvl == GROUNDED
+        assert lvl != HIGH
+
+    def test_grounded_still_counts_as_confident(self):
+        assert GROUNDED in CONFIDENT_LEVELS and HIGH in CONFIDENT_LEVELS
+
+    def test_an_inferred_cell_can_still_be_low(self):
+        lvl, why = confidence_for("anything", "not in the doc", "Label", False,
+                                  inferred=True)
+        assert lvl == LOW and why
+
+    def test_two_data_in_an_inferred_cell_is_still_low(self):
+        lvl, _ = confidence_for("Mr. Robert Chen - rchen@apex.com",
+                                "Mr. Robert Chen - rchen@apex.com",
+                                "Bill To Contact", True, inferred=True)
+        assert lvl == LOW
+
+    def test_the_two_confident_levels_are_never_the_same_word(self):
+        """The whole point of the split: a reader must be able to tell a
+        user-authored slot from a model-named one."""
+        assert HIGH != GROUNDED
+
+    def test_unverified_is_not_a_confident_level(self):
+        """No text layer means nothing was checked — which is not the same as
+        a check that came out middling, and not something to stand behind."""
+        assert UNVERIFIED not in CONFIDENT_LEVELS
 
 
 def _stub(payload):

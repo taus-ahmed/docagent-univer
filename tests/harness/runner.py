@@ -616,9 +616,14 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     cal = report.get("calibration") or {}
     if cal:
         print("\nCONFIDENCE CALIBRATION  (of cells at each level, % correct)")
-        print(f"  {'level':<8}{'cells':>7}{'judged':>8}{'correct':>9}"
+        print(f"  {'level':<11}{'cells':>7}{'judged':>8}{'correct':>9}"
               f"{'precision':>11}   wrong/near/missed   halluc")
-        for lvl in ("high", "medium", "low"):
+        # Every level the engine can emit, in descending strength. Listing them
+        # explicitly (rather than iterating cal.keys()) keeps the order stable;
+        # an unknown level is appended rather than dropped, because a level we
+        # forgot to list is exactly the thing worth seeing.
+        known = ("high", "grounded", "medium", "unverified", "low")
+        for lvl in known + tuple(k for k in cal if k not in known):
             b = cal.get(lvl)
             if not b:
                 continue
@@ -628,13 +633,20 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
             # never asked about, which says nothing about the confidence level.
             judged = b["correct"] + b["near"] + b["wrong"] + b["missed"]
             prec = (b["correct"] / judged) if judged else 0
-            print(f"  {lvl:<8}{b['n']:>7}{judged:>8}{b['correct']:>9}"
+            print(f"  {lvl:<11}{b['n']:>7}{judged:>8}{b['correct']:>9}"
                   f"{prec*100:>10.1f}%   {b['wrong']}/{b['near']}/{b['missed']}"
                   f"        {b['hallucinated']}")
+        # "Survival" is the share of cells at a level we stand behind. HIGH and
+        # GROUNDED both qualify; they are counted together here and reported
+        # separately above, because the DISTINCTION is per-cell and the RATE is
+        # per-run. Counting only "high" would have read 0% the moment the
+        # no-template path stopped claiming it.
         tot = sum(b["n"] for b in cal.values())
-        hi = (cal.get("high") or {}).get("n", 0)
-        print(f"  survival: {hi}/{tot} cells ({(hi/tot*100 if tot else 0):.1f}%) "
-              f"are high confidence")
+        conf = sum((cal.get(l) or {}).get("n", 0) for l in ("high", "grounded"))
+        parts = [f"{l}={(cal.get(l) or {}).get('n', 0)}"
+                 for l in ("high", "grounded") if cal.get(l)]
+        print(f"  survival: {conf}/{tot} cells ({(conf/tot*100 if tot else 0):.1f}%) "
+              f"are at a confident level ({', '.join(parts) or 'none'})")
     print(f"cache               : {report['cache_stats']}")
     if report["unstable_total"]:
         print(f"UNSTABLE fields     : {report['unstable_total']}")
