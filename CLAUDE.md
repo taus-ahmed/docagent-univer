@@ -213,6 +213,22 @@ Ungrounded ⇒ the value is kept, marked **low**, and flagged — never presente
 fact. Table rows carry a **row-level** span, which grounds every cell in the row
 and additionally catches fabricated and duplicated rows (`seen_sources` dedup).
 
+**The confidence vocabulary is five words, defined once in
+`app/core/confidence.py`** — read that docstring before touching any of them:
+
+| level | claim |
+|---|---|
+| `high` | grounded **and** the USER authored the slot's label. Templated only. |
+| `grounded` | grounded, but the MODEL named the slot, so nothing independent says the value *belongs* there. The most no-template extraction can honestly claim. |
+| `unverified` | no text layer existed to check any span against (image upload, scanned PDF). Not a middling measurement — no measurement. |
+| `low` | checked and failed. |
+| `edited` | a human typed it in the results grid. |
+
+`high` and `grounded` are both "confident" (`CONFIDENT_LEVELS`) for the review
+gate and the admin stat — **test membership in that tuple, never `== "high"`** —
+and are never merged for display. The UI and both Excel exporters spell the
+claim out ("Verbatim from the document"); `ResultsGrid.tsx` mirrors the map.
+
 `confidence_for` returns **high** only when grounded **and** `_single_datum`
 passes — one piece of information per cell; an email or phone number in a cell
 that did not ask for one, or a `|`, demotes to low.
@@ -265,17 +281,29 @@ saves, and from there **nothing downstream can tell the difference** — same
   template at all.
 - Inference failing is a hard failure with a message, not a silent fallback.
 
-⚠ **Inference is not reproducible.** Field *names* vary run to run, which is the
-dominant no-template defect — see "Measured limits" below before building on
-this path.
+**Batch schema reuse (Phase 8).** `run_extraction(..., batch_schemas=dict)`
+takes a per-JOB cache so documents of the same kind share ONE inferred schema
+instead of each inferring a differently-named copy — `_run_extraction_sync`
+creates it; every single-document caller passes `None` and infers per document.
+Reuse is keyed by `classify_by_hints` (keyword pre-screening, no LLM call) so a
+mixed batch still gets one shape per kind, and a reused schema must fill ≥40%
+of its slots or the result is **discarded** and that document gets its own
+inference. Nothing is persisted beyond the job.
+
+⚠ **Inference is not fully reproducible.** `infer_template` runs at
+`temperature=0` (Phase 8), which cut run-to-run field-name variance from 40
+fields to 1 — but Gemini gives no reproducibility guarantee even at 0 (no seed
+parameter in this REST API). The residual is structural: "what should this
+column be called" has several correct answers. See "Measured limits" below.
 
 ### Images bypass the slot pipeline
 
 `_is_image_file` (JPG/PNG/WEBP/TIFF/BMP) routes to
 `_extract_image_with_template`, which still uses the older
 `_build_vision_prompt` → `_process_vision_result` path with
-`prompt_registry.py`, forces every confidence to medium, and always sets
-`needs_review=True`. PDFs — the overwhelming majority — go to
+`prompt_registry.py`, marks every value `unverified` (an image has no text
+layer, so no span can be checked — it was reported as "medium", which implied a
+measurement that never happened), and always sets `needs_review=True`. PDFs — the overwhelming majority — go to
 `run_extraction`. This is the one surviving second path.
 `_analyse_template_regions`, `prompt_registry.py` and the form/mixed/table
 writers exist for it and for re-exporting legacy jobs.
@@ -299,22 +327,51 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 `/api/export/perfile`, both openpyxl directly — never the engine's
 `excel_writer.py`.
 
-### Measured limits (from `tests/reports/latest*.json` at `80fbf76`)
+### Measured limits (from `tests/reports/latest*.json` at `ef3b34d`, Phase 8)
+
+Every run reports **three** accuracy numbers, because one number was hiding two
+different failures. Read all three:
 
 | | templated | no-template |
 |---|---|---|
-| accuracy | **97.9%** | **86.5%** |
-| accuracy RAW (all adapter widenings off) | 49.2% | 78.0% |
-| hallucination rate | **0%** | 22.6% |
-| invention rate (value nowhere in the PDF) | 0% | 0.5% |
-| high-confidence cells that were hallucinations | **0 / 369** | **90 / 415** |
-| fields varying across 3 live repeats | **0** | **40** |
-| balance sheet `BS-2024-Q1` | 100% | **15.2%** |
+| **accuracy** (container-aware headline) | **97.9%** | **86.8%** |
+| **content** (container-blind: got the fact, wherever it landed) | 96.7% | **95.0%** |
+| **structure fidelity** (gold tables returned as tables) | **100%** (14/14) | **64.3%** (9/14) |
+| accuracy RAW (all adapter widenings off) | 49.2% | 77.5% |
+| hallucination rate | **0%** | 26.3% |
+| ├ invented (value nowhere in the PDF) | 0 | **0** |
+| ├ misfiled (real content in a slot gold says is empty) | 0 | **4** |
+| └ out-of-schema (real content, name gold lacks — *not* a defect) | 0 | 115 |
+| **defect rate** (invented + misfiled) | **0%** | **0.9%** |
+| renamed (right value, different field name) | 0 | 5 |
+| cells at a confident level that were hallucinations | 0 / 369 `high` | 84 / 409 `grounded` |
+| fields varying across 3 live repeats | **0** | **1** (was 40) |
+| balance sheet `BS-2024-Q1` | 100% | 17.4% headline / **100% content** / 0% structure |
 
-Templated extraction is stable and grounded. No-template is neither, and the
-cause is **inference, not extraction**: the same balance sheet scores 100%
-templated and 15.2% inferred through identical extraction code. Decision-log §6
-records the `BS-2024-Q1` no-template regression as outstanding and unfixed.
+What these say:
+
+- **No-template reads pages nearly as well as templated** (95.0% vs 96.7%
+  content) **and structures them far worse** (64% vs 100%). The headline gap
+  was mostly the structuring failure being charged to reading.
+- **Nothing is invented.** Across 10 documents the engine produces no value
+  that is absent from the source. The 26.3% "hallucination rate" is 115
+  out-of-schema names — real page content that gold has no field for, which is
+  what inference is *for* — plus 4 genuine misfilings, all of them one bug:
+  `PAYSLIP-EMP-0012`'s "Total" summary line returned as a data row.
+- **`BS-2024-Q1` extracts perfectly.** Its content score is 100%; its headline
+  is 17.4% purely because inference returns 34 flat fields where gold names 5
+  tables. Decision-log §6 recorded this as an outstanding regression; the
+  reading half is closed, the structuring half is not. The "one genuine
+  extraction error" on that document turned out to be an adapter bug (see
+  `ef3b34d`) — the engine always had it right.
+- **Naming instability is largely gone** (40 → 1 across 3 live repeats, from
+  `temperature=0`). The one survivor is a value-granularity difference
+  ("1.5%" vs "1.5% monthly interest"), not a schema rename.
+
+Still open, and deliberately not attempted in Phase 8: a canonical field
+vocabulary per document type, and per-client schema persistence. Structure
+fidelity — inference describing a balance sheet as flat fields instead of
+tables — is the largest remaining no-template gap.
 
 ---
 
