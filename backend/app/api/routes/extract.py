@@ -4549,6 +4549,36 @@ def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod):
     return True
 
 
+def coerce_cell_value(value):
+    """The value as it will actually appear in the spreadsheet cell.
+
+    Money and numbers are written as NUMBERS: the currency symbol, thousands
+    separators and accounting parentheses are notation, not content, so
+    "$1,365,503" and "1,365,503" are the same cell. Anything that does not
+    parse stays the string it was. Returns None for an empty value (write
+    nothing).
+
+    Public because the accuracy harness compares run-to-run stability with it.
+    Two runs that differ only in how the model spelled a number produce an
+    identical spreadsheet, and reporting that as an unstable field measures the
+    model's formatting rather than its extraction.
+    """
+    if value is None or str(value).strip() == "":
+        return None
+    txt = str(value).strip()
+    num = txt.replace(",", "")
+    for sym in "$£€₹¥":
+        num = num.replace(sym, "")
+    neg = num.startswith("(") and num.endswith(")")
+    if neg:
+        num = num[1:-1]
+    try:
+        val = float(num)
+        return -val if neg else val
+    except ValueError:
+        return txt
+
+
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     """
     Writer for slot-directed extraction.
@@ -4600,20 +4630,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         cell = ws.cell(row=r + 1, column=c + 1)
         if isinstance(cell, MergedCell):
             return
-        if value is None or str(value).strip() == "":
-            return
-        txt = str(value).strip()
-        num = txt.replace(",", "")
-        for sym in "$£€₹¥":
-            num = num.replace(sym, "")
-        neg = num.startswith("(") and num.endswith(")")
-        if neg:
-            num = num[1:-1]
-        try:
-            val = float(num)
-            cell.value = -val if neg else val
-        except ValueError:
-            cell.value = txt
+        out = coerce_cell_value(value)
+        if out is not None:
+            cell.value = out
 
     for doc in doc_results:
         ed = doc.get_extracted_data()

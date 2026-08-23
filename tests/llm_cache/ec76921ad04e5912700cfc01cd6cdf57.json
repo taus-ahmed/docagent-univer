@@ -1,0 +1,276 @@
+{
+ "key": "ec76921ad04e5912700cfc01cd6cdf5720521d4542393d0b3df1f7f5a8fa8ae0",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4425,
+  "captured_at": "2026-08-22 22:35:26",
+  "prompt_preview": "Fill in a bank_statement spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nFIRST NATIONAL BANK OF NEW ACCOUNT STATEMENT\nYORK\n330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC\nAccount Holder: Nexus Global Trading LLC Statement No: STMT-2024-01\n142 West 57t"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"FIRST NATIONAL BANK OF NEW YORK\",\n      \"source\": \"FIRST NATIONAL BANK OF NEW YORK\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"330 Madison Avenue, New York, NY 10017\",\n      \"source\": \"330 Madison Avenue, New York, NY 10017\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"021000021\",\n      \"source\": \"ABA: 021000021\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Member FDIC\",\n      \"source\": \"Member FDIC\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"Nexus Global Trading LLC\",\n      \"source\": \"Account Holder: Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"STMT-2024-01\",\n      \"source\": \"Statement No: STMT-2024-01\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"January 2024\",\n      \"source\": \"Period: January 2024\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"****7743\",\n      \"source\": \"Account No: ****7743\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"Business Checking\",\n      \"source\": \"Type: Business Checking\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"$184,320.55\",\n      \"source\": \"$184,320.55\",\n      \"page\": 1\n    },\n    \"F13\": {\n      \"value\": \"$46,841.68\",\n      \"source\": \"$46,841.68\",\n      \"page\": 1\n    },\n    \"F14\": {\n      \"value\": \"$105,804.97\",\n      \"source\": \"$105,804.97\",\n      \"page\": 1\n    },\n    \"F15\": {\n      \"value\": \"$184,320.55\",\n      \"source\": \"$184,320.55\",\n      \"page\": 1\n    },\n    \"F16\": {\n      \"value\": \"$46,841.68\",\n      \"source\": \"$46,841.68\",\n      \"page\": 1\n    },\n    \"F17\": {\n      \"value\": \"$105,804.97\",\n      \"source\": \"$105,804.97\",\n      \"page\": 1\n    },\n    \"F18\": {\n      \"value\": \"$125,357.26\",\n      \"source\": \"$125,357.26\",\n      \"page\": 1\n    },\n    \"F19\": {\n      \"value\": \"(800) 555-0100\",\n      \"source\": \"Customer Service: (800) 555-0100\",\n      \"page\": 1\n    },\n    \"F20\": {\n      \"value\": \"fnbny.com\",\n      \"source\": \"fnbny.com\",\n      \"page\": 1\n    },\n    \"F21\": {\n      \"value\": \"$125,357.26\",\n      \"source\": \"Closing Balance: $125,357.26\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"Transactions\": [\n      {\n        \"cells\": {\n          \"Date\": \"01/03\",\n          \"Type\": \"DEP\",\n          \"Description\": \"Wire deposit — Summit Retail Group\",\n          \"Debit\": \"\",\n          \"Credit\": \"$15,000.00\",\n          \"Balance\": \"$199,320.55\"\n        },\n        \"source\": \"01/03 DEP Wire deposit — Summit Retail Group $15,000.00 $199,320.55\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/05\",\n          \"Type\": \"ACH\",\n          \"Description\": \"Payroll disbursement — January wk1\",\n          \"Debit\": \"$18,450.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$180,870.55\"\n        },\n        \"source\": \"01/05 ACH Payroll disbursement — January wk1 $18,450.00 $180,870.55\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/10\",\n          \"Type\": \"CHQ\",\n          \"Description\": \"Cheque #001831 — National Office Supplies\",\n          \"Debit\": \"$5,682.75\",\n          \"Credit\": \"\",\n          \"Balance\": \"$175,187.80\"\n        },\n        \"source\": \"01/10 CHQ Cheque #001831 — National Office Supplies $5,682.75 $175,187.80\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/12\",\n          \"Type\": \"DEP\",\n          \"Description\": \"Wire deposit — Pinnacle Electronics Corp.\",\n          \"Debit\": \"\",\n          \"Credit\": \"$22,934.50\",\n          \"Balance\": \"$198,122.30\"\n        },\n        \"source\": \"01/12 DEP Wire deposit — Pinnacle Electronics Corp. $22,934.50 $198,122.30\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/15\",\n          \"Type\": \"FEE\",\n          \"Description\": \"Monthly account maintenance fee\",\n          \"Debit\": \"$25.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$198,097.30\"\n        },\n        \"source\": \"01/15 FEE Monthly account maintenance fee $25.00 $198,097.30\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/15\",\n          \"Type\": \"ACH\",\n          \"Description\": \"Payroll disbursement — January wk3\",\n          \"Debit\": \"$18,450.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$179,647.30\"\n        },\n        \"source\": \"01/15 ACH Payroll disbursement — January wk3 $18,450.00 $179,647.30\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/18\",\n          \"Type\": \"CHQ\",\n          \"Description\": \"Cheque #001832 — Con Edison utilities\",\n          \"Debit\": \"$3,847.22\",\n          \"Credit\": \"\",\n          \"Balance\": \"$175,800.08\"\n        },\n        \"source\": \"01/18 CHQ Cheque #001832 — Con Edison utilities $3,847.22 $175,800.08\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/22\",\n          \"Type\": \"DEP\",\n          \"Description\": \"Wire deposit — BlueLine Wholesale Group\",\n          \"Debit\": \"\",\n          \"Credit\": \"$8,765.00\",\n          \"Balance\": \"$184,565.08\"\n        },\n        \"source\": \"01/22 DEP Wire deposit — BlueLine Wholesale Group $8,765.00 $184,565.08\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/25\",\n          \"Type\": \"ACH\",\n          \"Description\": \"Federal tax deposit — Q4 payroll\",\n          \"Debit\": \"$12,400.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$172,165.08\"\n        },\n        \"source\": \"01/25 ACH Federal tax deposit — Q4 payroll $12,400.00 $172,165.08\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/28\",\n          \"Type\": \"CHQ\",\n          \"Description\": \"Cheque #001833 — Manhattan Commercial Prop.\",\n          \"Debit\": \"$28,500.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$143,665.08\"\n        },\n        \"source\": \"01/28 CHQ Cheque #001833 — Manhattan Commercial Prop. $28,500.00 $143,665.08\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/30\",\n          \"Type\": \"INT\",\n          \"Description\": \"Interest earned — savings component\",\n          \"Debit\": \"\",\n          \"Credit\": \"$142.18\",\n          \"Balance\": \"$143,807.26\"\n        },\n        \"source\": \"01/30 INT Interest earned — savings component $142.18 $143,807.26\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"01/31\",\n          \"Type\": \"ACH\",\n          \"Description\": \"Payroll disbursement — January wk4\",\n          \"Debit\": \"$18,450.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$125,357.26\"\n        },\n        \"source\": \"01/31 ACH Payroll disbursement — January wk4 $18,450.00 $125,357.26\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "FIRST NATIONAL BANK OF NEW YORK",
+     "source": "FIRST NATIONAL BANK OF NEW YORK",
+     "page": 1
+    },
+    "F2": {
+     "value": "330 Madison Avenue, New York, NY 10017",
+     "source": "330 Madison Avenue, New York, NY 10017",
+     "page": 1
+    },
+    "F3": {
+     "value": "021000021",
+     "source": "ABA: 021000021",
+     "page": 1
+    },
+    "F4": {
+     "value": "Member FDIC",
+     "source": "Member FDIC",
+     "page": 1
+    },
+    "F5": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Account Holder: Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F6": {
+     "value": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "page": 1
+    },
+    "F7": {
+     "value": "47-3821654",
+     "source": "EIN: 47-3821654",
+     "page": 1
+    },
+    "F8": {
+     "value": "STMT-2024-01",
+     "source": "Statement No: STMT-2024-01",
+     "page": 1
+    },
+    "F9": {
+     "value": "January 2024",
+     "source": "Period: January 2024",
+     "page": 1
+    },
+    "F10": {
+     "value": "****7743",
+     "source": "Account No: ****7743",
+     "page": 1
+    },
+    "F11": {
+     "value": "Business Checking",
+     "source": "Type: Business Checking",
+     "page": 1
+    },
+    "F12": {
+     "value": "$184,320.55",
+     "source": "$184,320.55",
+     "page": 1
+    },
+    "F13": {
+     "value": "$46,841.68",
+     "source": "$46,841.68",
+     "page": 1
+    },
+    "F14": {
+     "value": "$105,804.97",
+     "source": "$105,804.97",
+     "page": 1
+    },
+    "F15": {
+     "value": "$184,320.55",
+     "source": "$184,320.55",
+     "page": 1
+    },
+    "F16": {
+     "value": "$46,841.68",
+     "source": "$46,841.68",
+     "page": 1
+    },
+    "F17": {
+     "value": "$105,804.97",
+     "source": "$105,804.97",
+     "page": 1
+    },
+    "F18": {
+     "value": "$125,357.26",
+     "source": "$125,357.26",
+     "page": 1
+    },
+    "F19": {
+     "value": "(800) 555-0100",
+     "source": "Customer Service: (800) 555-0100",
+     "page": 1
+    },
+    "F20": {
+     "value": "fnbny.com",
+     "source": "fnbny.com",
+     "page": 1
+    },
+    "F21": {
+     "value": "$125,357.26",
+     "source": "Closing Balance: $125,357.26",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Transactions": [
+     {
+      "cells": {
+       "Date": "01/03",
+       "Type": "DEP",
+       "Description": "Wire deposit — Summit Retail Group",
+       "Debit": "",
+       "Credit": "$15,000.00",
+       "Balance": "$199,320.55"
+      },
+      "source": "01/03 DEP Wire deposit — Summit Retail Group $15,000.00 $199,320.55",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/05",
+       "Type": "ACH",
+       "Description": "Payroll disbursement — January wk1",
+       "Debit": "$18,450.00",
+       "Credit": "",
+       "Balance": "$180,870.55"
+      },
+      "source": "01/05 ACH Payroll disbursement — January wk1 $18,450.00 $180,870.55",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/10",
+       "Type": "CHQ",
+       "Description": "Cheque #001831 — National Office Supplies",
+       "Debit": "$5,682.75",
+       "Credit": "",
+       "Balance": "$175,187.80"
+      },
+      "source": "01/10 CHQ Cheque #001831 — National Office Supplies $5,682.75 $175,187.80",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/12",
+       "Type": "DEP",
+       "Description": "Wire deposit — Pinnacle Electronics Corp.",
+       "Debit": "",
+       "Credit": "$22,934.50",
+       "Balance": "$198,122.30"
+      },
+      "source": "01/12 DEP Wire deposit — Pinnacle Electronics Corp. $22,934.50 $198,122.30",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/15",
+       "Type": "FEE",
+       "Description": "Monthly account maintenance fee",
+       "Debit": "$25.00",
+       "Credit": "",
+       "Balance": "$198,097.30"
+      },
+      "source": "01/15 FEE Monthly account maintenance fee $25.00 $198,097.30",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/15",
+       "Type": "ACH",
+       "Description": "Payroll disbursement — January wk3",
+       "Debit": "$18,450.00",
+       "Credit": "",
+       "Balance": "$179,647.30"
+      },
+      "source": "01/15 ACH Payroll disbursement — January wk3 $18,450.00 $179,647.30",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/18",
+       "Type": "CHQ",
+       "Description": "Cheque #001832 — Con Edison utilities",
+       "Debit": "$3,847.22",
+       "Credit": "",
+       "Balance": "$175,800.08"
+      },
+      "source": "01/18 CHQ Cheque #001832 — Con Edison utilities $3,847.22 $175,800.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/22",
+       "Type": "DEP",
+       "Description": "Wire deposit — BlueLine Wholesale Group",
+       "Debit": "",
+       "Credit": "$8,765.00",
+       "Balance": "$184,565.08"
+      },
+      "source": "01/22 DEP Wire deposit — BlueLine Wholesale Group $8,765.00 $184,565.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/25",
+       "Type": "ACH",
+       "Description": "Federal tax deposit — Q4 payroll",
+       "Debit": "$12,400.00",
+       "Credit": "",
+       "Balance": "$172,165.08"
+      },
+      "source": "01/25 ACH Federal tax deposit — Q4 payroll $12,400.00 $172,165.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/28",
+       "Type": "CHQ",
+       "Description": "Cheque #001833 — Manhattan Commercial Prop.",
+       "Debit": "$28,500.00",
+       "Credit": "",
+       "Balance": "$143,665.08"
+      },
+      "source": "01/28 CHQ Cheque #001833 — Manhattan Commercial Prop. $28,500.00 $143,665.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/30",
+       "Type": "INT",
+       "Description": "Interest earned — savings component",
+       "Debit": "",
+       "Credit": "$142.18",
+       "Balance": "$143,807.26"
+      },
+      "source": "01/30 INT Interest earned — savings component $142.18 $143,807.26",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "01/31",
+       "Type": "ACH",
+       "Description": "Payroll disbursement — January wk4",
+       "Debit": "$18,450.00",
+       "Credit": "",
+       "Balance": "$125,357.26"
+      },
+      "source": "01/31 ACH Payroll disbursement — January wk4 $18,450.00 $125,357.26",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4425,
+  "success": true,
+  "error": ""
+ }
+}

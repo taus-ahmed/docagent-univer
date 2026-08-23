@@ -1,0 +1,62 @@
+{
+ "key": "ee11299996b7bb1f68cb36a416557e565d7369f9698b395a098208c23eefa97a",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2223,
+  "captured_at": "2026-08-22 22:35:19",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nFIRST NATIONAL BANK OF NEW ACCOUNT STATEMENT\nYORK\n330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC\nAccount Holder: Nexus Global Trading LLC Statement No: STMT-2024-01\n142 West 57th Str"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"bank_statement\",\n  \"title\": \"Account Statement\",\n  \"fields\": [\n    \"Bank Name\",\n    \"Bank Address\",\n    \"ABA Number\",\n    \"Member FDIC\",\n    \"Account Holder\",\n    \"Account Holder Address\",\n    \"EIN\",\n    \"Statement Number\",\n    \"Period\",\n    \"Account Number\",\n    \"Account Type\",\n    \"Opening Balance\",\n    \"Total Credits\",\n    \"Total Debits\",\n    \"Opening Balance Amount\",\n    \"Credits Amount\",\n    \"Debits Amount\",\n    \"Closing Balance Amount\",\n    \"Customer Service Phone\",\n    \"Bank Website\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Transactions\",\n      \"columns\": [\n        \"Date\",\n        \"Type\",\n        \"Description\",\n        \"Debit\",\n        \"Credit\",\n        \"Balance\"\n      ],\n      \"row_count\": 12\n    }\n  ],\n  \"totals\": [\n    \"Closing Balance\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "bank_statement",
+   "title": "Account Statement",
+   "fields": [
+    "Bank Name",
+    "Bank Address",
+    "ABA Number",
+    "Member FDIC",
+    "Account Holder",
+    "Account Holder Address",
+    "EIN",
+    "Statement Number",
+    "Period",
+    "Account Number",
+    "Account Type",
+    "Opening Balance",
+    "Total Credits",
+    "Total Debits",
+    "Opening Balance Amount",
+    "Credits Amount",
+    "Debits Amount",
+    "Closing Balance Amount",
+    "Customer Service Phone",
+    "Bank Website"
+   ],
+   "tables": [
+    {
+     "name": "Transactions",
+     "columns": [
+      "Date",
+      "Type",
+      "Description",
+      "Debit",
+      "Credit",
+      "Balance"
+     ],
+     "row_count": 12
+    }
+   ],
+   "totals": [
+    "Closing Balance"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2223,
+  "success": true,
+  "error": ""
+ }
+}

@@ -233,16 +233,35 @@ def _log_findings(log: str) -> dict:
 # ── stability (--repeat) ─────────────────────────────────────────────────────
 
 
+def _stable_value(v):
+    """A value as the user will actually receive it in the spreadsheet.
+
+    Uses the WRITER's own coercion (`coerce_cell_value`), so "stable" means
+    "two runs put the same thing in the cell" — which is the only sense of
+    stability a user experiences. Money and numbers become numbers, so
+    "$1,365,503" and "1,365,503" are the same value; genuine text differences
+    ("1.5%" vs "1.5% monthly interest") still differ, because neither parses.
+
+    Comparing the raw strings instead reported 9 BS-2024-Q1 totals as unstable
+    when every run extracted the identical number and the exported workbook was
+    byte-identical — measuring the model's formatting, not its extraction.
+    """
+    if v is None:
+        return None
+    from app.api.routes.extract import coerce_cell_value
+    out = coerce_cell_value(v)
+    return normalize_string(out) if isinstance(out, str) else out
+
+
 def _flat_values(adapted: dict) -> dict:
     out = {}
     for name, v in adapted.get("fields", {}).items():
-        out[f"field:{name}"] = normalize_string(v) if v is not None else None
+        out[f"field:{name}"] = _stable_value(v)
     for tname, rows in adapted.get("tables", {}).items():
         out[f"table:{tname}:row_count"] = len(rows)
         for i, row in enumerate(rows):
             for col, v in row.items():
-                out[f"table:{tname}[{i}].{col}"] = (
-                    normalize_string(v) if v is not None else None)
+                out[f"table:{tname}[{i}].{col}"] = _stable_value(v)
     return out
 
 
