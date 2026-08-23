@@ -1,6 +1,6 @@
 {
- "run_id": "2026-08-22 18:08:16",
- "git_commit": "838a113",
+ "run_id": "2026-08-22 18:16:12",
+ "git_commit": "90ce63e",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -74,6 +74,15 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
+     "Total Current Assets": "$1,129,003",
+     "Total Non-Current Assets": "$236,500",
+     "TOTAL ASSETS": "$1,365,503",
+     "Total Current Liabilities": "$421,200",
+     "Total Long-Term Liabilities": "$129,400",
+     "TOTAL LIABILITIES": "$550,600",
+     "Total Equity": "$698,104",
+     "TOTAL LIABILITIES & EQUITY": "$1,248,704",
+     "Other Current Assets": "$8,800",
      "Company Name": "Nexus Global Trading LLC",
      "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Company City, State, Zip": "New York, NY 10019",
@@ -84,28 +93,20 @@
      "Accounts Receivable (net)": "$348,200",
      "Inventory": "$612,000",
      "Prepaid Expenses": "$16,200",
-     "Total Current Assets": "$8,800",
      "Property & Equipment (gross)": "$240,000",
      "Less: Accum. Depreciation": "$108,500",
      "Security Deposits": "$85,000",
      "Intangibles (net)": "$20,000",
-     "Total Non-Current Assets": "$236,500",
-     "TOTAL ASSETS": "$1,365,503",
      "Accounts Payable": "$254,800",
      "Accrued Liabilities": "$44,200",
      "Short-term Loan — First National Bank": "$80,000",
      "Deferred Revenue": "$18,200",
      "Current Portion of Long-term Debt": "$24,000",
-     "Total Current Liabilities": "$421,200",
      "Long-term Loan — First National Bank": "$121,000",
      "Deferred Tax Liability": "$8,400",
-     "Total Long-Term Liabilities": "$129,400",
-     "TOTAL LIABILITIES": "$550,600",
      "Common Stock (100 shares @ $1,000 par)": "$100,000",
      "Retained Earnings": "$550,751",
      "Net Income YTD Q1": "$47,353",
-     "Total Equity": "$698,104",
-     "TOTAL LIABILITIES & EQUITY": "$1,248,704",
      "Prepared by": "Meridian & Associates CPA"
     },
     "tables": {}
@@ -115,9 +116,9 @@
     "document_type": "balance_sheet",
     "fields": {
      "Total Current Assets": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 1129003,
-      "actual": "$8,800",
+      "actual": "$1,129,003",
       "type": "money",
       "in_gold_schema": true
      },
@@ -169,6 +170,15 @@
       "actual": "$1,248,704",
       "type": "money",
       "in_gold_schema": true
+     },
+     "Other Current Assets": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$8,800",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -949,20 +959,19 @@
      }
     },
     "counts": {
-     "wrong": 1,
-     "correct": 7,
-     "hallucinated": 25,
+     "correct": 8,
+     "hallucinated": 26,
      "missed": 38
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 25
+     "out_of_schema": 26
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.15217391304347827,
-    "hallucination_rate": 0.7575757575757576,
+    "accuracy": 0.17391304347826086,
+    "hallucination_rate": 0.7647058823529411,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -1833,9 +1842,9 @@
     "document_type": "balance_sheet",
     "fields": {
      "Total Current Assets": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 1129003,
-      "actual": 8800.0,
+      "actual": 1129003.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -1887,6 +1896,15 @@
       "actual": 1248704.0,
       "type": "money",
       "in_gold_schema": true
+     },
+     "Other Current Assets": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": 8800.0,
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -2667,47 +2685,30 @@
      }
     },
     "counts": {
-     "wrong": 1,
-     "correct": 7,
-     "hallucinated": 25,
+     "correct": 8,
+     "hallucinated": 26,
      "missed": 38
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 25
+     "out_of_schema": 26
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.15217391304347827,
-    "hallucination_rate": 0.7575757575757576,
+    "accuracy": 0.17391304347826086,
+    "hallucination_rate": 0.7647058823529411,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
-     "wrong": 1,
-     "correct": 25,
-     "missed": 1,
+     "correct": 27,
      "unmatched": 7
     },
     "gold_valued": 27,
-    "accuracy": 0.9259259259259259,
+    "accuracy": 1.0,
     "unmatched": 7,
-    "mismatches": [
-     {
-      "key": "total current assets",
-      "outcome": "wrong",
-      "matched_key": "total current assets",
-      "expected": 1129003,
-      "actual": "$8,800"
-     },
-     {
-      "key": "other current assets",
-      "outcome": "missed",
-      "expected": 8800,
-      "actual": null
-     }
-    ]
+    "mismatches": []
    },
    "score_structure": {
     "gold_tables": 5,
@@ -2792,19 +2793,21 @@
    "adapted": {
     "fields": {
      "Bank Name": "FIRST NATIONAL BANK OF NEW YORK",
+     "Cheque Number": "CHQ-001847",
+     "Date": "January 31, 2024",
+     "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
+     "Memo": "Payment for PO-2024-0018 — Steel materials",
+     "Payee": "Pacific Steel & Metals Co.",
+     "Amount": "$ 8,410.00",
+     "Payee Name": "Pacific Steel & Metals Co.",
+     "Amount in Figures": "$ 8,410.00",
      "Bank Address": "330 Madison Ave, New York, NY 10017",
      "Bank Member FDIC": "Member FDIC",
-     "Cheque Number": "CHQ-001847",
      "Drawer Company Name": "Nexus Global Trading LLC",
      "Drawer Street Address": "142 West 57th Street, Suite 1800",
      "Drawer City State Zip": "New York, NY 10019",
      "Drawer EIN": "47-3821654",
      "Drawer Phone": "(212) 555-0148",
-     "Date": "January 31, 2024",
-     "Payee": "Pacific Steel & Metals Co.",
-     "Amount": "$ 8,410.00",
-     "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
-     "Memo": "Payment for PO-2024-0018 — Steel materials",
      "Authorized Signature Name": "Janet Wu",
      "MICR Line": "A021000021A C7743882201C 001847D",
      "Non-Negotiable Copy": "Non-Negotiable Copy"
@@ -2894,6 +2897,24 @@
       "type": "string",
       "in_gold_schema": true
      },
+     "Payee Name": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Pacific Steel & Metals Co.",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Amount in Figures": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$ 8,410.00",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
      "Bank Address": {
       "outcome": "hallucinated",
       "expected": null,
@@ -2972,17 +2993,17 @@
      "correct": 7,
      "renamed": 2,
      "missed": 2,
-     "hallucinated": 8
+     "hallucinated": 10
     },
     "renamed": 2,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 8
+     "out_of_schema": 10
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.6363636363636364,
-    "hallucination_rate": 0.47058823529411764,
+    "hallucination_rate": 0.5263157894736842,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -3338,18 +3359,20 @@
    "score_content": {
     "counts": {
      "correct": 7,
-     "missed": 4,
-     "unmatched": 10
+     "wrong": 1,
+     "missed": 3,
+     "unmatched": 11
     },
     "gold_valued": 11,
     "accuracy": 0.6363636363636364,
-    "unmatched": 10,
+    "unmatched": 11,
     "mismatches": [
      {
       "key": "payer name",
-      "outcome": "missed",
+      "outcome": "wrong",
+      "matched_key": "payee name",
       "expected": "Nexus Global Trading LLC",
-      "actual": null
+      "actual": "Pacific Steel & Metals Co."
      },
      {
       "key": "authorized by",
@@ -3431,11 +3454,6 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Company Name": "NEXUS GLOBAL TRADING LLC",
-     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Company Phone": "(212) 555-0148",
-     "Company EIN": "47-3821654",
-     "Employee": "Marcus A. Thompson",
      "Report No": "EXP-2024-0081",
      "Status": "APPROVED",
      "Employee ID": "EMP-0012",
@@ -3443,7 +3461,13 @@
      "Manager": "Janet Wu",
      "Period": "March 15–22, 2024",
      "Purpose": "Supplier site visit — Pacific Steel, Los Angeles",
-     "Total Claimed": "$1,727.25"
+     "Total Claimed": "$1,727.25",
+     "TOTAL CLAIMED": "$1,727.25",
+     "Company Name": "NEXUS GLOBAL TRADING LLC",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company Phone": "(212) 555-0148",
+     "Company EIN": "47-3821654",
+     "Employee": "Marcus A. Thompson"
     },
     "tables": {
      "expenses": [
@@ -3590,6 +3614,15 @@
       "type": "money",
       "in_gold_schema": true
      },
+     "TOTAL CLAIMED": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$1,727.25",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
      "Company Name": {
       "outcome": "hallucinated",
       "expected": null,
@@ -4096,17 +4129,17 @@
     "counts": {
      "renamed": 1,
      "correct": 53,
-     "hallucinated": 4
+     "hallucinated": 5
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 4
+     "out_of_schema": 5
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9814814814814815,
-    "hallucination_rate": 0.06896551724137931,
+    "hallucination_rate": 0.0847457627118644,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -4177,6 +4210,15 @@
       "type": "money",
       "in_gold_schema": true
      },
+     "TOTAL CLAIMED": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$1,727.25",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
      "Company Name": {
       "outcome": "hallucinated",
       "expected": null,
@@ -4683,17 +4725,17 @@
     "counts": {
      "renamed": 1,
      "correct": 53,
-     "hallucinated": 4
+     "hallucinated": 5
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 4
+     "out_of_schema": 5
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9814814814814815,
-    "hallucination_rate": 0.06896551724137931,
+    "hallucination_rate": 0.0847457627118644,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -5287,11 +5329,11 @@
     "counts": {
      "missed": 1,
      "correct": 17,
-     "unmatched": 5
+     "unmatched": 6
     },
     "gold_valued": 18,
     "accuracy": 0.9444444444444444,
-    "unmatched": 5,
+    "unmatched": 6,
     "mismatches": [
      {
       "key": "employee name",
@@ -5379,29 +5421,32 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Company Name": "NEXUS GLOBAL TRADING LLC",
-     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Company Phone": "(212) 555-0148",
-     "Company Tax ID": "47-3821654",
      "Bill To Company": "Apex Industrial Supplies Inc.",
      "Bill To Address": "500 Commerce Drive, Chicago, IL 60601",
-     "Bill To Contact": "Mr. Robert Chen",
      "Invoice Number": "INV-2024-0031",
      "Invoice Date": "January 15, 2024",
      "Due Date": "February 14, 2024",
      "PO Reference": "PO-2024-0018",
      "Payment Terms": "Net 30",
      "Status": "PAID",
+     "Subtotal": "$10,892.50",
+     "Shipping & Handling": "$320.00",
+     "Sales Tax": "$966.71",
+     "Total Due": "$12,179.21",
+     "TOTAL DUE": "$12,179.21",
+     "Bill To Contact": "Mr. Robert Chen",
+     "Bill To Contact Email": "rchen@apexindustrial.com",
+     "Bill To Contact Person": "Mr. Robert Chen",
+     "Company Name": "NEXUS GLOBAL TRADING LLC",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company Phone": "(212) 555-0148",
+     "Company Tax ID": "47-3821654",
      "Payment Instructions Bank Name": "First National Bank of New York",
      "Payment Instructions ABA": "021000021",
      "Payment Instructions Account Number": "7743882201",
      "Payment Instructions Cheque Payable To": "Nexus Global Trading LLC",
      "Notes Payment Received": "Payment received via wire transfer Feb 10, 2024.",
-     "Notes Reference": "WT-20240210-4421.",
-     "Subtotal": "$10,892.50",
-     "Shipping & Handling": "$320.00",
-     "Sales Tax": "$966.71",
-     "Total Due": "$12,179.21"
+     "Notes Reference": "WT-20240210-4421."
     },
     "tables": {
      "line_items": [
@@ -5534,6 +5579,33 @@
       "actual": "$12,179.21",
       "type": "money",
       "in_gold_schema": true
+     },
+     "TOTAL DUE": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$12,179.21",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Bill To Contact Email": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "rchen@apexindustrial.com",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Bill To Contact Person": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Mr. Robert Chen",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -5844,17 +5916,17 @@
     },
     "counts": {
      "correct": 33,
-     "hallucinated": 10
+     "hallucinated": 13
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 13
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.23255813953488372,
+    "hallucination_rate": 0.2826086956521739,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -5952,6 +6024,15 @@
       "actual": "$12,179.21",
       "type": "money",
       "in_gold_schema": true
+     },
+     "TOTAL DUE": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$12,179.21",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -6320,18 +6401,18 @@
     "counts": {
      "correct": 28,
      "renamed": 1,
-     "hallucinated": 15,
+     "hallucinated": 16,
      "missed": 4
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 15
+     "out_of_schema": 16
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.8484848484848485,
-    "hallucination_rate": 0.3409090909090909,
+    "hallucination_rate": 0.35555555555555557,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -6428,6 +6509,15 @@
       "actual": 12179.21,
       "type": "money",
       "in_gold_schema": true
+     },
+     "Bill To Contact Email": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "rchen@apexindustrial.com",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -6738,27 +6828,27 @@
     },
     "counts": {
      "correct": 33,
-     "hallucinated": 10
+     "hallucinated": 11
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 11
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.23255813953488372,
+    "hallucination_rate": 0.25,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "correct": 25,
-     "unmatched": 10
+     "unmatched": 13
     },
     "gold_valued": 25,
     "accuracy": 1.0,
-    "unmatched": 10,
+    "unmatched": 13,
     "mismatches": []
    },
    "score_structure": {
@@ -6839,30 +6929,32 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Company Name": "NEXUS GLOBAL TRADING LLC",
-     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Company Phone": "(212) 555-0148",
-     "Company EIN": "47-3821654",
      "Bill To Company": "Pinnacle Electronics Corp.",
      "Bill To Address": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
      "Bill To Contact": "Ms. Sarah Johnson",
-     "Bill To Email": "sjohnson@pinnacleelec.com",
      "Invoice Number": "INV-2024-0047",
      "Invoice Date": "February 3, 2024",
      "Due Date": "March 4, 2024",
      "PO Reference": "PO-2024-0029",
-     "Payment Terms": "Net 30",
      "Status": "OUTSTANDING",
+     "Subtotal": "$15,549.00",
+     "Shipping & Handling": "$580.00",
+     "Sales Tax": "$1,282.79",
+     "Total Due": "$17,411.79",
+     "TOTAL DUE": "$17,411.79",
+     "Payment Terms": "Net 30",
+     "Terms": "Net 30",
+     "Company Name": "NEXUS GLOBAL TRADING LLC",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company Phone": "(212) 555-0148",
+     "Company EIN": "47-3821654",
+     "Bill To Email": "sjohnson@pinnacleelec.com",
      "Payment Instructions Wire Bank": "First National Bank of New York",
      "Payment Instructions Wire ABA": "021000021",
      "Payment Instructions Wire Account": "7743882201",
      "Payment Instructions Cheque Payable To": "Nexus Global Trading LLC",
      "Notes Balance Due": "Balance due March 4, 2024.",
-     "Notes Late Payment Interest": "1.5%",
-     "Subtotal": "$15,549.00",
-     "Shipping & Handling": "$580.00",
-     "Sales Tax": "$1,282.79",
-     "Total Due": "$17,411.79"
+     "Notes Late Payment Interest": "1.5%"
     },
     "tables": {
      "line_items": [
@@ -7003,6 +7095,24 @@
       "actual": "$17,411.79",
       "type": "money",
       "in_gold_schema": true
+     },
+     "TOTAL DUE": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$17,411.79",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Terms": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Net 30",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -7372,17 +7482,17 @@
     },
     "counts": {
      "correct": 38,
-     "hallucinated": 11
+     "hallucinated": 13
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 11
+     "out_of_schema": 13
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.22448979591836735,
+    "hallucination_rate": 0.2549019607843137,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -7480,6 +7590,15 @@
       "actual": "$17,411.79",
       "type": "money",
       "in_gold_schema": true
+     },
+     "TOTAL DUE": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$17,411.79",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -7850,17 +7969,17 @@
     "counts": {
      "correct": 37,
      "renamed": 1,
-     "hallucinated": 11
+     "hallucinated": 12
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 11
+     "out_of_schema": 12
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9736842105263158,
-    "hallucination_rate": 0.22448979591836735,
+    "hallucination_rate": 0.24,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -8342,11 +8461,11 @@
    "score_content": {
     "counts": {
      "correct": 28,
-     "unmatched": 11
+     "unmatched": 13
     },
     "gold_valued": 28,
     "accuracy": 1.0,
-    "unmatched": 11,
+    "unmatched": 13,
     "mismatches": []
    },
    "score_structure": {
@@ -8422,12 +8541,6 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Company Name": "Nexus Global Trading LLC",
-     "Company Street Address": "142 West 57th Street, Suite 1800",
-     "Company City, State, Zip": "New York, NY 10019",
-     "Company EIN": "47-3821654",
-     "Period": "Q4 2024",
-     "Document Number": "IS-2024-Q4",
      "Gross Sales": "$1,980,000",
      "Less: Returns": "$28,600",
      "Net Revenue": "$1,951,400",
@@ -8450,9 +8563,20 @@
      "Total Operating Expenses": "$359,250",
      "Operating Income (EBIT)": "$336,150",
      "Interest Income": "$1,240",
-     "Net Income Before Tax": "$337,390",
+     "GROSS PROFIT": "$695,400",
+     "OPERATING INCOME (EBIT)": "$336,150",
      "Income Tax Provision": "$70,852",
+     "Est. Income Tax Provision (21%)": "$70,852",
+     "Net Income Before Tax": "$337,390",
      "Net Income After Tax": "$266,538",
+     "NET INCOME (LOSS) BEFORE TAX": "$337,390",
+     "NET INCOME (LOSS) AFTER TAX": "$266,538",
+     "Company Name": "Nexus Global Trading LLC",
+     "Company Street Address": "142 West 57th Street, Suite 1800",
+     "Company City, State, Zip": "New York, NY 10019",
+     "Company EIN": "47-3821654",
+     "Period": "Q4 2024",
+     "Document Number": "IS-2024-Q4",
      "Prepared by": "Meridian & Associates CPA"
     },
     "tables": {}
@@ -8636,6 +8760,51 @@
       "type": "money",
       "in_gold_schema": true
      },
+     "GROSS PROFIT": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$695,400",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "OPERATING INCOME (EBIT)": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$336,150",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Est. Income Tax Provision (21%)": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$70,852",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "NET INCOME (LOSS) BEFORE TAX": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$337,390",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "NET INCOME (LOSS) AFTER TAX": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$266,538",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
      "Company Name": {
       "outcome": "hallucinated",
       "expected": null,
@@ -8703,17 +8872,17 @@
     "tables": {},
     "counts": {
      "correct": 25,
-     "hallucinated": 7
+     "hallucinated": 12
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 7
+     "out_of_schema": 12
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.21875,
+    "hallucination_rate": 0.32432432432432434,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -8898,6 +9067,24 @@
       "in_gold_schema": true,
       "renamed_to": "NET INCOME (LOSS) AFTER TAX"
      },
+     "GROSS PROFIT": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$695,400",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "OPERATING INCOME (EBIT)": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$336,150",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
      "Company Name": {
       "outcome": "hallucinated",
       "expected": null,
@@ -8966,17 +9153,17 @@
     "counts": {
      "correct": 22,
      "renamed": 3,
-     "hallucinated": 7
+     "hallucinated": 9
     },
     "renamed": 3,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 7
+     "out_of_schema": 9
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.88,
-    "hallucination_rate": 0.21875,
+    "hallucination_rate": 0.2647058823529412,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -9241,11 +9428,11 @@
    "score_content": {
     "counts": {
      "correct": 25,
-     "unmatched": 7
+     "unmatched": 12
     },
     "gold_valued": 25,
     "accuracy": 1.0,
-    "unmatched": 7,
+    "unmatched": 12,
     "mismatches": []
    },
    "score_structure": {
@@ -9315,13 +9502,8 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Company Name": "NEXUS GLOBAL TRADING",
-     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Company EIN": "47-3821654",
      "Employee Name": "Janet L. Wu",
      "Employee ID": "EMP-0007",
-     "Employee Title / Dept": "VP Operations – Executive",
-     "SSN": "***-**-3317",
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
      "Annual Salary": "$145,000.00",
@@ -9329,7 +9511,16 @@
      "Total Deductions": "($7,070.30)",
      "Net Pay": "$7,513.0 3",
      "YTD Gross Earnings": "$58,333.33",
-     "YTD Taxes Withheld": "$22,716.00"
+     "YTD Taxes Withheld": "$22,716.00",
+     "Earnings Total": "$14,583.33",
+     "Deductions Total": "($7,070.30)",
+     "NET PAY": "$7,513.0 3",
+     "SSN": "***-**-3317",
+     "Employee SSN": "***-**-3317",
+     "Company Name": "NEXUS GLOBAL TRADING",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company EIN": "47-3821654",
+     "Employee Title / Dept": "VP Operations – Executive"
     },
     "tables": {
      "earnings": [
@@ -9493,6 +9684,42 @@
       "actual": "$22,716.00",
       "type": "money",
       "in_gold_schema": true
+     },
+     "Earnings Total": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$14,583.33",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Deductions Total": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "($7,070.30)",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "NET PAY": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$7,513.0 3",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Employee SSN": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "***-**-3317",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -9796,17 +10023,17 @@
      "missed": 1,
      "correct": 35,
      "renamed": 1,
-     "hallucinated": 3
+     "hallucinated": 7
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 3
+     "out_of_schema": 7
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9459459459459459,
-    "hallucination_rate": 0.07692307692307693,
+    "hallucination_rate": 0.16279069767441862,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -9907,6 +10134,15 @@
       "actual": "$22,716.00",
       "type": "money",
       "in_gold_schema": true
+     },
+     "NET PAY": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$7,513.0 3",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -10210,17 +10446,17 @@
      "missed": 1,
      "correct": 32,
      "renamed": 4,
-     "hallucinated": 3
+     "hallucinated": 4
     },
     "renamed": 4,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 3
+     "out_of_schema": 4
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.8648648648648649,
-    "hallucination_rate": 0.07692307692307693,
+    "hallucination_rate": 0.1,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -10638,11 +10874,11 @@
     "counts": {
      "missed": 2,
      "correct": 23,
-     "unmatched": 4
+     "unmatched": 8
     },
     "gold_valued": 25,
     "accuracy": 0.92,
-    "unmatched": 4,
+    "unmatched": 8,
     "mismatches": [
      {
       "key": "employer name",
@@ -10736,19 +10972,21 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Company Name": "NEXUS GLOBAL TRADING",
-     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Company EIN": "47-3821654",
      "Employee Name": "Marcus A. Thompson",
      "Employee ID": "EMP-0012",
-     "Employee Title / Dept": "Purchasing Manager – Procurement",
-     "SSN": "***-**-4821",
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
      "Annual Salary": "$90,000.00",
-     "Net Pay": "$5,182.65",
      "YTD Gross Earnings": "$33,500.00",
-     "YTD Taxes Withheld": "$7,508.70"
+     "YTD Taxes Withheld": "$7,508.70",
+     "Net Pay": "$5,182.65",
+     "Net Pay Amount": "$5,182.65",
+     "SSN": "***-**-4821",
+     "Employee SSN": "***-**-4821",
+     "Company Name": "NEXUS GLOBAL TRADING",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company EIN": "47-3821654",
+     "Employee Title / Dept": "Purchasing Manager – Procurement"
     },
     "tables": {
      "earnings": [
@@ -10912,6 +11150,24 @@
       "actual": "$7,508.70",
       "type": "money",
       "in_gold_schema": true
+     },
+     "Net Pay Amount": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$5,182.65",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Employee SSN": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "***-**-4821",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -11241,17 +11497,17 @@
      "missed": 3,
      "correct": 29,
      "renamed": 1,
-     "hallucinated": 7
+     "hallucinated": 9
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 4,
-     "out_of_schema": 3
+     "out_of_schema": 5
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.8787878787878788,
-    "hallucination_rate": 0.1891891891891892,
+    "hallucination_rate": 0.23076923076923078,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -12132,11 +12388,11 @@
     "counts": {
      "missed": 4,
      "correct": 19,
-     "unmatched": 6
+     "unmatched": 8
     },
     "gold_valued": 23,
     "accuracy": 0.8260869565217391,
-    "unmatched": 6,
+    "unmatched": 8,
     "mismatches": [
      {
       "key": "employer name",
@@ -12253,10 +12509,6 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Company Name": "NEXUS GLOBAL TRADING LLC",
-     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
-     "Company Phone": "(212) 555-0148",
-     "Company Tax ID": "47-3821654",
      "PO Number": "PO-2024-0018",
      "Date": "January 10, 2024",
      "Required By": "January 28, 2024",
@@ -12265,20 +12517,30 @@
      "Vendor Name": "Pacific Steel & Metals Co.",
      "Vendor Address": "2200 Harbor Drive, Los Angeles, CA 90021",
      "Vendor Contact": "Ms. Linda Zhao",
-     "Vendor Phone": "(310) 555-0233",
      "Vendor ID": "VND-0041",
      "Buyer Name": "Marcus A. Thompson",
      "Buyer Title": "Purchasing Manager",
+     "Subtotal": "$12,090.00",
+     "Freight": "$480.00",
+     "Order Total": "$12,570.00",
+     "ORDER TOTAL": "$12,570.00",
+     "Authorised By": "Janet Wu",
+     "Authorised By Title": "VP Operations",
+     "Authorised By Name": "Janet Wu",
+     "Buyer Signature Name": "Marcus A. Thompson",
+     "Buyer Signature Title": "Purchasing Manager",
+     "Tax": "$0.00",
+     "Tax (exempt)": "$0.00",
+     "Company Name": "NEXUS GLOBAL TRADING LLC",
+     "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Company Phone": "(212) 555-0148",
+     "Company Tax ID": "47-3821654",
+     "Vendor Phone": "(310) 555-0233",
      "Buyer Phone": "(212) 555-0148",
      "Buyer Email": "purchasing@nexusglobaltrading.com",
      "Special Instructions": "Deliver with packing list and COA. Partial shipments not accepted.",
-     "Authorised By": "Janet Wu",
      "Buyer Signature Email": "purchasing@nexusglobaltrading.com",
-     "Buyer Signature Phone": "(212) 555-0148",
-     "Subtotal": "$12,090.00",
-     "Freight": "$480.00",
-     "Tax": "$0.00",
-     "Order Total": "$12,570.00"
+     "Buyer Signature Phone": "(212) 555-0148"
     },
     "tables": {
      "line_items": [
@@ -12424,6 +12686,60 @@
       "actual": "$12,570.00",
       "type": "money",
       "in_gold_schema": true
+     },
+     "ORDER TOTAL": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$12,570.00",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Authorised By Title": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "VP Operations",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Authorised By Name": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Janet Wu",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Buyer Signature Name": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Marcus A. Thompson",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Buyer Signature Title": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Purchasing Manager",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Tax (exempt)": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$0.00",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -12685,17 +13001,17 @@
     "counts": {
      "correct": 30,
      "near": 1,
-     "hallucinated": 10
+     "hallucinated": 16
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 16
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.967741935483871,
-    "hallucination_rate": 0.24390243902439024,
+    "hallucination_rate": 0.3404255319148936,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -12814,6 +13130,15 @@
       "actual": "$12,570.00",
       "type": "money",
       "in_gold_schema": true
+     },
+     "ORDER TOTAL": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$12,570.00",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -13356,17 +13681,17 @@
      "correct": 14,
      "missed": 16,
      "renamed": 1,
-     "hallucinated": 29
+     "hallucinated": 30
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 29
+     "out_of_schema": 30
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.45161290322580644,
-    "hallucination_rate": 0.6590909090909091,
+    "hallucination_rate": 0.6666666666666666,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -13484,6 +13809,33 @@
       "actual": 12570.0,
       "type": "money",
       "in_gold_schema": true
+     },
+     "Authorised By Title": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "VP Operations",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Buyer Signature Name": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Marcus A. Thompson",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Buyer Signature Title": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Purchasing Manager",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Company Name": {
       "outcome": "hallucinated",
@@ -13745,28 +14097,28 @@
     "counts": {
      "correct": 30,
      "near": 1,
-     "hallucinated": 10
+     "hallucinated": 13
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 13
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.967741935483871,
-    "hallucination_rate": 0.24390243902439024,
+    "hallucination_rate": 0.29545454545454547,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "correct": 24,
      "near": 1,
-     "unmatched": 10
+     "unmatched": 16
     },
     "gold_valued": 25,
     "accuracy": 0.96,
-    "unmatched": 10,
+    "unmatched": 16,
     "mismatches": [
      {
       "key": "authorised by",
@@ -13849,19 +14201,23 @@
    "adapted": {
     "fields": {
      "Bank Name": "FIRST NATIONAL BANK OF NEW YORK",
-     "Bank Address": "330 Madison Avenue, New York, NY 10017",
-     "ABA Number": "021000021",
-     "Member FDIC": "Member FDIC",
      "Account Holder": "Nexus Global Trading LLC",
-     "EIN": "47-3821654",
      "Statement No": "STMT-2024-01",
      "Period": "January 2024",
      "Account No": "****7743",
-     "Account Type": "Business Checking",
      "Opening Balance": "$184,320.55",
+     "Closing Balance": "$125,357.26",
+     "Account Holder Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "Account Type": "Business Checking",
      "Total Credits": "$46,841.68",
      "Total Debits": "$105,804.97",
-     "Closing Balance": "$125,357.26"
+     "Type": "Business Checking",
+     "Credits": "$46,841.68",
+     "Debits": "$105,804.97",
+     "Bank Address": "330 Madison Avenue, New York, NY 10017",
+     "ABA Number": "021000021",
+     "Member FDIC": "Member FDIC",
+     "EIN": "47-3821654"
     },
     "tables": {
      "transactions": [
@@ -14049,6 +14405,42 @@
       "actual": "$125,357.26",
       "type": "money",
       "in_gold_schema": true
+     },
+     "Account Holder Address": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Type": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Business Checking",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Credits": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$46,841.68",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Debits": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "$105,804.97",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
      },
      "Bank Address": {
       "outcome": "hallucinated",
@@ -14825,18 +15217,18 @@
     },
     "counts": {
      "correct": 70,
-     "hallucinated": 4,
+     "hallucinated": 8,
      "empty_ok": 12
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 4
+     "out_of_schema": 8
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.05405405405405406,
+    "hallucination_rate": 0.10256410256410256,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -15789,6 +16181,15 @@
       "type": "money",
       "in_gold_schema": true
      },
+     "Account Holder Address": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "142 West 57th Street, Suite 1800, New York, NY 10019",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
      "Bank Address": {
       "outcome": "hallucinated",
       "expected": null,
@@ -16564,28 +16965,28 @@
     },
     "counts": {
      "correct": 70,
-     "hallucinated": 4,
+     "hallucinated": 5,
      "empty_ok": 12
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 4
+     "out_of_schema": 5
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.05405405405405406,
+    "hallucination_rate": 0.06666666666666667,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "correct": 34,
-     "unmatched": 4
+     "unmatched": 8
     },
     "gold_valued": 34,
     "accuracy": 1.0,
-    "unmatched": 4,
+    "unmatched": 8,
     "mismatches": []
    },
    "score_structure": {
@@ -16610,54 +17011,52 @@
  "summary": {
   "overall": {
    "counts": {
-    "wrong": 1,
-    "correct": 327,
-    "hallucinated": 89,
+    "correct": 328,
+    "hallucinated": 119,
     "missed": 44,
     "renamed": 5,
     "near": 1,
     "empty_ok": 12
    },
    "gold_valued": 378,
-   "accuracy": 0.8650793650793651,
+   "accuracy": 0.8677248677248677,
    "near_rate": 0.0026455026455026454,
    "renamed": 5,
    "rename_rate": 0.013227513227513227,
-   "hallucinated": 89,
-   "hallucination_rate": 0.21040189125295508,
+   "hallucinated": 119,
+   "hallucination_rate": 0.26269315673289184,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
-   "out_of_schema": 85,
-   "defect_rate": 0.009456264775413711
+   "out_of_schema": 115,
+   "defect_rate": 0.008830022075055188
   },
   "by_document_type": {
    "balance_sheet": {
     "counts": {
-     "wrong": 1,
-     "correct": 7,
-     "hallucinated": 25,
+     "correct": 8,
+     "hallucinated": 26,
      "missed": 38
     },
     "gold_valued": 46,
-    "accuracy": 0.15217391304347827,
+    "accuracy": 0.17391304347826086,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 25,
-    "hallucination_rate": 0.7575757575757576,
+    "hallucinated": 26,
+    "hallucination_rate": 0.7647058823529411,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 25,
+    "out_of_schema": 26,
     "defect_rate": 0.0
    },
    "bank_statement": {
     "counts": {
      "correct": 70,
-     "hallucinated": 4,
+     "hallucinated": 8,
      "empty_ok": 12
     },
     "gold_valued": 70,
@@ -16665,29 +17064,8 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 4,
-    "hallucination_rate": 0.05405405405405406,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0,
-    "invented": 0,
-    "misfiled": 0,
-    "out_of_schema": 4,
-    "defect_rate": 0.0
-   },
-   "cheque": {
-    "counts": {
-     "correct": 7,
-     "renamed": 2,
-     "missed": 2,
-     "hallucinated": 8
-    },
-    "gold_valued": 11,
-    "accuracy": 0.6363636363636364,
-    "near_rate": 0.0,
-    "renamed": 2,
-    "rename_rate": 0.18181818181818182,
     "hallucinated": 8,
-    "hallucination_rate": 0.47058823529411764,
+    "hallucination_rate": 0.10256410256410256,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
@@ -16695,79 +17073,20 @@
     "out_of_schema": 8,
     "defect_rate": 0.0
    },
-   "expense_report": {
+   "cheque": {
     "counts": {
-     "renamed": 1,
-     "correct": 53,
-     "hallucinated": 4
-    },
-    "gold_valued": 54,
-    "accuracy": 0.9814814814814815,
-    "near_rate": 0.0,
-    "renamed": 1,
-    "rename_rate": 0.018518518518518517,
-    "hallucinated": 4,
-    "hallucination_rate": 0.06896551724137931,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0,
-    "invented": 0,
-    "misfiled": 0,
-    "out_of_schema": 4,
-    "defect_rate": 0.0
-   },
-   "income_statement": {
-    "counts": {
-     "correct": 25,
-     "hallucinated": 7
-    },
-    "gold_valued": 25,
-    "accuracy": 1.0,
-    "near_rate": 0.0,
-    "renamed": 0,
-    "rename_rate": 0.0,
-    "hallucinated": 7,
-    "hallucination_rate": 0.21875,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0,
-    "invented": 0,
-    "misfiled": 0,
-    "out_of_schema": 7,
-    "defect_rate": 0.0
-   },
-   "payslip": {
-    "counts": {
-     "missed": 4,
-     "correct": 64,
+     "correct": 7,
      "renamed": 2,
+     "missed": 2,
      "hallucinated": 10
     },
-    "gold_valued": 70,
-    "accuracy": 0.9142857142857143,
+    "gold_valued": 11,
+    "accuracy": 0.6363636363636364,
     "near_rate": 0.0,
     "renamed": 2,
-    "rename_rate": 0.02857142857142857,
+    "rename_rate": 0.18181818181818182,
     "hallucinated": 10,
-    "hallucination_rate": 0.13157894736842105,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0,
-    "invented": 0,
-    "misfiled": 4,
-    "out_of_schema": 6,
-    "defect_rate": 0.05263157894736842
-   },
-   "purchase_order": {
-    "counts": {
-     "correct": 30,
-     "near": 1,
-     "hallucinated": 10
-    },
-    "gold_valued": 31,
-    "accuracy": 0.967741935483871,
-    "near_rate": 0.03225806451612903,
-    "renamed": 0,
-    "rename_rate": 0.0,
-    "hallucinated": 10,
-    "hallucination_rate": 0.24390243902439024,
+    "hallucination_rate": 0.5263157894736842,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
@@ -16775,23 +17094,103 @@
     "out_of_schema": 10,
     "defect_rate": 0.0
    },
+   "expense_report": {
+    "counts": {
+     "renamed": 1,
+     "correct": 53,
+     "hallucinated": 5
+    },
+    "gold_valued": 54,
+    "accuracy": 0.9814814814814815,
+    "near_rate": 0.0,
+    "renamed": 1,
+    "rename_rate": 0.018518518518518517,
+    "hallucinated": 5,
+    "hallucination_rate": 0.0847457627118644,
+    "hallucinated_ungrounded": 0,
+    "invention_rate": 0.0,
+    "invented": 0,
+    "misfiled": 0,
+    "out_of_schema": 5,
+    "defect_rate": 0.0
+   },
+   "income_statement": {
+    "counts": {
+     "correct": 25,
+     "hallucinated": 12
+    },
+    "gold_valued": 25,
+    "accuracy": 1.0,
+    "near_rate": 0.0,
+    "renamed": 0,
+    "rename_rate": 0.0,
+    "hallucinated": 12,
+    "hallucination_rate": 0.32432432432432434,
+    "hallucinated_ungrounded": 0,
+    "invention_rate": 0.0,
+    "invented": 0,
+    "misfiled": 0,
+    "out_of_schema": 12,
+    "defect_rate": 0.0
+   },
+   "payslip": {
+    "counts": {
+     "missed": 4,
+     "correct": 64,
+     "renamed": 2,
+     "hallucinated": 16
+    },
+    "gold_valued": 70,
+    "accuracy": 0.9142857142857143,
+    "near_rate": 0.0,
+    "renamed": 2,
+    "rename_rate": 0.02857142857142857,
+    "hallucinated": 16,
+    "hallucination_rate": 0.1951219512195122,
+    "hallucinated_ungrounded": 0,
+    "invention_rate": 0.0,
+    "invented": 0,
+    "misfiled": 4,
+    "out_of_schema": 12,
+    "defect_rate": 0.04878048780487805
+   },
+   "purchase_order": {
+    "counts": {
+     "correct": 30,
+     "near": 1,
+     "hallucinated": 16
+    },
+    "gold_valued": 31,
+    "accuracy": 0.967741935483871,
+    "near_rate": 0.03225806451612903,
+    "renamed": 0,
+    "rename_rate": 0.0,
+    "hallucinated": 16,
+    "hallucination_rate": 0.3404255319148936,
+    "hallucinated_ungrounded": 0,
+    "invention_rate": 0.0,
+    "invented": 0,
+    "misfiled": 0,
+    "out_of_schema": 16,
+    "defect_rate": 0.0
+   },
    "sales_invoice": {
     "counts": {
      "correct": 71,
-     "hallucinated": 21
+     "hallucinated": 26
     },
     "gold_valued": 71,
     "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 21,
-    "hallucination_rate": 0.22826086956521738,
+    "hallucinated": 26,
+    "hallucination_rate": 0.26804123711340205,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 21,
+    "out_of_schema": 26,
     "defect_rate": 0.0
    }
   },
@@ -16816,14 +17215,13 @@
    },
    "money": {
     "counts": {
-     "wrong": 1,
-     "correct": 139,
+     "correct": 140,
      "missed": 21,
      "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.8633540372670807,
+    "accuracy": 0.8695652173913043,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -16856,7 +17254,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 87,
+     "hallucinated": 117,
      "missed": 23,
      "correct": 146,
      "renamed": 5,
@@ -16867,14 +17265,14 @@
     "near_rate": 0.005714285714285714,
     "renamed": 5,
     "rename_rate": 0.02857142857142857,
-    "hallucinated": 87,
-    "hallucination_rate": 0.36401673640167365,
+    "hallucinated": 117,
+    "hallucination_rate": 0.4349442379182156,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
-    "out_of_schema": 85,
-    "defect_rate": 0.008368200836820083
+    "out_of_schema": 115,
+    "defect_rate": 0.007434944237918215
    }
   }
  },
@@ -16882,7 +17280,7 @@
   "overall": {
    "counts": {
     "correct": 293,
-    "hallucinated": 115,
+    "hallucinated": 122,
     "missed": 64,
     "renamed": 21,
     "empty_ok": 12
@@ -16892,14 +17290,14 @@
    "near_rate": 0.0,
    "renamed": 21,
    "rename_rate": 0.05555555555555555,
-   "hallucinated": 115,
-   "hallucination_rate": 0.2680652680652681,
+   "hallucinated": 122,
+   "hallucination_rate": 0.2798165137614679,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
-   "out_of_schema": 111,
-   "defect_rate": 0.009324009324009324
+   "out_of_schema": 118,
+   "defect_rate": 0.009174311926605505
   },
   "by_document_type": {
    "balance_sheet": {
@@ -16968,40 +17366,40 @@
     "counts": {
      "renamed": 1,
      "correct": 53,
-     "hallucinated": 4
+     "hallucinated": 5
     },
     "gold_valued": 54,
     "accuracy": 0.9814814814814815,
     "near_rate": 0.0,
     "renamed": 1,
     "rename_rate": 0.018518518518518517,
-    "hallucinated": 4,
-    "hallucination_rate": 0.06896551724137931,
+    "hallucinated": 5,
+    "hallucination_rate": 0.0847457627118644,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 4,
+    "out_of_schema": 5,
     "defect_rate": 0.0
    },
    "income_statement": {
     "counts": {
      "correct": 22,
      "renamed": 3,
-     "hallucinated": 7
+     "hallucinated": 9
     },
     "gold_valued": 25,
     "accuracy": 0.88,
     "near_rate": 0.0,
     "renamed": 3,
     "rename_rate": 0.12,
-    "hallucinated": 7,
-    "hallucination_rate": 0.21875,
+    "hallucinated": 9,
+    "hallucination_rate": 0.2647058823529412,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 7,
+    "out_of_schema": 9,
     "defect_rate": 0.0
    },
    "payslip": {
@@ -17009,48 +17407,48 @@
      "missed": 4,
      "correct": 59,
      "renamed": 7,
-     "hallucinated": 10
+     "hallucinated": 11
     },
     "gold_valued": 70,
     "accuracy": 0.8428571428571429,
     "near_rate": 0.0,
     "renamed": 7,
     "rename_rate": 0.1,
-    "hallucinated": 10,
-    "hallucination_rate": 0.13157894736842105,
+    "hallucinated": 11,
+    "hallucination_rate": 0.14285714285714285,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 4,
-    "out_of_schema": 6,
-    "defect_rate": 0.05263157894736842
+    "out_of_schema": 7,
+    "defect_rate": 0.05194805194805195
    },
    "purchase_order": {
     "counts": {
      "correct": 14,
      "missed": 16,
      "renamed": 1,
-     "hallucinated": 29
+     "hallucinated": 30
     },
     "gold_valued": 31,
     "accuracy": 0.45161290322580644,
     "near_rate": 0.0,
     "renamed": 1,
     "rename_rate": 0.03225806451612903,
-    "hallucinated": 29,
-    "hallucination_rate": 0.6590909090909091,
+    "hallucinated": 30,
+    "hallucination_rate": 0.6666666666666666,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 29,
+    "out_of_schema": 30,
     "defect_rate": 0.0
    },
    "sales_invoice": {
     "counts": {
      "correct": 65,
      "renamed": 2,
-     "hallucinated": 26,
+     "hallucinated": 28,
      "missed": 4
     },
     "gold_valued": 71,
@@ -17058,13 +17456,13 @@
     "near_rate": 0.0,
     "renamed": 2,
     "rename_rate": 0.028169014084507043,
-    "hallucinated": 26,
-    "hallucination_rate": 0.27956989247311825,
+    "hallucinated": 28,
+    "hallucination_rate": 0.29473684210526313,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 26,
+    "out_of_schema": 28,
     "defect_rate": 0.0
    }
   },
@@ -17130,7 +17528,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 113,
+     "hallucinated": 120,
      "missed": 30,
      "correct": 134,
      "renamed": 11
@@ -17140,68 +17538,66 @@
     "near_rate": 0.0,
     "renamed": 11,
     "rename_rate": 0.06285714285714286,
-    "hallucinated": 113,
-    "hallucination_rate": 0.437984496124031,
+    "hallucinated": 120,
+    "hallucination_rate": 0.4528301886792453,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
-    "out_of_schema": 111,
-    "defect_rate": 0.007751937984496124
+    "out_of_schema": 118,
+    "defect_rate": 0.007547169811320755
    }
   }
  },
  "summary_export": {
   "overall": {
    "counts": {
-    "wrong": 1,
-    "correct": 327,
-    "hallucinated": 89,
+    "correct": 328,
+    "hallucinated": 95,
     "missed": 44,
     "renamed": 5,
     "near": 1,
     "empty_ok": 12
    },
    "gold_valued": 378,
-   "accuracy": 0.8650793650793651,
+   "accuracy": 0.8677248677248677,
    "near_rate": 0.0026455026455026454,
    "renamed": 5,
    "rename_rate": 0.013227513227513227,
-   "hallucinated": 89,
-   "hallucination_rate": 0.21040189125295508,
+   "hallucinated": 95,
+   "hallucination_rate": 0.22144522144522144,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
-   "out_of_schema": 85,
-   "defect_rate": 0.009456264775413711
+   "out_of_schema": 91,
+   "defect_rate": 0.009324009324009324
   },
   "by_document_type": {
    "balance_sheet": {
     "counts": {
-     "wrong": 1,
-     "correct": 7,
-     "hallucinated": 25,
+     "correct": 8,
+     "hallucinated": 26,
      "missed": 38
     },
     "gold_valued": 46,
-    "accuracy": 0.15217391304347827,
+    "accuracy": 0.17391304347826086,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 25,
-    "hallucination_rate": 0.7575757575757576,
+    "hallucinated": 26,
+    "hallucination_rate": 0.7647058823529411,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 25,
+    "out_of_schema": 26,
     "defect_rate": 0.0
    },
    "bank_statement": {
     "counts": {
      "correct": 70,
-     "hallucinated": 4,
+     "hallucinated": 5,
      "empty_ok": 12
     },
     "gold_valued": 70,
@@ -17209,13 +17605,13 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 4,
-    "hallucination_rate": 0.05405405405405406,
+    "hallucinated": 5,
+    "hallucination_rate": 0.06666666666666667,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 4,
+    "out_of_schema": 5,
     "defect_rate": 0.0
    },
    "cheque": {
@@ -17303,39 +17699,39 @@
     "counts": {
      "correct": 30,
      "near": 1,
-     "hallucinated": 10
+     "hallucinated": 13
     },
     "gold_valued": 31,
     "accuracy": 0.967741935483871,
     "near_rate": 0.03225806451612903,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 10,
-    "hallucination_rate": 0.24390243902439024,
+    "hallucinated": 13,
+    "hallucination_rate": 0.29545454545454547,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 10,
+    "out_of_schema": 13,
     "defect_rate": 0.0
    },
    "sales_invoice": {
     "counts": {
      "correct": 71,
-     "hallucinated": 21
+     "hallucinated": 22
     },
     "gold_valued": 71,
     "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 21,
-    "hallucination_rate": 0.22826086956521738,
+    "hallucinated": 22,
+    "hallucination_rate": 0.23655913978494625,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 21,
+    "out_of_schema": 22,
     "defect_rate": 0.0
    }
   },
@@ -17360,14 +17756,13 @@
    },
    "money": {
     "counts": {
-     "wrong": 1,
-     "correct": 139,
+     "correct": 140,
      "missed": 21,
      "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.8633540372670807,
+    "accuracy": 0.8695652173913043,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17400,7 +17795,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 87,
+     "hallucinated": 93,
      "missed": 23,
      "correct": 146,
      "renamed": 5,
@@ -17411,28 +17806,28 @@
     "near_rate": 0.005714285714285714,
     "renamed": 5,
     "rename_rate": 0.02857142857142857,
-    "hallucinated": 87,
-    "hallucination_rate": 0.36401673640167365,
+    "hallucinated": 93,
+    "hallucination_rate": 0.3795918367346939,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
-    "out_of_schema": 85,
-    "defect_rate": 0.008368200836820083
+    "out_of_schema": 91,
+    "defect_rate": 0.00816326530612245
    }
   }
  },
  "summary_content": {
   "counts": {
+   "correct": 229,
+   "unmatched": 102,
    "wrong": 1,
-   "correct": 227,
-   "missed": 12,
-   "unmatched": 74,
+   "missed": 10,
    "near": 1
   },
   "gold_valued": 241,
-  "unmatched": 74,
-  "accuracy": 0.941908713692946
+  "unmatched": 102,
+  "accuracy": 0.950207468879668
  },
  "summary_structure": {
   "gold_tables": 14,
@@ -17444,8 +17839,8 @@
  "calibration": {
   "grounded": {
    "n": 409,
-   "correct": 323,
-   "wrong": 1,
+   "correct": 324,
+   "wrong": 0,
    "missed": 0,
    "near": 1,
    "hallucinated": 84
@@ -17460,6 +17855,2683 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-22 17:57:50"
+ "diff": [
+  {
+   "key": "CHQ-001847 :: Account Number",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Amount in Figures",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Amount in Words",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Authorized By",
+   "before": null,
+   "after": "renamed",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Bank Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Bank Member FDIC",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Bank Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Cheque Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Drawer City State Zip",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Drawer EIN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Drawer Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Drawer Street Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: MICR Line",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Memo",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Non-Negotiable Copy",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Payee",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Payee Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Payer Name",
+   "before": null,
+   "after": "renamed",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Routing Number",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Company Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Company EIN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Company Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Company Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Department",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee Name",
+   "before": null,
+   "after": "renamed",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Manager",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Purpose",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Report No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: TOTAL CLAIMED",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Total Claimed",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Company",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Contact",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Contact Email",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Contact Person",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Company Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Company Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Company Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Company Tax ID",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Due Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Notes Payment Received",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Notes Reference",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: PO Reference",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions ABA",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions Account Number",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions Bank Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Instructions Cheque Payable To",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Sales Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Shipping & Handling",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: TOTAL DUE",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Total Due",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Company",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Contact",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Email",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Company Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Company EIN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Company Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Company Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Due Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Notes Balance Due",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Notes Late Payment Interest",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: PO Reference",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Instructions Cheque Payable To",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Instructions Wire ABA",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Instructions Wire Account",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Instructions Wire Bank",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Sales Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Shipping & Handling",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: TOTAL DUE",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Terms",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Total Due",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Bad Debt",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Bank Charges & Interest",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Company City, State, Zip",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Company EIN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Company Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Company Street Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Depreciation",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Document Number",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Est. Income Tax Provision (21%)",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Freight In",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: GROSS PROFIT",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Gross Profit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Gross Sales",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Income Tax Provision",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Insurance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Interest Income",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Less: Closing Inventory",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Less: Returns",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Marketing",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: NET INCOME (LOSS) AFTER TAX",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: NET INCOME (LOSS) BEFORE TAX",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Income After Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Income Before Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Revenue",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: OPERATING INCOME (EBIT)",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Office & Misc",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Opening Inventory",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Operating Income (EBIT)",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Period",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Prepared by",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Professional Fees",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Purchases",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Rent",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Salaries & Wages",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Total COGS",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Total Operating Expenses",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Utilities",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Annual Salary",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Company Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Company EIN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Company Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Deductions Total",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Earnings Total",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employee SSN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employer Name",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: NET PAY",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Net Pay",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Pay Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Pay Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: SSN",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Title / Department",
+   "before": null,
+   "after": "renamed",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Total Deductions",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Total Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: YTD Gross Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: YTD Taxes Withheld",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Annual Salary",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Company Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Company EIN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Company Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee SSN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employer Name",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Net Pay",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Net Pay Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Pay Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Pay Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: SSN",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Title / Department",
+   "before": null,
+   "after": "renamed",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Total Deductions",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Total Earnings",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: YTD Gross Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: YTD Taxes Withheld",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions :: row_count_mismatch",
+   "before": null,
+   "after": "1",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings :: row_count_mismatch",
+   "before": null,
+   "after": "1",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Authorised By",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Authorised By Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Authorised By Title",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Email",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Signature Email",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Signature Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Signature Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Signature Title",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Title",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Company Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Company Name",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Company Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Company Tax ID",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Freight",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: ORDER TOTAL",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Order Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: PO Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Required By",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Ship Via",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Special Instructions",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Tax (exempt)",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Contact",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Phone",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: ABA Number",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account Holder",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account Holder Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Bank Address",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Bank Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Closing Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Credits",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Debits",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: EIN",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Member FDIC",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Opening Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Statement No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Total Credits",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Total Debits",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Type",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-08-22 18:14:16"
 }

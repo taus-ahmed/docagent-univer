@@ -98,3 +98,54 @@ class TestRowArrays:
         out = adapt([r1, r2], LABEL, GRID)
         assert len(out["tables"]["line_items"]) == 2
         assert any("2 result blocks" in n for n in out["notes"])
+
+
+class TestBestMatchWinsAGoldName:
+    """Name matching was greedy and first-come-first-served, so a WEAK match
+    could take a gold name an EXACT match wanted, and the exact match arriving
+    afterwards was dropped as a duplicate.
+
+    On BS-2024-Q1 the engine returned "Other Current Assets" = $8,800 and
+    "Total Current Assets" = $1,129,003, both correct and both correctly
+    placed. "Other Current Assets" was seen first, token-overlapped gold's
+    "Total Current Assets" at exactly 0.5 — they share two of three tokens and
+    the differing one carries the whole meaning — took that key, and the exact
+    match was discarded. It was reported for four phases as that document's one
+    genuine extraction error. It was ours.
+    """
+
+    LABEL = {"document_id": "BS", "document_type": "balance_sheet",
+             "fields": {"Total Current Assets": 1129003},
+             "field_types": {"Total Current Assets": "money"},
+             "tables": {}, "table_types": {}}
+
+    def _adapt(self, ordered_fields):
+        from tests.harness.adapter import adapt
+        r = _res({"extracted_data": {k: {"value": v, "confidence": "grounded"}
+                                   for k, v in ordered_fields}})
+        return adapt([r], self.LABEL, {"cells": {}})
+
+    def test_the_exact_match_gets_the_gold_name(self):
+        out = self._adapt([("Other Current Assets", "$8,800"),
+                           ("Total Current Assets", "$1,129,003")])
+        assert out["fields"]["Total Current Assets"] == "$1,129,003"
+
+    def test_order_does_not_decide_it(self):
+        out = self._adapt([("Total Current Assets", "$1,129,003"),
+                           ("Other Current Assets", "$8,800")])
+        assert out["fields"]["Total Current Assets"] == "$1,129,003"
+
+    def test_the_loser_keeps_its_own_name_and_is_not_dropped(self):
+        """It must still be visible — as out-of-schema, which is what it is."""
+        out = self._adapt([("Other Current Assets", "$8,800"),
+                           ("Total Current Assets", "$1,129,003")])
+        assert out["fields"].get("Other Current Assets") == "$8,800"
+
+    def test_a_lone_fuzzy_match_still_matches(self):
+        """Best-match-wins must not turn off fuzzy matching — with no exact
+        claim competing, the fuzzy one is still the best available."""
+        from tests.harness.adapter import adapt
+        r = _res({"extracted_data": {"Total Current Asset":
+                                   {"value": "1129003", "confidence": "high"}}})
+        out = adapt([r], self.LABEL, {"cells": {}})
+        assert out["fields"].get("Total Current Assets") == "1129003"

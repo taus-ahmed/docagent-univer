@@ -78,6 +78,33 @@ def _tokens(s: Any) -> set:
     return set(re.findall(r"[a-z0-9]+", str(s or "").casefold()))
 
 
+def _match_score(pred_name: str, gold_names: list) -> tuple:
+    """(gold_name_or_None, score). Score orders competing claims on one gold
+    name: 1.0 exact, 0.9 substring, else the token-overlap ratio.
+
+    Needed because matching was greedy and first-come-first-served, so a WEAK
+    match could take a gold name that an EXACT match wanted. On BS-2024-Q1 the
+    engine returned "Other Current Assets" = $8,800 and "Total Current Assets"
+    = $1,129,003, both correct; "Other Current Assets" was seen first, token-
+    overlapped gold's "Total Current Assets" at exactly 0.5 (they share two of
+    three tokens, and the differing one carries the entire meaning), claimed
+    that key, and the exact match arriving afterwards was dropped as a
+    duplicate. It was reported for four phases as the document's one genuine
+    extraction error. It was ours.
+    """
+    g = _match_name(pred_name, gold_names)
+    if g is None:
+        return None, 0.0
+    pn = _norm(pred_name)
+    if _norm(g) == pn:
+        return g, 1.0
+    gn = _norm(g)
+    if len(gn) >= 4 and len(pn) >= 4 and (gn in pn or pn in gn):
+        return g, 0.9
+    pt, gt = _tokens(pred_name), _tokens(g)
+    return g, (len(gt & pt) / len(gt | pt)) if (pt and gt) else 0.0
+
+
 def _match_name(pred_name: str, gold_names: list) -> Optional[str]:
     """exact (normalized) -> substring -> token overlap >= 0.5."""
     pn = _norm(pred_name)
@@ -231,13 +258,34 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
         notes.append(f"engine returned {len(results)} result blocks for one "
                      f"document; fields merged (first wins), tables concatenated")
 
+    # Field claims are BUFFERED, not applied as they arrive, so that a gold
+    # name goes to the best claim rather than the first one. See _match_score.
+    pending_fields = []
+
     def put_field(name, value):
         if is_empty(value):
             return
-        g = _match_name(name, gold_field_names)
-        key = g or str(name)
-        if key not in fields:
-            fields[key] = value
+        pending_fields.append((str(name), value))
+
+    def resolve_fields():
+        """Assign gold names to predicted names best-match-first, one-to-one.
+
+        An exact match always beats a fuzzy one, whatever order they arrived
+        in. A predicted name that loses its gold name keeps its own name and
+        scores as out-of-schema, which is what it is.
+        """
+        scored = []
+        for i, (name, value) in enumerate(pending_fields):
+            g, sc = _match_score(name, gold_field_names)
+            scored.append((-sc, i, name, value, g))
+        scored.sort(key=lambda t: (t[0], t[1]))   # best score, then arrival
+        claimed = set()
+        for _neg, _i, name, value, g in scored:
+            key = g if (g and g not in claimed) else name
+            if g and g not in claimed:
+                claimed.add(g)
+            if key not in fields:
+                fields[key] = value
 
     def put_table(name, rows):
         g = _match_name(name, gold_table_names)
@@ -361,6 +409,11 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
                     out_rows.append(mapped)
             if out_rows:
                 put_table(g or base, out_rows)
+
+    # Every field claim is in; assign gold names best-match-first. Must run
+    # BEFORE the W4 block below, which writes into `fields` directly and tests
+    # membership.
+    resolve_fields()
 
     # A list of labelled amounts can legitimately be described EITHER as named
     # fields (a hand-built template names each row) OR as a two-column table of
