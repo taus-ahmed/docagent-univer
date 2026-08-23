@@ -325,28 +325,32 @@ def write_markdown(report: dict, path: Path):
     add(f"| └ misplacement (real content, slot gold leaves empty) | {_pct((o['hallucinated'] - o['hallucinated_ungrounded']) / max(1, o['gold_valued'] + o['hallucinated']))} |")
     add(f"| hallucinated values | {o['hallucinated']} (invented {o['hallucinated_ungrounded']}, misplaced {o['hallucinated'] - o['hallucinated_ungrounded']}) |")
     add(f"| near misses | {o['counts'].get('near', 0)} |")
+    add(f"| **renamed (right value, different field name)** | "
+        f"**{o.get('renamed', 0)}** ({_pct(o.get('rename_rate'))}) |")
     add(f"| outcome counts | {json.dumps(o['counts'])} |")
     add("")
     add("## By document type")
     add("")
-    add("| document type | accuracy | halluc. rate | invented | correct | near | wrong | missed | halluc. |")
-    add("|---|---|---|---|---|---|---|---|---|")
+    add("| document type | accuracy | halluc. rate | invented | correct | near | renamed | wrong | missed | halluc. |")
+    add("|---|---|---|---|---|---|---|---|---|---|")
     for k, v in s["by_document_type"].items():
         c = v["counts"]
         add(f"| {k} | {_pct(v['accuracy'])} | {_pct(v['hallucination_rate'])} | "
             f"{v['hallucinated_ungrounded']} | "
-            f"{c.get('correct', 0)} | {c.get('near', 0)} | {c.get('wrong', 0)} | "
+            f"{c.get('correct', 0)} | {c.get('near', 0)} | {c.get('renamed', 0)} | "
+            f"{c.get('wrong', 0)} | "
             f"{c.get('missed', 0)} | {c.get('hallucinated', 0)} |")
     add("")
     add("## By field type")
     add("")
-    add("| field type | accuracy | halluc. rate | invented | correct | near | wrong | missed | halluc. |")
-    add("|---|---|---|---|---|---|---|---|---|")
+    add("| field type | accuracy | halluc. rate | invented | correct | near | renamed | wrong | missed | halluc. |")
+    add("|---|---|---|---|---|---|---|---|---|---|")
     for k, v in s["by_field_type"].items():
         c = v["counts"]
         add(f"| {k} | {_pct(v['accuracy'])} | {_pct(v['hallucination_rate'])} | "
             f"{v['hallucinated_ungrounded']} | "
-            f"{c.get('correct', 0)} | {c.get('near', 0)} | {c.get('wrong', 0)} | "
+            f"{c.get('correct', 0)} | {c.get('near', 0)} | {c.get('renamed', 0)} | "
+            f"{c.get('wrong', 0)} | "
             f"{c.get('missed', 0)} | {c.get('hallucinated', 0)} |")
     add("")
     add("## Per document")
@@ -612,6 +616,10 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
           f"({o['hallucinated_ungrounded']} values found nowhere in the PDF)")
     print(f"  of which misplaced: {o['hallucinated'] - o['hallucinated_ungrounded']} "
           f"(real document content, wrong slot)")
+    if o.get("renamed"):
+        print(f"renamed             : {o['renamed']} ({_pct(o['rename_rate'])}) "
+              f"(right value, different field name — ONE defect, not a "
+              f"miss plus a hallucination)")
     print(f"outcome counts      : {o['counts']}")
     cal = report.get("calibration") or {}
     if cal:

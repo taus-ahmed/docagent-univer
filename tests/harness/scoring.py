@@ -7,6 +7,7 @@ Every gold-valued field lands in exactly one of four outcomes:
   wrong         — a value was extracted and it is incorrect
   missed        — gold has a value, extraction returned nothing
   hallucinated  — gold has nothing, extraction invented a value
+  renamed       — gold's value came back correct, under a DIFFERENT name
 
 plus one refinement reported separately:
 
@@ -377,7 +378,59 @@ def score_table(gold_rows: list, pred_rows: list, col_types: dict,
 
 # ── document + suite aggregation ─────────────────────────────────────────────
 
-OUTCOME_KEYS = ("correct", "near", "wrong", "missed", "hallucinated", "empty_ok")
+OUTCOME_KEYS = ("correct", "near", "wrong", "missed", "hallucinated",
+                "renamed", "empty_ok")
+
+
+def collapse_renames(field_results: dict) -> int:
+    """Fold each (missed gold field, hallucinated field with the same value)
+    pair into ONE `renamed` entry. Returns how many were folded.
+
+    A schema that names a field "Drawer Company Name" where gold says "Payer
+    Name" makes ONE mistake — it used a different name. Scored naively it makes
+    two: the gold field is `missed` because nothing answered to its name, and
+    the prediction is `hallucinated` because gold has no field by that name.
+    Every no-template naming difference was being counted twice, once in each
+    of the two headline metrics, which made the same defect look like a recall
+    problem AND a precision problem.
+
+    The match must be EXACT (`compare_values` -> "correct"). A `near` value
+    under a different name is not a rename: `Routing Number` = "021000021"
+    against a predicted `MICR Line` = "A021000021A C7743882201C 001847D" is a
+    different, broader field that happens to contain the routing number, and
+    folding it away would flatter the score. Those stay as two entries, which
+    is what they are.
+
+    Matching is one-to-one and greedy over sorted names, so a run is
+    reproducible and one prediction can never absolve two gold fields.
+    """
+    missed = sorted(n for n, r in field_results.items()
+                    if r["outcome"] == "missed")
+    halluc = sorted(n for n, r in field_results.items()
+                    if r["outcome"] == "hallucinated")
+    if not missed or not halluc:
+        return 0
+
+    taken, folded = set(), 0
+    for gname in missed:
+        g = field_results[gname]
+        for hname in halluc:
+            if hname in taken:
+                continue
+            h = field_results[hname]
+            if compare_values(g["expected"], h["actual"],
+                              g.get("type") or "string") != "correct":
+                continue
+            taken.add(hname)
+            folded += 1
+            g["outcome"] = "renamed"
+            g["actual"] = h["actual"]
+            g["renamed_to"] = hname
+            break
+
+    for hname in taken:
+        del field_results[hname]
+    return folded
 
 
 def _tally(counter: dict, outcome: str):
@@ -391,6 +444,7 @@ def score_document(label: dict, adapted: dict, doc_text: str = "") -> dict:
     field_results = score_fields(label.get("fields", {}),
                                  label.get("field_types", {}),
                                  adapted.get("fields", {}))
+    renamed = collapse_renames(field_results)
 
     table_results = {}
     gold_tables = label.get("tables", {}) or {}
@@ -428,14 +482,21 @@ def score_document(label: dict, adapted: dict, doc_text: str = "") -> dict:
             if c.get("outcome") == "hallucinated" and not c.get("grounded"):
                 ungrounded += 1
 
-    gold_valued = sum(counts.get(k, 0) for k in ("correct", "near", "wrong", "missed"))
-    extracted = sum(counts.get(k, 0) for k in ("correct", "near", "wrong", "hallucinated"))
+    # A renamed field is gold-valued (it belongs in the denominator — it was
+    # not returned correctly under its own name) and it WAS extracted (its
+    # value is in the output, so it belongs in the hallucination-rate
+    # denominator too). It is never counted as correct.
+    gold_valued = sum(counts.get(k, 0)
+                      for k in ("correct", "near", "wrong", "missed", "renamed"))
+    extracted = sum(counts.get(k, 0)
+                    for k in ("correct", "near", "wrong", "hallucinated", "renamed"))
     return {
         "document_id": label.get("document_id"),
         "document_type": label.get("document_type"),
         "fields": field_results,
         "tables": table_results,
         "counts": counts,
+        "renamed": renamed,
         "hallucinated_ungrounded": ungrounded,
         "accuracy": (counts.get("correct", 0) / gold_valued) if gold_valued else None,
         "hallucination_rate": (counts.get("hallucinated", 0) / extracted) if extracted else None,
@@ -470,13 +531,17 @@ def summarize(doc_results: list) -> dict:
     def rates(c):
         c = dict(c)
         ungrounded = c.pop("_ungrounded", 0)
-        gold_valued = sum(c.get(k, 0) for k in ("correct", "near", "wrong", "missed"))
-        extracted = sum(c.get(k, 0) for k in ("correct", "near", "wrong", "hallucinated"))
+        gold_valued = sum(c.get(k, 0)
+                          for k in ("correct", "near", "wrong", "missed", "renamed"))
+        extracted = sum(c.get(k, 0)
+                        for k in ("correct", "near", "wrong", "hallucinated", "renamed"))
         return {
             "counts": c,
             "gold_valued": gold_valued,
             "accuracy": (c.get("correct", 0) / gold_valued) if gold_valued else None,
             "near_rate": (c.get("near", 0) / gold_valued) if gold_valued else None,
+            "renamed": c.get("renamed", 0),
+            "rename_rate": (c.get("renamed", 0) / gold_valued) if gold_valued else None,
             "hallucinated": c.get("hallucinated", 0),
             "hallucination_rate": (c.get("hallucinated", 0) / extracted) if extracted else None,
             "hallucinated_ungrounded": ungrounded,

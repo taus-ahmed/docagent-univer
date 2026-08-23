@@ -228,3 +228,81 @@ class TestAggregation:
         assert d2["counts"]["hallucinated"] == 1
         assert d2["hallucinated_ungrounded"] == 1
         assert summarize([d2])["overall"]["hallucinated_ungrounded"] == 1
+
+
+class TestCollapseRenames:
+    """A schema that calls gold's "Payer Name" field "Drawer Company Name"
+    makes ONE mistake. Scored naively it makes two — a miss (nothing answered
+    to gold's name) and a hallucination (gold has no field by that name) — and
+    the same defect lands in both headline metrics at once."""
+
+    def _results(self, gold_name, gold_val, pred_name, pred_val, ftype="string"):
+        from tests.harness.scoring import score_fields
+        return score_fields({gold_name: gold_val}, {gold_name: ftype},
+                            {pred_name: pred_val})
+
+    def test_the_pair_becomes_one_renamed_entry(self):
+        from tests.harness.scoring import collapse_renames
+        r = self._results("Payer Name", "Nexus Global Trading LLC",
+                          "Drawer Company Name", "Nexus Global Trading LLC")
+        assert r["Payer Name"]["outcome"] == "missed"
+        assert r["Drawer Company Name"]["outcome"] == "hallucinated"
+
+        assert collapse_renames(r) == 1
+        assert r["Payer Name"]["outcome"] == "renamed"
+        assert r["Payer Name"]["renamed_to"] == "Drawer Company Name"
+        assert r["Payer Name"]["actual"] == "Nexus Global Trading LLC"
+        assert "Drawer Company Name" not in r, "the duplicate must be removed"
+
+    def test_a_near_value_is_not_a_rename(self):
+        """"Routing Number" = 021000021 vs a predicted "MICR Line" =
+        "A021000021A C7743882201C 001847D" is a different, broader field that
+        merely contains the routing number. Folding it would flatter the
+        score, so it stays two entries — which is what it is."""
+        from tests.harness.scoring import collapse_renames
+        r = self._results("Routing Number", "021000021",
+                          "MICR Line", "A021000021A C7743882201C 001847D")
+        assert collapse_renames(r) == 0
+        assert r["Routing Number"]["outcome"] == "missed"
+        assert r["MICR Line"]["outcome"] == "hallucinated"
+
+    def test_money_renames_match_across_formatting(self):
+        from tests.harness.scoring import collapse_renames
+        r = self._results("Closing Balance", 125357.26,
+                          "Ending Balance", "$125,357.26", ftype="money")
+        assert collapse_renames(r) == 1
+        assert r["Closing Balance"]["outcome"] == "renamed"
+
+    def test_one_prediction_cannot_absolve_two_gold_fields(self):
+        from tests.harness.scoring import collapse_renames, score_fields
+        r = score_fields({"A": "Janet Wu", "B": "Janet Wu"},
+                         {"A": "string", "B": "string"},
+                         {"Signed By": "Janet Wu"})
+        assert collapse_renames(r) == 1
+        outcomes = sorted(v["outcome"] for v in r.values())
+        assert outcomes == ["missed", "renamed"], outcomes
+
+    def test_a_genuine_hallucination_is_untouched(self):
+        from tests.harness.scoring import collapse_renames
+        r = self._results("Payer Name", "Nexus Global Trading LLC",
+                          "Company Phone", "(212) 555-0148")
+        assert collapse_renames(r) == 0
+        assert r["Payer Name"]["outcome"] == "missed"
+        assert r["Company Phone"]["outcome"] == "hallucinated"
+
+    def test_renamed_is_not_counted_as_correct(self):
+        """It is still a defect: the user's sheet has an empty cell where they
+        expected a value, and a column they did not ask for."""
+        from tests.harness.scoring import score_document
+        label = {"document_id": "D", "document_type": "cheque",
+                 "fields": {"Payer Name": "Nexus Global Trading LLC"},
+                 "field_types": {"Payer Name": "string"}, "tables": {}}
+        sc = score_document(label,
+                            {"fields": {"Drawer Company Name":
+                                        "Nexus Global Trading LLC"},
+                             "tables": {}}, "Nexus Global Trading LLC")
+        assert sc["counts"].get("renamed") == 1
+        assert sc["counts"].get("correct", 0) == 0
+        assert sc["counts"].get("hallucinated", 0) == 0
+        assert sc["accuracy"] == 0.0
+        assert sc["hallucination_rate"] == 0.0
