@@ -387,3 +387,112 @@ class TestHallucinationKinds:
         cols = [c["column"] for t in sc["tables"].values() for c in t["cells"]]
         assert not any(str(c).startswith("_") for c in cols), cols
         assert sc["halluc_kinds"]["invented"] == 0
+
+
+class TestContentVsStructure:
+    """The headline compares like-for-like containers, which is right with a
+    template and wrong without one: inference DESIGNS the containers, so
+    describing a balance sheet as 34 label/value pairs where gold says 5 tables
+    scores 15.2% while the values are all correct. Content and structure are
+    two questions and get two numbers."""
+
+    # A balance sheet as gold describes it: two fields and a table of rows.
+    GOLD = {
+        "document_id": "BS", "document_type": "balance_sheet",
+        "fields": {"TOTAL ASSETS": 1365503},
+        "field_types": {"TOTAL ASSETS": "money"},
+        "tables": {"current_assets": [
+            {"Label": "Cash & Cash Equivalents", "Amount": 143803},
+            {"Label": "Inventory", "Amount": 612000},
+        ]},
+        "table_types": {"current_assets": {"Label": "string",
+                                           "Amount": "money"}},
+    }
+
+    # The same facts, flattened — what inference actually returns.
+    FLAT = {"fields": {"TOTAL ASSETS": "$1,365,503",
+                       "Cash & Cash Equivalents": "$143,803",
+                       "Inventory": "$612,000"},
+            "tables": {}}
+
+    def test_flat_output_scores_full_marks_on_content(self):
+        from tests.harness.scoring import score_content
+        c = score_content(self.GOLD, self.FLAT)
+        assert c["accuracy"] == 1.0, c
+        assert c["counts"].get("missed", 0) == 0
+
+    def test_flat_output_scores_zero_on_structure(self):
+        """The user asked for a table and got a list. That is a real failure
+        and it must stay visible — content full marks does not excuse it."""
+        from tests.harness.scoring import score_structure
+        st = score_structure(self.GOLD, self.FLAT)
+        assert st["fidelity"] == 0.0
+        assert st["tables_present"] == 0 and st["gold_tables"] == 1
+
+    def test_the_headline_still_penalises_the_flat_output(self):
+        """Content scoring is reported ALONGSIDE the headline, never instead
+        of it — otherwise this commit would just be raising the score."""
+        from tests.harness.scoring import score_document
+        sc = score_document(self.GOLD, self.FLAT, "")
+        assert sc["accuracy"] < 1.0
+
+    def test_correct_containers_score_full_marks_on_both(self):
+        from tests.harness.scoring import score_content, score_structure
+        pred = {"fields": {"TOTAL ASSETS": "1365503"},
+                "tables": {"current_assets": [
+                    {"Label": "Cash & Cash Equivalents", "Amount": "143,803"},
+                    {"Label": "Inventory", "Amount": "612,000"}]}}
+        assert score_content(self.GOLD, pred)["accuracy"] == 1.0
+        assert score_structure(self.GOLD, pred)["fidelity"] == 1.0
+
+    def test_a_wrong_value_is_wrong_in_content_too(self):
+        """Container-blind is not value-blind."""
+        from tests.harness.scoring import score_content
+        bad = dict(self.FLAT)
+        bad["fields"] = dict(self.FLAT["fields"], Inventory="$999")
+        c = score_content(self.GOLD, bad)
+        assert c["accuracy"] < 1.0
+        assert c["counts"].get("wrong", 0) == 1
+
+    def test_structure_is_not_scored_when_gold_has_no_tables(self):
+        """A cheque has no structure to get right; 0% and 100% would both be
+        noise."""
+        from tests.harness.scoring import score_structure
+        gold = {"fields": {"Amount": 1}, "field_types": {"Amount": "money"},
+                "tables": {}}
+        assert score_structure(gold, {"fields": {}, "tables": {}})["fidelity"] is None
+
+    def test_row_identity_uses_every_non_numeric_cell(self):
+        """Two bank transactions can share a date or a description but not
+        both. Keying on one column alone collapses them and loses a row."""
+        from tests.harness.scoring import _flatten
+        types = {"t": {"Date": "date", "Description": "string",
+                       "Debit": "money"}}
+        rows = [{"Date": "01/03", "Description": "Payroll", "Debit": 100},
+                {"Date": "01/09", "Description": "Payroll", "Debit": 200}]
+        out = _flatten({}, {"t": rows}, {}, types)
+        assert len(out) == 2, out
+
+    def test_genuinely_identical_rows_are_kept_not_overwritten(self):
+        from tests.harness.scoring import _flatten
+        types = {"t": {"Description": "string", "Debit": "money"}}
+        rows = [{"Description": "Fee", "Debit": 10},
+                {"Description": "Fee", "Debit": 10}]
+        out = _flatten({}, {"t": rows}, {}, types)
+        assert len(out) == 2, out
+
+    def test_noisy_labels_do_not_read_as_misses(self):
+        """Some gold labels carry mojibake dashes from the source PDFs and a
+        model writes an em dash where the page has an en dash. Exact key
+        equality reported a bank statement the engine reads perfectly as 35% —
+        measuring the labels instead of the extraction."""
+        from tests.harness.scoring import score_content
+        gold = {"fields": {}, "field_types": {},
+                "tables": {"t": [{"Description": "Wire deposit – Summit Retail",
+                                  "Credit": 15000.0}]},
+                "table_types": {"t": {"Description": "string",
+                                      "Credit": "money"}}}
+        pred = {"fields": {}, "tables": {"t": [
+            {"Description": "Wire deposit — Summit Retail",
+             "Credit": "15,000.00"}]}}
+        assert score_content(gold, pred)["accuracy"] == 1.0

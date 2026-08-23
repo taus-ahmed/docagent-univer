@@ -1,6 +1,6 @@
 {
- "run_id": "2026-08-22 17:41:34",
- "git_commit": "c8ad9f1",
+ "run_id": "2026-08-22 17:48:06",
+ "git_commit": "09f16dd",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -1961,6 +1961,55 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "correct": 27
+    },
+    "gold_valued": 27,
+    "accuracy": 1.0,
+    "unmatched": 0,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 5,
+    "tables_present": 5,
+    "tables_exact_rows": 5,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "current_assets": {
+      "gold_rows": 5,
+      "pred_rows": 5,
+      "present": true,
+      "row_delta": 0
+     },
+     "non_current_assets": {
+      "gold_rows": 4,
+      "pred_rows": 4,
+      "present": true,
+      "row_delta": 0
+     },
+     "current_liabilities": {
+      "gold_rows": 5,
+      "pred_rows": 5,
+      "present": true,
+      "row_delta": 0
+     },
+     "long_term_liabilities": {
+      "gold_rows": 2,
+      "pred_rows": 2,
+      "present": true,
+      "row_delta": 0
+     },
+     "shareholders_equity": {
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   },
   "CHQ-001847": {
@@ -2284,6 +2333,38 @@
     "accuracy": 0.8181818181818182,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 9,
+     "missed": 2
+    },
+    "gold_valued": 11,
+    "accuracy": 0.8181818181818182,
+    "unmatched": 0,
+    "mismatches": [
+     {
+      "key": "routing number",
+      "outcome": "missed",
+      "expected": "021000021",
+      "actual": null
+     },
+     {
+      "key": "account number",
+      "outcome": "missed",
+      "expected": "7743882201",
+      "actual": null
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 0,
+    "tables_present": 0,
+    "tables_exact_rows": 0,
+    "fidelity": null,
+    "row_count_fidelity": null,
+    "tables": {},
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -4738,6 +4819,31 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "correct": 18
+    },
+    "gold_valued": 18,
+    "accuracy": 1.0,
+    "unmatched": 0,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "expenses": {
+      "gold_rows": 9,
+      "pred_rows": 9,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   },
   "INV-2024-0031": {
@@ -6111,6 +6217,40 @@
     "accuracy": 0.9696969696969697,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 24,
+     "near": 1
+    },
+    "gold_valued": 25,
+    "accuracy": 0.96,
+    "unmatched": 0,
+    "mismatches": [
+     {
+      "key": "bill to contact",
+      "outcome": "near",
+      "matched_key": "bill to contact",
+      "expected": "Mr. Robert Chen",
+      "actual": "Mr. Robert Chen — rchen@apexindustrial.com"
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "line_items": {
+      "gold_rows": 4,
+      "pred_rows": 4,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -7720,6 +7860,40 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "correct": 27,
+     "near": 1
+    },
+    "gold_valued": 28,
+    "accuracy": 0.9642857142857143,
+    "unmatched": 0,
+    "mismatches": [
+     {
+      "key": "bill to contact",
+      "outcome": "near",
+      "matched_key": "bill to contact",
+      "expected": "Ms. Sarah Johnson",
+      "actual": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com"
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "line_items": {
+      "gold_rows": 5,
+      "pred_rows": 5,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   },
   "IS-2024-Q4": {
@@ -8350,6 +8524,24 @@
     "accuracy": 1.0,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 25
+    },
+    "gold_valued": 25,
+    "accuracy": 1.0,
+    "unmatched": 0,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 0,
+    "tables_present": 0,
+    "tables_exact_rows": 0,
+    "fidelity": null,
+    "row_count_fidelity": null,
+    "tables": {},
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -9596,6 +9788,54 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "near": 1,
+     "correct": 23,
+     "wrong": 1
+    },
+    "gold_valued": 25,
+    "accuracy": 0.92,
+    "unmatched": 0,
+    "mismatches": [
+     {
+      "key": "employer name",
+      "outcome": "near",
+      "matched_key": "employer name",
+      "expected": "Nexus Global Trading LLC",
+      "actual": "NEXUS GLOBAL TRADING"
+     },
+     {
+      "key": "net pay",
+      "outcome": "wrong",
+      "matched_key": "net pay",
+      "expected": 7513.03,
+      "actual": "$7,513.0"
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 2,
+    "tables_present": 2,
+    "tables_exact_rows": 2,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "earnings": {
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "present": true,
+      "row_delta": 0
+     },
+     "deductions": {
+      "gold_rows": 9,
+      "pred_rows": 9,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   },
   "PAYSLIP-EMP-0012-APR2024": {
@@ -10707,6 +10947,46 @@
     "accuracy": 0.9696969696969697,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "near": 1,
+     "correct": 22
+    },
+    "gold_valued": 23,
+    "accuracy": 0.9565217391304348,
+    "unmatched": 0,
+    "mismatches": [
+     {
+      "key": "employer name",
+      "outcome": "near",
+      "matched_key": "employer name",
+      "expected": "Nexus Global Trading LLC",
+      "actual": "NEXUS GLOBAL TRADING"
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 2,
+    "tables_present": 2,
+    "tables_exact_rows": 2,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "earnings": {
+      "gold_rows": 2,
+      "pred_rows": 2,
+      "present": true,
+      "row_delta": 0
+     },
+     "deductions": {
+      "gold_rows": 8,
+      "pred_rows": 8,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -11913,6 +12193,40 @@
     "accuracy": 0.967741935483871,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 24,
+     "near": 1
+    },
+    "gold_valued": 25,
+    "accuracy": 0.96,
+    "unmatched": 0,
+    "mismatches": [
+     {
+      "key": "vendor contact",
+      "outcome": "near",
+      "matched_key": "vendor contact",
+      "expected": "Ms. Linda Zhao",
+      "actual": "Ms. Linda Zhao | (310) 555-0233"
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "line_items": {
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -15369,6 +15683,31 @@
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "correct": 34
+    },
+    "gold_valued": 34,
+    "accuracy": 1.0,
+    "unmatched": 0,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "transactions": {
+      "gold_rows": 12,
+      "pred_rows": 12,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   }
  },
@@ -16145,6 +16484,24 @@
    }
   }
  },
+ "summary_content": {
+  "counts": {
+   "correct": 233,
+   "missed": 2,
+   "near": 5,
+   "wrong": 1
+  },
+  "gold_valued": 241,
+  "unmatched": 0,
+  "accuracy": 0.966804979253112
+ },
+ "summary_structure": {
+  "gold_tables": 14,
+  "tables_present": 14,
+  "tables_exact_rows": 14,
+  "fidelity": 1.0,
+  "row_count_fidelity": 1.0
+ },
  "calibration": {
   "high": {
    "n": 369,
@@ -16165,5 +16522,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-08-22 17:02:54"
+ "diff_against": "2026-08-22 17:41:34"
 }

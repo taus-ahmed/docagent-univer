@@ -28,7 +28,10 @@ from pathlib import Path
 from tests.harness import bootstrap as bs
 from tests.harness.adapter import adapt, set_widenings
 from tests.harness.llm_cache import LLMCache
-from tests.harness.scoring import normalize_string, score_document, summarize
+from tests.harness.scoring import (normalize_string, score_content,
+                                   score_document, score_structure,
+                                   summarize, summarize_content,
+                                   summarize_structure)
 
 # ── pipeline plumbing ────────────────────────────────────────────────────────
 
@@ -320,6 +323,15 @@ def write_markdown(report: dict, path: Path):
     add(f"|---|---|")
     add(f"| **accuracy (correct / gold-valued)** | **{_pct(o['accuracy'])}** |")
     add(f"| **accuracy RAW (all adapter widenings off)** | **{_pct(s_raw['accuracy'])}** |")
+    _sc = report.get("summary_content") or {}
+    _st = report.get("summary_structure") or {}
+    if _sc.get("gold_valued"):
+        add(f"| **accuracy CONTENT (container-blind)** | **{_pct(_sc['accuracy'])}** |")
+    if _st.get("gold_tables"):
+        add(f"| **structure FIDELITY (gold tables returned as tables)** | "
+            f"**{_pct(_st['fidelity'])}** "
+            f"({_st['tables_present']}/{_st['gold_tables']}; "
+            f"{_st['tables_exact_rows']} with exact row count) |")
     add(f"| **hallucination rate (hallucinated / extracted)** | **{_pct(o['hallucination_rate'])}** |")
     add(f"| **├ INVENTED — value found NOWHERE in the PDF** | "
         f"**{o.get('invented', 0)}** ({_pct(o['invention_rate'])}) |")
@@ -458,6 +470,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
     doc_scores = []
     doc_scores_raw = []
     doc_scores_export = []
+    doc_scores_content = []
+    doc_scores_structure = []
     calib = []
     try:
         for label in labels:
@@ -523,8 +537,15 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                 raw_score = score_document(label, raw_adapted, doc_text=text)
             finally:
                 set_widenings(**prev)
+            # CONTENT and STRUCTURE, asked separately. See the block comment in
+            # scoring.py: the headline compares like-for-like containers, which
+            # is right with a template and conflates two questions without one.
+            content = score_content(label, adapted)
+            structure = score_structure(label, adapted)
             doc_scores.append(score)
             doc_scores_raw.append(raw_score)
+            doc_scores_content.append(content)
+            doc_scores_structure.append(structure)
             calib.append(calibrate(label, adapted, score, results))
             if export_score:
                 doc_scores_export.append(export_score)
@@ -548,6 +569,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                 "score": score,
                 "score_raw": raw_score,
                 "score_export": export_score,
+                "score_content": content,
+                "score_structure": structure,
                 "unstable": unstable,
             }
             ex = _pct((export_score or {}).get("accuracy"))
@@ -576,6 +599,8 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         "summary": summarize(doc_scores),
         "summary_raw": summarize(doc_scores_raw),
         "summary_export": summarize(doc_scores_export) if doc_scores_export else None,
+        "summary_content": summarize_content(doc_scores_content),
+        "summary_structure": summarize_structure(doc_scores_structure),
         "calibration": merge_calibration(calib),
         "unstable_total": sum(len(d["unstable"]) for d in doc_reports.values()),
     }
@@ -616,6 +641,17 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
         print(f"accuracy  EXPORT    : {_pct(eo.get('accuracy'))}{div}")
     print(f"accuracy  RAW       : {_pct(ro.get('accuracy'))}"
           f"   (all adapter widenings off)")
+    # CONTENT and STRUCTURE are asked separately — see the block comment in
+    # scoring.py. Reported alongside the headline, never instead of it.
+    sc_ = report.get("summary_content") or {}
+    st_ = report.get("summary_structure") or {}
+    if sc_.get("gold_valued"):
+        print(f"accuracy  CONTENT   : {_pct(sc_['accuracy'])}"
+              f"   (container-blind: did we get the fact, wherever it landed)")
+    if st_.get("gold_tables"):
+        print(f"structure FIDELITY  : {_pct(st_['fidelity'])}"
+              f"   ({st_['tables_present']}/{st_['gold_tables']} gold tables came "
+              f"back as tables, {st_['tables_exact_rows']} with the right row count)")
     print(f"hallucination rate  : {_pct(o['hallucination_rate'])} "
           f"({o['hallucinated']} values in slots gold leaves empty)")
     # ASCII only: this goes to a Windows cp1252 console.

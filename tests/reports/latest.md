@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-22 17:41:34
+# Accuracy report — 2026-08-22 17:48:06
 
-- git: `c8ad9f1`  mode: **replay**  repeat: 1
+- git: `09f16dd`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -9,6 +9,8 @@
 |---|---|
 | **accuracy (correct / gold-valued)** | **97.9%** |
 | **accuracy RAW (all adapter widenings off)** | **49.2%** |
+| **accuracy CONTENT (container-blind)** | **96.7%** |
+| **structure FIDELITY (gold tables returned as tables)** | **100.0%** (14/14; 14 with exact row count) |
 | **hallucination rate (hallucinated / extracted)** | **0.0%** |
 | **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
 | ├ misfiled — real content in a slot gold says is EMPTY | 0 |

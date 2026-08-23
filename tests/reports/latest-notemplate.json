@@ -1,6 +1,6 @@
 {
- "run_id": "2026-08-22 17:06:18",
- "git_commit": "c8ad9f1",
+ "run_id": "2026-08-22 17:47:40",
+ "git_commit": "09f16dd",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -2683,6 +2683,72 @@
     "hallucination_rate": 0.7575757575757576,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "wrong": 1,
+     "correct": 25,
+     "missed": 1,
+     "unmatched": 7
+    },
+    "gold_valued": 27,
+    "accuracy": 0.9259259259259259,
+    "unmatched": 7,
+    "mismatches": [
+     {
+      "key": "total current assets",
+      "outcome": "wrong",
+      "matched_key": "total current assets",
+      "expected": 1129003,
+      "actual": "$8,800"
+     },
+     {
+      "key": "other current assets",
+      "outcome": "missed",
+      "expected": 8800,
+      "actual": null
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 5,
+    "tables_present": 0,
+    "tables_exact_rows": 0,
+    "fidelity": 0.0,
+    "row_count_fidelity": 0.0,
+    "tables": {
+     "current_assets": {
+      "gold_rows": 5,
+      "pred_rows": 0,
+      "present": false,
+      "row_delta": -5
+     },
+     "non_current_assets": {
+      "gold_rows": 4,
+      "pred_rows": 0,
+      "present": false,
+      "row_delta": -4
+     },
+     "current_liabilities": {
+      "gold_rows": 5,
+      "pred_rows": 0,
+      "present": false,
+      "row_delta": -5
+     },
+     "long_term_liabilities": {
+      "gold_rows": 2,
+      "pred_rows": 0,
+      "present": false,
+      "row_delta": -2
+     },
+     "shareholders_equity": {
+      "gold_rows": 3,
+      "pred_rows": 0,
+      "present": false,
+      "row_delta": -3
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   },
   "CHQ-001847": {
@@ -3268,6 +3334,51 @@
     "accuracy": 0.6363636363636364,
     "hallucination_rate": 0.47058823529411764,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 7,
+     "missed": 4,
+     "unmatched": 10
+    },
+    "gold_valued": 11,
+    "accuracy": 0.6363636363636364,
+    "unmatched": 10,
+    "mismatches": [
+     {
+      "key": "payer name",
+      "outcome": "missed",
+      "expected": "Nexus Global Trading LLC",
+      "actual": null
+     },
+     {
+      "key": "authorized by",
+      "outcome": "missed",
+      "expected": "Janet Wu",
+      "actual": null
+     },
+     {
+      "key": "routing number",
+      "outcome": "missed",
+      "expected": "021000021",
+      "actual": null
+     },
+     {
+      "key": "account number",
+      "outcome": "missed",
+      "expected": "7743882201",
+      "actual": null
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 0,
+    "tables_present": 0,
+    "tables_exact_rows": 0,
+    "fidelity": null,
+    "row_count_fidelity": null,
+    "tables": {},
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -5172,6 +5283,40 @@
     "hallucination_rate": 0.06896551724137931,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "missed": 1,
+     "correct": 17,
+     "unmatched": 5
+    },
+    "gold_valued": 18,
+    "accuracy": 0.9444444444444444,
+    "unmatched": 5,
+    "mismatches": [
+     {
+      "key": "employee name",
+      "outcome": "missed",
+      "expected": "Marcus A. Thompson",
+      "actual": null
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "expenses": {
+      "gold_rows": 9,
+      "pred_rows": 9,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   },
   "INV-2024-0031": {
@@ -6605,6 +6750,32 @@
     "accuracy": 1.0,
     "hallucination_rate": 0.23255813953488372,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 25,
+     "unmatched": 10
+    },
+    "gold_valued": 25,
+    "accuracy": 1.0,
+    "unmatched": 10,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "line_items": {
+      "gold_rows": 4,
+      "pred_rows": 4,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -8168,6 +8339,32 @@
     "hallucination_rate": 0.22448979591836735,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "correct": 28,
+     "unmatched": 11
+    },
+    "gold_valued": 28,
+    "accuracy": 1.0,
+    "unmatched": 11,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "line_items": {
+      "gold_rows": 5,
+      "pred_rows": 5,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   },
   "IS-2024-Q4": {
@@ -9040,6 +9237,25 @@
     "accuracy": 1.0,
     "hallucination_rate": 0.21875,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 25,
+     "unmatched": 7
+    },
+    "gold_valued": 25,
+    "accuracy": 1.0,
+    "unmatched": 7,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 0,
+    "tables_present": 0,
+    "tables_exact_rows": 0,
+    "fidelity": null,
+    "row_count_fidelity": null,
+    "tables": {},
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -10417,6 +10633,52 @@
     "accuracy": 0.9459459459459459,
     "hallucination_rate": 0.07692307692307693,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "missed": 2,
+     "correct": 23,
+     "unmatched": 4
+    },
+    "gold_valued": 25,
+    "accuracy": 0.92,
+    "unmatched": 4,
+    "mismatches": [
+     {
+      "key": "employer name",
+      "outcome": "missed",
+      "expected": "Nexus Global Trading LLC",
+      "actual": null
+     },
+     {
+      "key": "title / department",
+      "outcome": "missed",
+      "expected": "VP Operations – Executive",
+      "actual": null
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 2,
+    "tables_present": 2,
+    "tables_exact_rows": 2,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "earnings": {
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "present": true,
+      "row_delta": 0
+     },
+     "deductions": {
+      "gold_rows": 9,
+      "pred_rows": 9,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -11863,6 +12125,64 @@
     "accuracy": 0.8787878787878788,
     "hallucination_rate": 0.1891891891891892,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "missed": 4,
+     "correct": 19,
+     "unmatched": 6
+    },
+    "gold_valued": 23,
+    "accuracy": 0.8260869565217391,
+    "unmatched": 6,
+    "mismatches": [
+     {
+      "key": "employer name",
+      "outcome": "missed",
+      "expected": "Nexus Global Trading LLC",
+      "actual": null
+     },
+     {
+      "key": "title / department",
+      "outcome": "missed",
+      "expected": "Purchasing Manager – Procurement",
+      "actual": null
+     },
+     {
+      "key": "total earnings",
+      "outcome": "missed",
+      "expected": 8300.0,
+      "actual": null
+     },
+     {
+      "key": "total deductions",
+      "outcome": "missed",
+      "expected": -3117.35,
+      "actual": null
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 2,
+    "tables_present": 2,
+    "tables_exact_rows": 0,
+    "fidelity": 1.0,
+    "row_count_fidelity": 0.0,
+    "tables": {
+     "earnings": {
+      "gold_rows": 2,
+      "pred_rows": 3,
+      "present": true,
+      "row_delta": 1
+     },
+     "deductions": {
+      "gold_rows": 8,
+      "pred_rows": 9,
+      "present": true,
+      "row_delta": 1
+     }
+    },
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -13435,6 +13755,41 @@
     "accuracy": 0.967741935483871,
     "hallucination_rate": 0.24390243902439024,
     "invention_rate": 0.0
+   },
+   "score_content": {
+    "counts": {
+     "correct": 24,
+     "near": 1,
+     "unmatched": 10
+    },
+    "gold_valued": 25,
+    "accuracy": 0.96,
+    "unmatched": 10,
+    "mismatches": [
+     {
+      "key": "authorised by",
+      "outcome": "near",
+      "matched_key": "authorised by",
+      "expected": "Janet Wu – VP Operations",
+      "actual": "Janet Wu"
+     }
+    ]
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "line_items": {
+      "gold_rows": 3,
+      "pred_rows": 3,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
    },
    "unstable": []
   },
@@ -16221,6 +16576,32 @@
     "hallucination_rate": 0.05405405405405406,
     "invention_rate": 0.0
    },
+   "score_content": {
+    "counts": {
+     "correct": 34,
+     "unmatched": 4
+    },
+    "gold_valued": 34,
+    "accuracy": 1.0,
+    "unmatched": 4,
+    "mismatches": []
+   },
+   "score_structure": {
+    "gold_tables": 1,
+    "tables_present": 1,
+    "tables_exact_rows": 1,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "transactions": {
+      "gold_rows": 12,
+      "pred_rows": 12,
+      "present": true,
+      "row_delta": 0
+     }
+    },
+    "extra_tables": []
+   },
    "unstable": []
   }
  },
@@ -17039,6 +17420,25 @@
    }
   }
  },
+ "summary_content": {
+  "counts": {
+   "wrong": 1,
+   "correct": 227,
+   "missed": 12,
+   "unmatched": 74,
+   "near": 1
+  },
+  "gold_valued": 241,
+  "unmatched": 74,
+  "accuracy": 0.941908713692946
+ },
+ "summary_structure": {
+  "gold_tables": 14,
+  "tables_present": 9,
+  "tables_exact_rows": 7,
+  "fidelity": 0.6428571428571429,
+  "row_count_fidelity": 0.5
+ },
  "calibration": {
   "grounded": {
    "n": 409,
@@ -17058,19 +17458,6 @@
   }
  },
  "unstable_total": 0,
- "diff": [
-  {
-   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8]._confidence",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2]._confidence",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  }
- ],
- "diff_against": "2026-08-22 17:05:31"
+ "diff": [],
+ "diff_against": "2026-08-22 17:06:18"
 }

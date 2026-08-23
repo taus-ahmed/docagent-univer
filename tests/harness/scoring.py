@@ -554,6 +554,237 @@ def score_document(label: dict, adapted: dict, doc_text: str = "") -> dict:
     }
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CONTENT vs STRUCTURE  (no-template scoring)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Headline accuracy compares like-for-like containers: a gold table row against
+# a predicted table row, a gold field against a predicted field. With a
+# template that is exactly right — the user drew the containers, so putting a
+# value in the wrong kind of one is a real failure.
+#
+# Without a template it conflates two different questions. Inference DESIGNS
+# the containers, and it can describe a balance sheet as 34 label/value pairs
+# where gold describes it as 5 tables of label/amount rows. Content-wise those
+# are the same spreadsheet. Scored container-aware, BS-2024-Q1 reads 15.2%
+# while 18 of its 19 gold table rows are present, correct and correctly
+# labelled — every one of them counted TWICE, once as a `missed` table cell and
+# once as a `hallucinated` flat field. That number measures a representation
+# mismatch and reports it as if the engine could not read the page.
+#
+# So the two questions are asked separately:
+#
+#   CONTENT    did we get the fact, in whatever container? Both sides are
+#              flattened to (label, value) pairs and compared.
+#   STRUCTURE  did we put it in the right KIND of container? Its own number,
+#              never averaged into content.
+#
+# Neither replaces the headline, and a run reports all three. A high content
+# score with zero structure fidelity is a real and specific failure — the user
+# asked for tables and got a list — and hiding it inside one number is what got
+# us here in the first place.
+
+
+def _row_identity(row: dict, col_types: dict):
+    """(identity_string, value_columns) for one table row.
+
+    A row's identity is every NON-numeric cell in it, joined — the date and
+    description of a bank transaction, the label of a balance-sheet line. Its
+    values are the numeric cells. Using only the first non-numeric column was
+    not enough: two transactions on different dates share a description, and
+    two on the same date differ by it, so either one alone collides.
+
+    A row with no numeric cell at all has no value/identity split to make; its
+    first column becomes the identity and the rest are values.
+    """
+    cols = [c for c in row if not str(c).startswith("_")]
+    num = [c for c in cols if col_types.get(c, "string") in ("money", "number")]
+    if not num:
+        return (normalize_string(row.get(cols[0])) if cols else ""), cols[1:]
+    ident = " ".join(normalize_string(row.get(c)) for c in cols
+                     if c not in num and not is_empty(row.get(c)))
+    return ident, num
+
+
+def _flatten(fields: dict, tables: dict, field_types: dict,
+             table_types: dict) -> dict:
+    """{content_key: (value, type)} for one side of the comparison.
+
+    A table row contributes its cells keyed by the row's IDENTITY, never by its
+    position — position is a container detail, and this is the container-blind
+    view. A row with exactly ONE value column is keyed by its identity alone so
+    it can match a flat field of the same name: that is the whole point, and it
+    is what lets a balance sheet's "Cash & Cash Equivalents" row match a
+    predicted "Cash & Cash Equivalents" field. Wider rows keep the column in
+    the key, so an invoice line's Qty stays distinct from its Total.
+
+    Two rows that really do share an identity are suffixed "#2", "#3" rather
+    than silently overwriting each other — a dropped row would read as a miss
+    on one side and vanish on the other.
+    """
+    out = {}
+
+    def put(key, value, ftype):
+        k = normalize_string(key)
+        if not k or is_empty(value):
+            return
+        if k in out:
+            n = 2
+            while f"{k} #{n}" in out:
+                n += 1
+            k = f"{k} #{n}"
+        out[k] = (value, ftype)
+
+    for name, v in (fields or {}).items():
+        put(name, v, field_types.get(name, "string"))
+
+    for tname, rows in (tables or {}).items():
+        ctypes = (table_types or {}).get(tname, {})
+        for row in rows or []:
+            if not isinstance(row, dict):
+                continue
+            ident, value_cols = _row_identity(row, ctypes)
+            if not ident:
+                continue
+            filled = [c for c in value_cols if not is_empty(row.get(c))]
+            if len(filled) == 1:
+                put(ident, row[filled[0]], ctypes.get(filled[0], "string"))
+            else:
+                for c in filled:
+                    put(f"{ident} | {c}", row[c], ctypes.get(c, "string"))
+    return out
+
+
+def score_content(label: dict, adapted: dict) -> dict:
+    """Container-blind accuracy: did we get the fact, wherever it ended up."""
+    ftypes = label.get("field_types", {})
+    ttypes = label.get("table_types", {})
+    gold = _flatten(label.get("fields", {}), label.get("tables", {}),
+                    ftypes, ttypes)
+    pred = _flatten(adapted.get("fields", {}), adapted.get("tables", {}),
+                    ftypes, ttypes)
+
+    # Keys are label text, and label text is noisy: some gold labels carry
+    # mojibake dashes from the source PDFs, and a model writes an em dash where
+    # the page has an en dash. Exact key equality would score those as misses
+    # and report a document the engine reads perfectly as 35% — measuring the
+    # labels rather than the extraction. So keys are matched the same way rows
+    # already are: exact first, then best fuzzy match among what is left,
+    # one-to-one and greedy so a run is reproducible.
+    pairs = {}
+    left_g = []
+    for k in gold:
+        if k in pred:
+            pairs[k] = k
+        else:
+            left_g.append(k)
+    left_p = [k for k in pred if k not in pairs.values()]
+    if left_g and left_p:
+        cand = []
+        for gk in left_g:
+            for pk in left_p:
+                r = difflib.SequenceMatcher(None, gk, pk).ratio()
+                if r >= 0.85:
+                    cand.append((-r, gk, pk))
+        cand.sort()
+        used_g, used_p = set(), set()
+        for _r, gk, pk in cand:
+            if gk in used_g or pk in used_p:
+                continue
+            used_g.add(gk)
+            used_p.add(pk)
+            pairs[gk] = pk
+
+    counts, mismatches = {}, []
+    for k, (gv, gt) in gold.items():
+        pk = pairs.get(k)
+        if pk is None:
+            _tally(counts, "missed")
+            mismatches.append({"key": k, "outcome": "missed",
+                               "expected": gv, "actual": None})
+            continue
+        out = compare_values(gv, pred[pk][0], gt)
+        _tally(counts, out)
+        if out != "correct":
+            mismatches.append({"key": k, "outcome": out, "matched_key": pk,
+                               "expected": gv, "actual": pred[pk][0]})
+    extra = sorted(set(pred) - set(pairs.values()))
+    for _ in extra:
+        _tally(counts, "unmatched")
+
+    gold_valued = len(gold)
+    return {
+        "counts": counts,
+        "gold_valued": gold_valued,
+        "accuracy": (counts.get("correct", 0) / gold_valued) if gold_valued else None,
+        "unmatched": len(extra),
+        "mismatches": mismatches,
+    }
+
+
+def score_structure(label: dict, adapted: dict) -> dict:
+    """Did the content land in the right KIND of container?
+
+    Fidelity is the share of gold's tables that came back AS TABLES with rows
+    in them. `None` when gold names no tables — a cheque has no structure to
+    get right, and scoring it 0% or 100% would both be noise.
+    """
+    gold_tables = label.get("tables", {}) or {}
+    pred_tables = adapted.get("tables", {}) or {}
+    per = {}
+    for tname, grows in gold_tables.items():
+        prows = pred_tables.get(tname) or []
+        per[tname] = {
+            "gold_rows": len(grows),
+            "pred_rows": len(prows),
+            "present": bool(prows),
+            "row_delta": len(prows) - len(grows),
+        }
+    present = sum(1 for v in per.values() if v["present"])
+    n = len(gold_tables)
+    exact = sum(1 for v in per.values() if v["present"] and v["row_delta"] == 0)
+    return {
+        "gold_tables": n,
+        "tables_present": present,
+        "tables_exact_rows": exact,
+        "fidelity": (present / n) if n else None,
+        "row_count_fidelity": (exact / n) if n else None,
+        "tables": per,
+        # Tables the prediction produced that gold does not name. Kept out of
+        # fidelity: inventing a table is a different failure from losing one.
+        "extra_tables": sorted(set(pred_tables) - set(gold_tables)),
+    }
+
+
+def summarize_content(content_scores: list) -> dict:
+    total = {}
+    gold_valued = unmatched = 0
+    for c in content_scores:
+        for k, v in (c.get("counts") or {}).items():
+            total[k] = total.get(k, 0) + v
+        gold_valued += c.get("gold_valued", 0)
+        unmatched += c.get("unmatched", 0)
+    return {
+        "counts": total,
+        "gold_valued": gold_valued,
+        "unmatched": unmatched,
+        "accuracy": (total.get("correct", 0) / gold_valued) if gold_valued else None,
+    }
+
+
+def summarize_structure(structure_scores: list) -> dict:
+    n = sum(s.get("gold_tables", 0) for s in structure_scores)
+    present = sum(s.get("tables_present", 0) for s in structure_scores)
+    exact = sum(s.get("tables_exact_rows", 0) for s in structure_scores)
+    return {
+        "gold_tables": n,
+        "tables_present": present,
+        "tables_exact_rows": exact,
+        "fidelity": (present / n) if n else None,
+        "row_count_fidelity": (exact / n) if n else None,
+    }
+
+
 def summarize(doc_results: list) -> dict:
     """Aggregate across documents: overall, per document type, per field type."""
     total = {}

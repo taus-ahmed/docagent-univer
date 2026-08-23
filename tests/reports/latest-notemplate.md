@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-22 17:06:18
+# Accuracy report — 2026-08-22 17:47:40
 
-- git: `c8ad9f1`  mode: **replay**  repeat: 1
+- git: `09f16dd`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -9,6 +9,8 @@
 |---|---|
 | **accuracy (correct / gold-valued)** | **86.5%** |
 | **accuracy RAW (all adapter widenings off)** | **78.0%** |
+| **accuracy CONTENT (container-blind)** | **94.2%** |
+| **structure FIDELITY (gold tables returned as tables)** | **64.3%** (9/14; 7 with exact row count) |
 | **hallucination rate (hallucinated / extracted)** | **21.0%** |
 | **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
 | ├ misfiled — real content in a slot gold says is EMPTY | 4 |
@@ -200,8 +202,3 @@
 | STMT-2024-01 | ABA Number | hallucinated (misplaced) | None | 021000021 |
 | STMT-2024-01 | Member FDIC | hallucinated (misplaced) | None | Member FDIC |
 | STMT-2024-01 | EIN | hallucinated (misplaced) | None | 47-3821654 |
-
-## Changes vs previous run
-
-- PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8]._confidence: hallucinated -> None
-- PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2]._confidence: hallucinated -> None
