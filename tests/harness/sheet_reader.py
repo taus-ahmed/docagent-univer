@@ -115,12 +115,25 @@ def read_sheet(ws, shape):
         band_rows.add(hdr_row)
         out = []
         r = hdr_row + 1
+        # How far down the sheet this band's own rows can reach. The template
+        # reserved `start_row..end_row`; the writer may have pushed the whole
+        # block down, and `hdr_row` says by how much. Inside that reserved
+        # area a row belongs to the band by construction, so the `stops` check
+        # must not apply there.
+        #
+        # It used to apply everywhere, and a band lost every row from the first
+        # one whose label also happened to be a field slot's — which inference
+        # causes routinely, by proposing the same item as both a field and a
+        # table row. The exported sheet was correct each time; the reader was
+        # not, and it reported the writer as broken.
+        shift = hdr_row - band.get("header_row", hdr_row)
+        reserved_end = band.get("end_row", hdr_row) + shift
         while r <= max(rows):
             cells = rows.get(r)
             if not cells:
                 break                                   # blank line ends the band
             first = _norm(cells.get(headers[0][0], cells.get(lcol0)))
-            if first in stops:
+            if first in stops and r > reserved_end:
                 break                                   # a total, or the next band
             vals = {}
             for col, h in headers:

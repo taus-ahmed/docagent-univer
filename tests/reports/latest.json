@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-22 22:47:37",
- "git_commit": "fb9c8af",
+ "run_id": "2026-08-23 15:04:48",
+ "git_commit": "2afa4cd",
  "config": {
-  "mode": "replay",
+  "mode": "record",
   "repeat": 1,
   "no_template": false,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 10,
-  "recorded": 0,
+  "hits": 1,
+  "recorded": 9,
   "live": 0,
   "misses": 0
  },
@@ -46,105 +46,105 @@
      "current_assets": [
       {
        "Label": "Cash & Cash Equivalents",
-       "Amount": "143,803",
+       "Amount": "$143,803",
        "_confidence": "high"
       },
       {
        "Label": "Accounts Receivable (net)",
-       "Amount": "348,200",
+       "Amount": "$348,200",
        "_confidence": "high"
       },
       {
        "Label": "Inventory",
-       "Amount": "612,000",
+       "Amount": "$612,000",
        "_confidence": "high"
       },
       {
        "Label": "Prepaid Expenses",
-       "Amount": "16,200",
+       "Amount": "$16,200",
        "_confidence": "high"
       },
       {
        "Label": "Other Current Assets",
-       "Amount": "8,800",
+       "Amount": "$8,800",
        "_confidence": "high"
       }
      ],
      "non_current_assets": [
       {
        "Label": "Property & Equipment (gross)",
-       "Amount": "240,000",
+       "Amount": "$240,000",
        "_confidence": "high"
       },
       {
        "Label": "Less: Accum. Depreciation",
-       "Amount": "108,500",
+       "Amount": "$108,500",
        "_confidence": "high"
       },
       {
        "Label": "Security Deposits",
-       "Amount": "85,000",
+       "Amount": "$85,000",
        "_confidence": "high"
       },
       {
        "Label": "Intangibles (net)",
-       "Amount": "20,000",
+       "Amount": "$20,000",
        "_confidence": "high"
       }
      ],
      "current_liabilities": [
       {
        "Label": "Accounts Payable",
-       "Amount": "254,800",
+       "Amount": "$254,800",
        "_confidence": "high"
       },
       {
        "Label": "Accrued Liabilities",
-       "Amount": "44,200",
+       "Amount": "$44,200",
        "_confidence": "high"
       },
       {
        "Label": "Short-term Loan — First National Bank",
-       "Amount": "80,000",
+       "Amount": "$80,000",
        "_confidence": "high"
       },
       {
        "Label": "Deferred Revenue",
-       "Amount": "18,200",
+       "Amount": "$18,200",
        "_confidence": "high"
       },
       {
        "Label": "Current Portion of Long-term Debt",
-       "Amount": "24,000",
+       "Amount": "$24,000",
        "_confidence": "high"
       }
      ],
      "long_term_liabilities": [
       {
        "Label": "Long-term Loan — First National Bank",
-       "Amount": "121,000",
+       "Amount": "$121,000",
        "_confidence": "high"
       },
       {
        "Label": "Deferred Tax Liability",
-       "Amount": "8,400",
+       "Amount": "$8,400",
        "_confidence": "high"
       }
      ],
      "shareholders_equity": [
       {
        "Label": "Common Stock (100 shares @ $1,000 par)",
-       "Amount": "100,000",
+       "Amount": "$100,000",
        "_confidence": "high"
       },
       {
        "Label": "Retained Earnings",
-       "Amount": "550,751",
+       "Amount": "$550,751",
        "_confidence": "high"
       },
       {
        "Label": "Net Income YTD Q1",
-       "Amount": "47,353",
+       "Amount": "$47,353",
        "_confidence": "high"
       }
      ]
@@ -241,7 +241,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 143803,
-        "actual": "143,803",
+        "actual": "$143,803",
         "in_gold_schema": true
        },
        {
@@ -261,7 +261,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 348200,
-        "actual": "348,200",
+        "actual": "$348,200",
         "in_gold_schema": true
        },
        {
@@ -281,7 +281,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 612000,
-        "actual": "612,000",
+        "actual": "$612,000",
         "in_gold_schema": true
        },
        {
@@ -301,7 +301,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 16200,
-        "actual": "16,200",
+        "actual": "$16,200",
         "in_gold_schema": true
        },
        {
@@ -321,7 +321,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8800,
-        "actual": "8,800",
+        "actual": "$8,800",
         "in_gold_schema": true
        }
       ]
@@ -355,7 +355,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 240000,
-        "actual": "240,000",
+        "actual": "$240,000",
         "in_gold_schema": true
        },
        {
@@ -375,7 +375,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 108500,
-        "actual": "108,500",
+        "actual": "$108,500",
         "in_gold_schema": true
        },
        {
@@ -395,7 +395,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85000,
-        "actual": "85,000",
+        "actual": "$85,000",
         "in_gold_schema": true
        },
        {
@@ -415,7 +415,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 20000,
-        "actual": "20,000",
+        "actual": "$20,000",
         "in_gold_schema": true
        }
       ]
@@ -449,7 +449,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 254800,
-        "actual": "254,800",
+        "actual": "$254,800",
         "in_gold_schema": true
        },
        {
@@ -469,7 +469,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 44200,
-        "actual": "44,200",
+        "actual": "$44,200",
         "in_gold_schema": true
        },
        {
@@ -489,7 +489,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 80000,
-        "actual": "80,000",
+        "actual": "$80,000",
         "in_gold_schema": true
        },
        {
@@ -509,7 +509,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18200,
-        "actual": "18,200",
+        "actual": "$18,200",
         "in_gold_schema": true
        },
        {
@@ -529,7 +529,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 24000,
-        "actual": "24,000",
+        "actual": "$24,000",
         "in_gold_schema": true
        }
       ]
@@ -563,7 +563,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 121000,
-        "actual": "121,000",
+        "actual": "$121,000",
         "in_gold_schema": true
        },
        {
@@ -583,7 +583,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8400,
-        "actual": "8,400",
+        "actual": "$8,400",
         "in_gold_schema": true
        }
       ]
@@ -617,7 +617,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 100000,
-        "actual": "100,000",
+        "actual": "$100,000",
         "in_gold_schema": true
        },
        {
@@ -637,7 +637,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 550751,
-        "actual": "550,751",
+        "actual": "$550,751",
         "in_gold_schema": true
        },
        {
@@ -657,7 +657,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 47353,
-        "actual": "47,353",
+        "actual": "$47,353",
         "in_gold_schema": true
        }
       ]
@@ -768,7 +768,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 143803,
-        "actual": "143,803",
+        "actual": "$143,803",
         "in_gold_schema": true
        },
        {
@@ -800,7 +800,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 348200,
-        "actual": "348,200",
+        "actual": "$348,200",
         "in_gold_schema": true
        },
        {
@@ -832,7 +832,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 612000,
-        "actual": "612,000",
+        "actual": "$612,000",
         "in_gold_schema": true
        },
        {
@@ -864,7 +864,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 16200,
-        "actual": "16,200",
+        "actual": "$16,200",
         "in_gold_schema": true
        },
        {
@@ -896,7 +896,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8800,
-        "actual": "8,800",
+        "actual": "$8,800",
         "in_gold_schema": true
        },
        {
@@ -942,7 +942,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 240000,
-        "actual": "240,000",
+        "actual": "$240,000",
         "in_gold_schema": true
        },
        {
@@ -974,7 +974,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 108500,
-        "actual": "108,500",
+        "actual": "$108,500",
         "in_gold_schema": true
        },
        {
@@ -1006,7 +1006,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85000,
-        "actual": "85,000",
+        "actual": "$85,000",
         "in_gold_schema": true
        },
        {
@@ -1038,7 +1038,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 20000,
-        "actual": "20,000",
+        "actual": "$20,000",
         "in_gold_schema": true
        },
        {
@@ -1084,7 +1084,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 254800,
-        "actual": "254,800",
+        "actual": "$254,800",
         "in_gold_schema": true
        },
        {
@@ -1116,7 +1116,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 44200,
-        "actual": "44,200",
+        "actual": "$44,200",
         "in_gold_schema": true
        },
        {
@@ -1148,7 +1148,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 80000,
-        "actual": "80,000",
+        "actual": "$80,000",
         "in_gold_schema": true
        },
        {
@@ -1180,7 +1180,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18200,
-        "actual": "18,200",
+        "actual": "$18,200",
         "in_gold_schema": true
        },
        {
@@ -1212,7 +1212,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 24000,
-        "actual": "24,000",
+        "actual": "$24,000",
         "in_gold_schema": true
        },
        {
@@ -1258,7 +1258,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 121000,
-        "actual": "121,000",
+        "actual": "$121,000",
         "in_gold_schema": true
        },
        {
@@ -1290,7 +1290,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8400,
-        "actual": "8,400",
+        "actual": "$8,400",
         "in_gold_schema": true
        },
        {
@@ -1336,7 +1336,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 100000,
-        "actual": "100,000",
+        "actual": "$100,000",
         "in_gold_schema": true
        },
        {
@@ -1368,7 +1368,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 550751,
-        "actual": "550,751",
+        "actual": "$550,751",
         "in_gold_schema": true
        },
        {
@@ -1400,7 +1400,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 47353,
-        "actual": "47,353",
+        "actual": "$47,353",
         "in_gold_schema": true
        },
        {
@@ -7912,84 +7912,113 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Gross Sales": "$1,980,000",
-     "Less: Returns": "$28,600",
      "Net Revenue": "$1,951,400",
-     "Opening Inventory": "$648,000",
-     "Purchases": "$1,280,000",
-     "Freight In": "$52,000",
-     "Less: Closing Inventory": "$724,000",
      "Total COGS": "$1,256,000",
-     "Gross Profit": "$695,400",
-     "Salaries & Wages": "$190,000",
-     "Rent": "$85,500",
-     "Marketing": "$22,400",
-     "Utilities": "$12,100",
-     "Depreciation": "$10,300",
-     "Insurance": "$7,150",
-     "Office & Misc": "$5,800",
-     "Professional Fees": "$18,000",
-     "Bank Charges & Interest": "$3,800",
-     "Bad Debt": "$4,200",
      "Total Operating Expenses": "$359,250",
+     "Gross Profit": "$695,400",
      "Operating Income (EBIT)": "$336,150",
      "Interest Income": "$1,240",
      "Net Income Before Tax": "$337,390",
      "Income Tax Provision": "$70,852",
      "Net Income After Tax": "$266,538"
     },
-    "tables": {}
+    "tables": {
+     "revenue": [
+      {
+       "Label": "Gross Sales",
+       "Amount": "$1,980,000",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Less: Returns",
+       "Amount": "$28,600",
+       "_confidence": "high"
+      }
+     ],
+     "cost_of_goods_sold": [
+      {
+       "Label": "Opening Inventory",
+       "Amount": "$648,000",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Purchases",
+       "Amount": "$1,280,000",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Freight In",
+       "Amount": "$52,000",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Less: Closing Inventory",
+       "Amount": "$724,000",
+       "_confidence": "high"
+      }
+     ],
+     "operating_expenses": [
+      {
+       "Label": "Salaries & Wages",
+       "Amount": "$190,000",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Rent",
+       "Amount": "$85,500",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Marketing",
+       "Amount": "$22,400",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Utilities",
+       "Amount": "$12,100",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Depreciation",
+       "Amount": "$10,300",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Insurance",
+       "Amount": "$7,150",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Office & Misc",
+       "Amount": "$5,800",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Professional Fees",
+       "Amount": "$18,000",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Bank Charges & Interest",
+       "Amount": "$3,800",
+       "_confidence": "high"
+      },
+      {
+       "Label": "Bad Debt",
+       "Amount": "$4,200",
+       "_confidence": "high"
+      }
+     ]
+    }
    },
    "score": {
     "document_id": "IS-2024-Q4",
     "document_type": "income_statement",
     "fields": {
-     "Gross Sales": {
-      "outcome": "correct",
-      "expected": 1980000,
-      "actual": "$1,980,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Less: Returns": {
-      "outcome": "correct",
-      "expected": 28600,
-      "actual": "$28,600",
-      "type": "money",
-      "in_gold_schema": true
-     },
      "Net Revenue": {
       "outcome": "correct",
       "expected": 1951400,
       "actual": "$1,951,400",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Opening Inventory": {
-      "outcome": "correct",
-      "expected": 648000,
-      "actual": "$648,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Purchases": {
-      "outcome": "correct",
-      "expected": 1280000,
-      "actual": "$1,280,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Freight In": {
-      "outcome": "correct",
-      "expected": 52000,
-      "actual": "$52,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Less: Closing Inventory": {
-      "outcome": "correct",
-      "expected": 724000,
-      "actual": "$724,000",
       "type": "money",
       "in_gold_schema": true
      },
@@ -8004,76 +8033,6 @@
       "outcome": "correct",
       "expected": 695400,
       "actual": "$695,400",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Salaries & Wages": {
-      "outcome": "correct",
-      "expected": 190000,
-      "actual": "$190,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Rent": {
-      "outcome": "correct",
-      "expected": 85500,
-      "actual": "$85,500",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Marketing": {
-      "outcome": "correct",
-      "expected": 22400,
-      "actual": "$22,400",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Utilities": {
-      "outcome": "correct",
-      "expected": 12100,
-      "actual": "$12,100",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Depreciation": {
-      "outcome": "correct",
-      "expected": 10300,
-      "actual": "$10,300",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Insurance": {
-      "outcome": "correct",
-      "expected": 7150,
-      "actual": "$7,150",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Office & Misc": {
-      "outcome": "correct",
-      "expected": 5800,
-      "actual": "$5,800",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Professional Fees": {
-      "outcome": "correct",
-      "expected": 18000,
-      "actual": "$18,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Bank Charges & Interest": {
-      "outcome": "correct",
-      "expected": 3800,
-      "actual": "$3,800",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Bad Debt": {
-      "outcome": "correct",
-      "expected": 4200,
-      "actual": "$4,200",
       "type": "money",
       "in_gold_schema": true
      },
@@ -8120,9 +8079,372 @@
       "in_gold_schema": true
      }
     },
-    "tables": {},
+    "tables": {
+     "revenue": {
+      "table": "revenue",
+      "gold_row_count": 2,
+      "pred_row_count": 2,
+      "row_count_mismatch": 0,
+      "matched_rows": 2,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Gross Sales",
+        "actual": "Gross Sales",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 1980000,
+        "actual": "$1,980,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Less: Returns",
+        "actual": "Less: Returns",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 28600,
+        "actual": "$28,600",
+        "in_gold_schema": true
+       }
+      ]
+     },
+     "cost_of_goods_sold": {
+      "table": "cost_of_goods_sold",
+      "gold_row_count": 4,
+      "pred_row_count": 4,
+      "row_count_mismatch": 0,
+      "matched_rows": 4,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Opening Inventory",
+        "actual": "Opening Inventory",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 648000,
+        "actual": "$648,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Purchases",
+        "actual": "Purchases",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 1280000,
+        "actual": "$1,280,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Freight In",
+        "actual": "Freight In",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 52000,
+        "actual": "$52,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Less: Closing Inventory",
+        "actual": "Less: Closing Inventory",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 724000,
+        "actual": "$724,000",
+        "in_gold_schema": true
+       }
+      ]
+     },
+     "operating_expenses": {
+      "table": "operating_expenses",
+      "gold_row_count": 10,
+      "pred_row_count": 10,
+      "row_count_mismatch": 0,
+      "matched_rows": 10,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Salaries & Wages",
+        "actual": "Salaries & Wages",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 190000,
+        "actual": "$190,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Rent",
+        "actual": "Rent",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 85500,
+        "actual": "$85,500",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Marketing",
+        "actual": "Marketing",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 22400,
+        "actual": "$22,400",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Utilities",
+        "actual": "Utilities",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 12100,
+        "actual": "$12,100",
+        "in_gold_schema": true
+       },
+       {
+        "row": 4,
+        "pred_row": 4,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Depreciation",
+        "actual": "Depreciation",
+        "in_gold_schema": true
+       },
+       {
+        "row": 4,
+        "pred_row": 4,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 10300,
+        "actual": "$10,300",
+        "in_gold_schema": true
+       },
+       {
+        "row": 5,
+        "pred_row": 5,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Insurance",
+        "actual": "Insurance",
+        "in_gold_schema": true
+       },
+       {
+        "row": 5,
+        "pred_row": 5,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 7150,
+        "actual": "$7,150",
+        "in_gold_schema": true
+       },
+       {
+        "row": 6,
+        "pred_row": 6,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Office & Misc",
+        "actual": "Office & Misc",
+        "in_gold_schema": true
+       },
+       {
+        "row": 6,
+        "pred_row": 6,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 5800,
+        "actual": "$5,800",
+        "in_gold_schema": true
+       },
+       {
+        "row": 7,
+        "pred_row": 7,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Professional Fees",
+        "actual": "Professional Fees",
+        "in_gold_schema": true
+       },
+       {
+        "row": 7,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 18000,
+        "actual": "$18,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 8,
+        "pred_row": 8,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Bank Charges & Interest",
+        "actual": "Bank Charges & Interest",
+        "in_gold_schema": true
+       },
+       {
+        "row": 8,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 3800,
+        "actual": "$3,800",
+        "in_gold_schema": true
+       },
+       {
+        "row": 9,
+        "pred_row": 9,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Bad Debt",
+        "actual": "Bad Debt",
+        "in_gold_schema": true
+       },
+       {
+        "row": 9,
+        "pred_row": 9,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 4200,
+        "actual": "$4,200",
+        "in_gold_schema": true
+       }
+      ]
+     }
+    },
     "counts": {
-     "correct": 25
+     "correct": 41
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -8139,52 +8461,10 @@
     "document_id": "IS-2024-Q4",
     "document_type": "income_statement",
     "fields": {
-     "Gross Sales": {
-      "outcome": "correct",
-      "expected": 1980000,
-      "actual": "$1,980,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Less: Returns": {
-      "outcome": "correct",
-      "expected": 28600,
-      "actual": "$28,600",
-      "type": "money",
-      "in_gold_schema": true
-     },
      "Net Revenue": {
       "outcome": "correct",
       "expected": 1951400,
       "actual": "$1,951,400",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Opening Inventory": {
-      "outcome": "correct",
-      "expected": 648000,
-      "actual": "$648,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Purchases": {
-      "outcome": "correct",
-      "expected": 1280000,
-      "actual": "$1,280,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Freight In": {
-      "outcome": "correct",
-      "expected": 52000,
-      "actual": "$52,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Less: Closing Inventory": {
-      "outcome": "correct",
-      "expected": 724000,
-      "actual": "$724,000",
       "type": "money",
       "in_gold_schema": true
      },
@@ -8199,76 +8479,6 @@
       "outcome": "correct",
       "expected": 695400,
       "actual": "$695,400",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Salaries & Wages": {
-      "outcome": "correct",
-      "expected": 190000,
-      "actual": "$190,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Rent": {
-      "outcome": "correct",
-      "expected": 85500,
-      "actual": "$85,500",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Marketing": {
-      "outcome": "correct",
-      "expected": 22400,
-      "actual": "$22,400",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Utilities": {
-      "outcome": "correct",
-      "expected": 12100,
-      "actual": "$12,100",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Depreciation": {
-      "outcome": "correct",
-      "expected": 10300,
-      "actual": "$10,300",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Insurance": {
-      "outcome": "correct",
-      "expected": 7150,
-      "actual": "$7,150",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Office & Misc": {
-      "outcome": "correct",
-      "expected": 5800,
-      "actual": "$5,800",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Professional Fees": {
-      "outcome": "correct",
-      "expected": 18000,
-      "actual": "$18,000",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Bank Charges & Interest": {
-      "outcome": "correct",
-      "expected": 3800,
-      "actual": "$3,800",
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Bad Debt": {
-      "outcome": "correct",
-      "expected": 4200,
-      "actual": "$4,200",
       "type": "money",
       "in_gold_schema": true
      },
@@ -8315,71 +8525,586 @@
       "in_gold_schema": true
      }
     },
-    "tables": {},
+    "tables": {
+     "revenue": {
+      "table": "revenue",
+      "gold_row_count": 2,
+      "pred_row_count": 2,
+      "row_count_mismatch": 0,
+      "matched_rows": 2,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 0.5,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Gross Sales",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 1980000,
+        "actual": "$1,980,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "REVENUE",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Gross Sales",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Less: Returns",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 28600,
+        "actual": "$28,600",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "REVENUE",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Less: Returns",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       }
+      ]
+     },
+     "cost_of_goods_sold": {
+      "table": "cost_of_goods_sold",
+      "gold_row_count": 4,
+      "pred_row_count": 4,
+      "row_count_mismatch": 0,
+      "matched_rows": 4,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 0.5,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Opening Inventory",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 648000,
+        "actual": "$648,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "COST OF GOODS SOLD",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Opening Inventory",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Purchases",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 1280000,
+        "actual": "$1,280,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "COST OF GOODS SOLD",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Purchases",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Freight In",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 52000,
+        "actual": "$52,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "COST OF GOODS SOLD",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Freight In",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Less: Closing Inventory",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 724000,
+        "actual": "$724,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "COST OF GOODS SOLD",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Less: Closing Inventory",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       }
+      ]
+     },
+     "operating_expenses": {
+      "table": "operating_expenses",
+      "gold_row_count": 10,
+      "pred_row_count": 10,
+      "row_count_mismatch": 0,
+      "matched_rows": 10,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 0.5,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Salaries & Wages",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 190000,
+        "actual": "$190,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Salaries & Wages",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Rent",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 85500,
+        "actual": "$85,500",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Rent",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Marketing",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 22400,
+        "actual": "$22,400",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Marketing",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Utilities",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 12100,
+        "actual": "$12,100",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Utilities",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 4,
+        "pred_row": 4,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Depreciation",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 4,
+        "pred_row": 4,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 10300,
+        "actual": "$10,300",
+        "in_gold_schema": true
+       },
+       {
+        "row": 4,
+        "pred_row": 4,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Depreciation",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 5,
+        "pred_row": 5,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Insurance",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 5,
+        "pred_row": 5,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 7150,
+        "actual": "$7,150",
+        "in_gold_schema": true
+       },
+       {
+        "row": 5,
+        "pred_row": 5,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Insurance",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 6,
+        "pred_row": 6,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Office & Misc",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 6,
+        "pred_row": 6,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 5800,
+        "actual": "$5,800",
+        "in_gold_schema": true
+       },
+       {
+        "row": 6,
+        "pred_row": 6,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Office & Misc",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 7,
+        "pred_row": 7,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Professional Fees",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 7,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 18000,
+        "actual": "$18,000",
+        "in_gold_schema": true
+       },
+       {
+        "row": 7,
+        "pred_row": 7,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Professional Fees",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 8,
+        "pred_row": 8,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Bank Charges & Interest",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 8,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 3800,
+        "actual": "$3,800",
+        "in_gold_schema": true
+       },
+       {
+        "row": 8,
+        "pred_row": 8,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Bank Charges & Interest",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": 9,
+        "pred_row": 9,
+        "column": "Label",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Bad Debt",
+        "actual": null,
+        "in_gold_schema": true
+       },
+       {
+        "row": 9,
+        "pred_row": 9,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 4200,
+        "actual": "$4,200",
+        "in_gold_schema": true
+       },
+       {
+        "row": 9,
+        "pred_row": 9,
+        "column": "OPERATING EXPENSES",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Bad Debt",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       }
+      ]
+     }
+    },
     "counts": {
-     "correct": 25
+     "correct": 25,
+     "missed": 16,
+     "hallucinated": 16
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 0
+     "out_of_schema": 16
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 1.0,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.6097560975609756,
+    "hallucination_rate": 0.3902439024390244,
     "invention_rate": 0.0
    },
    "score_export": {
     "document_id": "IS-2024-Q4",
     "document_type": "income_statement",
     "fields": {
-     "Gross Sales": {
-      "outcome": "correct",
-      "expected": 1980000,
-      "actual": 1980000.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Less: Returns": {
-      "outcome": "correct",
-      "expected": 28600,
-      "actual": 28600.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
      "Net Revenue": {
       "outcome": "correct",
       "expected": 1951400,
       "actual": 1951400.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Opening Inventory": {
-      "outcome": "correct",
-      "expected": 648000,
-      "actual": 648000.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Purchases": {
-      "outcome": "correct",
-      "expected": 1280000,
-      "actual": 1280000.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Freight In": {
-      "outcome": "correct",
-      "expected": 52000,
-      "actual": 52000.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Less: Closing Inventory": {
-      "outcome": "correct",
-      "expected": 724000,
-      "actual": 724000.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -8394,76 +9119,6 @@
       "outcome": "correct",
       "expected": 695400,
       "actual": 695400.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Salaries & Wages": {
-      "outcome": "correct",
-      "expected": 190000,
-      "actual": 190000.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Rent": {
-      "outcome": "correct",
-      "expected": 85500,
-      "actual": 85500.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Marketing": {
-      "outcome": "correct",
-      "expected": 22400,
-      "actual": 22400.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Utilities": {
-      "outcome": "correct",
-      "expected": 12100,
-      "actual": 12100.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Depreciation": {
-      "outcome": "correct",
-      "expected": 10300,
-      "actual": 10300.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Insurance": {
-      "outcome": "correct",
-      "expected": 7150,
-      "actual": 7150.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Office & Misc": {
-      "outcome": "correct",
-      "expected": 5800,
-      "actual": 5800.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Professional Fees": {
-      "outcome": "correct",
-      "expected": 18000,
-      "actual": 18000.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Bank Charges & Interest": {
-      "outcome": "correct",
-      "expected": 3800,
-      "actual": 3800.0,
-      "type": "money",
-      "in_gold_schema": true
-     },
-     "Bad Debt": {
-      "outcome": "correct",
-      "expected": 4200,
-      "actual": 4200.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -8510,9 +9165,372 @@
       "in_gold_schema": true
      }
     },
-    "tables": {},
+    "tables": {
+     "revenue": {
+      "table": "revenue",
+      "gold_row_count": 2,
+      "pred_row_count": 2,
+      "row_count_mismatch": 0,
+      "matched_rows": 2,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Gross Sales",
+        "actual": "Gross Sales",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 1980000,
+        "actual": 1980000.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Less: Returns",
+        "actual": "Less: Returns",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 28600,
+        "actual": 28600.0,
+        "in_gold_schema": true
+       }
+      ]
+     },
+     "cost_of_goods_sold": {
+      "table": "cost_of_goods_sold",
+      "gold_row_count": 4,
+      "pred_row_count": 4,
+      "row_count_mismatch": 0,
+      "matched_rows": 4,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Opening Inventory",
+        "actual": "Opening Inventory",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 648000,
+        "actual": 648000.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Purchases",
+        "actual": "Purchases",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 1280000,
+        "actual": 1280000.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Freight In",
+        "actual": "Freight In",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 52000,
+        "actual": 52000.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Less: Closing Inventory",
+        "actual": "Less: Closing Inventory",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 724000,
+        "actual": 724000.0,
+        "in_gold_schema": true
+       }
+      ]
+     },
+     "operating_expenses": {
+      "table": "operating_expenses",
+      "gold_row_count": 10,
+      "pred_row_count": 10,
+      "row_count_mismatch": 0,
+      "matched_rows": 10,
+      "row_precision": 1.0,
+      "row_recall": 1.0,
+      "cell_accuracy": 1.0,
+      "missed_rows": [],
+      "hallucinated_rows": [],
+      "cells": [
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Salaries & Wages",
+        "actual": "Salaries & Wages",
+        "in_gold_schema": true
+       },
+       {
+        "row": 0,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 190000,
+        "actual": 190000.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Rent",
+        "actual": "Rent",
+        "in_gold_schema": true
+       },
+       {
+        "row": 1,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 85500,
+        "actual": 85500.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Marketing",
+        "actual": "Marketing",
+        "in_gold_schema": true
+       },
+       {
+        "row": 2,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 22400,
+        "actual": 22400.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Utilities",
+        "actual": "Utilities",
+        "in_gold_schema": true
+       },
+       {
+        "row": 3,
+        "pred_row": 3,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 12100,
+        "actual": 12100.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 4,
+        "pred_row": 4,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Depreciation",
+        "actual": "Depreciation",
+        "in_gold_schema": true
+       },
+       {
+        "row": 4,
+        "pred_row": 4,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 10300,
+        "actual": 10300.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 5,
+        "pred_row": 5,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Insurance",
+        "actual": "Insurance",
+        "in_gold_schema": true
+       },
+       {
+        "row": 5,
+        "pred_row": 5,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 7150,
+        "actual": 7150.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 6,
+        "pred_row": 6,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Office & Misc",
+        "actual": "Office & Misc",
+        "in_gold_schema": true
+       },
+       {
+        "row": 6,
+        "pred_row": 6,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 5800,
+        "actual": 5800.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 7,
+        "pred_row": 7,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Professional Fees",
+        "actual": "Professional Fees",
+        "in_gold_schema": true
+       },
+       {
+        "row": 7,
+        "pred_row": 7,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 18000,
+        "actual": 18000.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 8,
+        "pred_row": 8,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Bank Charges & Interest",
+        "actual": "Bank Charges & Interest",
+        "in_gold_schema": true
+       },
+       {
+        "row": 8,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 3800,
+        "actual": 3800.0,
+        "in_gold_schema": true
+       },
+       {
+        "row": 9,
+        "pred_row": 9,
+        "column": "Label",
+        "type": "string",
+        "outcome": "correct",
+        "expected": "Bad Debt",
+        "actual": "Bad Debt",
+        "in_gold_schema": true
+       },
+       {
+        "row": 9,
+        "pred_row": 9,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "correct",
+        "expected": 4200,
+        "actual": 4200.0,
+        "in_gold_schema": true
+       }
+      ]
+     }
+    },
     "counts": {
-     "correct": 25
+     "correct": 41
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -8535,12 +9553,31 @@
     "mismatches": []
    },
    "score_structure": {
-    "gold_tables": 0,
-    "tables_present": 0,
-    "tables_exact_rows": 0,
-    "fidelity": null,
-    "row_count_fidelity": null,
-    "tables": {},
+    "gold_tables": 3,
+    "tables_present": 3,
+    "tables_exact_rows": 3,
+    "fidelity": 1.0,
+    "row_count_fidelity": 1.0,
+    "tables": {
+     "revenue": {
+      "gold_rows": 2,
+      "pred_rows": 2,
+      "present": true,
+      "row_delta": 0
+     },
+     "cost_of_goods_sold": {
+      "gold_rows": 4,
+      "pred_rows": 4,
+      "present": true,
+      "row_delta": 0
+     },
+     "operating_expenses": {
+      "gold_rows": 10,
+      "pred_rows": 10,
+      "present": true,
+      "row_delta": 0
+     }
+    },
     "extra_tables": []
    },
    "unstable": []
@@ -8571,7 +9608,7 @@
      "Annual Salary": "$145,000.00",
      "Total Earnings": "$14,583.33",
      "Total Deductions": "($7,070.30)",
-     "Net Pay": "$7,513.0",
+     "Net Pay": "$7,513.0 3",
      "YTD Gross Earnings": "$58,333.33",
      "YTD Taxes Withheld": "$22,716.00"
     },
@@ -8717,9 +9754,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0",
+      "actual": "$7,513.0 3",
       "type": "money",
       "in_gold_schema": true
      },
@@ -9010,8 +10047,7 @@
     },
     "counts": {
      "near": 1,
-     "correct": 35,
-     "wrong": 1
+     "correct": 36
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -9020,7 +10056,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9459459459459459,
+    "accuracy": 0.972972972972973,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -9099,9 +10135,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0",
+      "actual": "$7,513.0 3",
       "type": "money",
       "in_gold_schema": true
      },
@@ -9392,8 +10428,7 @@
     },
     "counts": {
      "near": 1,
-     "correct": 35,
-     "wrong": 1
+     "correct": 36
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -9402,7 +10437,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9459459459459459,
+    "accuracy": 0.972972972972973,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -9481,9 +10516,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 7513.03,
-      "actual": 7513.0,
+      "actual": "$7,513.0 3",
       "type": "money",
       "in_gold_schema": true
      },
@@ -9774,8 +10809,7 @@
     },
     "counts": {
      "near": 1,
-     "correct": 35,
-     "wrong": 1
+     "correct": 36
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -9784,18 +10818,17 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9459459459459459,
+    "accuracy": 0.972972972972973,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "near": 1,
-     "correct": 23,
-     "wrong": 1
+     "correct": 24
     },
     "gold_valued": 25,
-    "accuracy": 0.92,
+    "accuracy": 0.96,
     "unmatched": 0,
     "mismatches": [
      {
@@ -9804,13 +10837,6 @@
       "matched_key": "employer name",
       "expected": "Nexus Global Trading LLC",
       "actual": "NEXUS GLOBAL TRADING"
-     },
-     {
-      "key": "net pay",
-      "outcome": "wrong",
-      "matched_key": "net pay",
-      "expected": 7513.03,
-      "actual": "$7,513.0"
      }
     ]
    },
@@ -9864,7 +10890,7 @@
      "Annual Salary": "$90,000.00",
      "Total Earnings": "$8,300.00",
      "Total Deductions": "($3,117.35)",
-     "Net Pay": "$5,182.65",
+     "Net Pay": "$5,182.6",
      "YTD Gross Earnings": "$33,500.00",
      "YTD Taxes Withheld": "$7,508.70"
     },
@@ -9878,6 +10904,11 @@
       {
        "Description": "Performance Bonus",
        "Amount": "$800.00",
+       "_confidence": "high"
+      },
+      {
+       "Description": "Total",
+       "Amount": "$8,300.00",
        "_confidence": "high"
       }
      ],
@@ -9920,6 +10951,11 @@
       {
        "Description": "Dental & Vision",
        "Amount": "($45.00)",
+       "_confidence": "high"
+      },
+      {
+       "Description": "Total",
+       "Amount": "($3,117.35)",
        "_confidence": "high"
       }
      ]
@@ -10000,9 +11036,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "correct",
+      "outcome": "wrong",
       "expected": 5182.65,
-      "actual": "$5,182.65",
+      "actual": "$5,182.6",
       "type": "money",
       "in_gold_schema": true
      },
@@ -10025,14 +11061,23 @@
      "earnings": {
       "table": "earnings",
       "gold_row_count": 2,
-      "pred_row_count": 2,
-      "row_count_mismatch": 0,
+      "pred_row_count": 3,
+      "row_count_mismatch": 1,
       "matched_rows": 2,
-      "row_precision": 1.0,
+      "row_precision": 0.6666666666666666,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 2,
+        "pred": {
+         "Description": "Total",
+         "Amount": "$8,300.00",
+         "_confidence": "high"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -10073,20 +11118,53 @@
         "expected": 800.0,
         "actual": "$800.00",
         "in_gold_schema": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$8,300.00",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
        }
       ]
      },
      "deductions": {
       "table": "deductions",
       "gold_row_count": 8,
-      "pred_row_count": 8,
-      "row_count_mismatch": 0,
+      "pred_row_count": 9,
+      "row_count_mismatch": 1,
       "matched_rows": 8,
-      "row_precision": 1.0,
+      "row_precision": 0.8888888888888888,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 8,
+        "pred": {
+         "Description": "Total",
+         "Amount": "($3,117.35)",
+         "_confidence": "high"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -10247,23 +11325,49 @@
         "expected": -45.0,
         "actual": "($45.00)",
         "in_gold_schema": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "($3,117.35)",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 32
+     "correct": 31,
+     "wrong": 1,
+     "hallucinated": 4
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
-     "misfiled": 0,
+     "misfiled": 4,
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.9393939393939394,
+    "hallucination_rate": 0.10810810810810811,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -10341,9 +11445,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "correct",
+      "outcome": "wrong",
       "expected": 5182.65,
-      "actual": "$5,182.65",
+      "actual": "$5,182.6",
       "type": "money",
       "in_gold_schema": true
      },
@@ -10366,14 +11470,23 @@
      "earnings": {
       "table": "earnings",
       "gold_row_count": 2,
-      "pred_row_count": 2,
-      "row_count_mismatch": 0,
+      "pred_row_count": 3,
+      "row_count_mismatch": 1,
       "matched_rows": 2,
-      "row_precision": 1.0,
+      "row_precision": 0.6666666666666666,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 2,
+        "pred": {
+         "Description": "Total",
+         "Amount": "$8,300.00",
+         "_confidence": "high"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -10414,20 +11527,53 @@
         "expected": 800.0,
         "actual": "$800.00",
         "in_gold_schema": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$8,300.00",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
        }
       ]
      },
      "deductions": {
       "table": "deductions",
       "gold_row_count": 8,
-      "pred_row_count": 8,
-      "row_count_mismatch": 0,
+      "pred_row_count": 9,
+      "row_count_mismatch": 1,
       "matched_rows": 8,
-      "row_precision": 1.0,
+      "row_precision": 0.8888888888888888,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 8,
+        "pred": {
+         "Description": "Total",
+         "Amount": "($3,117.35)",
+         "_confidence": "high"
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -10588,23 +11734,49 @@
         "expected": -45.0,
         "actual": "($45.00)",
         "in_gold_schema": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "($3,117.35)",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 32
+     "correct": 31,
+     "wrong": 1,
+     "hallucinated": 4
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
-     "misfiled": 0,
+     "misfiled": 4,
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.9393939393939394,
+    "hallucination_rate": 0.10810810810810811,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -10682,9 +11854,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "correct",
+      "outcome": "wrong",
       "expected": 5182.65,
-      "actual": 5182.65,
+      "actual": 5182.6,
       "type": "money",
       "in_gold_schema": true
      },
@@ -10707,14 +11879,22 @@
      "earnings": {
       "table": "earnings",
       "gold_row_count": 2,
-      "pred_row_count": 2,
-      "row_count_mismatch": 0,
+      "pred_row_count": 3,
+      "row_count_mismatch": 1,
       "matched_rows": 2,
-      "row_precision": 1.0,
+      "row_precision": 0.6666666666666666,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 2,
+        "pred": {
+         "Description": "Total",
+         "Amount": 8300.0
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -10755,20 +11935,52 @@
         "expected": 800.0,
         "actual": 800.0,
         "in_gold_schema": true
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": 8300.0,
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
        }
       ]
      },
      "deductions": {
       "table": "deductions",
       "gold_row_count": 8,
-      "pred_row_count": 8,
-      "row_count_mismatch": 0,
+      "pred_row_count": 9,
+      "row_count_mismatch": 1,
       "matched_rows": 8,
-      "row_precision": 1.0,
+      "row_precision": 0.8888888888888888,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 8,
+        "pred": {
+         "Description": "Total",
+         "Amount": -3117.35
+        }
+       }
+      ],
       "cells": [
        {
         "row": 0,
@@ -10929,33 +12141,61 @@
         "expected": -45.0,
         "actual": -45.0,
         "in_gold_schema": true
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Total",
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
+       },
+       {
+        "row": null,
+        "pred_row": 8,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": -3117.35,
+        "in_gold_schema": true,
+        "grounded": true,
+        "halluc_kind": "misfiled"
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 32
+     "correct": 31,
+     "wrong": 1,
+     "hallucinated": 4
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
-     "misfiled": 0,
+     "misfiled": 4,
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.0,
+    "accuracy": 0.9393939393939394,
+    "hallucination_rate": 0.10810810810810811,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "near": 1,
-     "correct": 22
+     "correct": 21,
+     "wrong": 1,
+     "unmatched": 2
     },
     "gold_valued": 23,
-    "accuracy": 0.9565217391304348,
-    "unmatched": 0,
+    "accuracy": 0.9130434782608695,
+    "unmatched": 2,
     "mismatches": [
      {
       "key": "employer name",
@@ -10963,27 +12203,34 @@
       "matched_key": "employer name",
       "expected": "Nexus Global Trading LLC",
       "actual": "NEXUS GLOBAL TRADING"
+     },
+     {
+      "key": "net pay",
+      "outcome": "wrong",
+      "matched_key": "net pay",
+      "expected": 5182.65,
+      "actual": "$5,182.6"
      }
     ]
    },
    "score_structure": {
     "gold_tables": 2,
     "tables_present": 2,
-    "tables_exact_rows": 2,
+    "tables_exact_rows": 0,
     "fidelity": 1.0,
-    "row_count_fidelity": 1.0,
+    "row_count_fidelity": 0.0,
     "tables": {
      "earnings": {
       "gold_rows": 2,
-      "pred_rows": 2,
+      "pred_rows": 3,
       "present": true,
-      "row_delta": 0
+      "row_delta": 1
      },
      "deductions": {
       "gold_rows": 8,
-      "pred_rows": 8,
+      "pred_rows": 9,
       "present": true,
-      "row_delta": 0
+      "row_delta": 1
      }
     },
     "extra_tables": []
@@ -15714,25 +16961,26 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 370,
+    "correct": 386,
     "missed": 2,
     "near": 5,
     "wrong": 1,
+    "hallucinated": 4,
     "empty_ok": 12
    },
-   "gold_valued": 378,
-   "accuracy": 0.9788359788359788,
-   "near_rate": 0.013227513227513227,
+   "gold_valued": 394,
+   "accuracy": 0.9796954314720813,
+   "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
-   "hallucinated": 0,
-   "hallucination_rate": 0.0,
+   "hallucinated": 4,
+   "hallucination_rate": 0.010101010101010102,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
-   "misfiled": 0,
+   "misfiled": 4,
    "out_of_schema": 0,
-   "defect_rate": 0.0
+   "defect_rate": 0.010101010101010102
   },
   "by_document_type": {
    "balance_sheet": {
@@ -15811,9 +17059,9 @@
    },
    "income_statement": {
     "counts": {
-     "correct": 25
+     "correct": 41
     },
-    "gold_valued": 25,
+    "gold_valued": 41,
     "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
@@ -15831,21 +17079,22 @@
     "counts": {
      "near": 2,
      "correct": 67,
-     "wrong": 1
+     "wrong": 1,
+     "hallucinated": 4
     },
     "gold_valued": 70,
     "accuracy": 0.9571428571428572,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 4,
+    "hallucination_rate": 0.05405405405405406,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 4,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.05405405405405406
    },
    "purchase_order": {
     "counts": {
@@ -15909,6 +17158,7 @@
     "counts": {
      "correct": 160,
      "wrong": 1,
+     "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
@@ -15916,14 +17166,14 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 2,
+    "hallucination_rate": 0.012269938650306749,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.012269938650306749
    },
    "number": {
     "counts": {
@@ -15945,23 +17195,24 @@
    },
    "string": {
     "counts": {
-     "correct": 168,
+     "correct": 184,
      "missed": 2,
-     "near": 5
+     "near": 5,
+     "hallucinated": 2
     },
-    "gold_valued": 175,
-    "accuracy": 0.96,
-    "near_rate": 0.02857142857142857,
+    "gold_valued": 191,
+    "accuracy": 0.9633507853403142,
+    "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 2,
+    "hallucination_rate": 0.010471204188481676,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.010471204188481676
    }
   }
  },
@@ -15969,24 +17220,24 @@
   "overall": {
    "counts": {
     "correct": 186,
-    "missed": 186,
-    "hallucinated": 184,
+    "missed": 202,
+    "hallucinated": 204,
     "near": 5,
     "wrong": 1
    },
-   "gold_valued": 378,
-   "accuracy": 0.49206349206349204,
-   "near_rate": 0.013227513227513227,
+   "gold_valued": 394,
+   "accuracy": 0.4720812182741117,
+   "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
-   "hallucinated": 184,
-   "hallucination_rate": 0.48936170212765956,
+   "hallucinated": 204,
+   "hallucination_rate": 0.5151515151515151,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
-   "misfiled": 0,
-   "out_of_schema": 184,
-   "defect_rate": 0.0
+   "misfiled": 4,
+   "out_of_schema": 200,
+   "defect_rate": 0.010101010101010102
   },
   "by_document_type": {
    "balance_sheet": {
@@ -16070,41 +17321,44 @@
    },
    "income_statement": {
     "counts": {
-     "correct": 25
+     "correct": 25,
+     "missed": 16,
+     "hallucinated": 16
     },
-    "gold_valued": 25,
-    "accuracy": 1.0,
+    "gold_valued": 41,
+    "accuracy": 0.6097560975609756,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 16,
+    "hallucination_rate": 0.3902439024390244,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 0,
+    "out_of_schema": 16,
     "defect_rate": 0.0
    },
    "payslip": {
     "counts": {
      "near": 2,
      "correct": 67,
-     "wrong": 1
+     "wrong": 1,
+     "hallucinated": 4
     },
     "gold_valued": 70,
     "accuracy": 0.9571428571428572,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 4,
+    "hallucination_rate": 0.05405405405405406,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 4,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.05405405405405406
    },
    "purchase_order": {
     "counts": {
@@ -16173,21 +17427,22 @@
     "counts": {
      "correct": 103,
      "missed": 57,
-     "wrong": 1
+     "wrong": 1,
+     "hallucinated": 2
     },
     "gold_valued": 161,
     "accuracy": 0.639751552795031,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 2,
+    "hallucination_rate": 0.018867924528301886,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.018867924528301886
    },
    "number": {
     "counts": {
@@ -16209,49 +17464,50 @@
    },
    "string": {
     "counts": {
-     "missed": 96,
-     "hallucinated": 184,
+     "missed": 112,
+     "hallucinated": 202,
      "correct": 74,
      "near": 5
     },
-    "gold_valued": 175,
-    "accuracy": 0.4228571428571429,
-    "near_rate": 0.02857142857142857,
+    "gold_valued": 191,
+    "accuracy": 0.387434554973822,
+    "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 184,
-    "hallucination_rate": 0.6996197718631179,
+    "hallucinated": 202,
+    "hallucination_rate": 0.7188612099644128,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
-    "out_of_schema": 184,
-    "defect_rate": 0.0
+    "misfiled": 2,
+    "out_of_schema": 200,
+    "defect_rate": 0.0071174377224199285
    }
   }
  },
  "summary_export": {
   "overall": {
    "counts": {
-    "correct": 370,
+    "correct": 386,
     "missed": 2,
     "near": 5,
     "wrong": 1,
+    "hallucinated": 4,
     "empty_ok": 12
    },
-   "gold_valued": 378,
-   "accuracy": 0.9788359788359788,
-   "near_rate": 0.013227513227513227,
+   "gold_valued": 394,
+   "accuracy": 0.9796954314720813,
+   "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
-   "hallucinated": 0,
-   "hallucination_rate": 0.0,
+   "hallucinated": 4,
+   "hallucination_rate": 0.010101010101010102,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
-   "misfiled": 0,
+   "misfiled": 4,
    "out_of_schema": 0,
-   "defect_rate": 0.0
+   "defect_rate": 0.010101010101010102
   },
   "by_document_type": {
    "balance_sheet": {
@@ -16330,9 +17586,9 @@
    },
    "income_statement": {
     "counts": {
-     "correct": 25
+     "correct": 41
     },
-    "gold_valued": 25,
+    "gold_valued": 41,
     "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
@@ -16350,21 +17606,22 @@
     "counts": {
      "near": 2,
      "correct": 67,
-     "wrong": 1
+     "wrong": 1,
+     "hallucinated": 4
     },
     "gold_valued": 70,
     "accuracy": 0.9571428571428572,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 4,
+    "hallucination_rate": 0.05405405405405406,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 4,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.05405405405405406
    },
    "purchase_order": {
     "counts": {
@@ -16428,6 +17685,7 @@
     "counts": {
      "correct": 160,
      "wrong": 1,
+     "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
@@ -16435,14 +17693,14 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 2,
+    "hallucination_rate": 0.012269938650306749,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.012269938650306749
    },
    "number": {
     "counts": {
@@ -16464,23 +17722,24 @@
    },
    "string": {
     "counts": {
-     "correct": 168,
+     "correct": 184,
      "missed": 2,
-     "near": 5
+     "near": 5,
+     "hallucinated": 2
     },
-    "gold_valued": 175,
-    "accuracy": 0.96,
-    "near_rate": 0.02857142857142857,
+    "gold_valued": 191,
+    "accuracy": 0.9633507853403142,
+    "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 0,
-    "hallucination_rate": 0.0,
+    "hallucinated": 2,
+    "hallucination_rate": 0.010471204188481676,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 0,
+    "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.0
+    "defect_rate": 0.010471204188481676
    }
   }
  },
@@ -16489,38 +17748,2602 @@
    "correct": 233,
    "missed": 2,
    "near": 5,
-   "wrong": 1
+   "wrong": 1,
+   "unmatched": 2
   },
   "gold_valued": 241,
-  "unmatched": 0,
+  "unmatched": 2,
   "accuracy": 0.966804979253112
  },
  "summary_structure": {
-  "gold_tables": 14,
-  "tables_present": 14,
-  "tables_exact_rows": 14,
+  "gold_tables": 17,
+  "tables_present": 17,
+  "tables_exact_rows": 15,
   "fidelity": 1.0,
-  "row_count_fidelity": 1.0
+  "row_count_fidelity": 0.8823529411764706
  },
  "calibration": {
   "high": {
-   "n": 369,
-   "correct": 367,
-   "wrong": 0,
+   "n": 390,
+   "correct": 383,
+   "wrong": 1,
    "missed": 0,
    "near": 2,
-   "hallucinated": 0
+   "hallucinated": 4
   },
   "low": {
-   "n": 7,
+   "n": 6,
    "correct": 3,
-   "wrong": 1,
+   "wrong": 0,
    "missed": 0,
    "near": 3,
    "hallucinated": 0
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-22 18:15:46"
+ "diff": [
+  {
+   "key": "BS-2024-Q1 :: TOTAL ASSETS",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: TOTAL LIABILITIES",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: TOTAL LIABILITIES & EQUITY",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Current Assets",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Current Liabilities",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Equity",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Long-Term Liabilities",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Non-Current Assets",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 4].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 4].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Account Number",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Amount in Words",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Authorized By",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Bank Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Cheque Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Memo",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Payee",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Payer Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "CHQ-001847 :: Routing Number",
+   "before": null,
+   "after": "missed",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Department",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Manager",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Purpose",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Report No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Total Claimed",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Address",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Company",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Contact",
+   "before": "missed",
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Due Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Date",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Number",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: PO Reference",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Terms",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Sales Tax",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Shipping & Handling",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Status",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Subtotal",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Total Due",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items :: row_count_mismatch",
+   "before": "-4",
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Amount",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Description",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Qty",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit Price",
+   "before": "missed",
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Company",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Contact",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Due Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: PO Reference",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Sales Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Shipping & Handling",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Total Due",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Gross Profit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Income Tax Provision",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Interest Income",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Income After Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Income Before Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Revenue",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Operating Income (EBIT)",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Total COGS",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Total Operating Expenses",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 4].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 5].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 6].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 7].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 8].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 9].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 9].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Annual Salary",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employer Name",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Net Pay",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Pay Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Pay Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: SSN",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Title / Department",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Total Deductions",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Total Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: YTD Gross Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: YTD Taxes Withheld",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Annual Salary",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employer Name",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Net Pay",
+   "before": null,
+   "after": "wrong",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Pay Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Pay Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: SSN",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Title / Department",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Total Deductions",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Total Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: YTD Gross Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: YTD Taxes Withheld",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions :: row_count_mismatch",
+   "before": null,
+   "after": "1",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings :: row_count_mismatch",
+   "before": null,
+   "after": "1",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Authorised By",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Title",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Freight",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Order Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: PO Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Required By",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Ship Via",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Contact",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account Holder",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Bank Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Closing Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Opening Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Statement No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Total Credits",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Total Debits",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-08-23 14:52:31"
 }

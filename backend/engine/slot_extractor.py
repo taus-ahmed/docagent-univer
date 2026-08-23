@@ -136,11 +136,18 @@ def build_prompt(slots, page_texts, doc_type=""):
     p.append("=== END DOCUMENT ===\n")
 
     if fields:
-        p.append("FIELD SLOTS — each is one cell. Answer every one by its slot id:")
+        # The label is the slot's ADDRESS, not its answer. Saying only
+        # 'row label "Net Revenue"' let the model read the label as the thing
+        # to output, and it answered every slot with its own label — read off
+        # the right line, so grounding passed and the sheet said
+        # "Net Revenue | Net Revenue".
+        p.append("FIELD SLOTS — each is one cell of the sheet. The label is the "
+                 "slot's ADDRESS, not its answer: find that row in the document "
+                 "and give the VALUE printed on it. Answer every slot by its id:")
         for f in fields:
-            addr = f'row label "{f["row_label"]}"'
+            addr = f'the value on the row labelled "{f["row_label"]}"'
             if f["section"]:
-                addr = f'section "{f["section"]}", ' + addr
+                addr = f'in section "{f["section"]}", ' + addr
             p.append(f'  {f["slot_id"]}: {addr}')
         p.append("")
 
@@ -196,8 +203,11 @@ def build_prompt(slots, page_texts, doc_type=""):
              "Credit, and an empty cell is a real answer.")
     p.append("- One row object per document line. Never merge two lines into one row, and "
              "never repeat a line as two rows.")
-    p.append("- Give the value only, not the label: for a slot labelled \"Closing Balance\", "
-             'answer "125,357.26", not "Closing Balance: 125,357.26".')
+    p.append("- Give the value only, not the label. For a slot labelled "
+             '"Closing Balance" on the line "Closing Balance: 125,357.26", '
+             'answer "125,357.26" — NOT "Closing Balance: 125,357.26", and '
+             'NEVER "Closing Balance". Repeating the label back is not an '
+             'answer; if the line has no value, give "".')
     return "\n".join(p)
 
 
@@ -254,6 +264,25 @@ def _single_datum(value, label):
 from app.core.confidence import (  # noqa: E402
     CONFIDENT_LEVELS, GROUNDED, HIGH, LOW, MEDIUM, UNVERIFIED,
 )
+
+
+def is_label_echo(value, row_label) -> bool:
+    """The answer is the slot's own label rather than a value.
+
+    "Net Revenue" for the slot labelled "Net Revenue", read off the line
+    "Net Revenue $1,951,400". Grounding cannot catch this: the label really is
+    in the document, and really is inside the span the value was read from, so
+    every check passes and the sheet ends up reading "Net Revenue | Net
+    Revenue". It is a distinct failure from a wrong value — nothing was
+    extracted at all — and it is treated as no answer rather than written.
+    """
+    v, l = _flat(value), _flat(row_label)
+    if not v or not l:
+        return False
+    if v == l:
+        return True
+    # "Total COGS:" / "Total COGS -" — the label with trailing punctuation.
+    return v.rstrip(" :-–—") == l.rstrip(" :-–—")
 
 
 def confidence_for(value, source, label, grounded, inferred=False):
@@ -358,6 +387,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 value, source, page = ans, "", 0
             if str(value).strip() == "":
                 continue
+            if is_label_echo(value, slot["row_label"]):
+                notes.append(f'{slot["row_label"]}: the model returned the '
+                             f"slot's own label instead of a value — dropped")
+                continue
             ok, why = verify_span(value, source, page, pages)
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
                                          inferred=inferred)
@@ -402,7 +435,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     v = cells.get(h, "")
                     if v is None:
                         v = ""
-                    if str(v).strip() == "":
+                    if str(v).strip() == "" or is_label_echo(v, h):
                         row[h] = ""
                         continue
                     ok, why = verify_span(v, source, page, pages)

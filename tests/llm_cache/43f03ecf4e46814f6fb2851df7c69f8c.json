@@ -1,0 +1,183 @@
+{
+ "key": "43f03ecf4e46814f6fb2851df7c69f8c31f84547da33874fbd462c67c2a42877",
+ "meta": {
+  "method": "extract",
+  "context": "IS-2024-Q4",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3575,
+  "captured_at": "2026-08-23 14:44:59",
+  "prompt_preview": "Fill in a income_statement spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nIncome Statement — Q4 2024\nQuarter Ended December 31, 2024 | Doc No: IS-2024-Q4\nREVENUE\nGross Sales $1"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"Nexus Global Trading LLC\",\n      \"source\": \"Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"December 31, 2024\",\n      \"source\": \"Quarter Ended December 31, 2024\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"IS-2024-Q4\",\n      \"source\": \"Doc No: IS-2024-Q4\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"$1,980,000\",\n      \"source\": \"Gross Sales $1,980,000\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$28,600\",\n      \"source\": \"Less: Returns $28,600\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"$1,951,400\",\n      \"source\": \"Net Revenue $1,951,400\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"$648,000\",\n      \"source\": \"Opening Inventory $648,000\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"$1,280,000\",\n      \"source\": \"Purchases $1,280,000\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"$52,000\",\n      \"source\": \"Freight In $52,000\",\n      \"page\": 1\n    },\n    \"F13\": {\n      \"value\": \"$724,000\",\n      \"source\": \"Less: Closing Inventory $724,000\",\n      \"page\": 1\n    },\n    \"F14\": {\n      \"value\": \"$1,256,000\",\n      \"source\": \"Total COGS $1,256,000\",\n      \"page\": 1\n    },\n    \"F15\": {\n      \"value\": \"$695,400\",\n      \"source\": \"GROSS PROFIT $695,400\",\n      \"page\": 1\n    },\n    \"F16\": {\n      \"value\": \"$190,000\",\n      \"source\": \"Salaries & Wages $190,000\",\n      \"page\": 1\n    },\n    \"F17\": {\n      \"value\": \"$85,500\",\n      \"source\": \"Rent $85,500\",\n      \"page\": 1\n    },\n    \"F18\": {\n      \"value\": \"$22,400\",\n      \"source\": \"Marketing $22,400\",\n      \"page\": 1\n    },\n    \"F19\": {\n      \"value\": \"$12,100\",\n      \"source\": \"Utilities $12,100\",\n      \"page\": 1\n    },\n    \"F20\": {\n      \"value\": \"$10,300\",\n      \"source\": \"Depreciation $10,300\",\n      \"page\": 1\n    },\n    \"F21\": {\n      \"value\": \"$7,150\",\n      \"source\": \"Insurance $7,150\",\n      \"page\": 1\n    },\n    \"F22\": {\n      \"value\": \"$5,800\",\n      \"source\": \"Office & Misc $5,800\",\n      \"page\": 1\n    },\n    \"F23\": {\n      \"value\": \"$18,000\",\n      \"source\": \"Professional Fees $18,000\",\n      \"page\": 1\n    },\n    \"F24\": {\n      \"value\": \"$3,800\",\n      \"source\": \"Bank Charges & Interest $3,800\",\n      \"page\": 1\n    },\n    \"F25\": {\n      \"value\": \"$4,200\",\n      \"source\": \"Bad Debt $4,200\",\n      \"page\": 1\n    },\n    \"F26\": {\n      \"value\": \"$359,250\",\n      \"source\": \"Total Operating Expenses $359,250\",\n      \"page\": 1\n    },\n    \"F27\": {\n      \"value\": \"$336,150\",\n      \"source\": \"OPERATING INCOME (EBIT) $336,150\",\n      \"page\": 1\n    },\n    \"F28\": {\n      \"value\": \"$1,240\",\n      \"source\": \"Interest Income $1,240\",\n      \"page\": 1\n    },\n    \"F29\": {\n      \"value\": \"$337,390\",\n      \"source\": \"NET INCOME (LOSS) BEFORE TAX $337,390\",\n      \"page\": 1\n    },\n    \"F30\": {\n      \"value\": \"$70,852\",\n      \"source\": \"Est. Income Tax Provision (21%) $70,852\",\n      \"page\": 1\n    },\n    \"F31\": {\n      \"value\": \"$266,538\",\n      \"source\": \"NET INCOME (LOSS) AFTER TAX $266,538\",\n      \"page\": 1\n    },\n    \"F32\": {\n      \"value\": \"Meridian & Associates CPA\",\n      \"source\": \"Prepared by: Meridian & Associates CPA\",\n      \"page\": 2\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F2": {
+     "value": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "page": 1
+    },
+    "F3": {
+     "value": "New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "page": 1
+    },
+    "F4": {
+     "value": "47-3821654",
+     "source": "EIN: 47-3821654",
+     "page": 1
+    },
+    "F5": {
+     "value": "December 31, 2024",
+     "source": "Quarter Ended December 31, 2024",
+     "page": 1
+    },
+    "F6": {
+     "value": "IS-2024-Q4",
+     "source": "Doc No: IS-2024-Q4",
+     "page": 1
+    },
+    "F7": {
+     "value": "$1,980,000",
+     "source": "Gross Sales $1,980,000",
+     "page": 1
+    },
+    "F8": {
+     "value": "$28,600",
+     "source": "Less: Returns $28,600",
+     "page": 1
+    },
+    "F9": {
+     "value": "$1,951,400",
+     "source": "Net Revenue $1,951,400",
+     "page": 1
+    },
+    "F10": {
+     "value": "$648,000",
+     "source": "Opening Inventory $648,000",
+     "page": 1
+    },
+    "F11": {
+     "value": "$1,280,000",
+     "source": "Purchases $1,280,000",
+     "page": 1
+    },
+    "F12": {
+     "value": "$52,000",
+     "source": "Freight In $52,000",
+     "page": 1
+    },
+    "F13": {
+     "value": "$724,000",
+     "source": "Less: Closing Inventory $724,000",
+     "page": 1
+    },
+    "F14": {
+     "value": "$1,256,000",
+     "source": "Total COGS $1,256,000",
+     "page": 1
+    },
+    "F15": {
+     "value": "$695,400",
+     "source": "GROSS PROFIT $695,400",
+     "page": 1
+    },
+    "F16": {
+     "value": "$190,000",
+     "source": "Salaries & Wages $190,000",
+     "page": 1
+    },
+    "F17": {
+     "value": "$85,500",
+     "source": "Rent $85,500",
+     "page": 1
+    },
+    "F18": {
+     "value": "$22,400",
+     "source": "Marketing $22,400",
+     "page": 1
+    },
+    "F19": {
+     "value": "$12,100",
+     "source": "Utilities $12,100",
+     "page": 1
+    },
+    "F20": {
+     "value": "$10,300",
+     "source": "Depreciation $10,300",
+     "page": 1
+    },
+    "F21": {
+     "value": "$7,150",
+     "source": "Insurance $7,150",
+     "page": 1
+    },
+    "F22": {
+     "value": "$5,800",
+     "source": "Office & Misc $5,800",
+     "page": 1
+    },
+    "F23": {
+     "value": "$18,000",
+     "source": "Professional Fees $18,000",
+     "page": 1
+    },
+    "F24": {
+     "value": "$3,800",
+     "source": "Bank Charges & Interest $3,800",
+     "page": 1
+    },
+    "F25": {
+     "value": "$4,200",
+     "source": "Bad Debt $4,200",
+     "page": 1
+    },
+    "F26": {
+     "value": "$359,250",
+     "source": "Total Operating Expenses $359,250",
+     "page": 1
+    },
+    "F27": {
+     "value": "$336,150",
+     "source": "OPERATING INCOME (EBIT) $336,150",
+     "page": 1
+    },
+    "F28": {
+     "value": "$1,240",
+     "source": "Interest Income $1,240",
+     "page": 1
+    },
+    "F29": {
+     "value": "$337,390",
+     "source": "NET INCOME (LOSS) BEFORE TAX $337,390",
+     "page": 1
+    },
+    "F30": {
+     "value": "$70,852",
+     "source": "Est. Income Tax Provision (21%) $70,852",
+     "page": 1
+    },
+    "F31": {
+     "value": "$266,538",
+     "source": "NET INCOME (LOSS) AFTER TAX $266,538",
+     "page": 1
+    },
+    "F32": {
+     "value": "Meridian & Associates CPA",
+     "source": "Prepared by: Meridian & Associates CPA",
+     "page": 2
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3575,
+  "success": true,
+  "error": ""
+ }
+}

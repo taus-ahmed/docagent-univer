@@ -1,0 +1,60 @@
+{
+ "key": "b9e8a9e68083965403fc670223b71be970abec52196991048966d15c4ab9dc06",
+ "meta": {
+  "method": "extract",
+  "context": "PAYSLIP-EMP-0012-APR2024",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2623,
+  "captured_at": "2026-08-23 15:03:27",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING PAY STUB\nLLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nEmployee: Marcus A. Thompson\nEmployee ID: EMP-0012\nTitle / Dept: Purchasing Manager – Procurement\nSS"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"payslip\",\n  \"title\": \"Pay Stub\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company EIN\",\n    \"Employee Name\",\n    \"Employee ID\",\n    \"Employee Title / Dept\",\n    \"Employee SSN\",\n    \"Pay Period\",\n    \"Pay Date\",\n    \"Annual Salary\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Earnings\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 2\n    },\n    {\n      \"name\": \"Deductions\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 7\n    }\n  ],\n  \"totals\": [\n    \"Earnings Total\",\n    \"Deductions Total\",\n    \"NET PAY\",\n    \"YTD Gross Earnings\",\n    \"YTD Taxes Withheld\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "payslip",
+   "title": "Pay Stub",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company EIN",
+    "Employee Name",
+    "Employee ID",
+    "Employee Title / Dept",
+    "Employee SSN",
+    "Pay Period",
+    "Pay Date",
+    "Annual Salary"
+   ],
+   "tables": [
+    {
+     "name": "Earnings",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 2
+    },
+    {
+     "name": "Deductions",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 7
+    }
+   ],
+   "totals": [
+    "Earnings Total",
+    "Deductions Total",
+    "NET PAY",
+    "YTD Gross Earnings",
+    "YTD Taxes Withheld"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2623,
+  "success": true,
+  "error": ""
+ }
+}

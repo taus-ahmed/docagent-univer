@@ -1,0 +1,221 @@
+{
+ "key": "03066169a6c66c34e2bd405c4a0476c99e2fa60dce1203515b097360705e587f",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-05",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3757,
+  "captured_at": "2026-08-23 15:13:09",
+  "prompt_preview": "Fill in a bank_statement spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nFIRST NATIONAL BANK OF NEW ACCOUNT STATEMENT\nYORK\n330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC\nAccount Holder: Nexus Global Trading LLC Statement No: STMT-2024-05\n142 West 57t"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"FIRST NATIONAL BANK OF NEW YORK\",\n      \"source\": \"FIRST NATIONAL BANK OF NEW YORK\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"Nexus Global Trading LLC\",\n      \"source\": \"Account Holder: Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"STMT-2024-05\",\n      \"source\": \"Statement No: STMT-2024-05\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"May 2024\",\n      \"source\": \"Period: May 2024\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"****7743\",\n      \"source\": \"Account No: ****7743\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"Business Checking\",\n      \"source\": \"Type: Business Checking\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"$73,801.10\",\n      \"source\": \"$73,801.10\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$75,635.83\",\n      \"source\": \"$75,635.83\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"$128,425.00\",\n      \"source\": \"$128,425.00\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"$21,011.93\",\n      \"source\": \"$21,011.93\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"table\": [\n      {\n        \"cells\": {\n          \"Date\": \"05/01\",\n          \"Type\": \"ACH\",\n          \"Description\": \"Payroll disbursement — May wk1\",\n          \"Debit\": \"$18,450.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$55,351.10\"\n        },\n        \"source\": \"05/01 ACH Payroll disbursement — May wk1 $18,450.00 $55,351.10\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/03\",\n          \"Type\": \"CHQ\",\n          \"Description\": \"Cheque #001842 — Manhattan Commercial Prop.\",\n          \"Debit\": \"$28,500.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$26,851.10\"\n        },\n        \"source\": \"05/03 CHQ Cheque #001842 — Manhattan Commercial Prop. $28,500.00 $26,851.10\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/07\",\n          \"Type\": \"DEP\",\n          \"Description\": \"Wire deposit — Apex Industrial Supplies\",\n          \"Debit\": \"\",\n          \"Credit\": \"$34,800.00\",\n          \"Balance\": \"$61,651.10\"\n        },\n        \"source\": \"05/07 DEP Wire deposit — Apex Industrial Supplies $34,800.00 $61,651.10\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/10\",\n          \"Type\": \"FEE\",\n          \"Description\": \"Monthly account maintenance fee\",\n          \"Debit\": \"$25.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$61,626.10\"\n        },\n        \"source\": \"05/10 FEE Monthly account maintenance fee $25.00 $61,626.10\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/12\",\n          \"Type\": \"ACH\",\n          \"Description\": \"NY State payroll tax Q1 filing\",\n          \"Debit\": \"$8,900.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$52,726.10\"\n        },\n        \"source\": \"05/12 ACH NY State payroll tax Q1 filing $8,900.00 $52,726.10\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/15\",\n          \"Type\": \"ACH\",\n          \"Description\": \"Payroll disbursement — May wk3\",\n          \"Debit\": \"$18,450.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$34,276.10\"\n        },\n        \"source\": \"05/15 ACH Payroll disbursement — May wk3 $18,450.00 $34,276.10\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/17\",\n          \"Type\": \"DEP\",\n          \"Description\": \"Wire deposit — Redwood Office Solutions\",\n          \"Debit\": \"\",\n          \"Credit\": \"$7,998.18\",\n          \"Balance\": \"$42,274.28\"\n        },\n        \"source\": \"05/17 DEP Wire deposit — Redwood Office Solutions $7,998.18 $42,274.28\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/20\",\n          \"Type\": \"CHQ\",\n          \"Description\": \"Cheque #001847 — Meridian & Associates CPA\",\n          \"Debit\": \"$12,000.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$30,274.28\"\n        },\n        \"source\": \"05/20 CHQ Cheque #001847 — Meridian & Associates CPA $12,000.00 $30,274.28\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/25\",\n          \"Type\": \"DD\",\n          \"Description\": \"Demand Draft FNBNY-DD-2024-0572 issued\",\n          \"Debit\": \"$42,100.00\",\n          \"Credit\": \"\",\n          \"Balance\": \"$-11,825.72\"\n        },\n        \"source\": \"05/25 DD Demand Draft FNBNY-DD-2024-0572 issued $42,100.00 $-11,825.72\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/28\",\n          \"Type\": \"DEP\",\n          \"Description\": \"Wire deposit — Pinnacle Electronics Corp.\",\n          \"Debit\": \"\",\n          \"Credit\": \"$19,500.00\",\n          \"Balance\": \"$7,674.28\"\n        },\n        \"source\": \"05/28 DEP Wire deposit — Pinnacle Electronics Corp. $19,500.00 $7,674.28\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/30\",\n          \"Type\": \"DEP\",\n          \"Description\": \"Wire deposit — Summit Retail Group\",\n          \"Debit\": \"\",\n          \"Credit\": \"$13,188.75\",\n          \"Balance\": \"$20,863.03\"\n        },\n        \"source\": \"05/30 DEP Wire deposit — Summit Retail Group $13,188.75 $20,863.03\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"05/31\",\n          \"Type\": \"INT\",\n          \"Description\": \"Interest earned — savings component\",\n          \"Debit\": \"\",\n          \"Credit\": \"$148.90\",\n          \"Balance\": \"$21,011.93\"\n        },\n        \"source\": \"05/31 INT Interest earned — savings component $148.90 $21,011.93\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "FIRST NATIONAL BANK OF NEW YORK",
+     "source": "FIRST NATIONAL BANK OF NEW YORK",
+     "page": 1
+    },
+    "F2": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Account Holder: Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F3": {
+     "value": "STMT-2024-05",
+     "source": "Statement No: STMT-2024-05",
+     "page": 1
+    },
+    "F4": {
+     "value": "May 2024",
+     "source": "Period: May 2024",
+     "page": 1
+    },
+    "F5": {
+     "value": "****7743",
+     "source": "Account No: ****7743",
+     "page": 1
+    },
+    "F6": {
+     "value": "Business Checking",
+     "source": "Type: Business Checking",
+     "page": 1
+    },
+    "F7": {
+     "value": "$73,801.10",
+     "source": "$73,801.10",
+     "page": 1
+    },
+    "F8": {
+     "value": "$75,635.83",
+     "source": "$75,635.83",
+     "page": 1
+    },
+    "F9": {
+     "value": "$128,425.00",
+     "source": "$128,425.00",
+     "page": 1
+    },
+    "F10": {
+     "value": "$21,011.93",
+     "source": "$21,011.93",
+     "page": 1
+    }
+   },
+   "tables": {
+    "table": [
+     {
+      "cells": {
+       "Date": "05/01",
+       "Type": "ACH",
+       "Description": "Payroll disbursement — May wk1",
+       "Debit": "$18,450.00",
+       "Credit": "",
+       "Balance": "$55,351.10"
+      },
+      "source": "05/01 ACH Payroll disbursement — May wk1 $18,450.00 $55,351.10",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/03",
+       "Type": "CHQ",
+       "Description": "Cheque #001842 — Manhattan Commercial Prop.",
+       "Debit": "$28,500.00",
+       "Credit": "",
+       "Balance": "$26,851.10"
+      },
+      "source": "05/03 CHQ Cheque #001842 — Manhattan Commercial Prop. $28,500.00 $26,851.10",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/07",
+       "Type": "DEP",
+       "Description": "Wire deposit — Apex Industrial Supplies",
+       "Debit": "",
+       "Credit": "$34,800.00",
+       "Balance": "$61,651.10"
+      },
+      "source": "05/07 DEP Wire deposit — Apex Industrial Supplies $34,800.00 $61,651.10",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/10",
+       "Type": "FEE",
+       "Description": "Monthly account maintenance fee",
+       "Debit": "$25.00",
+       "Credit": "",
+       "Balance": "$61,626.10"
+      },
+      "source": "05/10 FEE Monthly account maintenance fee $25.00 $61,626.10",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/12",
+       "Type": "ACH",
+       "Description": "NY State payroll tax Q1 filing",
+       "Debit": "$8,900.00",
+       "Credit": "",
+       "Balance": "$52,726.10"
+      },
+      "source": "05/12 ACH NY State payroll tax Q1 filing $8,900.00 $52,726.10",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/15",
+       "Type": "ACH",
+       "Description": "Payroll disbursement — May wk3",
+       "Debit": "$18,450.00",
+       "Credit": "",
+       "Balance": "$34,276.10"
+      },
+      "source": "05/15 ACH Payroll disbursement — May wk3 $18,450.00 $34,276.10",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/17",
+       "Type": "DEP",
+       "Description": "Wire deposit — Redwood Office Solutions",
+       "Debit": "",
+       "Credit": "$7,998.18",
+       "Balance": "$42,274.28"
+      },
+      "source": "05/17 DEP Wire deposit — Redwood Office Solutions $7,998.18 $42,274.28",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/20",
+       "Type": "CHQ",
+       "Description": "Cheque #001847 — Meridian & Associates CPA",
+       "Debit": "$12,000.00",
+       "Credit": "",
+       "Balance": "$30,274.28"
+      },
+      "source": "05/20 CHQ Cheque #001847 — Meridian & Associates CPA $12,000.00 $30,274.28",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/25",
+       "Type": "DD",
+       "Description": "Demand Draft FNBNY-DD-2024-0572 issued",
+       "Debit": "$42,100.00",
+       "Credit": "",
+       "Balance": "$-11,825.72"
+      },
+      "source": "05/25 DD Demand Draft FNBNY-DD-2024-0572 issued $42,100.00 $-11,825.72",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/28",
+       "Type": "DEP",
+       "Description": "Wire deposit — Pinnacle Electronics Corp.",
+       "Debit": "",
+       "Credit": "$19,500.00",
+       "Balance": "$7,674.28"
+      },
+      "source": "05/28 DEP Wire deposit — Pinnacle Electronics Corp. $19,500.00 $7,674.28",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/30",
+       "Type": "DEP",
+       "Description": "Wire deposit — Summit Retail Group",
+       "Debit": "",
+       "Credit": "$13,188.75",
+       "Balance": "$20,863.03"
+      },
+      "source": "05/30 DEP Wire deposit — Summit Retail Group $13,188.75 $20,863.03",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "05/31",
+       "Type": "INT",
+       "Description": "Interest earned — savings component",
+       "Debit": "",
+       "Credit": "$148.90",
+       "Balance": "$21,011.93"
+      },
+      "source": "05/31 INT Interest earned — savings component $148.90 $21,011.93",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3757,
+  "success": true,
+  "error": ""
+ }
+}

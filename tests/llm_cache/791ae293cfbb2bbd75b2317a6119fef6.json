@@ -1,0 +1,64 @@
+{
+ "key": "791ae293cfbb2bbd75b2317a6119fef6d0e3f23f31ce3259ad9c9af2c8e0d0b6",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0047",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2554,
+  "captured_at": "2026-08-23 15:03:11",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC INVOICE\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nBill To: Invoice: INV-2024-0047\nPinnacle Electronics Corp. Date: February 3, 2024\n3800"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"sales_invoice\",\n  \"title\": \"Invoice\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company Phone\",\n    \"Company EIN\",\n    \"Bill To Company\",\n    \"Bill To Address\",\n    \"Bill To Contact\",\n    \"Bill To Contact Email\",\n    \"Invoice Number\",\n    \"Invoice Date\",\n    \"Due Date\",\n    \"PO Reference\",\n    \"Terms\",\n    \"Status\",\n    \"Payment Instructions Wire Bank\",\n    \"Payment Instructions ABA\",\n    \"Payment Instructions Account\",\n    \"Payment Instructions Cheque Payable To\",\n    \"Notes Balance Due\",\n    \"Notes Late Payment Interest\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Description Qty Unit Unit Price Amount\",\n      \"columns\": [\n        \"Description\",\n        \"Qty\",\n        \"Unit\",\n        \"Unit Price\",\n        \"Amount\"\n      ],\n      \"row_count\": 5\n    }\n  ],\n  \"totals\": [\n    \"Subtotal\",\n    \"Shipping & Handling\",\n    \"Sales Tax (8.25%)\",\n    \"TOTAL DUE\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "sales_invoice",
+   "title": "Invoice",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company Phone",
+    "Company EIN",
+    "Bill To Company",
+    "Bill To Address",
+    "Bill To Contact",
+    "Bill To Contact Email",
+    "Invoice Number",
+    "Invoice Date",
+    "Due Date",
+    "PO Reference",
+    "Terms",
+    "Status",
+    "Payment Instructions Wire Bank",
+    "Payment Instructions ABA",
+    "Payment Instructions Account",
+    "Payment Instructions Cheque Payable To",
+    "Notes Balance Due",
+    "Notes Late Payment Interest"
+   ],
+   "tables": [
+    {
+     "name": "Description Qty Unit Unit Price Amount",
+     "columns": [
+      "Description",
+      "Qty",
+      "Unit",
+      "Unit Price",
+      "Amount"
+     ],
+     "row_count": 5
+    }
+   ],
+   "totals": [
+    "Subtotal",
+    "Shipping & Handling",
+    "Sales Tax (8.25%)",
+    "TOTAL DUE"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2554,
+  "success": true,
+  "error": ""
+ }
+}

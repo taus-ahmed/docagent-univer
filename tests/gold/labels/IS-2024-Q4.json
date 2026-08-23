@@ -4,25 +4,9 @@
   "pdf": "IS-2024-Q4.pdf",
   "template": "income_statement.json",
   "fields": {
-    "Gross Sales": 1980000,
-    "Less: Returns": 28600,
     "Net Revenue": 1951400,
-    "Opening Inventory": 648000,
-    "Purchases": 1280000,
-    "Freight In": 52000,
-    "Less: Closing Inventory": 724000,
     "Total COGS": 1256000,
     "Gross Profit": 695400,
-    "Salaries & Wages": 190000,
-    "Rent": 85500,
-    "Marketing": 22400,
-    "Utilities": 12100,
-    "Depreciation": 10300,
-    "Insurance": 7150,
-    "Office & Misc": 5800,
-    "Professional Fees": 18000,
-    "Bank Charges & Interest": 3800,
-    "Bad Debt": 4200,
     "Total Operating Expenses": 359250,
     "Operating Income (EBIT)": 336150,
     "Interest Income": 1240,
@@ -31,20 +15,102 @@
     "Net Income After Tax": 266538
   },
   "field_types": {
-    "Gross Sales": "money", "Less: Returns": "money", "Net Revenue": "money",
-    "Opening Inventory": "money", "Purchases": "money", "Freight In": "money",
-    "Less: Closing Inventory": "money", "Total COGS": "money",
-    "Gross Profit": "money", "Salaries & Wages": "money", "Rent": "money",
-    "Marketing": "money", "Utilities": "money", "Depreciation": "money",
-    "Insurance": "money", "Office & Misc": "money",
-    "Professional Fees": "money", "Bank Charges & Interest": "money",
-    "Bad Debt": "money", "Total Operating Expenses": "money",
-    "Operating Income (EBIT)": "money", "Interest Income": "money",
-    "Net Income Before Tax": "money", "Income Tax Provision": "money",
+    "Net Revenue": "money",
+    "Total COGS": "money",
+    "Gross Profit": "money",
+    "Total Operating Expenses": "money",
+    "Operating Income (EBIT)": "money",
+    "Interest Income": "money",
+    "Net Income Before Tax": "money",
+    "Income Tax Provision": "money",
     "Net Income After Tax": "money"
   },
-  "tables": {},
-  "table_types": {},
+  "tables": {
+    "revenue": [
+      {
+        "Label": "Gross Sales",
+        "Amount": 1980000
+      },
+      {
+        "Label": "Less: Returns",
+        "Amount": 28600
+      }
+    ],
+    "cost_of_goods_sold": [
+      {
+        "Label": "Opening Inventory",
+        "Amount": 648000
+      },
+      {
+        "Label": "Purchases",
+        "Amount": 1280000
+      },
+      {
+        "Label": "Freight In",
+        "Amount": 52000
+      },
+      {
+        "Label": "Less: Closing Inventory",
+        "Amount": 724000
+      }
+    ],
+    "operating_expenses": [
+      {
+        "Label": "Salaries & Wages",
+        "Amount": 190000
+      },
+      {
+        "Label": "Rent",
+        "Amount": 85500
+      },
+      {
+        "Label": "Marketing",
+        "Amount": 22400
+      },
+      {
+        "Label": "Utilities",
+        "Amount": 12100
+      },
+      {
+        "Label": "Depreciation",
+        "Amount": 10300
+      },
+      {
+        "Label": "Insurance",
+        "Amount": 7150
+      },
+      {
+        "Label": "Office & Misc",
+        "Amount": 5800
+      },
+      {
+        "Label": "Professional Fees",
+        "Amount": 18000
+      },
+      {
+        "Label": "Bank Charges & Interest",
+        "Amount": 3800
+      },
+      {
+        "Label": "Bad Debt",
+        "Amount": 4200
+      }
+    ]
+  },
+  "table_types": {
+    "revenue": {
+      "Label": "string",
+      "Amount": "money"
+    },
+    "cost_of_goods_sold": {
+      "Label": "string",
+      "Amount": "money"
+    },
+    "operating_expenses": {
+      "Label": "string",
+      "Amount": "money"
+    }
+  },
   "uncertain": [],
-  "notes": "POLICY P1: 'Less: Returns' (28600) and 'Less: Closing Inventory' (724000) are labeled POSITIVE, as printed — the document shows no parentheses or minus sign. Arithmetic reconciles only when they are subtracted (1980000 - 28600 = 1951400; 648000 + 1280000 + 52000 - 724000 = 1256000), but that sign is a downstream transform, not part of reading the value. 2-page income statement (page 2 is only a footer). All subtotals verified: revenue, COGS, opex (sum of 10 items = 359250), EBIT = 695400 - 359250, pre-tax = 336150 + 1240, tax = 21% of 337390 rounded, after-tax = 337390 - 70852. Document prints 'NET INCOME (LOSS) BEFORE TAX' / 'Est. Income Tax Provision (21%)' / 'NET INCOME (LOSS) AFTER TAX' — template uses the shorter labels."
+  "notes": "POLICY P7 (2026-08-23): a section heading followed by 3 or more label/amount lines is a TABLE. REVENUE, COST OF GOODS SOLD and OPERATING EXPENSES are tables of Label/Amount rows; each section's closing total (Net Revenue, Total COGS, Total Operating Expenses) stays a FIELD, as on the balance sheet. OTHER INCOME prints one line only and is too short to be a table, so Interest Income stays a field. Statement-level totals (Gross Profit, Operating Income (EBIT), Net Income Before/After Tax, Income Tax Provision) sit under no heading and stay fields. POLICY P1: 'Less: Returns' (28600) and 'Less: Closing Inventory' (724000) are labeled POSITIVE, as printed — the document shows no parentheses or minus sign. Arithmetic reconciles only when they are subtracted (1980000 - 28600 = 1951400; 648000 + 1280000 + 52000 - 724000 = 1256000), but that sign is a downstream transform, not part of reading the value. 2-page income statement (page 2 is only a footer). All subtotals verified: revenue, COGS, opex (sum of 10 items = 359250), EBIT = 695400 - 359250, pre-tax = 336150 + 1240, tax = 21% of 337390 rounded, after-tax = 337390 - 70852. Document prints 'NET INCOME (LOSS) BEFORE TAX' / 'Est. Income Tax Provision (21%)' / 'NET INCOME (LOSS) AFTER TAX' — template uses the shorter labels."
 }

@@ -1,0 +1,184 @@
+{
+ "key": "a2b7c22144417c02bbd23425b1371342b3e2f240c14e7ffd726491c43f0c0619",
+ "meta": {
+  "method": "extract",
+  "context": "PAYSLIP-EMP-0012-APR2024",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3314,
+  "captured_at": "2026-08-23 15:03:30",
+  "prompt_preview": "Fill in a payslip spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING PAY STUB\nLLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nEmployee: Marcus A. Thompson\nEmployee ID: EMP-0012\nTitle / Dept: Purchasing Manager – Procurement\nSSN:"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"NEXUS GLOBAL TRADING\",\n      \"source\": \"NEXUS GLOBAL TRADING PAY STUB\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Marcus A. Thompson\",\n      \"source\": \"Employee: Marcus A. Thompson\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"EMP-0012\",\n      \"source\": \"Employee ID: EMP-0012\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"Purchasing Manager – Procurement\",\n      \"source\": \"Title / Dept: Purchasing Manager – Procurement\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"***-**-4821\",\n      \"source\": \"SSN: ***-**-4821\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"April 1–30, 2024\",\n      \"source\": \"Pay Period: April 1–30, 2024\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"April 30, 2024\",\n      \"source\": \"Pay Date: April 30, 2024\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"$90,000.00\",\n      \"source\": \"Annual Salary: $90,000.00\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"$8,300.00\",\n      \"source\": \"Total $8,300.00\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"($3,117.35)\",\n      \"source\": \"Total ($3,117.35)\",\n      \"page\": 1\n    },\n    \"F13\": {\n      \"value\": \"$5,182.6\",\n      \"source\": \"$5,182.6\",\n      \"page\": 2\n    },\n    \"F14\": {\n      \"value\": \"$33,500.00\",\n      \"source\": \"YTD Gross Earnings: $33,500.00\",\n      \"page\": 2\n    },\n    \"F15\": {\n      \"value\": \"$7,508.70\",\n      \"source\": \"YTD Taxes Withheld: $7,508.70\",\n      \"page\": 2\n    }\n  },\n  \"tables\": {\n    \"Earnings\": [\n      {\n        \"cells\": {\n          \"Description\": \"Base Salary\",\n          \"Amount\": \"$7,500.00\"\n        },\n        \"source\": \"Base Salary $7,500.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Performance Bonus\",\n          \"Amount\": \"$800.00\"\n        },\n        \"source\": \"Performance Bonus $800.00\",\n        \"page\": 1\n      }\n    ],\n    \"Deductions\": [\n      {\n        \"cells\": {\n          \"Description\": \"Federal Income Tax\",\n          \"Amount\": \"($1,245.00)\"\n        },\n        \"source\": \"Federal Income Tax ($1,245.00)\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Social Security (6.2%)\",\n          \"Amount\": \"($515.00)\"\n        },\n        \"source\": \"Social Security (6.2%) ($515.00)\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Medicare (1.45%)\",\n          \"Amount\": \"($120.35)\"\n        },\n        \"source\": \"Medicare (1.45%) ($120.35)\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"NY State Income Tax\",\n          \"Amount\": \"($412.00)\"\n        },\n        \"source\": \"NY State Income Tax ($412.00)\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"NY City Tax\",\n          \"Amount\": \"($185.00)\"\n        },\n        \"source\": \"NY City Tax ($185.00)\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Health Insurance (Medical)\",\n          \"Amount\": \"($220.00)\"\n        },\n        \"source\": \"Health Insurance (Medical) ($220.00)\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"401(k) Contribution (5%)\",\n          \"Amount\": \"($375.00)\"\n        },\n        \"source\": \"401(k) Contribution (5%) ($375.00)\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Dental & Vision\",\n          \"Amount\": \"($45.00)\"\n        },\n        \"source\": \"Dental & Vision ($45.00)\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "NEXUS GLOBAL TRADING",
+     "source": "NEXUS GLOBAL TRADING PAY STUB",
+     "page": 1
+    },
+    "F2": {
+     "value": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654",
+     "page": 1
+    },
+    "F3": {
+     "value": "47-3821654",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654",
+     "page": 1
+    },
+    "F4": {
+     "value": "Marcus A. Thompson",
+     "source": "Employee: Marcus A. Thompson",
+     "page": 1
+    },
+    "F5": {
+     "value": "EMP-0012",
+     "source": "Employee ID: EMP-0012",
+     "page": 1
+    },
+    "F6": {
+     "value": "Purchasing Manager – Procurement",
+     "source": "Title / Dept: Purchasing Manager – Procurement",
+     "page": 1
+    },
+    "F7": {
+     "value": "***-**-4821",
+     "source": "SSN: ***-**-4821",
+     "page": 1
+    },
+    "F8": {
+     "value": "April 1–30, 2024",
+     "source": "Pay Period: April 1–30, 2024",
+     "page": 1
+    },
+    "F9": {
+     "value": "April 30, 2024",
+     "source": "Pay Date: April 30, 2024",
+     "page": 1
+    },
+    "F10": {
+     "value": "$90,000.00",
+     "source": "Annual Salary: $90,000.00",
+     "page": 1
+    },
+    "F11": {
+     "value": "$8,300.00",
+     "source": "Total $8,300.00",
+     "page": 1
+    },
+    "F12": {
+     "value": "($3,117.35)",
+     "source": "Total ($3,117.35)",
+     "page": 1
+    },
+    "F13": {
+     "value": "$5,182.6",
+     "source": "$5,182.6",
+     "page": 2
+    },
+    "F14": {
+     "value": "$33,500.00",
+     "source": "YTD Gross Earnings: $33,500.00",
+     "page": 2
+    },
+    "F15": {
+     "value": "$7,508.70",
+     "source": "YTD Taxes Withheld: $7,508.70",
+     "page": 2
+    }
+   },
+   "tables": {
+    "Earnings": [
+     {
+      "cells": {
+       "Description": "Base Salary",
+       "Amount": "$7,500.00"
+      },
+      "source": "Base Salary $7,500.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Performance Bonus",
+       "Amount": "$800.00"
+      },
+      "source": "Performance Bonus $800.00",
+      "page": 1
+     }
+    ],
+    "Deductions": [
+     {
+      "cells": {
+       "Description": "Federal Income Tax",
+       "Amount": "($1,245.00)"
+      },
+      "source": "Federal Income Tax ($1,245.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Social Security (6.2%)",
+       "Amount": "($515.00)"
+      },
+      "source": "Social Security (6.2%) ($515.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Medicare (1.45%)",
+       "Amount": "($120.35)"
+      },
+      "source": "Medicare (1.45%) ($120.35)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "NY State Income Tax",
+       "Amount": "($412.00)"
+      },
+      "source": "NY State Income Tax ($412.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "NY City Tax",
+       "Amount": "($185.00)"
+      },
+      "source": "NY City Tax ($185.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Health Insurance (Medical)",
+       "Amount": "($220.00)"
+      },
+      "source": "Health Insurance (Medical) ($220.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "401(k) Contribution (5%)",
+       "Amount": "($375.00)"
+      },
+      "source": "401(k) Contribution (5%) ($375.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Dental & Vision",
+       "Amount": "($45.00)"
+      },
+      "source": "Dental & Vision ($45.00)",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3314,
+  "success": true,
+  "error": ""
+ }
+}

@@ -39,6 +39,92 @@ _SYSTEM = (
 _MAX_TEXT = 12000
 
 
+# ── deterministic section detection ──────────────────────────────────────────
+#
+# "A heading followed by 3+ label/amount lines is a table" is a rule about
+# SHAPE, and shape is visible in the text. Asking the model to apply it worked
+# on some documents and not others, and flipped between runs on the same
+# document — the balance sheet obeyed it, the income statement did not, and
+# each rewording moved which one complied. That is the failure decision-log §3
+# warns about: a rule applied to a shape it cannot reliably express, failing
+# silently.
+#
+# So the sections are detected HERE, in code, and handed to the model as a list
+# it must cover. The model still decides everything else — what the columns
+# are, what the table is called, which line is a total. It no longer decides
+# whether a run of label/amount lines under a heading is a table, because that
+# question has an arithmetic answer.
+#
+# Deliberately NOT dictating the columns: an invoice's line-item block also
+# matches "heading, then rows", and it is a FIVE-column table. Naming it as a
+# section is harmless — the model already tables it correctly — but telling it
+# the columns were [Description, Amount] would break it.
+
+_AMOUNT_LINE = re.compile(
+    r"^(?P<label>.{2,70}?)\s+\(?[-$£€₹¥]?\s?\d[\d,]*(?:\.\d+)?\)?$")
+
+_MIN_SECTION_ROWS = 3
+
+
+def detect_amount_sections(doc_text_pages):
+    """[{heading, rows, labels}] for every heading followed by >= 3 lines that
+    each end in an amount. [] for a document with no such shape — most of them.
+    """
+    lines = [l.strip() for t in (doc_text_pages or [])
+             for l in str(t or "").split("\n") if l.strip()]
+    out, i = [], 0
+    while i < len(lines):
+        if not _AMOUNT_LINE.match(lines[i]):
+            i += 1
+            continue
+        j = i
+        while j < len(lines) and _AMOUNT_LINE.match(lines[j]):
+            j += 1
+        if j - i >= _MIN_SECTION_ROWS and i > 0:
+            heading = lines[i - 1]
+            # A line carrying its own value ("SSN: ***-**-3317", "PO Number:
+            # PO-2024-0018") is a data line that happens to sit above a run —
+            # the top block of a payslip or a PO, not a section heading. Taking
+            # it as one would turn a document's header fields into a table.
+            if (not _AMOUNT_LINE.match(heading) and len(heading) <= 70
+                    and not re.search(r":\s*\S", heading)):
+                out.append({
+                    "heading": heading,
+                    "rows": j - i,
+                    "labels": [_AMOUNT_LINE.match(lines[k]).group("label").strip()
+                               for k in range(i, j)],
+                })
+        i = max(j, i + 1)
+    return out
+
+
+def _sections_block(sections):
+    """The MUST-cover list appended to the inference prompt."""
+    if not sections:
+        return ""
+    p = ["",
+         "SECTIONS DETECTED IN THIS DOCUMENT (read from its text — this is not "
+         "a suggestion). Each heading below is followed by repeating "
+         "label/amount rows, so each MUST appear in \"tables\", never as a list "
+         "of separate fields:"]
+    for sec in sections:
+        shown = ", ".join(sec["labels"][:3])
+        more = ", …" if len(sec["labels"]) > 3 else ""
+        p.append(f'  - "{sec["heading"]}", followed by: {shown}{more}')
+    p.append("Give each one its own table, and then apply BOTH of these:")
+    p.append("  (a) THE SECTION TOTAL IS NOT A ROW. Where the last line under "
+             "a heading is that section's total — its label starts with "
+             "Total, Subtotal, Net or Gross, or repeats the heading — put it "
+             "in \"totals\" and EXCLUDE it from the table. A section showing "
+             "five items and a total is a table of FIVE rows, not six.")
+    p.append("  (b) The run can overshoot the section. Lines after a "
+             "section's total that state the statement's own bottom line "
+             "belong in \"totals\" too, not in the table. Judge that from the "
+             "labels — but the heading list itself is not negotiable.")
+    p.append("")
+    return "\n".join(p)
+
+
 def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
     """One LLM call. Returns the inferred template dict, or None on failure."""
     text = "\n".join(f"--- page {i} ---\n{t or ''}"
@@ -69,8 +155,8 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
         "its amount in figures and in words.\n"
         "   - amounts that sit in their own box rather than on a labelled "
         "row.\n"
-        "   But a REPEATING group of similar rows is a table (item 4), not a "
-        "list of fields — do not list its rows here.\n"
+        "   But a REPEATING group of similar rows is a table (item 4), not "
+        "a list of fields — do not list its rows here.\n"
         "4. tables — every REPEATING group of rows. For each: a name, its "
         "column headings in left-to-right order, and how many rows it has.\n"
         "   A TABLE DOES NOT NEED A PRINTED HEADING ROW. This is the most "
@@ -79,22 +165,32 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
         "that is a table — whether or not the document prints a "
         "'Description  Amount' line above it. Name the table after its "
         "heading and give it the columns [\"Description\", \"Amount\"].\n"
-        "   Worked example. This:\n"
-        "       CURRENT ASSETS\n"
-        "       Cash & Cash Equivalents      $143,803\n"
-        "       Accounts Receivable (net)    $348,200\n"
-        "       Inventory                    $612,000\n"
-        "       Total Current Assets       $1,129,003\n"
-        "   is ONE table named 'CURRENT ASSETS', columns "
-        "[\"Description\", \"Amount\"], row_count 3 — NOT three separate "
-        "fields. The closing 'Total Current Assets' line is a TOTAL "
-        "(item 5), not a row of the table.\n"
-        "   A section with only ONE or TWO such lines is too short to be a "
-        "table; leave those as fields.\n"
-        "   Every heading of this kind gets its OWN table. A balance sheet "
-        "with CURRENT ASSETS, NON-CURRENT ASSETS, CURRENT LIABILITIES, "
-        "LONG-TERM LIABILITIES and SHAREHOLDERS' EQUITY has FIVE tables, "
-        "not one and not none.\n"
+        "   Worked example — this SHAPE, whatever the document calls it:\n"
+        "       <HEADING>\n"
+        "       <name>                <amount>\n"
+        "       <name>                <amount>\n"
+        "       <name>                <amount>\n"
+        "       Total <heading>       <amount>\n"
+        "   is ONE table named after <HEADING>, with columns "
+        "[\"Description\", \"Amount\"] and row_count 3 — NOT three "
+        "separate fields. The closing 'Total …' line is a TOTAL (item 5), "
+        "not a row of the table.\n"
+        "   The heading can be anything a document groups amounts under: "
+        "CURRENT ASSETS, OPERATING EXPENSES, REVENUE, COST OF GOODS SOLD, "
+        "Earnings, Deductions, Fees. The SHAPE decides, not the wording — "
+        "apply this to every document, not to one kind of statement.\n"
+        "   COUNT THE SECTION'S LINES INCLUDING ITS CLOSING TOTAL. A "
+        "heading with two named amounts and a Total under them is THREE "
+        "lines: a table of 2 rows, plus that total. A heading with only "
+        "one or two lines and NO total is too short to be a table — "
+        "leave those as fields.\n"
+        "   Every such heading gets its OWN table, named after that "
+        "heading. A statement with five headings of this kind has FIVE "
+        "tables; one with three has THREE. Never merge them into one "
+        "table, and never return none. This applies to EVERY document "
+        "that groups amounts under headings — assets and liabilities, "
+        "revenue and expenses, earnings and deductions — not to one kind "
+        "of statement.\n"
         "5. totals — the summary values at the end (subtotal, tax, total, "
         "closing balance).\n\n"
         "Return ONLY this JSON:\n"
@@ -121,7 +217,13 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
         "before you answer.\n"
         "- Give each part of a block its own field rather than one field "
         "holding several values.\n"
+        "- NOTHING APPEARS TWICE. Every value belongs to exactly ONE of "
+        "fields, tables or totals. If a line is a row of a table in "
+        "item 4, it must NOT also be a field in item 3; if it is a "
+        "section total in item 5, it is not a table row either. A "
+        "value listed in two places is written into the sheet twice.\n"
         "- If the document has no repeating rows, return \"tables\": [].\n"
+        + _sections_block(detect_amount_sections(doc_text_pages))
     )
 
     # TEMPERATURE 0. Inference decides what the columns are CALLED, and a

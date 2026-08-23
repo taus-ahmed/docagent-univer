@@ -71,8 +71,11 @@ the product's job downstream, not part of reading it.**
 | **P3** | a name field whose printed text also carries a title — PO-2024-0018 `Authorised By:` / `Janet Wu – VP Operations` | **Full printed string**, `"Janet Wu – VP Operations"`. Per P0, gold is what that field's region prints. CHQ-001847's signature block prints `Janet Wu` alone, so its label is name-only by the same rule — the two differ because the documents differ. |
 | **P5** | an identifier printed in two forms — CHQ-001847 header `No: CHQ-001847` vs MICR `…C 001847D` | **The human-facing field form**, `"CHQ-001847"`, not the bare MICR serial. |
 | **P6** | print-security decoration around a value — CHQ-001847 `Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***` | **Full printed string including the decoration.** P0 wins over "strip the filler"; the `***`/`U.S. DOLLARS` are on the page. |
+| **P7** | a section heading followed by label/amount lines — is it a TABLE of rows or a LIST of fields? BS-2024-Q1 `CURRENT ASSETS`; IS-2024-Q4 `REVENUE`, `COST OF GOODS SOLD`, `OPERATING EXPENSES` | **A table, when the heading is followed by 3 or more label/amount lines.** Decided 2026-08-23. The first pass labelled the balance sheet as 5 tables and the income statement — the same shape — as 25 flat fields, so the same document class was measured two ways and an engine could not satisfy both. Counting rule: the section's **closing total** (`Total Current Assets`, `Net Revenue`, `Total COGS`) is a FIELD, not a row, and it counts toward the 3. A section with only ONE or TWO label/amount lines stays fields — IS-2024-Q4 `OTHER INCOME` prints one line, so `Interest Income` is a field. Statement-level totals under no heading (`GROSS PROFIT`, `TOTAL ASSETS`, `NET INCOME`) are fields. |
 
 (There is no P4: the two payslips raised one shared question, answered by P2.)
+
+P7 moved 16 of IS-2024-Q4's 25 gold fields into 3 tables. **No printed value changed** — the relabel copied values across rather than re-reading them, and asserted that the flattened before/after sets were identical. `templates/income_statement.json` was rebuilt to match, so a `missed` outcome still means "asked and not returned".
 
 Consequences for scoring: an extraction that returns the *other* candidate in
 each case scores **`near`**, not `wrong` — the scorer treats sign-only money
