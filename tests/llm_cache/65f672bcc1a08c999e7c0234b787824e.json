@@ -1,0 +1,61 @@
+{
+ "key": "65f672bcc1a08c999e7c0234b787824ed1c3cf0dcce625cf5f62bce507e76808",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2174,
+  "captured_at": "2026-08-22 17:57:13",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nBalance Sheet — Q1 2024\nAs of March 31, 2024 | Doc No: BS-2024-Q1\nCURRENT ASSETS\nCash & Cash Equivalents $143"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"balance_sheet\",\n  \"title\": \"Balance Sheet \\u2014 Q1 2024\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company City, State, Zip\",\n    \"Company EIN\",\n    \"As of Date\",\n    \"Document Number\",\n    \"Cash & Cash Equivalents\",\n    \"Accounts Receivable (net)\",\n    \"Inventory\",\n    \"Prepaid Expenses\",\n    \"Other Current Assets\",\n    \"Total Current Assets\",\n    \"Property & Equipment (gross)\",\n    \"Less: Accum. Depreciation\",\n    \"Security Deposits\",\n    \"Intangibles (net)\",\n    \"Total Non-Current Assets\",\n    \"TOTAL ASSETS\",\n    \"Accounts Payable\",\n    \"Accrued Liabilities\",\n    \"Short-term Loan \\u2014 First National Bank\",\n    \"Deferred Revenue\",\n    \"Current Portion of Long-term Debt\",\n    \"Total Current Liabilities\",\n    \"Long-term Loan \\u2014 First National Bank\",\n    \"Deferred Tax Liability\",\n    \"Total Long-Term Liabilities\",\n    \"TOTAL LIABILITIES\",\n    \"Common Stock (100 shares @ $1,000 par)\",\n    \"Retained Earnings\",\n    \"Net Income YTD Q1\",\n    \"Total Equity\",\n    \"TOTAL LIABILITIES & EQUITY\",\n    \"Prepared by\"\n  ],\n  \"tables\": [],\n  \"totals\": []\n}",
+  "parsed_json": {
+   "document_type": "balance_sheet",
+   "title": "Balance Sheet — Q1 2024",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company City, State, Zip",
+    "Company EIN",
+    "As of Date",
+    "Document Number",
+    "Cash & Cash Equivalents",
+    "Accounts Receivable (net)",
+    "Inventory",
+    "Prepaid Expenses",
+    "Other Current Assets",
+    "Total Current Assets",
+    "Property & Equipment (gross)",
+    "Less: Accum. Depreciation",
+    "Security Deposits",
+    "Intangibles (net)",
+    "Total Non-Current Assets",
+    "TOTAL ASSETS",
+    "Accounts Payable",
+    "Accrued Liabilities",
+    "Short-term Loan — First National Bank",
+    "Deferred Revenue",
+    "Current Portion of Long-term Debt",
+    "Total Current Liabilities",
+    "Long-term Loan — First National Bank",
+    "Deferred Tax Liability",
+    "Total Long-Term Liabilities",
+    "TOTAL LIABILITIES",
+    "Common Stock (100 shares @ $1,000 par)",
+    "Retained Earnings",
+    "Net Income YTD Q1",
+    "Total Equity",
+    "TOTAL LIABILITIES & EQUITY",
+    "Prepared by"
+   ],
+   "tables": [],
+   "totals": []
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2174,
+  "success": true,
+  "error": ""
+ }
+}

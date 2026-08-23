@@ -46,11 +46,13 @@ def _num(s):
         return None
 
 
-def _llm_json(orchestrator, prompt, system, images=None, text="", model=None):
+def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
+              temperature=0.1):
     """
     One Gemini call (vision-first, all images), returning (parsed_dict_or_None,
     response_or_None). 3 attempts with 2s backoff; text fallback when vision fails.
     `model` pins the Gemini tier (e.g. "gemini-2.5-flash" for accuracy-critical calls).
+    `temperature` is 0 for shape inference — see `infer_template`.
     """
     resp = None
     base_delay = 1
@@ -59,13 +61,16 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None):
         try:
             if images:
                 resp = orchestrator.llm.extract(image_b64=images, prompt=prompt,
-                                                system_instruction=system, model=model)
+                                                system_instruction=system, model=model,
+                                                temperature=temperature)
                 if (not getattr(resp, "success", False)) and text:
                     resp = orchestrator.llm.extract(text=text, prompt=prompt,
-                                                    system_instruction=system, model=model)
+                                                    system_instruction=system, model=model,
+                                                    temperature=temperature)
             elif text:
                 resp = orchestrator.llm.extract(text=text, prompt=prompt,
-                                                system_instruction=system, model=model)
+                                                system_instruction=system, model=model,
+                                                temperature=temperature)
             else:
                 return None, None
             if resp and getattr(resp, "success", False) and getattr(resp, "parsed_json", None):

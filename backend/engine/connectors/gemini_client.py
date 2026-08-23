@@ -190,7 +190,8 @@ class GeminiClient:
     # ── Vision call ───────────────────────────────────────────────────────────
 
     def _call_vision(self, prompt: str, image_b64,
-                     system_instruction: str = "", model: str = None) -> Tuple[str, int, str]:
+                     system_instruction: str = "", model: str = None,
+                     temperature: float = 0.1) -> Tuple[str, int, str]:
         """Vision extraction — text prompt + one or more page images.
         image_b64 may be a single base64 string OR a list of them (multi-page);
         each image becomes its own inlineData part so Gemini sees every page.
@@ -203,7 +204,7 @@ class GeminiClient:
         body: dict = {
             "contents": [{"parts": parts}],
             "generationConfig": {
-                "temperature":     0.1,
+                "temperature":     temperature,
                 "maxOutputTokens": 8192,
                 "responseMimeType": "application/json",
             },
@@ -295,7 +296,8 @@ class GeminiClient:
                                latency_ms=(time.time()-t0)*1000)
 
     def extract_data(self, text: str, prompt: str,
-                     system_instruction: str = "", model: str = None) -> LLMResponse:
+                     system_instruction: str = "", model: str = None,
+                     temperature: float = 0.1) -> LLMResponse:
         t0 = time.time()
         try:
             # Fold the document text into the prompt — mirrors GroqClient.extract_data.
@@ -306,7 +308,8 @@ class GeminiClient:
                 f"{prompt}\n\nDocument content:\n\n{text}" if text else prompt
             )
             raw, tok, model_used = self._call(
-                user_prompt, system_instruction, label="extract", model=model
+                user_prompt, system_instruction, label="extract", model=model,
+                temperature=temperature
             )
             return self._make_response(raw, tok, model_used, t0, "extract")
         except Exception as e:
@@ -316,11 +319,13 @@ class GeminiClient:
                                latency_ms=(time.time()-t0)*1000)
 
     def extract_data_vision(self, image_b64: str, prompt: str,
-                             system_instruction: str = "", model: str = None) -> LLMResponse:
+                             system_instruction: str = "", model: str = None,
+                             temperature: float = 0.1) -> LLMResponse:
         t0 = time.time()
         try:
             raw, tok, model_used = self._call_vision(
-                prompt, image_b64, system_instruction, model=model
+                prompt, image_b64, system_instruction, model=model,
+                temperature=temperature
             )
             return self._make_response(raw, tok, model_used, t0, "extract-vision")
         except Exception as e:

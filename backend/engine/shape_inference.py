@@ -104,8 +104,23 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
         "- If the document has no repeating rows, return \"tables\": [].\n"
     )
 
+    # TEMPERATURE 0. Inference decides what the columns are CALLED, and a
+    # near-tie between two equally correct names ("Doc No" vs "Document
+    # Number", "Company EIN" vs "Company Tax ID") resolves differently on each
+    # sample. That renamed columns between runs of the SAME document, and — via
+    # `signature()`, which hashes the field names — gave two invoices with the
+    # identical printed layout two different shapes, so a batch that should be
+    # one sheet became several.
+    #
+    # This is a floor, not a fix. Gemini offers NO reproducibility guarantee
+    # even at temperature 0: there is no seed parameter in the REST API used
+    # here, and batching and kernel scheduling make identical requests able to
+    # return different tokens. It removes the sampling contribution to the
+    # variance; the structural contribution — that "what should this column be
+    # called" has several correct answers — is untouched by any decoding
+    # setting, and needs a fixed vocabulary or a reused schema.
     parsed, resp = _llm_json(orchestrator, prompt, _SYSTEM,
-                             images=page_images, text=text)
+                             images=page_images, text=text, temperature=0)
     if not isinstance(parsed, dict):
         _log("INFER", f"{filename}: no usable template inferred")
         return None

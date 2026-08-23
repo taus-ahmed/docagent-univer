@@ -89,7 +89,7 @@ def model_returns_a_phantom_row(monkeypatch):
     from connectors.llm_router import LLMRouter
 
     def extract(self, text="", image_b64="", prompt="", system_instruction="",
-                model=None):
+                model=None, **kw):        # **kw: tolerate router kwargs (temperature)
         return LLMResponse(raw_text=json.dumps(RESPONSE), parsed_json=RESPONSE,
                            model_used="stub", tokens_used=0, success=True)
 

@@ -1,0 +1,59 @@
+{
+ "key": "0782d1afb7ba2205c2caf0ec94ec8e6e2240780155b0fdde8847d1ec8def515f",
+ "meta": {
+  "method": "extract",
+  "context": "IS-2024-Q4",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2031,
+  "captured_at": "2026-08-22 17:57:32",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nIncome Statement — Q4 2024\nQuarter Ended December 31, 2024 | Doc No: IS-2024-Q4\nREVENUE\nGross Sales $1,980,00"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"income_statement\",\n  \"title\": \"Income Statement — Q4 2024\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Street Address\",\n    \"Company City, State, Zip\",\n    \"Company EIN\",\n    \"Period\",\n    \"Document Number\",\n    \"Gross Sales\",\n    \"Less: Returns\",\n    \"Net Revenue\",\n    \"Opening Inventory\",\n    \"Purchases\",\n    \"Freight In\",\n    \"Less: Closing Inventory\",\n    \"Total COGS\",\n    \"GROSS PROFIT\",\n    \"Salaries & Wages\",\n    \"Rent\",\n    \"Marketing\",\n    \"Utilities\",\n    \"Depreciation\",\n    \"Insurance\",\n    \"Office & Misc\",\n    \"Professional Fees\",\n    \"Bank Charges & Interest\",\n    \"Bad Debt\",\n    \"Total Operating Expenses\",\n    \"OPERATING INCOME (EBIT)\",\n    \"Interest Income\",\n    \"NET INCOME (LOSS) BEFORE TAX\",\n    \"Est. Income Tax Provision (21%)\",\n    \"NET INCOME (LOSS) AFTER TAX\",\n    \"Prepared by\"\n  ],\n  \"tables\": [],\n  \"totals\": []\n}",
+  "parsed_json": {
+   "document_type": "income_statement",
+   "title": "Income Statement — Q4 2024",
+   "fields": [
+    "Company Name",
+    "Company Street Address",
+    "Company City, State, Zip",
+    "Company EIN",
+    "Period",
+    "Document Number",
+    "Gross Sales",
+    "Less: Returns",
+    "Net Revenue",
+    "Opening Inventory",
+    "Purchases",
+    "Freight In",
+    "Less: Closing Inventory",
+    "Total COGS",
+    "GROSS PROFIT",
+    "Salaries & Wages",
+    "Rent",
+    "Marketing",
+    "Utilities",
+    "Depreciation",
+    "Insurance",
+    "Office & Misc",
+    "Professional Fees",
+    "Bank Charges & Interest",
+    "Bad Debt",
+    "Total Operating Expenses",
+    "OPERATING INCOME (EBIT)",
+    "Interest Income",
+    "NET INCOME (LOSS) BEFORE TAX",
+    "Est. Income Tax Provision (21%)",
+    "NET INCOME (LOSS) AFTER TAX",
+    "Prepared by"
+   ],
+   "tables": [],
+   "totals": []
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2031,
+  "success": true,
+  "error": ""
+ }
+}

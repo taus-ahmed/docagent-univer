@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-22 17:48:06
+# Accuracy report — 2026-08-22 17:56:56
 
-- git: `09f16dd`  mode: **replay**  repeat: 1
+- git: `e446ba8`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall

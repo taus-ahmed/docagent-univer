@@ -1,0 +1,64 @@
+{
+ "key": "cd5426a1df47eec345a0f5aea998dc13ebe7be58f7a829755696662c4a34f068",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1802,
+  "captured_at": "2026-08-22 17:57:22",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC INVOICE\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nBill To: Invoice: INV-2024-0031\nApex Industrial Supplies Inc. Date: January 15, 2024\n5"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"sales_invoice\",\n  \"title\": \"Invoice\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company Phone\",\n    \"Company Tax ID\",\n    \"Bill To Company\",\n    \"Bill To Address\",\n    \"Bill To Contact Person\",\n    \"Bill To Contact Email\",\n    \"Invoice Number\",\n    \"Invoice Date\",\n    \"Due Date\",\n    \"PO Reference\",\n    \"Payment Terms\",\n    \"Status\",\n    \"Payment Instructions Bank Name\",\n    \"Payment Instructions ABA\",\n    \"Payment Instructions Account Number\",\n    \"Payment Instructions Cheque Payable To\",\n    \"Notes Payment Received\",\n    \"Notes Reference\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Line Items\",\n      \"columns\": [\n        \"Description\",\n        \"Quantity\",\n        \"Unit\",\n        \"Unit Price\",\n        \"Amount\"\n      ],\n      \"row_count\": 4\n    }\n  ],\n  \"totals\": [\n    \"Subtotal\",\n    \"Shipping & Handling\",\n    \"Sales Tax\",\n    \"TOTAL DUE\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "sales_invoice",
+   "title": "Invoice",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company Phone",
+    "Company Tax ID",
+    "Bill To Company",
+    "Bill To Address",
+    "Bill To Contact Person",
+    "Bill To Contact Email",
+    "Invoice Number",
+    "Invoice Date",
+    "Due Date",
+    "PO Reference",
+    "Payment Terms",
+    "Status",
+    "Payment Instructions Bank Name",
+    "Payment Instructions ABA",
+    "Payment Instructions Account Number",
+    "Payment Instructions Cheque Payable To",
+    "Notes Payment Received",
+    "Notes Reference"
+   ],
+   "tables": [
+    {
+     "name": "Line Items",
+     "columns": [
+      "Description",
+      "Quantity",
+      "Unit",
+      "Unit Price",
+      "Amount"
+     ],
+     "row_count": 4
+    }
+   ],
+   "totals": [
+    "Subtotal",
+    "Shipping & Handling",
+    "Sales Tax",
+    "TOTAL DUE"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1802,
+  "success": true,
+  "error": ""
+ }
+}

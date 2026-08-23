@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-22 17:47:40",
- "git_commit": "09f16dd",
+ "run_id": "2026-08-22 17:57:50",
+ "git_commit": "e446ba8",
  "config": {
-  "mode": "replay",
+  "mode": "record",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 20,
-  "recorded": 0,
+  "hits": 7,
+  "recorded": 13,
   "live": 0,
   "misses": 0
  },
@@ -5363,7 +5363,7 @@
      "Subtotal",
      "Shipping & Handling",
      "Sales Tax",
-     "Total Due"
+     "TOTAL DUE"
     ]
    },
    "template": "invoice.json",
@@ -8371,14 +8371,14 @@
    "document_type": "income_statement",
    "inferred_template": {
     "document_type": "income_statement",
-    "title": "Income Statement - Q4 2024",
+    "title": "Income Statement — Q4 2024",
     "fields": [
      "Company Name",
      "Company Street Address",
      "Company City, State, Zip",
      "Company EIN",
      "Period",
-     "Doc No",
+     "Document Number",
      "Gross Sales",
      "Less: Returns",
      "Net Revenue",
@@ -8427,7 +8427,7 @@
      "Company City, State, Zip": "New York, NY 10019",
      "Company EIN": "47-3821654",
      "Period": "Q4 2024",
-     "Doc No": "IS-2024-Q4",
+     "Document Number": "IS-2024-Q4",
      "Gross Sales": "$1,980,000",
      "Less: Returns": "$28,600",
      "Net Revenue": "$1,951,400",
@@ -8681,7 +8681,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Doc No": {
+     "Document Number": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "IS-2024-Q4",
@@ -8943,7 +8943,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Doc No": {
+     "Document Number": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "IS-2024-Q4",
@@ -9203,7 +9203,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Doc No": {
+     "Document Number": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "IS-2024-Q4",
@@ -10693,12 +10693,12 @@
      "Company EIN",
      "Employee Name",
      "Employee ID",
-     "Title / Dept",
-     "SSN",
+     "Employee Title / Dept",
+     "Employee SSN",
      "Pay Period",
      "Pay Date",
      "Annual Salary",
-     "NET PAY"
+     "Net Pay Amount"
     ],
     "tables": [
      {
@@ -10741,7 +10741,7 @@
      "Company EIN": "47-3821654",
      "Employee Name": "Marcus A. Thompson",
      "Employee ID": "EMP-0012",
-     "Title / Dept": "Purchasing Manager – Procurement",
+     "Employee Title / Dept": "Purchasing Manager – Procurement",
      "SSN": "***-**-4821",
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
@@ -10848,7 +10848,7 @@
       "actual": "Purchasing Manager – Procurement",
       "type": "string",
       "in_gold_schema": true,
-      "renamed_to": "Title / Dept"
+      "renamed_to": "Employee Title / Dept"
      },
      "SSN": {
       "outcome": "correct",
@@ -11285,14 +11285,15 @@
       "actual": "Purchasing Manager – Procurement",
       "type": "string",
       "in_gold_schema": true,
-      "renamed_to": "Title / Dept"
+      "renamed_to": "Employee Title / Dept"
      },
      "SSN": {
-      "outcome": "correct",
+      "outcome": "renamed",
       "expected": "***-**-4821",
       "actual": "***-**-4821",
       "type": "string",
-      "in_gold_schema": true
+      "in_gold_schema": true,
+      "renamed_to": "Employee SSN"
      },
      "Pay Period": {
       "outcome": "correct",
@@ -11330,11 +11331,12 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "correct",
+      "outcome": "renamed",
       "expected": 5182.65,
       "actual": "$5,182.65",
       "type": "money",
-      "in_gold_schema": true
+      "in_gold_schema": true,
+      "renamed_to": "Net Pay Amount"
      },
      "YTD Gross Earnings": {
       "outcome": "correct",
@@ -11676,18 +11678,18 @@
     },
     "counts": {
      "missed": 3,
-     "correct": 29,
-     "renamed": 1,
+     "correct": 27,
+     "renamed": 3,
      "hallucinated": 7
     },
-    "renamed": 1,
+    "renamed": 3,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 4,
      "out_of_schema": 3
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8787878787878788,
+    "accuracy": 0.8181818181818182,
     "hallucination_rate": 0.1891891891891892,
     "invention_rate": 0.0
    },
@@ -11722,7 +11724,7 @@
       "actual": "Purchasing Manager – Procurement",
       "type": "string",
       "in_gold_schema": true,
-      "renamed_to": "Title / Dept"
+      "renamed_to": "Employee Title / Dept"
      },
      "SSN": {
       "outcome": "correct",
@@ -16879,17 +16881,17 @@
  "summary_raw": {
   "overall": {
    "counts": {
-    "correct": 295,
+    "correct": 293,
     "hallucinated": 115,
     "missed": 64,
-    "renamed": 19,
+    "renamed": 21,
     "empty_ok": 12
    },
    "gold_valued": 378,
-   "accuracy": 0.7804232804232805,
+   "accuracy": 0.7751322751322751,
    "near_rate": 0.0,
-   "renamed": 19,
-   "rename_rate": 0.05026455026455026,
+   "renamed": 21,
+   "rename_rate": 0.05555555555555555,
    "hallucinated": 115,
    "hallucination_rate": 0.2680652680652681,
    "hallucinated_ungrounded": 0,
@@ -17005,15 +17007,15 @@
    "payslip": {
     "counts": {
      "missed": 4,
-     "correct": 61,
-     "renamed": 5,
+     "correct": 59,
+     "renamed": 7,
      "hallucinated": 10
     },
     "gold_valued": 70,
-    "accuracy": 0.8714285714285714,
+    "accuracy": 0.8428571428571429,
     "near_rate": 0.0,
-    "renamed": 5,
-    "rename_rate": 0.07142857142857142,
+    "renamed": 7,
+    "rename_rate": 0.1,
     "hallucinated": 10,
     "hallucination_rate": 0.13157894736842105,
     "hallucinated_ungrounded": 0,
@@ -17087,17 +17089,17 @@
    },
    "money": {
     "counts": {
-     "correct": 125,
+     "correct": 124,
      "missed": 27,
-     "renamed": 9,
+     "renamed": 10,
      "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.7763975155279503,
+    "accuracy": 0.7701863354037267,
     "near_rate": 0.0,
-    "renamed": 9,
-    "rename_rate": 0.055900621118012424,
+    "renamed": 10,
+    "rename_rate": 0.062111801242236024,
     "hallucinated": 2,
     "hallucination_rate": 0.014705882352941176,
     "hallucinated_ungrounded": 0,
@@ -17130,14 +17132,14 @@
     "counts": {
      "hallucinated": 113,
      "missed": 30,
-     "correct": 135,
-     "renamed": 10
+     "correct": 134,
+     "renamed": 11
     },
     "gold_valued": 175,
-    "accuracy": 0.7714285714285715,
+    "accuracy": 0.7657142857142857,
     "near_rate": 0.0,
-    "renamed": 10,
-    "rename_rate": 0.05714285714285714,
+    "renamed": 11,
+    "rename_rate": 0.06285714285714286,
     "hallucinated": 113,
     "hallucination_rate": 0.437984496124031,
     "hallucinated_ungrounded": 0,
@@ -17458,6 +17460,19 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-22 17:06:18"
+ "diff": [
+  {
+   "key": "IS-2024-Q4 :: Doc No",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Document Number",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-08-22 17:47:40"
 }

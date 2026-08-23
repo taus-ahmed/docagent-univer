@@ -41,18 +41,30 @@ def _img_sig(image_b64: Any) -> list:
     return [hashlib.sha256(str(i).encode("utf-8")).hexdigest()[:16] for i in imgs]
 
 
+#: The router's default sampling temperature. A call at this temperature keys
+#: exactly as it did before temperature was threaded through, so the committed
+#: cache stays valid; a call at any other temperature is a genuinely different
+#: request and gets its own key rather than silently colliding.
+DEFAULT_TEMPERATURE = 0.1
+
+
 def request_key(method: str, *, text: str = "", image_b64: Any = "",
                 prompt: str = "", system_instruction: str = "",
-                model: Optional[str] = None) -> str:
-    payload = json.dumps({
+                model: Optional[str] = None,
+                temperature: float = DEFAULT_TEMPERATURE) -> str:
+    payload = {
         "method": method,
         "text": text or "",
         "prompt": prompt or "",
         "system_instruction": system_instruction or "",
         "model": model or "",
         "images": _img_sig(image_b64),
-    }, sort_keys=True, ensure_ascii=False)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    }
+    if temperature != DEFAULT_TEMPERATURE:
+        payload["temperature"] = temperature
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
 
 
 class LLMCache:
@@ -123,7 +135,9 @@ class LLMCache:
                           image_b64=kwargs.get("image_b64", ""),
                           prompt=kwargs.get("prompt", ""),
                           system_instruction=kwargs.get("system_instruction", ""),
-                          model=kwargs.get("model"))
+                          model=kwargs.get("model"),
+                          temperature=kwargs.get("temperature",
+                                                 DEFAULT_TEMPERATURE))
         # 'live' deliberately does NOT consult the cache. Stability runs exist
         # to observe the model's nondeterminism; serving them a cached answer
         # would report every field as stable no matter how much it varies.
@@ -167,10 +181,12 @@ class LLMCache:
         cache = self
 
         def extract(router, text: str = "", image_b64="", prompt: str = "",
-                    system_instruction: str = "", model: str = None):
+                    system_instruction: str = "", model: str = None,
+                    temperature: float = DEFAULT_TEMPERATURE):
             return cache._dispatch("extract", cache._orig["extract"], router, {
                 "text": text, "image_b64": image_b64, "prompt": prompt,
-                "system_instruction": system_instruction, "model": model})
+                "system_instruction": system_instruction, "model": model,
+                "temperature": temperature})
 
         def classify(router, text: str = "", image_b64: str = "",
                      prompt: str = ""):

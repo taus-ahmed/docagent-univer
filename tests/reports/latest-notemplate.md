@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-22 17:47:40
+# Accuracy report — 2026-08-22 17:57:50
 
-- git: `09f16dd`  mode: **replay**  repeat: 1
+- git: `e446ba8`  mode: **record**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -8,7 +8,7 @@
 | metric | value |
 |---|---|
 | **accuracy (correct / gold-valued)** | **86.5%** |
-| **accuracy RAW (all adapter widenings off)** | **78.0%** |
+| **accuracy RAW (all adapter widenings off)** | **77.5%** |
 | **accuracy CONTENT (container-blind)** | **94.2%** |
 | **structure FIDELITY (gold tables returned as tables)** | **64.3%** (9/14; 7 with exact row count) |
 | **hallucination rate (hallucinated / extracted)** | **21.0%** |
@@ -54,7 +54,7 @@
 | INV-2024-0047 | sales_invoice | 100.0% | 97.4% | 11 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 88.0% | 7 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
 | PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 86.5% | 3 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
-| PAYSLIP-EMP-0012-APR2024 | payslip | 87.9% | 87.9% | 7 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PAYSLIP-EMP-0012-APR2024 | payslip | 87.9% | 81.8% | 7 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PO-2024-0018 | purchase_order | 96.8% | 45.2% | 10 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
 | STMT-2024-01 | bank_statement | 100.0% | 95.7% | 4 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
 
@@ -169,7 +169,7 @@
 | IS-2024-Q4 | Company City, State, Zip | hallucinated (misplaced) | None | New York, NY 10019 |
 | IS-2024-Q4 | Company EIN | hallucinated (misplaced) | None | 47-3821654 |
 | IS-2024-Q4 | Period | hallucinated (misplaced) | None | Q4 2024 |
-| IS-2024-Q4 | Doc No | hallucinated (misplaced) | None | IS-2024-Q4 |
+| IS-2024-Q4 | Document Number | hallucinated (misplaced) | None | IS-2024-Q4 |
 | IS-2024-Q4 | Prepared by | hallucinated (misplaced) | None | Meridian & Associates CPA |
 | PAYSLIP-EMP-0007-APR2024 | Employer Name | missed | Nexus Global Trading LLC | None |
 | PAYSLIP-EMP-0007-APR2024 | Title / Department | renamed | VP Operations – Executive | VP Operations – Executive |
@@ -202,3 +202,8 @@
 | STMT-2024-01 | ABA Number | hallucinated (misplaced) | None | 021000021 |
 | STMT-2024-01 | Member FDIC | hallucinated (misplaced) | None | Member FDIC |
 | STMT-2024-01 | EIN | hallucinated (misplaced) | None | 47-3821654 |
+
+## Changes vs previous run
+
+- IS-2024-Q4 :: Doc No: hallucinated -> None
+- IS-2024-Q4 :: Document Number: None -> hallucinated
