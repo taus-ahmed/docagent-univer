@@ -327,51 +327,81 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 `/api/export/perfile`, both openpyxl directly — never the engine's
 `excel_writer.py`.
 
-### Measured limits (from `tests/reports/latest*.json` at `ef3b34d`, Phase 8)
+### Measured limits (from `tests/reports/latest*.json` at `7359f12`, Phase 8)
 
 Every run reports **three** accuracy numbers, because one number was hiding two
 different failures. Read all three:
 
 | | templated | no-template |
 |---|---|---|
-| **accuracy** (container-aware headline) | **97.9%** | **86.8%** |
-| **content** (container-blind: got the fact, wherever it landed) | 96.7% | **95.0%** |
-| **structure fidelity** (gold tables returned as tables) | **100%** (14/14) | **64.3%** (9/14) |
-| accuracy RAW (all adapter widenings off) | 49.2% | 77.5% |
-| hallucination rate | **0%** | 26.3% |
+| **accuracy** (container-aware headline) | **97.9%** | **96.6%** |
+| **content** (container-blind: got the fact, wherever it landed) | 96.7% | 94.6% |
+| **structure fidelity** (gold tables returned as tables) | **100%** (14/14) | **100%** (14/14) |
+| accuracy RAW (all adapter widenings off) | 49.2% | 83.3% |
+| hallucination rate | **0%** | 21.5% |
 | ├ invented (value nowhere in the PDF) | 0 | **0** |
-| ├ misfiled (real content in a slot gold says is empty) | 0 | **4** |
-| └ out-of-schema (real content, name gold lacks — *not* a defect) | 0 | 115 |
-| **defect rate** (invented + misfiled) | **0%** | **0.9%** |
-| renamed (right value, different field name) | 0 | 5 |
-| cells at a confident level that were hallucinations | 0 / 369 `high` | 84 / 409 `grounded` |
-| fields varying across 3 live repeats | **0** | **1** (was 40) |
-| balance sheet `BS-2024-Q1` | 100% | 17.4% headline / **100% content** / 0% structure |
+| ├ misfiled (real content in a slot gold says is empty) | 0 | **0** |
+| └ out-of-schema (real content, name gold lacks — *not* a defect) | 0 | 102 |
+| **defect rate** (invented + misfiled) | **0%** | **0%** |
+| renamed (right value, different field name) | 0 | 6 |
+| cells at a confident level that were hallucinations | 0 / 369 `high` | 64 / 426 `grounded` |
+| fields varying across 3 live repeats | **0** | **1** |
 
 What these say:
 
-- **No-template reads pages nearly as well as templated** (95.0% vs 96.7%
-  content) **and structures them far worse** (64% vs 100%). The headline gap
-  was mostly the structuring failure being charged to reading.
-- **Nothing is invented.** Across 10 documents the engine produces no value
-  that is absent from the source. The 26.3% "hallucination rate" is 115
-  out-of-schema names — real page content that gold has no field for, which is
-  what inference is *for* — plus 4 genuine misfilings, all of them one bug:
-  `PAYSLIP-EMP-0012`'s "Total" summary line returned as a data row.
-- **`BS-2024-Q1` extracts perfectly.** Its content score is 100%; its headline
-  is 17.4% purely because inference returns 34 flat fields where gold names 5
-  tables. Decision-log §6 recorded this as an outstanding regression; the
-  reading half is closed, the structuring half is not. The "one genuine
-  extraction error" on that document turned out to be an adapter bug (see
-  `ef3b34d`) — the engine always had it right.
-- **Naming instability is largely gone** (40 → 1 across 3 live repeats, from
-  `temperature=0`). The one survivor is a value-granularity difference
-  ("1.5%" vs "1.5% monthly interest"), not a schema rename.
+- **Nothing is invented and nothing is misfiled.** Across 10 documents the
+  engine produces no value absent from the source, and none in a slot gold says
+  is empty. The 21.5% "hallucination rate" is entirely out-of-schema names —
+  real page content that gold has no field for, which is what inference is
+  *for*.
+- **Content is the number that lags now**, and it lags on naming, not reading:
+  the gap is renames plus `CHQ-001847`, where inference proposes no numeric
+  `Amount` field and splits the payer/payee blocks wrongly. That is the case a
+  canonical vocabulary would address.
+- **Structure is fixed** — see below for why it was broken, and for the one
+  labelling question it left open.
 
-Still open, and deliberately not attempted in Phase 8: a canonical field
-vocabulary per document type, and per-client schema persistence. Structure
-fidelity — inference describing a balance sheet as flat fields instead of
-tables — is the largest remaining no-template gap.
+Still open, and deliberately not attempted: a canonical field vocabulary per
+document type, and per-client schema persistence.
+
+### Why a table needs no printed heading row (Phase 8)
+
+Structure fidelity sat at 9/14 with all five missing tables on `BS-2024-Q1`.
+The cause was not the balance sheet. The model's operative rule was **"a table
+is a group with a printed column-header row"** — the payslip prints
+`Description  Amount`, and so do the invoice, PO, statement and expense report,
+which is why those were always 100%. The balance sheet prints `CURRENT ASSETS`
+and then bare label/amount lines, so the model read them as a block of fields,
+which is what the prompt's *fields* section explicitly asks for.
+
+It is a document **class**: of 60 fixture PDFs, **10** are multi-section
+label/amount statements with no header row — 5 balance sheets and 5 income
+statements. `infer_template`'s table rule is now operational rather than
+exhortative (a heading + 3 or more name/amount lines IS a table, worked
+example, closing `Total X` routed to totals, 1–2 line sections left as fields).
+
+⚠ **Gold labels that class two ways, and this was left alone.** `IS-2024-Q4`
+has the identical shape (`REVENUE` / `COST OF GOODS SOLD` / `OPERATING
+EXPENSES`, no header rows) and gold gives it **25 fields and zero tables**,
+where `BS-2024-Q1` gets **5 tables and 8 fields**. Flat fields for a balance
+sheet was the same answer gold demands for an income statement. Whether an
+income statement's `OPERATING EXPENSES` is a table is a labelling judgement,
+not an engineering one (decision-log §7) — it is the repo owner's call. The
+income statement is unaffected by the fix and still scores 100%.
+
+### Stability is measured on the exported cell, not the model's string
+
+`coerce_cell_value` (in `extract.py`, used by `_write_slot_excel`) is the one
+definition of what reaches a spreadsheet cell: money and numbers become
+numbers, because the currency symbol, thousands separators and accounting
+parentheses are notation, not content. The harness's `--repeat` check compares
+with it, so "stable" means **two runs put the same thing in the cell**.
+
+Comparing raw model strings reported 9 `BS-2024-Q1` totals as unstable —
+`"$1,365,503"` one run, `"1,365,503"` the next — while the exported workbook
+was identical either way. That measures the model's formatting, not its
+extraction. A genuine text difference still shows, and so does a field present
+in one run and absent in another.
 
 ---
 
