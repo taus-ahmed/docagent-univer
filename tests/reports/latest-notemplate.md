@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-22 17:57:50
+# Accuracy report — 2026-08-22 18:08:16
 
-- git: `e446ba8`  mode: **record**  repeat: 1
+- git: `838a113`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -202,8 +202,3 @@
 | STMT-2024-01 | ABA Number | hallucinated (misplaced) | None | 021000021 |
 | STMT-2024-01 | Member FDIC | hallucinated (misplaced) | None | Member FDIC |
 | STMT-2024-01 | EIN | hallucinated (misplaced) | None | 47-3821654 |
-
-## Changes vs previous run
-
-- IS-2024-Q4 :: Doc No: hallucinated -> None
-- IS-2024-Q4 :: Document Number: None -> hallucinated

@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-22 17:57:50",
- "git_commit": "e446ba8",
+ "run_id": "2026-08-22 18:08:16",
+ "git_commit": "838a113",
  "config": {
-  "mode": "record",
+  "mode": "replay",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 7,
-  "recorded": 13,
+  "hits": 20,
+  "recorded": 0,
   "live": 0,
   "misses": 0
  },
@@ -17460,19 +17460,6 @@
   }
  },
  "unstable_total": 0,
- "diff": [
-  {
-   "key": "IS-2024-Q4 :: Doc No",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: Document Number",
-   "before": null,
-   "after": "hallucinated",
-   "regression": false
-  }
- ],
- "diff_against": "2026-08-22 17:47:40"
+ "diff": [],
+ "diff_against": "2026-08-22 17:57:50"
 }

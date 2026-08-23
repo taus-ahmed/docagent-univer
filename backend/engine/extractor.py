@@ -131,6 +131,72 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images):
     }
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# BATCH SCHEMA REUSE  (Phase 8)
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Inference names the columns, and naming is the one thing it does not do the
+# same way twice: on the SAME document, run to run, "Doc No" became "Document
+# Number" and "Company EIN" became "Company Tax ID". `signature()` hashes those
+# names, and the exporter groups sheets by signature — so fifty invoices with
+# the identical printed layout produced up to fifty sheets, each with slightly
+# different column headings, instead of one sheet with fifty rows. That is
+# worse than any accuracy number: it defeats the point of batch extraction.
+#
+# The fix is not to make inference more stable. It is to run it ONCE per
+# document kind per job and reuse the answer, which drives within-batch
+# variance to exactly zero — the schema is not re-derived, so it cannot differ.
+#
+# Two things this must not break:
+#
+#   MIXED BATCHES. A job holding an invoice, a statement and a cheque must
+#   still produce three shapes. Reuse is keyed by document type, decided by
+#   `classify_by_hints` — keyword pre-screening, no LLM call, no cost — so a
+#   document only inherits a schema built for its own kind.
+#
+#   TWO LAYOUTS OF THE SAME TYPE. Two invoice designs in one job both classify
+#   as sales_invoice, and the second would inherit a schema with the wrong
+#   fields. So a reused schema has to EARN it: the document is extracted with
+#   it, and if it fills too few of the slots the result is thrown away and the
+#   document gets its own inference. A reused schema that fits costs one LLM
+#   call instead of two; one that does not costs three, and is rare.
+
+#: A reused schema must fill at least this share of its field slots, or it is
+#: judged not to fit this document and inference runs for it after all. Set
+#: from the observed fill rates: a fitting schema fills nearly all of them, a
+#: mismatched one fills almost none, and there is a wide gap in between.
+_REUSE_MIN_FILL = 0.4
+
+
+def _hint_type(doc_text):
+    """Cheap document-type guess — keyword pre-screening, NO LLM call.
+
+    Only ever used to decide which already-inferred schema to OFFER a document.
+    A wrong guess costs an extra inference call (the fill-rate check rejects
+    the schema); it can never put a value in the wrong place, because the
+    schema still has to fit before anything is kept.
+    """
+    try:
+        from app.api.routes.extract import _classify_by_hints
+        return _classify_by_hints(doc_text or "") or ""
+    except Exception:
+        return ""
+
+
+def _fill_rate(results):
+    """Share of the template's field slots that came back with a value."""
+    for r in results or []:
+        ed = getattr(r, "extracted_data", None)
+        if not isinstance(ed, dict):
+            continue
+        slots = ((ed.get("slot_map") or {}).get("fields") or [])
+        if not slots:
+            continue
+        filled = len(ed.get("extracted_fields") or {})
+        return filled / len(slots)
+    return 0.0
+
+
 # Document types routed to slot-directed extraction. Phase 1 scoped this to
 # bank_statement so the change could be measured in isolation; Phase 2c widens
 # it to every document type, because slot addressing by (row label, column
@@ -139,18 +205,25 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images):
 _SLOT_DOC_TYPES = None
 
 
-def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
+def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
+                   batch_schemas=None):
     """
     Single entry point. Returns list[DocumentExtractionResult].
 
     Two outcomes, decided at the start:
 
-      no template (or a template with no slots) -> _run_unguided_extraction
+      no template (or a template with no slots) -> infer one, then the same path
       a template with a usable shape            -> slot-directed extraction
 
     The shape says how many columns the template needs; slot addressing serves
     any number, so the only way to fail is a template with nowhere to put
     anything — and that fails loudly, with a message saying what to change.
+
+    `batch_schemas` is a caller-owned dict, one per JOB, that lets documents of
+    the same kind share a single inferred schema instead of each inferring its
+    own differently-named copy. Pass None (the default) to infer per document,
+    which is what a single-document call wants. See the BATCH SCHEMA REUSE
+    block above.
     """
     from core.preprocessor import preprocess_file
 
@@ -197,6 +270,35 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
             ctx["template_data"] = None
 
     if not template_data:
+        # BATCH REUSE — a schema already inferred for this document's kind,
+        # earlier in this same job. See the block comment above.
+        reused = None
+        hint = _hint_type(doc_text) if batch_schemas is not None else ""
+        if hint and hint in (batch_schemas or {}):
+            reused = batch_schemas[hint]
+            _log("INFER", f"{file_path.name}: reusing the {hint} schema "
+                          f"inferred earlier in this job "
+                          f"(shape {reused.get('shape_signature')}) "
+                          f"— no inference call")
+            trial = dict(ctx)
+            trial["template_data"] = reused
+            trial["default_doc_type"] = reused.get("doc_type", default_doc_type)
+            from slot_extractor import run_slot_extraction
+            results = run_slot_extraction(**trial)
+            rate = _fill_rate(results)
+            if rate >= _REUSE_MIN_FILL:
+                _log("INFER", f"{file_path.name}: reused schema fits "
+                              f"({rate:.0%} of slots filled)")
+                return results
+            # It did not fit — a different layout of the same document type.
+            # Throw the result away and infer for this document. Nothing
+            # partial is kept: a half-filled sheet from the wrong schema is
+            # worse than the cost of one more call.
+            _log("INFER", f"{file_path.name}: reused schema does NOT fit "
+                          f"({rate:.0%} of slots filled, need "
+                          f"{_REUSE_MIN_FILL:.0%}) — inferring for this "
+                          f"document instead")
+
         template_data = _infer_template_data(orchestrator, file_path,
                                              doc_text_pages, page_images)
         if template_data is None:
@@ -207,6 +309,15 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None):
         ctx["template_data"] = template_data
         default_doc_type = template_data.get("doc_type", default_doc_type)
         ctx["default_doc_type"] = default_doc_type
+        # Offer this schema to the rest of the job. Keyed by the type the
+        # model itself decided, so the next document of this kind reuses it
+        # verbatim rather than re-deriving a differently-named copy.
+        if batch_schemas is not None:
+            key = template_data.get("doc_type") or hint
+            if key and key not in batch_schemas:
+                batch_schemas[key] = template_data
+                _log("INFER", f"{file_path.name}: schema for '{key}' cached "
+                              f"for the rest of this job")
 
     # ── PATH SELECTION BY ARITHMETIC (Phase 2b) ──
     # How many columns does this template need, and can the path serve that

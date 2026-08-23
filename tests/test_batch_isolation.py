@@ -337,3 +337,116 @@ class TestMixedBatchNoTemplate:
             assert len(present) <= 1, (
                 f"sheet {sheet.title!r} contains more than one document's "
                 f"identifier: {present}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BATCH SCHEMA REUSE (Phase 8)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _extract_batch(stems, batch_schemas, cache=None):
+    """Run several documents through one job's schema cache, as the job thread
+    does. Returns {stem: results} and the captured log."""
+    from app.api.routes.extract import _extract_with_template
+    from orchestrator import Orchestrator
+    bs.chdir_backend()
+    out, buf = {}, io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        orch = Orchestrator(client_schema_path=_schema_path())
+        for stem in stems:
+            if cache is not None:
+                cache.context = stem
+            out[stem] = _extract_with_template(
+                orch, bs.PDF_DIR / f"{stem}.pdf", None,
+                batch_schemas=batch_schemas)
+    return out, buf.getvalue()
+
+
+class TestBatchSchemaReuse:
+    """Inference names the columns and does not name them the same way twice.
+    `signature()` hashes those names and the exporter groups sheets by it, so
+    fifty invoices of one design produced up to fifty sheets with slightly
+    different headings instead of one sheet with fifty rows. Inferring once per
+    document KIND per job makes within-batch variance exactly zero — the schema
+    is not re-derived, so it cannot differ."""
+
+    SIBS = ["STMT-2024-01", "STMT-2024-02", "STMT-2024-03"]
+
+    @pytest.fixture(scope="class")
+    @classmethod
+    def batch(cls):
+        cache = LLMCache(mode="replay")
+        cache.install()
+        try:
+            schemas = {}
+            results, log = _extract_batch(cls.SIBS, schemas, cache)
+            yield results, log, schemas
+        finally:
+            cache.uninstall()
+
+    def test_same_kind_documents_share_one_shape(self, batch):
+        """The headline defect: same layout, different sheets."""
+        results, _log, _s = batch
+        sigs = {s: (results[s][0].extracted_data or {}).get("shape_signature")
+                for s in self.SIBS}
+        assert all(sigs.values()), sigs
+        assert len(set(sigs.values())) == 1, (
+            f"documents of one kind must share ONE shape, got {sigs}")
+
+    def test_the_schema_is_inferred_once_not_per_document(self, batch):
+        _r, log, _s = batch
+        assert log.count("schema for") == 1, log
+        assert log.count("no inference call") == len(self.SIBS) - 1, log
+
+    def test_the_cache_holds_one_entry_for_one_kind(self, batch):
+        _r, _log, schemas = batch
+        assert list(schemas) == ["bank_statement"], schemas
+
+    def test_reuse_does_not_leak_values_between_documents(self, batch):
+        """Sharing a SHAPE must never mean sharing VALUES — the sibling
+        statements have distinct identifiers, periods and closing balances."""
+        results, _log, _s = batch
+        for stem in self.SIBS:
+            text = _all_text(results[stem][0].extracted_data)
+            for other in self.SIBS:
+                if other == stem:
+                    continue
+                assert SIBLINGS[other]["stmt"] not in text, (
+                    f"CONTAMINATION: {stem} contains {other}'s identifier")
+                assert _num(SIBLINGS[other]["closing"]) not in _numbers(text), (
+                    f"CONTAMINATION: {stem} contains {other}'s closing balance")
+
+    def test_each_document_still_gets_its_own_values(self, batch):
+        results, _log, _s = batch
+        for stem in self.SIBS:
+            text = _all_text(results[stem][0].extracted_data)
+            assert SIBLINGS[stem]["stmt"] in text, stem
+            assert _num(SIBLINGS[stem]["closing"]) in _numbers(text), stem
+
+    def test_a_mixed_batch_still_gets_one_shape_per_kind(self):
+        """Reuse is keyed by document type, so an invoice never inherits a
+        statement's schema."""
+        cache = LLMCache(mode="replay")
+        cache.install()
+        try:
+            schemas = {}
+            stems = list(MIXED)
+            results, _log = _extract_batch(stems, schemas, cache)
+        finally:
+            cache.uninstall()
+        sigs = {s: (results[s][0].extracted_data or {}).get("shape_signature")
+                for s in stems}
+        assert all(sigs.values()), sigs
+        assert len(set(sigs.values())) == len(stems), (
+            f"different document kinds must not share a shape: {sigs}")
+
+    def test_no_cache_means_infer_every_time(self):
+        """batch_schemas=None is the single-document call and must be
+        unchanged — the harness and every one-off extraction rely on it."""
+        cache = LLMCache(mode="replay")
+        cache.install()
+        try:
+            _r, log = _extract_batch(self.SIBS[:2], None, cache)
+        finally:
+            cache.uninstall()
+        assert "no inference call" not in log, log
+        assert "cached for the rest of this job" not in log, log

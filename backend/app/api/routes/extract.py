@@ -3607,15 +3607,20 @@ def _fail(filename, error):
 # ==============================================================================
 
 def _extract_with_template(orchestrator, file_path: Path, template_data: dict,
-                            selected_pages: Optional[list] = None):
+                            selected_pages: Optional[list] = None,
+                            batch_schemas: Optional[dict] = None):
     """
     Vision-First extraction engine - safety-wrapped version.
     All errors are caught and returned as failed DocumentResult objects
     so the job always completes with meaningful error messages.
+
+    `batch_schemas` is the per-job dict that lets no-template documents of the
+    same kind share one inferred schema. See engine/extractor.py.
     """
     try:
         return _extract_with_template_inner(orchestrator, file_path, template_data,
-                                            selected_pages=selected_pages)
+                                            selected_pages=selected_pages,
+                                            batch_schemas=batch_schemas)
     except Exception as e:
         print(f"[EXTRACT] FATAL {file_path.name}: {e}", flush=True)
         traceback.print_exc()
@@ -3741,7 +3746,8 @@ def _extract_image_with_template(orchestrator, file_path: Path,
 
 
 def _extract_with_template_inner(orchestrator, file_path: Path, template_data: dict,
-                                  selected_pages: Optional[list] = None):
+                                  selected_pages: Optional[list] = None,
+                                  batch_schemas: Optional[dict] = None):
     """Run the extraction engine. One pipeline, no flag, no fallback.
 
     Phase 2d: `USE_NEW_EXTRACTOR` and the legacy inline pipeline are gone. The
@@ -3754,7 +3760,8 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
     """
     from extractor import run_extraction
     return run_extraction(orchestrator, file_path, template_data,
-                          selected_pages=selected_pages)
+                          selected_pages=selected_pages,
+                          batch_schemas=batch_schemas)
 
 
 # ==============================================================================
@@ -3993,6 +4000,17 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         total_cost_usd = 0.0
         start_time = time.time()
 
+        # One schema cache per JOB, for documents extracted without a template.
+        # Inference names the columns and does not name them the same way twice,
+        # and the exporter groups sheets by a signature over those names — so
+        # fifty invoices of one design used to produce up to fifty sheets with
+        # slightly different headings instead of one sheet with fifty rows.
+        # Inferring once per document KIND and reusing the answer makes
+        # within-batch variance exactly zero: the schema is not re-derived, so
+        # it cannot differ. Scoped to this job and discarded with it — nothing
+        # is persisted, and nothing leaks between clients or jobs.
+        batch_schemas: dict = {}
+
         for i, fp in enumerate(file_paths):
             print(f"[THREAD] processing file {i+1}/{len(file_paths)}: {fp}", flush=True)
 
@@ -4032,6 +4050,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
                         results = _extract_with_template(
                             orchestrator, file_path, None,
                             selected_pages=selected_pages,
+                            batch_schemas=batch_schemas,
                         )
 
                 for result in results:
