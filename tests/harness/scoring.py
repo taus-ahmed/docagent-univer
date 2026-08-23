@@ -6,8 +6,23 @@ Every gold-valued field lands in exactly one of four outcomes:
   correct       — matches the gold value (type-aware, not string equality)
   wrong         — a value was extracted and it is incorrect
   missed        — gold has a value, extraction returned nothing
-  hallucinated  — gold has nothing, extraction invented a value
+  hallucinated  — gold has nothing where extraction produced something
   renamed       — gold's value came back correct, under a DIFFERENT name
+
+Every hallucination is further split three ways, because they are three
+different events with three different fixes and only one of them is a lie:
+
+  invented       the value appears NOWHERE in the document. The model made it
+                 up. This is the number that decides whether the product is
+                 trustworthy.
+  misfiled       gold HAS this field and says it is empty; extraction put real
+                 document content in it. Gold has an opinion and we contradicted
+                 it — a real defect, and the one slot errors show up as.
+  out_of_schema  gold has NO field by this name. Extraction read something real
+                 off the page and proposed a name for it that the labels never
+                 carried. This is not a defect: it is what no-template
+                 inference is FOR. Lumping it in with the other two made a
+                 working feature look like a lying one.
 
 plus one refinement reported separately:
 
@@ -254,6 +269,9 @@ def score_fields(gold_fields: dict, field_types: dict, pred_fields: dict) -> dic
             "expected": expected,
             "actual": actual,
             "type": ftype,
+            # Gold KNOWS this field. If it is hallucinated, gold's opinion is
+            # "this should be empty" and we contradicted it — a misfiling.
+            "in_gold_schema": True,
         }
     for name, actual in pred_fields.items():
         if name in results or is_empty(actual):
@@ -263,6 +281,9 @@ def score_fields(gold_fields: dict, field_types: dict, pred_fields: dict) -> dic
             "expected": None,
             "actual": actual,
             "type": field_types.get(name, "string"),
+            # Gold has no field by this name at all. Nothing was contradicted;
+            # a name was proposed that the labels do not carry.
+            "in_gold_schema": False,
         }
     return results
 
@@ -322,7 +343,8 @@ def score_table(gold_rows: list, pred_rows: list, col_types: dict,
             cells.append({"row": gi, "pred_row": pi, "column": col,
                           "type": col_types.get(col, "string"),
                           "outcome": out, "expected": g.get(col),
-                          "actual": p.get(col)})
+                          "actual": p.get(col),
+                          "in_gold_schema": True})
         for col in p:
             if str(col).startswith("_"):
                 continue            # internal metadata, not an extracted value
@@ -331,7 +353,9 @@ def score_table(gold_rows: list, pred_rows: list, col_types: dict,
             cells.append({"row": gi, "pred_row": pi, "column": col,
                           "type": col_types.get(col, "string"),
                           "outcome": "hallucinated", "expected": None,
-                          "actual": p.get(col)})
+                          "actual": p.get(col),
+                          # a column gold's schema for this table does not have
+                          "in_gold_schema": False})
 
     missed_rows = []
     for gi, g in enumerate(gold_rows):
@@ -350,11 +374,24 @@ def score_table(gold_rows: list, pred_rows: list, col_types: dict,
             continue
         hallucinated_rows.append({"pred_row": pi, "pred": p})
         for col, v in p.items():
+            # Internal metadata, not an extracted value — the matched-row loop
+            # above has always skipped these, and this loop did not, so the
+            # engine's own "_confidence" tag was being scored as a value the
+            # model invented. Both "inventions" in the no-template run were
+            # this scorer artifact.
+            if str(col).startswith("_"):
+                continue
             if not is_empty(v):
                 cells.append({"row": None, "pred_row": pi, "column": col,
                               "type": col_types.get(col, "string"),
                               "outcome": "hallucinated", "expected": None,
-                              "actual": v})
+                              "actual": v,
+                              # An extra ROW. If this table has gold rows at
+                              # all, gold knows how many there are and we added
+                              # one — that is a fabricated row, not a schema
+                              # difference. A table with NO gold counterpart is
+                              # a table gold's schema does not contain.
+                              "in_gold_schema": bool(gold_rows)})
 
     matched_cells = [c for c in cells if c["row"] is not None and c["pred_row"] is not None]
     gold_valued = [c for c in matched_cells if c["outcome"] in
@@ -457,12 +494,20 @@ def score_document(label: dict, adapted: dict, doc_text: str = "") -> dict:
     for tname, pred_rows in pred_tables.items():
         table_results[tname] = score_table([], pred_rows, {}, tname)
 
-    # grounding: split hallucinations into inventions and misplacements
+    # Every hallucination is one of three different events. See the module
+    # docstring: only `invented` is a lie, and `out_of_schema` is not a defect
+    # at all.
     def ground(entry):
         if entry.get("outcome") != "hallucinated":
             return
         entry["grounded"] = value_in_text(entry.get("actual"), doc_text,
                                           entry.get("type", "string"))
+        if not entry["grounded"]:
+            entry["halluc_kind"] = "invented"
+        elif entry.get("in_gold_schema", True):
+            entry["halluc_kind"] = "misfiled"
+        else:
+            entry["halluc_kind"] = "out_of_schema"
 
     for r in field_results.values():
         ground(r)
@@ -471,16 +516,20 @@ def score_document(label: dict, adapted: dict, doc_text: str = "") -> dict:
             ground(c)
 
     counts = {}
-    ungrounded = 0
+    kinds = {"invented": 0, "misfiled": 0, "out_of_schema": 0}
+
+    def tally_entry(e):
+        _tally(counts, e["outcome"])
+        k = e.get("halluc_kind")
+        if k:
+            kinds[k] += 1
+
     for r in field_results.values():
-        _tally(counts, r["outcome"])
-        if r.get("outcome") == "hallucinated" and not r.get("grounded"):
-            ungrounded += 1
+        tally_entry(r)
     for t in table_results.values():
         for c in t["cells"]:
-            _tally(counts, c["outcome"])
-            if c.get("outcome") == "hallucinated" and not c.get("grounded"):
-                ungrounded += 1
+            tally_entry(c)
+    ungrounded = kinds["invented"]
 
     # A renamed field is gold-valued (it belongs in the denominator — it was
     # not returned correctly under its own name) and it WAS extracted (its
@@ -497,6 +546,7 @@ def score_document(label: dict, adapted: dict, doc_text: str = "") -> dict:
         "tables": table_results,
         "counts": counts,
         "renamed": renamed,
+        "halluc_kinds": kinds,
         "hallucinated_ungrounded": ungrounded,
         "accuracy": (counts.get("correct", 0) / gold_valued) if gold_valued else None,
         "hallucination_rate": (counts.get("hallucinated", 0) / extracted) if extracted else None,
@@ -516,8 +566,9 @@ def summarize(doc_results: list) -> dict:
     def add_entry(counters, e):
         for c in counters:
             add(c, e["outcome"])
-            if e.get("outcome") == "hallucinated" and not e.get("grounded"):
-                add(c, "_ungrounded")
+            k = e.get("halluc_kind")
+            if k:
+                add(c, "_" + k)
 
     for d in doc_results:
         dt = d.get("document_type") or "unknown"
@@ -530,7 +581,10 @@ def summarize(doc_results: list) -> dict:
 
     def rates(c):
         c = dict(c)
-        ungrounded = c.pop("_ungrounded", 0)
+        invented = c.pop("_invented", 0)
+        misfiled = c.pop("_misfiled", 0)
+        out_of_schema = c.pop("_out_of_schema", 0)
+        ungrounded = invented
         gold_valued = sum(c.get(k, 0)
                           for k in ("correct", "near", "wrong", "missed", "renamed"))
         extracted = sum(c.get(k, 0)
@@ -545,7 +599,14 @@ def summarize(doc_results: list) -> dict:
             "hallucinated": c.get("hallucinated", 0),
             "hallucination_rate": (c.get("hallucinated", 0) / extracted) if extracted else None,
             "hallucinated_ungrounded": ungrounded,
-            "invention_rate": (ungrounded / extracted) if extracted else None,
+            "invention_rate": (invented / extracted) if extracted else None,
+            "invented": invented,
+            "misfiled": misfiled,
+            "out_of_schema": out_of_schema,
+            # The rate that actually says "can a client trust this": a value
+            # invented, or put in a slot gold says is empty. Out-of-schema
+            # names are excluded — nothing was contradicted by proposing one.
+            "defect_rate": ((invented + misfiled) / extracted) if extracted else None,
         }
 
     return {

@@ -306,3 +306,84 @@ class TestCollapseRenames:
         assert sc["counts"].get("hallucinated", 0) == 0
         assert sc["accuracy"] == 0.0
         assert sc["hallucination_rate"] == 0.0
+
+
+class TestHallucinationKinds:
+    """Three different events were being reported as one number. Only one of
+    them is a lie, and one of them is not a defect at all."""
+
+    def _doc(self, gold_fields, field_types, pred_fields, text,
+             gold_tables=None, pred_tables=None):
+        from tests.harness.scoring import score_document
+        label = {"document_id": "D", "document_type": "invoice",
+                 "fields": gold_fields, "field_types": field_types,
+                 "tables": gold_tables or {}}
+        return score_document(label, {"fields": pred_fields,
+                                      "tables": pred_tables or {}}, text)
+
+    def test_a_value_not_in_the_document_is_INVENTED(self):
+        sc = self._doc({"Total": "100"}, {"Total": "money"},
+                       {"Total": "100", "Vendor": "Nowhere Ltd"},
+                       "Total 100")
+        assert sc["halluc_kinds"]["invented"] == 1
+        assert sc["halluc_kinds"]["out_of_schema"] == 0
+
+    def test_real_content_under_a_name_gold_lacks_is_OUT_OF_SCHEMA(self):
+        """Inference proposing "Company EIN" for an EIN printed on the page is
+        the feature working, not a hallucination."""
+        sc = self._doc({"Total": "100"}, {"Total": "money"},
+                       {"Total": "100", "Company EIN": "47-3821654"},
+                       "Total 100  EIN 47-3821654")
+        assert sc["halluc_kinds"]["out_of_schema"] == 1
+        assert sc["halluc_kinds"]["invented"] == 0
+        assert sc["halluc_kinds"]["misfiled"] == 0
+
+    def test_real_content_in_a_slot_gold_says_is_empty_is_MISFILED(self):
+        """Gold HAS this field and says it is empty. We contradicted it."""
+        sc = self._doc({"Total": "100", "Discount": None},
+                       {"Total": "money", "Discount": "money"},
+                       {"Total": "100", "Discount": "25"},
+                       "Total 100  Shipping 25")
+        assert sc["halluc_kinds"]["misfiled"] == 1
+        assert sc["halluc_kinds"]["out_of_schema"] == 0
+
+    def test_defect_rate_excludes_out_of_schema(self):
+        sc = self._doc({"Total": "100"}, {"Total": "money"},
+                       {"Total": "100", "Company EIN": "47-3821654",
+                        "Company Phone": "(212) 555-0148"},
+                       "Total 100 EIN 47-3821654 Tel (212) 555-0148")
+        assert sc["counts"]["hallucinated"] == 2
+        assert sc["halluc_kinds"]["out_of_schema"] == 2
+        assert sc["hallucination_rate"] > 0
+        from tests.harness.scoring import summarize
+        assert summarize([sc])["overall"]["defect_rate"] == 0.0
+
+    def test_an_extra_row_in_a_known_table_is_not_out_of_schema(self):
+        """Gold knows how many rows this table has. An extra one is fabricated,
+        not a schema difference."""
+        sc = self._doc({}, {}, {},
+                       "Consulting 100\nTotal 100",
+                       gold_tables={"items": [{"Description": "Consulting",
+                                               "Amount": "100"}]},
+                       pred_tables={"items": [{"Description": "Consulting",
+                                               "Amount": "100"},
+                                              {"Description": "Total",
+                                               "Amount": "100"}]})
+        kinds = sc["halluc_kinds"]
+        assert kinds["out_of_schema"] == 0
+        assert kinds["misfiled"] == 2, kinds
+
+    def test_internal_metadata_is_never_scored_as_a_value(self):
+        """`_confidence` is ours, not the model's. Scoring it counted our own
+        tag as something the model invented."""
+        sc = self._doc({}, {}, {}, "Consulting 100\nTotal 100",
+                       gold_tables={"items": [{"Description": "Consulting",
+                                               "Amount": "100"}]},
+                       pred_tables={"items": [{"Description": "Consulting",
+                                               "Amount": "100"},
+                                              {"Description": "Total",
+                                               "Amount": "100",
+                                               "_confidence": "grounded"}]})
+        cols = [c["column"] for t in sc["tables"].values() for c in t["cells"]]
+        assert not any(str(c).startswith("_") for c in cols), cols
+        assert sc["halluc_kinds"]["invented"] == 0

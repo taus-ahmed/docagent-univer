@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-22 17:02:54
+# Accuracy report — 2026-08-22 17:41:34
 
-- git: `cd378d6`  mode: **replay**  repeat: 1
+- git: `c8ad9f1`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -10,9 +10,11 @@
 | **accuracy (correct / gold-valued)** | **97.9%** |
 | **accuracy RAW (all adapter widenings off)** | **49.2%** |
 | **hallucination rate (hallucinated / extracted)** | **0.0%** |
-| **└ invention rate (value found NOWHERE in the PDF)** | **0.0%** |
-| └ misplacement (real content, slot gold leaves empty) | 0.0% |
-| hallucinated values | 0 (invented 0, misplaced 0) |
+| **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
+| ├ misfiled — real content in a slot gold says is EMPTY | 0 |
+| └ out-of-schema — real content, name gold has no field for | 0 *(not a defect)* |
+| **DEFECT RATE (invented + misfiled / extracted)** | **0.0%** |
+| hallucinated values | 0 |
 | near misses | 5 |
 | **renamed (right value, different field name)** | **0** (0.0%) |
 | outcome counts | {"correct": 370, "missed": 2, "near": 5, "wrong": 1, "empty_ok": 12} |

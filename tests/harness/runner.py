@@ -321,9 +321,15 @@ def write_markdown(report: dict, path: Path):
     add(f"| **accuracy (correct / gold-valued)** | **{_pct(o['accuracy'])}** |")
     add(f"| **accuracy RAW (all adapter widenings off)** | **{_pct(s_raw['accuracy'])}** |")
     add(f"| **hallucination rate (hallucinated / extracted)** | **{_pct(o['hallucination_rate'])}** |")
-    add(f"| **└ invention rate (value found NOWHERE in the PDF)** | **{_pct(o['invention_rate'])}** |")
-    add(f"| └ misplacement (real content, slot gold leaves empty) | {_pct((o['hallucinated'] - o['hallucinated_ungrounded']) / max(1, o['gold_valued'] + o['hallucinated']))} |")
-    add(f"| hallucinated values | {o['hallucinated']} (invented {o['hallucinated_ungrounded']}, misplaced {o['hallucinated'] - o['hallucinated_ungrounded']}) |")
+    add(f"| **├ INVENTED — value found NOWHERE in the PDF** | "
+        f"**{o.get('invented', 0)}** ({_pct(o['invention_rate'])}) |")
+    add(f"| ├ misfiled — real content in a slot gold says is EMPTY | "
+        f"{o.get('misfiled', 0)} |")
+    add(f"| └ out-of-schema — real content, name gold has no field for | "
+        f"{o.get('out_of_schema', 0)} *(not a defect)* |")
+    add(f"| **DEFECT RATE (invented + misfiled / extracted)** | "
+        f"**{_pct(o.get('defect_rate'))}** |")
+    add(f"| hallucinated values | {o['hallucinated']} |")
     add(f"| near misses | {o['counts'].get('near', 0)} |")
     add(f"| **renamed (right value, different field name)** | "
         f"**{o.get('renamed', 0)}** ({_pct(o.get('rename_rate'))}) |")
@@ -612,10 +618,15 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
           f"   (all adapter widenings off)")
     print(f"hallucination rate  : {_pct(o['hallucination_rate'])} "
           f"({o['hallucinated']} values in slots gold leaves empty)")
-    print(f"  of which INVENTED : {_pct(o['invention_rate'])} "
-          f"({o['hallucinated_ungrounded']} values found nowhere in the PDF)")
-    print(f"  of which misplaced: {o['hallucinated'] - o['hallucinated_ungrounded']} "
-          f"(real document content, wrong slot)")
+    # ASCII only: this goes to a Windows cp1252 console.
+    print(f"  |- INVENTED       : {_pct(o['invention_rate'])} "
+          f"({o.get('invented', 0)} values found nowhere in the PDF)")
+    print(f"  |- misfiled       : {o.get('misfiled', 0)} "
+          f"(real content in a slot gold says is EMPTY - a real defect)")
+    print(f"  \- out-of-schema  : {o.get('out_of_schema', 0)} "
+          f"(real content under a name gold has no field for - NOT a defect)")
+    print(f"DEFECT RATE         : {_pct(o.get('defect_rate'))} "
+          f"(invented + misfiled / extracted)")
     if o.get("renamed"):
         print(f"renamed             : {o['renamed']} ({_pct(o['rename_rate'])}) "
               f"(right value, different field name — ONE defect, not a "

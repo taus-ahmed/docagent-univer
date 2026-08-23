@@ -1,6 +1,6 @@
-# Accuracy report — 2026-08-22 17:01:20
+# Accuracy report — 2026-08-22 17:06:18
 
-- git: `cd378d6`  mode: **replay**  repeat: 1
+- git: `c8ad9f1`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -9,13 +9,15 @@
 |---|---|
 | **accuracy (correct / gold-valued)** | **86.5%** |
 | **accuracy RAW (all adapter widenings off)** | **78.0%** |
-| **hallucination rate (hallucinated / extracted)** | **21.4%** |
-| **└ invention rate (value found NOWHERE in the PDF)** | **0.5%** |
-| └ misplacement (real content, slot gold leaves empty) | 19.0% |
-| hallucinated values | 91 (invented 2, misplaced 89) |
+| **hallucination rate (hallucinated / extracted)** | **21.0%** |
+| **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
+| ├ misfiled — real content in a slot gold says is EMPTY | 4 |
+| └ out-of-schema — real content, name gold has no field for | 85 *(not a defect)* |
+| **DEFECT RATE (invented + misfiled / extracted)** | **0.9%** |
+| hallucinated values | 89 |
 | near misses | 1 |
 | **renamed (right value, different field name)** | **5** (1.3%) |
-| outcome counts | {"wrong": 1, "correct": 327, "hallucinated": 91, "missed": 44, "renamed": 5, "near": 1, "empty_ok": 12} |
+| outcome counts | {"wrong": 1, "correct": 327, "hallucinated": 89, "missed": 44, "renamed": 5, "near": 1, "empty_ok": 12} |
 
 ## By document type
 
@@ -26,7 +28,7 @@
 | cheque | 63.6% | 47.1% | 0 | 7 | 0 | 2 | 0 | 2 | 8 |
 | expense_report | 98.1% | 6.9% | 0 | 53 | 0 | 1 | 0 | 0 | 4 |
 | income_statement | 100.0% | 21.9% | 0 | 25 | 0 | 0 | 0 | 0 | 7 |
-| payslip | 91.4% | 15.4% | 2 | 64 | 0 | 2 | 0 | 4 | 12 |
+| payslip | 91.4% | 13.2% | 0 | 64 | 0 | 2 | 0 | 4 | 10 |
 | purchase_order | 96.8% | 24.4% | 0 | 30 | 1 | 0 | 0 | 0 | 10 |
 | sales_invoice | 100.0% | 22.8% | 0 | 71 | 0 | 0 | 0 | 0 | 21 |
 
@@ -37,7 +39,7 @@
 | date | 100.0% | 0.0% | 0 | 30 | 0 | 0 | 0 | 0 | 0 |
 | money | 86.3% | 1.4% | 0 | 139 | 0 | 0 | 1 | 21 | 2 |
 | number | 100.0% | 0.0% | 0 | 12 | 0 | 0 | 0 | 0 | 0 |
-| string | 83.4% | 36.9% | 2 | 146 | 1 | 5 | 0 | 23 | 89 |
+| string | 83.4% | 36.4% | 0 | 146 | 1 | 5 | 0 | 23 | 87 |
 
 ## Per document
 
@@ -50,7 +52,7 @@
 | INV-2024-0047 | sales_invoice | 100.0% | 97.4% | 11 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 88.0% | 7 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
 | PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 86.5% | 3 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
-| PAYSLIP-EMP-0012-APR2024 | payslip | 87.9% | 87.9% | 9 | 2 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PAYSLIP-EMP-0012-APR2024 | payslip | 87.9% | 87.9% | 7 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PO-2024-0018 | purchase_order | 96.8% | 45.2% | 10 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
 | STMT-2024-01 | bank_statement | 100.0% | 95.7% | 4 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
 
@@ -181,10 +183,8 @@
 | PAYSLIP-EMP-0012-APR2024 | Company EIN | hallucinated (misplaced) | None | 47-3821654 |
 | PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2].Description | hallucinated (misplaced) | None | Total |
 | PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2].Amount | hallucinated (misplaced) | None | $8,300.00 |
-| PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2]._confidence | INVENTED | None | grounded |
 | PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8].Description | hallucinated (misplaced) | None | Total |
 | PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8].Amount | hallucinated (misplaced) | None | ($3,117.35) |
-| PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8]._confidence | INVENTED | None | grounded |
 | PO-2024-0018 | Authorised By | near | Janet Wu – VP Operations | Janet Wu |
 | PO-2024-0018 | Company Name | hallucinated (misplaced) | None | NEXUS GLOBAL TRADING LLC |
 | PO-2024-0018 | Company Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
@@ -203,13 +203,5 @@
 
 ## Changes vs previous run
 
-- CHQ-001847 :: Authorized By: missed -> renamed
-- CHQ-001847 :: Authorized Signature Name: hallucinated -> None
-- CHQ-001847 :: Drawer Company Name: hallucinated -> None
-- CHQ-001847 :: Payer Name: missed -> renamed
-- EXP-2024-0081 :: Employee: hallucinated -> None
-- EXP-2024-0081 :: Employee Name: missed -> renamed
-- PAYSLIP-EMP-0007-APR2024 :: Employee Title / Dept: hallucinated -> None
-- PAYSLIP-EMP-0007-APR2024 :: Title / Department: missed -> renamed
-- PAYSLIP-EMP-0012-APR2024 :: Title / Department: missed -> renamed
-- PAYSLIP-EMP-0012-APR2024 :: Title / Dept: hallucinated -> None
+- PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8]._confidence: hallucinated -> None
+- PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2]._confidence: hallucinated -> None
