@@ -104,8 +104,12 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images):
     from shape_inference import build_grid, infer_template, signature
     from template_shape import compute_shape, is_usable
 
+    # The canonical vocabulary is chosen by keyword pre-screening — no LLM
+    # call, and only a hint: the model still decides the document type itself.
     inferred = infer_template(orchestrator, doc_text_pages, page_images,
-                              file_path.name)
+                              file_path.name,
+                              doc_type_hint=_hint_type("\n".join(
+                                  str(t or "") for t in (doc_text_pages or []))))
     if not inferred:
         return None
     grid = build_grid(inferred)

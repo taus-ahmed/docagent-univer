@@ -1,0 +1,83 @@
+{
+ "key": "efb7c248415e20e83551ee19d67b6750ae22b3ea08b166f98a7117f2fc846a41",
+ "meta": {
+  "method": "extract",
+  "context": "BS-2024-Q1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3380,
+  "captured_at": "2026-08-23 15:24:41",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nBalance Sheet — Q1 2024\nAs of March 31, 2024 | Doc No: BS-2024-Q1\nCURRENT ASSETS\nCash & Cash Equivalents $143"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"balance_sheet\",\n  \"title\": \"Balance Sheet — Q1 2024\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company Identifier\",\n    \"As of Date\",\n    \"Doc No\",\n    \"Prepared by\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"CURRENT ASSETS\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 5\n    },\n    {\n      \"name\": \"NON-CURRENT ASSETS\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 4\n    },\n    {\n      \"name\": \"CURRENT LIABILITIES\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 5\n    },\n    {\n      \"name\": \"LONG-TERM LIABILITIES\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 3\n    },\n    {\n      \"name\": \"SHAREHOLDERS' EQUITY\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 3\n    }\n  ],\n  \"totals\": [\n    \"Total Current Assets\",\n    \"Total Non-Current Assets\",\n    \"TOTAL ASSETS\",\n    \"Total Current Liabilities\",\n    \"Total Long-Term Liabilities\",\n    \"TOTAL LIABILITIES\",\n    \"Total Equity\",\n    \"TOTAL LIABILITIES & EQUITY\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "balance_sheet",
+   "title": "Balance Sheet — Q1 2024",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company Identifier",
+    "As of Date",
+    "Doc No",
+    "Prepared by"
+   ],
+   "tables": [
+    {
+     "name": "CURRENT ASSETS",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 5
+    },
+    {
+     "name": "NON-CURRENT ASSETS",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 4
+    },
+    {
+     "name": "CURRENT LIABILITIES",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 5
+    },
+    {
+     "name": "LONG-TERM LIABILITIES",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 3
+    },
+    {
+     "name": "SHAREHOLDERS' EQUITY",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 3
+    }
+   ],
+   "totals": [
+    "Total Current Assets",
+    "Total Non-Current Assets",
+    "TOTAL ASSETS",
+    "Total Current Liabilities",
+    "Total Long-Term Liabilities",
+    "TOTAL LIABILITIES",
+    "Total Equity",
+    "TOTAL LIABILITIES & EQUITY"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3380,
+  "success": true,
+  "error": ""
+ }
+}

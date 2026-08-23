@@ -274,8 +274,23 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
         in. A predicted name that loses its gold name keeps its own name and
         scores as out-of-schema, which is what it is.
         """
+        # The engine reports the same value twice — once label-keyed in
+        # `extracted_data`, once cell-ref-keyed in `extracted_fields` — and
+        # both arrive here. Collapse them by name first: before best-match
+        # resolution the duplicate simply lost the `key not in fields` race,
+        # but afterwards the first copy claimed the gold name and the SECOND
+        # kept its own, so one engine value was scored as two fields and the
+        # spare counted as out-of-schema.
+        seen_names, deduped = set(), []
+        for name, value in pending_fields:
+            k = _norm(name)
+            if k in seen_names:
+                continue
+            seen_names.add(k)
+            deduped.append((name, value))
+
         scored = []
-        for i, (name, value) in enumerate(pending_fields):
+        for i, (name, value) in enumerate(deduped):
             g, sc = _match_score(name, gold_field_names)
             scored.append((-sc, i, name, value, g))
         scored.sort(key=lambda t: (t[0], t[1]))   # best score, then arrival

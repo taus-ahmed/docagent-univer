@@ -1,0 +1,60 @@
+{
+ "key": "017a85b9927e20d11d99de0d185e642f0016b2ffaa975340f115f9d2435446d8",
+ "meta": {
+  "method": "extract",
+  "context": "PAYSLIP-EMP-0007-APR2024",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3043,
+  "captured_at": "2026-08-23 15:25:22",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING PAY STUB\nLLC\n142 West 57th Street, Suite 1800, New York, NY 10019 | EIN: 47-3821654\nEmployee: Janet L. Wu\nEmployee ID: EMP-0007\nTitle / Dept: VP Operations – Executive\nSSN: ***-**-3317"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"payslip\",\n  \"title\": \"Pay Stub\",\n  \"fields\": [\n    \"Employer Name\",\n    \"Employer Address\",\n    \"Employer EIN\",\n    \"Employee Name\",\n    \"Employee ID\",\n    \"Title / Dept\",\n    \"SSN\",\n    \"Pay Period\",\n    \"Pay Date\",\n    \"Annual Salary\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Earnings\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 3\n    },\n    {\n      \"name\": \"Deductions\",\n      \"columns\": [\n        \"Description\",\n        \"Amount\"\n      ],\n      \"row_count\": 8\n    }\n  ],\n  \"totals\": [\n    \"Total Earnings\",\n    \"Total Deductions\",\n    \"NET PAY\",\n    \"YTD Gross Earnings\",\n    \"YTD Taxes Withheld\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "payslip",
+   "title": "Pay Stub",
+   "fields": [
+    "Employer Name",
+    "Employer Address",
+    "Employer EIN",
+    "Employee Name",
+    "Employee ID",
+    "Title / Dept",
+    "SSN",
+    "Pay Period",
+    "Pay Date",
+    "Annual Salary"
+   ],
+   "tables": [
+    {
+     "name": "Earnings",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 3
+    },
+    {
+     "name": "Deductions",
+     "columns": [
+      "Description",
+      "Amount"
+     ],
+     "row_count": 8
+    }
+   ],
+   "totals": [
+    "Total Earnings",
+    "Total Deductions",
+    "NET PAY",
+    "YTD Gross Earnings",
+    "YTD Taxes Withheld"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3043,
+  "success": true,
+  "error": ""
+ }
+}

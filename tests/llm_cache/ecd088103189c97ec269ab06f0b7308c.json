@@ -1,0 +1,43 @@
+{
+ "key": "ecd088103189c97ec269ab06f0b7308c424404ac69bcf8ac08bb125ddb1fcbee",
+ "meta": {
+  "method": "extract",
+  "context": "CHQ-001847",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2280,
+  "captured_at": "2026-08-23 15:24:48",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nFIRST NATIONAL BANK OF NEW YORK 330 Madison Ave, New York, NY 10017 | Member FDIC\nNo: CHQ-001847\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 Date: January 31, 2024\nEIN: 47"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"cheque\",\n  \"title\": \"Cheque\",\n  \"fields\": [\n    \"Bank Name\",\n    \"Bank Address\",\n    \"Cheque Number\",\n    \"Drawer Name\",\n    \"Drawer Address\",\n    \"Drawer EIN\",\n    \"Drawer Phone\",\n    \"Cheque Date\",\n    \"Payee\",\n    \"Amount in Words\",\n    \"Memo\",\n    \"Authorized By\",\n    \"MICR Line\",\n    \"Routing Number\",\n    \"Account Number\",\n    \"Amount in Figures\"\n  ],\n  \"tables\": [],\n  \"totals\": []\n}",
+  "parsed_json": {
+   "document_type": "cheque",
+   "title": "Cheque",
+   "fields": [
+    "Bank Name",
+    "Bank Address",
+    "Cheque Number",
+    "Drawer Name",
+    "Drawer Address",
+    "Drawer EIN",
+    "Drawer Phone",
+    "Cheque Date",
+    "Payee",
+    "Amount in Words",
+    "Memo",
+    "Authorized By",
+    "MICR Line",
+    "Routing Number",
+    "Account Number",
+    "Amount in Figures"
+   ],
+   "tables": [],
+   "totals": []
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2280,
+  "success": true,
+  "error": ""
+ }
+}

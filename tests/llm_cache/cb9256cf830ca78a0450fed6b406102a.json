@@ -1,0 +1,59 @@
+{
+ "key": "cb9256cf830ca78a0450fed6b406102ab392cffe1d1c5db59e3f0a68079f2c93",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2700,
+  "captured_at": "2026-08-23 15:20:50",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC INVOICE\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nBill To: Invoice: INV-2024-0031\nApex Industrial Supplies Inc. Date: January 15, 2024\n5"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"sales_invoice\",\n  \"title\": \"Invoice\",\n  \"fields\": [\n    \"other: Vendor Name\",\n    \"other: Vendor Address\",\n    \"other: Vendor Phone\",\n    \"other: Vendor Tax ID\",\n    \"Bill To Company\",\n    \"Bill To Address\",\n    \"Bill To Contact\",\n    \"Invoice Number\",\n    \"Invoice Date\",\n    \"Due Date\",\n    \"PO Ref\",\n    \"Terms\",\n    \"other: Status\",\n    \"other: Payment Received Date\",\n    \"other: Payment Reference\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Description Qty Unit Unit Price Amount\",\n      \"columns\": [\n        \"Description\",\n        \"Qty\",\n        \"Unit\",\n        \"Unit Price\",\n        \"Amount\"\n      ],\n      \"row_count\": 4\n    }\n  ],\n  \"totals\": [\n    \"Subtotal\",\n    \"Shipping & Handling\",\n    \"Sales Tax (8.88%)\",\n    \"TOTAL DUE\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "sales_invoice",
+   "title": "Invoice",
+   "fields": [
+    "other: Vendor Name",
+    "other: Vendor Address",
+    "other: Vendor Phone",
+    "other: Vendor Tax ID",
+    "Bill To Company",
+    "Bill To Address",
+    "Bill To Contact",
+    "Invoice Number",
+    "Invoice Date",
+    "Due Date",
+    "PO Ref",
+    "Terms",
+    "other: Status",
+    "other: Payment Received Date",
+    "other: Payment Reference"
+   ],
+   "tables": [
+    {
+     "name": "Description Qty Unit Unit Price Amount",
+     "columns": [
+      "Description",
+      "Qty",
+      "Unit",
+      "Unit Price",
+      "Amount"
+     ],
+     "row_count": 4
+    }
+   ],
+   "totals": [
+    "Subtotal",
+    "Shipping & Handling",
+    "Sales Tax (8.88%)",
+    "TOTAL DUE"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2700,
+  "success": true,
+  "error": ""
+ }
+}

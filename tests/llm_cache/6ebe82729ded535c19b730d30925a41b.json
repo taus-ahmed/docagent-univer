@@ -1,0 +1,55 @@
+{
+ "key": "6ebe82729ded535c19b730d30925a41b94d42bf3e7155d31acd9ed8054964e09",
+ "meta": {
+  "method": "extract",
+  "context": "STMT-2024-01",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3050,
+  "captured_at": "2026-08-23 15:25:38",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nFIRST NATIONAL BANK OF NEW ACCOUNT STATEMENT\nYORK\n330 Madison Avenue, New York, NY 10017 | ABA: 021000021 | Member FDIC\nAccount Holder: Nexus Global Trading LLC Statement No: STMT-2024-01\n142 West 57th Str"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"bank_statement\",\n  \"title\": \"Account Statement\",\n  \"fields\": [\n    \"Bank Name\",\n    \"Bank Address\",\n    \"ABA\",\n    \"Account Holder\",\n    \"EIN\",\n    \"Statement No\",\n    \"Period\",\n    \"Account No\",\n    \"Type\",\n    \"Opening Balance\",\n    \"Credits\",\n    \"Debits\",\n    \"Closing Balance\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Transactions\",\n      \"columns\": [\n        \"Date\",\n        \"Type\",\n        \"Description\",\n        \"Debit\",\n        \"Credit\",\n        \"Balance\"\n      ],\n      \"row_count\": 12\n    }\n  ],\n  \"totals\": [\n    \"Closing Balance\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "bank_statement",
+   "title": "Account Statement",
+   "fields": [
+    "Bank Name",
+    "Bank Address",
+    "ABA",
+    "Account Holder",
+    "EIN",
+    "Statement No",
+    "Period",
+    "Account No",
+    "Type",
+    "Opening Balance",
+    "Credits",
+    "Debits",
+    "Closing Balance"
+   ],
+   "tables": [
+    {
+     "name": "Transactions",
+     "columns": [
+      "Date",
+      "Type",
+      "Description",
+      "Debit",
+      "Credit",
+      "Balance"
+     ],
+     "row_count": 12
+    }
+   ],
+   "totals": [
+    "Closing Balance"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3050,
+  "success": true,
+  "error": ""
+ }
+}

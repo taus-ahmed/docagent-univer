@@ -27,6 +27,7 @@ import json
 import re
 
 from extractor import _llm_json, _log
+from vocabulary import split_other, vocabulary_block
 
 _SYSTEM = (
     "You are a document analyst who designs spreadsheet templates. Given a "
@@ -66,6 +67,57 @@ _AMOUNT_LINE = re.compile(
 _MIN_SECTION_ROWS = 3
 
 
+_STOPWORDS = {"the", "and", "of", "a", "an", "s"}
+
+
+def _words(text):
+    return {w for w in re.findall(r"[a-z0-9]+", str(text or "").lower())
+            if w not in _STOPWORDS}
+
+
+def _is_section_total(label, heading):
+    """Is this trailing line the section's own total rather than a data row?
+
+    Two ways to be one, and the second exists because the first is not enough:
+
+      "Total …", "Subtotal …", "Sum …"   — unambiguous, whatever follows.
+
+      "Net …" or "Gross …" that shares a word with the heading — "Net Revenue"
+      under REVENUE. The bare "starts with Net" test cannot be used on its own:
+      a balance sheet's SHAREHOLDERS' EQUITY section has "Net Income YTD Q1" as
+      a genuine DATA row, and stripping it would delete a row gold expects.
+      Sharing a word with the heading is what separates the two.
+    """
+    lab = str(label or "").strip().lower()
+    if re.match(r"^(total|subtotal|sub-total|sum)\b", lab):
+        return True
+    if re.match(r"^(net|gross)\b", lab):
+        return bool(_words(label) & _words(heading))
+    return False
+
+
+def _split_total(labels, heading):
+    """(data_rows, totals) — cut at the FIRST line that is this section's own
+    total. Everything before it is data; everything from it on is totals.
+
+    Scanning FORWARD is what makes both ends work, and neither backward rule
+    did. "Strip while the last line is a total" stops one line early, because a
+    statement prints its own aggregate straight after a section's total —
+    "Total COGS" then "GROSS PROFIT" — and that aggregate is not total-worded.
+    "Cut at the LAST total line" over-corrects and keeps "Total Non-Current
+    Assets" as a row because "TOTAL ASSETS" follows it.
+
+    Forward, the first total ends the section by definition, and everything
+    after it lands on the totals side. It also protects a genuine data row that
+    merely reads like an aggregate: a balance sheet's equity section lists
+    "Net Income YTD Q1" BEFORE "Total Equity", so the cut falls after it.
+    """
+    for i, lab in enumerate(labels):
+        if _is_section_total(lab, heading):
+            return list(labels[:i]), list(labels[i:])
+    return list(labels), []
+
+
 def detect_amount_sections(doc_text_pages):
     """[{heading, rows, labels}] for every heading followed by >= 3 lines that
     each end in an amount. [] for a document with no such shape — most of them.
@@ -88,12 +140,19 @@ def detect_amount_sections(doc_text_pages):
             # it as one would turn a document's header fields into a table.
             if (not _AMOUNT_LINE.match(heading) and len(heading) <= 70
                     and not re.search(r":\s*\S", heading)):
-                out.append({
-                    "heading": heading,
-                    "rows": j - i,
-                    "labels": [_AMOUNT_LINE.match(lines[k]).group("label").strip()
-                               for k in range(i, j)],
-                })
+                labels = [_AMOUNT_LINE.match(lines[k]).group("label").strip()
+                          for k in range(i, j)]
+                data, totals = _split_total(labels, heading)
+                # The 3-line minimum counts the section's lines INCLUDING its
+                # total (policy P7). What has to be a table is the DATA, and
+                # two rows is the smallest real one — a balance sheet's
+                # long-term liabilities and an income statement's revenue are
+                # both two rows plus a total. A heading with one data line and
+                # a pile of statement aggregates under it (an income
+                # statement's OTHER INCOME) is not a table.
+                if len(data) >= 2:
+                    out.append({"heading": heading, "rows": len(data),
+                                "labels": data, "totals": totals})
         i = max(j, i + 1)
     return out
 
@@ -108,25 +167,29 @@ def _sections_block(sections):
          "label/amount rows, so each MUST appear in \"tables\", never as a list "
          "of separate fields:"]
     for sec in sections:
-        shown = ", ".join(sec["labels"][:3])
-        more = ", …" if len(sec["labels"]) > 3 else ""
-        p.append(f'  - "{sec["heading"]}", followed by: {shown}{more}')
-    p.append("Give each one its own table, and then apply BOTH of these:")
-    p.append("  (a) THE SECTION TOTAL IS NOT A ROW. Where the last line under "
-             "a heading is that section's total — its label starts with "
-             "Total, Subtotal, Net or Gross, or repeats the heading — put it "
-             "in \"totals\" and EXCLUDE it from the table. A section showing "
-             "five items and a total is a table of FIVE rows, not six.")
-    p.append("  (b) The run can overshoot the section. Lines after a "
-             "section's total that state the statement's own bottom line "
-             "belong in \"totals\" too, not in the table. Judge that from the "
-             "labels — but the heading list itself is not negotiable.")
+        shown = ", ".join(sec["labels"]) or "(none)"
+        line = f'  - "{sec["heading"]}" — table rows: {shown}'
+        if sec["totals"]:
+            line += f'   |   section total (goes in "totals", NOT a row): ' \
+                    + ", ".join(sec["totals"])
+        p.append(line)
+    p.append("The rows are listed for you: the section's own total has already "
+             "been separated out above, so a table's row_count is exactly the "
+             "number of rows named on its line. Do not add the total back in "
+             "as a row.")
     p.append("")
     return "\n".join(p)
 
 
-def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
-    """One LLM call. Returns the inferred template dict, or None on failure."""
+def infer_template(orchestrator, doc_text_pages, page_images, filename="",
+                   doc_type_hint=""):
+    """One LLM call. Returns the inferred template dict, or None on failure.
+
+    `doc_type_hint` selects the CANONICAL VOCABULARY offered to the model
+    (engine/vocabulary.py). It comes from keyword pre-screening, costs no
+    LLM call, and is only a hint: the model still decides `document_type`
+    itself, and a wrong hint costs nothing but an unused name list.
+    """
     text = "\n".join(f"--- page {i} ---\n{t or ''}"
                      for i, t in enumerate(doc_text_pages or [], 1))[:_MAX_TEXT]
 
@@ -224,6 +287,7 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
         "value listed in two places is written into the sheet twice.\n"
         "- If the document has no repeating rows, return \"tables\": [].\n"
         + _sections_block(detect_amount_sections(doc_text_pages))
+        + vocabulary_block(doc_type_hint)
     )
 
     # TEMPERATURE 0. Inference decides what the columns are CALLED, and a
@@ -252,6 +316,12 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
         _log("INFER", f"{filename}: inferred template is empty")
         return None
 
+    n_named = (len(inferred["fields"]) + len(inferred["totals"])
+               + sum(len(t["columns"]) for t in inferred["tables"]))
+    n_novel = len(inferred.get("novel_fields") or [])
+    if doc_type_hint:
+        _log("VOCAB", f"{filename}: {n_named - n_novel}/{n_named} labels from "
+                      f"the {doc_type_hint} vocabulary, {n_novel} outside it")
     _log("INFER", f"{filename}: {inferred['document_type']} — "
                   f"{len(inferred['fields'])} fields, "
                   f"{len(inferred['tables'])} table(s) "
@@ -260,13 +330,22 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename=""):
     return inferred
 
 
-def _labels(seq):
-    """Clean a list of label strings: strings only, trimmed, deduped, ordered."""
+def _labels(seq, novel=None):
+    """Clean a list of label strings: strings only, trimmed, deduped, ordered.
+
+    A label the model prefixed "other: " fell outside the canonical vocabulary.
+    The prefix is stripped — a spreadsheet should read "Bank Address", not
+    "other: Bank Address" — and the name is recorded in `novel`, because the
+    share of values needing it is how we know whether the vocabulary is wide
+    enough.
+    """
     out, seen = [], set()
     for x in seq or []:
         if isinstance(x, dict):
             x = x.get("label") or x.get("name") or ""
-        s = re.sub(r"\s+", " ", str(x or "")).strip().strip(":").strip()
+        s = re.sub(r"\s+", " ", str(x or "")).strip()
+        s, was_other = split_other(s)
+        s = s.strip().strip(":").strip()
         if not s or len(s) > 60:
             continue
         k = s.casefold()
@@ -274,15 +353,18 @@ def _labels(seq):
             continue
         seen.add(k)
         out.append(s)
+        if was_other and novel is not None:
+            novel.append(s)
     return out
 
 
 def _clean(parsed):
+    novel = []
     tables = []
     for t in parsed.get("tables") or []:
         if not isinstance(t, dict):
             continue
-        cols = _labels(t.get("columns"))
+        cols = _labels(t.get("columns"), novel)
         if len(cols) < 2:
             continue                      # a one-column "table" is a field list
         try:
@@ -295,9 +377,10 @@ def _clean(parsed):
     return {
         "document_type": str(parsed.get("document_type") or "other").strip() or "other",
         "title": re.sub(r"\s+", " ", str(parsed.get("title") or "")).strip(),
-        "fields": _labels(parsed.get("fields")),
+        "fields": _labels(parsed.get("fields"), novel),
         "tables": tables,
-        "totals": _labels(parsed.get("totals")),
+        "totals": _labels(parsed.get("totals"), novel),
+        "novel_fields": novel,
     }
 
 

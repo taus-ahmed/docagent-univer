@@ -1,0 +1,57 @@
+{
+ "key": "70907ace8425731e6d5b95d5dfbc763483b9971b96aab6adce4226107c11f077",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2675,
+  "captured_at": "2026-08-23 15:23:35",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC EXPENSE REPORT\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nEmployee: Marcus A. Thompson Report No:\nAPPROVED\nEXP-2024-0081\nEmployee ID: EMP"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"expense_report\",\n  \"title\": \"Expense Report\",\n  \"fields\": [\n    \"other: Company Name\",\n    \"other: Company Address\",\n    \"other: Company Phone\",\n    \"other: Company Tax ID\",\n    \"Employee Name\",\n    \"Report Number\",\n    \"Status\",\n    \"Employee ID\",\n    \"Department\",\n    \"Manager\",\n    \"Report Period From\",\n    \"Report Period To\",\n    \"Purpose\",\n    \"Employee Signature\",\n    \"Manager Approval Signature\",\n    \"Finance Approval Signature\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Expense Details\",\n      \"columns\": [\n        \"Expense Date\",\n        \"Type\",\n        \"Description\",\n        \"Category\",\n        \"Amount\"\n      ],\n      \"row_count\": 9\n    }\n  ],\n  \"totals\": [\n    \"Total Claimed\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "expense_report",
+   "title": "Expense Report",
+   "fields": [
+    "other: Company Name",
+    "other: Company Address",
+    "other: Company Phone",
+    "other: Company Tax ID",
+    "Employee Name",
+    "Report Number",
+    "Status",
+    "Employee ID",
+    "Department",
+    "Manager",
+    "Report Period From",
+    "Report Period To",
+    "Purpose",
+    "Employee Signature",
+    "Manager Approval Signature",
+    "Finance Approval Signature"
+   ],
+   "tables": [
+    {
+     "name": "Expense Details",
+     "columns": [
+      "Expense Date",
+      "Type",
+      "Description",
+      "Category",
+      "Amount"
+     ],
+     "row_count": 9
+    }
+   ],
+   "totals": [
+    "Total Claimed"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2675,
+  "success": true,
+  "error": ""
+ }
+}
