@@ -53,6 +53,27 @@ from micr import field_role, find_micr_line, parse_micr
 _DASHES = {"–": "-", "—": "-", "−": "-", "‐": "-", "‑": "-"}
 
 
+def _flag(ref, value, reason) -> dict:
+    """One entry in `validation.flagged_fields`.
+
+    ONE SHAPE, because there were three. This path appended plain strings
+    (`"Closing Balance: not found in document text"`), the image path appended
+    `{ref, value, issue}`, and the legacy path `{ref, value, reason}` — while
+    both consumers assumed the last of those. The job runner built its
+    `validation_warnings` summary with `f['ref']`, which raises TypeError on a
+    string, and that exception was caught by the per-document handler: ANY
+    document with a flagged field failed to save, with the failure counted and
+    the cause visible only on stdout. The review panel, reading `f.reason` off
+    a string, rendered a row of blanks.
+
+    `ref` is the human-facing identifier — a row label, or `Table[3].Amount`
+    for a table cell. Cell addresses live in `confidence_map`, which is keyed
+    by them.
+    """
+    return {"ref": str(ref), "value": "" if value is None else str(value),
+            "reason": str(reason or "")}
+
+
 def _flat(s) -> str:
     """Collapse whitespace, unify dashes, drop case — for span matching."""
     t = str(s or "")
@@ -400,7 +421,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if not ok:
                 ungrounded += 1
             if lvl not in CONFIDENT_LEVELS:
-                flagged.append(f'{slot["row_label"]}: {reason or why}')
+                flagged.append(_flag(slot["row_label"], value, reason or why))
 
     # ── MICR decomposition ──
     # A cheque's routing and account numbers are printed only inside the MICR
@@ -431,7 +452,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if not ok:
                 ungrounded += 1
             if lvl not in CONFIDENT_LEVELS:
-                flagged.append(f'{slot["row_label"]}: {reason or why}')
+                flagged.append(_flag(slot["row_label"], value, reason or why))
         if parts:
             _log("MICR", f"{file_path.name}: band decomposed -> "
                          + ", ".join(sorted(parts)))
@@ -481,8 +502,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         ungrounded += 1
                     if lvl not in CONFIDENT_LEVELS:
                         row_conf = LOW
-                        flagged.append(
-                            f'{t["name"]}[{len(rows_out)}].{h}: {reason or why}')
+                        flagged.append(_flag(
+                            f'{t["name"]}[{len(rows_out)}].{h}', v,
+                            reason or why))
                 if any(str(v).strip() for v in row.values()):
                     row["_confidence"] = row_conf
                     rows_out.append(row)

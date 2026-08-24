@@ -3363,7 +3363,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     # FIX 3: a schema-coercion warning escalates the document to needs_review
     # so a silently-unwritable AI response never passes as clean.
     if _schema_warn:
-        flagged = list(flagged) + [{"ref": "_schema", "value": "", "issue": _schema_warn}]
+        flagged = list(flagged) + [{"ref": "_schema", "value": "", "reason": _schema_warn}]
         print(f"[SCHEMA] {filename}: {_schema_warn}", flush=True)
 
     # -- Build human-readable extracted_data -----------------------------------
@@ -3725,10 +3725,13 @@ def _extract_image_with_template(orchestrator, file_path: Path,
             # Inject a validation flag so _run_extraction_sync sets needs_review=True
             val = result.extracted_data.setdefault("validation", {})
             val["flagged_count"] = max(1, val.get("flagged_count", 0))
+            # `reason`, not `issue`: one key name across every producer, which
+            # is what the review panel reads. Spelling it `issue` here made
+            # this flag render as a blank row.
             val.setdefault("flagged_fields", []).append({
                 "ref": "image_upload",
                 "value": "",
-                "issue": (
+                "reason": (
                     "Image upload — no text layer, so no value could be "
                     "verified against the document; please check manually"
                 ),
@@ -3991,6 +3994,29 @@ def _resolve_source(storage, ref):
     return p if p.exists() else None
 
 
+def _flag_summary(flagged) -> str:
+    """`validation.flagged_fields` rendered as one line for the results row.
+
+    Tolerant of a bare string on purpose. The engine now emits one shape
+    (`{ref, value, reason}`, built by `slot_extractor._flag`), but this
+    function is on the SAVE path: the previous version indexed `f['ref']`
+    unconditionally, a string entry raised TypeError, and the per-document
+    handler recorded the whole document as failed. A summary line is not worth
+    losing a document over, so an unexpected entry is stringified rather than
+    fatal.
+    """
+    out = []
+    for f in flagged or []:
+        if isinstance(f, dict):
+            ref = f.get("ref") or f.get("label") or ""
+            value = f.get("value", "")
+            reason = f.get("reason") or f.get("issue") or ""
+            out.append(f"{ref}: {value}" + (f" ({reason})" if reason else ""))
+        else:
+            out.append(str(f))
+    return "; ".join(out)
+
+
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
                           selected_pages=None):
@@ -4182,7 +4208,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                             raw_llm_response=_raw_llm or None,
                             validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
                             validation_warnings=(
-                                "; ".join(f"{f['ref']}: {f['value']}" for f in validation_data.get("flagged_fields", []))
+                                _flag_summary(validation_data.get("flagged_fields", []))
                                 if has_flags else ""
                             ),
                             needs_review=has_flags or (result.validation.needs_review if result.validation else False),

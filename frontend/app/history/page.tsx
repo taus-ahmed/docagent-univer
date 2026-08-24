@@ -153,16 +153,26 @@ function ErrorPanel({ doc }: { doc: DocumentResult }) {
           <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text3)", marginBottom: 4 }}>
             {flagged.length} low-confidence field{flagged.length !== 1 ? "s" : ""}:
           </p>
-          {flagged.map((f: any, i: number) => (
-            <div key={i} style={{
-              display: "flex", gap: 6, fontSize: 11,
-              padding: "3px 0", color: "var(--text2)",
-            }}>
-              <span style={{ fontWeight: 600, color: "var(--amber,#f59e0b)", flexShrink: 0 }}>{f.ref}</span>
-              <span style={{ color: "var(--text1)" }}>"{f.value}"</span>
-              <span style={{ color: "var(--text3)" }}>— {f.reason}</span>
-            </div>
-          ))}
+          {/* An entry is {ref, value, reason}. A plain string is also rendered
+              rather than dropped: results extracted before the shapes were
+              unified hold strings, and reading `.ref` off one produced a row
+              of three blanks — a flag that says nothing is worse than none. */}
+          {flagged.map((f: any, i: number) =>
+            typeof f === "string" ? (
+              <div key={i} style={{ fontSize: 11, padding: "3px 0", color: "var(--text2)" }}>
+                {f}
+              </div>
+            ) : (
+              <div key={i} style={{
+                display: "flex", gap: 6, fontSize: 11,
+                padding: "3px 0", color: "var(--text2)",
+              }}>
+                <span style={{ fontWeight: 600, color: "var(--amber,#f59e0b)", flexShrink: 0 }}>{f.ref ?? f.label}</span>
+                {f.value ? <span style={{ color: "var(--text1)" }}>"{f.value}"</span> : null}
+                <span style={{ color: "var(--text3)" }}>— {f.reason ?? f.issue}</span>
+              </div>
+            )
+          )}
         </div>
       )}
       {!errorMsg && flagged.length === 0 && (
