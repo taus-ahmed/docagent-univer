@@ -4024,6 +4024,16 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
         from orchestrator import Orchestrator
         orchestrator = Orchestrator(client_schema_path=schema_path)
 
+        # The worker builds its OWN storage handle. `storage` in the upload
+        # route is a request dependency (`Depends(get_storage)`) and does not
+        # exist in this thread: referencing it here raised NameError on the
+        # FIRST line of every document's try block, and the per-document
+        # `except` turned that into "this document failed" — for every
+        # document, of every upload, while the job still reported `completed`.
+        # Pinned by tests/http/test_batch_end_to_end.py and by the pyflakes
+        # gate in tests/test_no_undefined_names.py.
+        storage = get_storage()
+
         successful = failed = needs_review = 0
         total_tokens_used = 0
         total_cost_usd = 0.0
