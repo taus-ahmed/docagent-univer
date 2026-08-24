@@ -331,20 +331,39 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 
 | | templated | no-template |
 |---|---|---|
-| **accuracy** (container-aware headline) | **98.0%** | **97.2%** |
-| **content** (container-blind) | 96.7% | 95.4% |
+| **accuracy** (container-aware headline) | **98.5%** | **98.0%** |
+| **content** (container-blind) | 97.5% | 96.7% |
 | **structure fidelity** | **100%** (17/17) | **100%** (17/17) |
-| accuracy RAW (all adapter widenings off) | 47.2% | 69.8% |
+| accuracy RAW (all adapter widenings off) | 47.7% | 70.8% |
 | invented (value nowhere in the PDF) | **0** | **0** |
-| misfiled (real content in a slot gold says is empty) | 4 | 6 |
-| out-of-schema (real content, name gold lacks — *not* a defect) | 0 | 60 |
+| misfiled | 4 | 6 |
+| out-of-schema (*not* a defect) | 0 | 60 |
 | **defect rate** | 1.0% | 1.3% |
-| renamed | 0 | 4 |
 | fields varying across 3 live repeats | 0 | 1 |
 
-The remaining misfilings are one intermittent bug on one document:
-`PAYSLIP-EMP-0012`'s "Total" summary line coming back as an earnings row and
-again as a deductions row.
+`BS-2024-Q1`, `CHQ-001847`, `IS-2024-Q4` and `STMT-2024-01` score 100% in both
+modes. The remaining misfilings are one intermittent bug on one document:
+`PAYSLIP-EMP-0012`'s "Total" summary line coming back as a data row.
+
+### The MICR band is parsed, not prompted (`engine/micr.py`)
+
+A cheque's routing and account numbers are printed only inside the MICR band,
+so the model returned it whole — asked for a routing number it answered
+`A021000021A C7743882201C 001847D`. The band is E-13B, with a sentinel
+delimiting each field, so it is parsed: both the real glyphs (`⑆ ⑇ ⑈ ⑉`) and
+the ASCII stand-ins different font vendors emit. Slot extraction fills only
+slots the model left **empty**, so a real answer is never overwritten, and the
+routing number is checked against the **ABA checksum** before use — nine digits
+in the transit position that fail it are not reported. `Account Holder` is a
+person and is deliberately not matched. `CHQ-001847`: 45.5% → **100%**.
+
+⚠ **Identifiers are not quantities.** `coerce_cell_value` numified any bare
+digit run, so extraction held `"021000021"` and the exported cell held
+`21000021` — the leading zero gone and the routing number wrong in the
+customer's file. A bare digit run with a leading zero, or longer than any
+amount written without separators, stays **text**. Money keeps its notation
+(symbol, separators, decimal, accounting parentheses); a bare count like a Qty
+of 40 is still a number. Caught only by the export-vs-extraction check.
 
 ### Naming: the page first, then the canonical vocabulary
 
