@@ -87,7 +87,9 @@ export interface TemplateShape {
 
 export interface JobStatus {
   id: number;
-  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+  // "partial" = some documents produced results and some failed. A job where
+  // every document failed reports "failed", never "completed".
+  status: "pending" | "processing" | "completed" | "partial" | "failed" | "cancelled";
   total_docs: number;
   successful: number;
   failed: number;

@@ -4017,6 +4017,50 @@ def _flag_summary(flagged) -> str:
     return "; ".join(out)
 
 
+def _persist_failure(session_factory, job_id, ref, error) -> None:
+    """Record a document that failed BEFORE it could produce a result.
+
+    A failed document must leave a row. Counting the failure and moving on is
+    exactly what hid the Phase 8 `storage` NameError: five documents failed,
+    the job reported `completed`, `GET /results` returned `[]`, the export
+    answered 404, and the only trace of the cause was one line on the
+    container's stdout. Nobody reads a container's stdout for a job that says
+    it worked.
+
+    A row costs nothing and turns a silent total failure into a diagnosable
+    one — the filename and the exception are where the user is already
+    looking. `extraction_json` stays NULL, which is what every reader already
+    treats as "no values", and the writers skip it rather than emitting an
+    empty block.
+
+    Written on its OWN session. The caller's session is a unit of work holding
+    flushed-but-uncommitted results from earlier documents in the same batch;
+    rolling it back or committing it here to record one failure would take
+    those with it.
+    """
+    from app.models.models import DocumentResult
+
+    s = session_factory()
+    try:
+        s.add(DocumentResult(
+            job_id=job_id,
+            filename=Path(str(ref)).name or str(ref),
+            document_type="unknown",
+            overall_confidence="low",
+            extraction_json=None,
+            validation_errors=f"{type(error).__name__}: {error}"[:2000],
+            needs_review=True,
+            latency_ms=0,
+            tokens_used=0,
+        ))
+        s.commit()
+    except Exception as e:
+        s.rollback()
+        print(f"[THREAD] could not record the failure of {ref}: {e}", flush=True)
+    finally:
+        s.close()
+
+
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
                           selected_pages=None):
@@ -4243,11 +4287,14 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                         print(f"[THREAD] SAVE ERROR for {result.filename}: {save_err}", flush=True)
                         traceback.print_exc()
                         failed += 1
+                        _persist_failure(Session, job_id,
+                                         getattr(result, "filename", fp), save_err)
 
             except Exception as doc_err:
                 print(f"[THREAD] doc error: {doc_err}", flush=True)
                 traceback.print_exc()
                 failed += 1
+                _persist_failure(Session, job_id, fp, doc_err)
 
             # Rate limit protection: delay between documents
             # Prevents Groq/Gemini 429 errors on batch uploads
@@ -4258,14 +4305,41 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                 time.sleep(delay)
 
         session.commit()
-        job.status = "completed"
+
+        # A job that produced nothing is not "completed". Saying it was is how
+        # a total failure came to look like an empty result set: a green tick,
+        # an empty grid, a download that 404s, and no statement anywhere that
+        # something went wrong. The status now names what happened.
+        #
+        #   completed — every document produced a result
+        #   partial   — some produced results, some failed
+        #   failed    — none did
+        #
+        # `successful + failed` counts RESULTS, not files: one PDF holding
+        # several documents yields several. The denominator in the message is
+        # therefore the result count, so it always agrees with the two numbers
+        # beside it.
+        produced = successful + failed
+        if produced and failed == 0:
+            job.status = "completed"
+        elif successful:
+            job.status = "partial"
+        else:
+            job.status = "failed"
+        if job.status != "completed":
+            job.error_message = (
+                f"{failed} of {produced} document(s) failed — open the job to "
+                f"see each document's error."
+                if produced else
+                "No documents were processed."
+            )
         job.successful = successful
         job.failed = failed
         job.needs_review = needs_review
         job.total_time_sec = time.time() - start_time
         job.completed_at = datetime.utcnow()
         session.commit()
-        print(f"[THREAD] COMPLETE: {successful} ok, {failed} failed, "
+        print(f"[THREAD] {job.status.upper()}: {successful} ok, {failed} failed, "
               f"{needs_review} review | "
               f"TOKENS: {total_tokens_used:,} total | "
               f"COST: ${total_cost_usd:.4f} | "

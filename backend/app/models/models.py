@@ -55,7 +55,13 @@ class ExtractionJob(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     client_id = Column(String(100), nullable=False, index=True)
     status = Column(String(20), default="pending", nullable=False)
-    # pending | processing | completed | failed | cancelled
+    # pending | processing | completed | partial | failed | cancelled
+    #
+    # A terminal status states what the batch PRODUCED, not merely that the
+    # worker stopped: `completed` means every document returned a result,
+    # `partial` that some did and some did not, `failed` that none did. A job
+    # where every document failed used to report `completed`, so a total
+    # failure was indistinguishable from an empty batch.
 
     total_docs = Column(Integer, default=0)
     successful = Column(Integer, default=0)

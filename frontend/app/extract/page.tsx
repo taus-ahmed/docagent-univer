@@ -431,8 +431,12 @@ export default function ExtractPage() {
     staleTime: 0,
   });
 
-  if (jobStatus?.status === "completed" && prevStatus.current !== "completed") {
-    prevStatus.current = "completed";
+  // "partial" is a finished job with real results for the documents that
+  // worked, so it loads them exactly as "completed" does. The difference is
+  // what the page then SAYS about the batch, not whether it fetches.
+  const finishedWithResults = jobStatus?.status === "completed" || jobStatus?.status === "partial";
+  if (finishedWithResults && prevStatus.current !== jobStatus!.status) {
+    prevStatus.current = jobStatus!.status;
     extractApi.getResults(activeJobId!).then(data => { setResults(data); setIsExtracting(false); });
   }
   if (jobStatus?.status === "failed" && prevStatus.current !== "failed") {
@@ -503,7 +507,8 @@ export default function ExtractPage() {
   }
 
   const isRunning = jobStatus?.status === "processing" || jobStatus?.status === "pending";
-  const isDone = jobStatus?.status === "completed";
+  const isDone = jobStatus?.status === "completed" || jobStatus?.status === "partial";
+  const isPartial = jobStatus?.status === "partial";
   const isFailed = jobStatus?.status === "failed";
   const hasResults = results.length > 0;
 
@@ -554,6 +559,7 @@ export default function ExtractPage() {
         .progress-fill { height: 100%; border-radius: 2px; }
         .progress-fill.running { background: var(--accent); animation: indeterminate 1.4s ease-in-out infinite; width: 50% !important; }
         .progress-fill.done { background: var(--green); width: 100% !important; }
+        .progress-fill.partial { background: var(--amber); width: 100% !important; }
         .progress-fill.failed { background: var(--red); width: 100% !important; }
         .job-stats { display: flex; gap: 12px; flex-wrap: wrap; }
         .job-stat { font-size: 11px; color: var(--text3); }
@@ -782,14 +788,18 @@ export default function ExtractPage() {
             <div className="card" style={{ padding: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 {isRunning && <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
-                {isDone && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>}
+                {isDone && !isPartial && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>}
+                {isPartial && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
                 {isFailed && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
                 <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text1)" }}>
-                  {isRunning ? "Extracting…" : isDone ? "Extraction complete" : "Extraction failed"}
+                  {isRunning ? "Extracting…"
+                    : isPartial ? `${jobStatus?.failed} of ${jobStatus?.total_docs} documents failed`
+                    : isDone ? "Extraction complete"
+                    : "Extraction failed"}
                 </span>
               </div>
               <div className="progress-bar">
-                <div className={`progress-fill ${isRunning ? "running" : isDone ? "done" : "failed"}`}/>
+                <div className={`progress-fill ${isRunning ? "running" : isPartial ? "partial" : isDone ? "done" : "failed"}`}/>
               </div>
               {jobStatus && (
                 <div className="job-stats">
@@ -799,8 +809,10 @@ export default function ExtractPage() {
                   {isDone && <span className="job-stat"><b>{(jobStatus.total_time_sec ?? 0).toFixed(1)}s</b></span>}
                 </div>
               )}
-              {isFailed && jobStatus?.error_message && (
-                <p style={{ fontSize: 11, color: "var(--red)", marginTop: 8 }}>{jobStatus.error_message}</p>
+              {(isFailed || isPartial) && jobStatus?.error_message && (
+                <p style={{ fontSize: 11, color: isPartial ? "var(--amber)" : "var(--red)", marginTop: 8 }}>
+                  {jobStatus.error_message}
+                </p>
               )}
               {/* N1: download available for ANY completed job — with or without a template
                   (no-template jobs export via the backend's flat-table writer) */}

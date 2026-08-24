@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     completed: "badge-green",
+    partial: "badge-amber",
     processing: "badge-blue",
     failed: "badge-red",
     pending: "badge-gray",
@@ -19,6 +20,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function StatusIcon({ status }: { status: string }) {
   if (status === "completed") return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
+  if (status === "partial")   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
   if (status === "failed")    return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
   if (status === "processing") return <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg>;
@@ -479,9 +481,12 @@ export default function HistoryPage() {
                 <div className="detail-header">
                   <span className="detail-title">Job #{selectedJob.id}</span>
                   <StatusBadge status={selectedJob.status} />
-                  {/* N1: show download buttons for any completed job with extracted docs —
-                      template or not (no-template jobs export via the flat-table writer) */}
-                  {selectedJob.status === "completed" && (selectedJob.successful ?? 0) > 0 && (
+                  {/* N1: show download buttons for any job with extracted docs —
+                      template or not (no-template jobs export via the flat-table writer).
+                      A "partial" job has real output for the documents that
+                      succeeded, so it downloads too; what it must not do is
+                      claim everything worked. */}
+                  {["completed", "partial"].includes(selectedJob.status) && (selectedJob.successful ?? 0) > 0 && (
                     <>
                       <button
                         className="btn btn-primary btn-sm"
@@ -510,9 +515,15 @@ export default function HistoryPage() {
                       )}
                     </>
                   )}
-                  {selectedJob.status === "failed" && (selectedJob.successful ?? 0) === 0 && (
+                  {selectedJob.status === "partial" && (
+                    <span style={{ fontSize: 12, color: "var(--amber)" }}>
+                      {selectedJob.failed} of {(selectedJob.successful ?? 0) + (selectedJob.failed ?? 0)} documents
+                      failed — the download holds only the ones that worked
+                    </span>
+                  )}
+                  {selectedJob.status === "failed" && (
                     <span style={{ fontSize: 12, color: "var(--red,#ef4444)" }}>
-                      All documents failed — no output available
+                      {selectedJob.error_message || "All documents failed — no output available"}
                     </span>
                   )}
                 </div>

@@ -101,8 +101,11 @@ export default function AnalyticsPage() {
     staleTime: 30_000,
   });
 
-  // Fetch results for last 20 completed jobs to get token data
-  const recentJobs = jobs.filter(j => j.status === "completed").slice(0, 20);
+  // Fetch results for the last 20 jobs that PRODUCED results, to get token
+  // data. A "partial" job did real work and cost real money for the documents
+  // that succeeded — counting only "completed" would understate the spend.
+  const producedResults = (s: string) => s === "completed" || s === "partial";
+  const recentJobs = jobs.filter(j => producedResults(j.status)).slice(0, 20);
   const { data: allResults = [] } = useQuery<DocumentResult[]>({
     queryKey: ["results-analytics", recentJobs.map(j => j.id).join(",")],
     queryFn: async () => {
@@ -117,7 +120,7 @@ export default function AnalyticsPage() {
 
   // ── Computed stats ────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const completed  = jobs.filter(j => j.status === "completed");
+    const completed  = jobs.filter(j => producedResults(j.status));
     const failed     = jobs.filter(j => j.status === "failed");
     const totalDocs  = completed.reduce((s, j) => s + j.total_docs, 0);
     const totalOk    = completed.reduce((s, j) => s + j.successful, 0);
@@ -423,7 +426,9 @@ export default function AnalyticsPage() {
                     const jobResults = allResults.filter(r => r.job_id === job.id);
                     const jobTokens  = jobResults.reduce((s, r) => s + (r.tokens_used || 0), 0);
                     const jobCost    = costOf(jobTokens);
-                    const statusColor = job.status === "completed" ? "var(--green)" : job.status === "failed" ? "var(--red)" : "var(--amber)";
+                    const statusColor = job.status === "completed" ? "var(--green)"
+                      : job.status === "failed" ? "var(--red)"
+                      : "var(--amber)";   // partial, processing, pending, cancelled
                     return (
                       <tr key={job.id} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "transparent" : "var(--surface2)" }}>
                         <td style={{ padding: "9px 14px", color: "var(--text1)", fontWeight: 500 }}>#{job.id}</td>
