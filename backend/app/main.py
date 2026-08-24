@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI):
 
     # Copy demo schema if no schemas exist
     _seed_demo_schema()
+    _materialise_schemas()
 
     logger.info("DocAgent ready.")
     yield
@@ -195,6 +196,51 @@ def _seed_admin():
             db.commit()
             logger.info("Default admin user created (username: admin, password: admin123)")
             logger.warning("⚠  CHANGE THE DEFAULT ADMIN PASSWORD BEFORE PRODUCTION DEPLOY!")
+    finally:
+        db.close()
+
+
+def _materialise_schemas():
+    """Write every client's YAML from the database to storage if it is missing.
+
+    This is the bug that actually broke the deploy, and it is not about losing
+    files — it is about never putting them back. A schema is stored twice: the
+    text in `client_schemas.yaml_content`, and a copy on disk that
+    `storage.get_schema_path()` hands to the extraction engine. On a container
+    with no volume the disk copy dies at every redeploy, and `_seed_demo_schema`
+    returned early whenever the TABLE was non-empty — which it always is after
+    the first boot. So from the second deploy onward there was no YAML anywhere
+    on disk, `get_schema_path()` returned None for every client, and
+    POST /api/extract/upload answered 404 "No schema found" for every upload.
+
+    The database copy was never lost, so nothing here is recovery — it is
+    re-materialisation, and it is idempotent: schemas already present are left
+    alone.
+    """
+    from app.models import SessionLocal
+    from app.models.models import ClientSchema
+    from app.core.storage import get_storage
+
+    db = SessionLocal()
+    try:
+        storage = get_storage()
+        restored = 0
+        for row in db.query(ClientSchema).all():
+            if not (row.yaml_content or "").strip():
+                continue
+            key = storage.schema_key(row.client_id)
+            if storage.exists(key):
+                continue
+            try:
+                storage.save_schema(row.yaml_content, row.client_id)
+                restored += 1
+            except Exception as e:
+                logger.error("Could not materialise schema for %s: %s",
+                             row.client_id, e)
+        if restored:
+            logger.info("Schemas materialised from database: %d", restored)
+    except Exception as e:
+        logger.warning("Schema materialisation skipped: %s", e)
     finally:
         db.close()
 

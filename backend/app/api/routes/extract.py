@@ -296,15 +296,19 @@ async def upload_and_extract(
     db.refresh(job)
     job_id = job.id
 
-    saved_paths = []
+    # The worker is handed KEYS, not paths. A local absolute path is
+    # meaningless to a separate worker process or an object store, and passing
+    # one is what tied extraction to this container's own disk.
+    saved_keys = []
     for f in files:
         content = await f.read()
-        local_path, _ = storage.save_upload(content, f.filename, job_id, current_user.id)
-        saved_paths.append(str(local_path))
+        key, _ = storage.save_upload(content, f.filename, job_id,
+                                     client_id=client_id)
+        saved_keys.append(key)
 
     thread = threading.Thread(
         target=_run_extraction_sync,
-        args=(job_id, saved_paths, str(schema_path), settings.DATABASE_URL,
+        args=(job_id, saved_keys, str(schema_path), settings.DATABASE_URL,
               template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
         kwargs={"options": selected_options, "selected_pages": selected_pages_list},
         daemon=True,
@@ -3962,7 +3966,32 @@ def _cross_validate_section_totals(extracted_data: dict, doc_type: str) -> Optio
 
 
 
-def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
+def _is_storage_key(value) -> bool:
+    """A storage key, as opposed to a filesystem path.
+
+    Jobs recorded before Phase 8 hold absolute paths; jobs after it hold keys.
+    Both have to keep working, and the difference is visible: a key is
+    relative, uses forward slashes, and has no drive letter.
+    """
+    v = str(value or "")
+    if not v or v.startswith(("/", "\\", "~")) or re.match(r"^[A-Za-z]:", v):
+        return False
+    return "\\" not in v
+
+
+def _resolve_source(storage, ref):
+    """A readable path for a source document, or None if it is gone.
+
+    Takes either a storage key (Phase 8 onward) or an absolute path (jobs
+    submitted before it), so a queue drained across the upgrade still runs.
+    """
+    if _is_storage_key(ref):
+        return storage.get_local_path(ref)
+    p = Path(ref)
+    return p if p.exists() else None
+
+
+def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
                           selected_pages=None):
     import os
@@ -4011,47 +4040,54 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
         # is persisted, and nothing leaks between clients or jobs.
         batch_schemas: dict = {}
 
-        for i, fp in enumerate(file_paths):
-            print(f"[THREAD] processing file {i+1}/{len(file_paths)}: {fp}", flush=True)
+        for i, fp in enumerate(file_keys):
+            print(f"[THREAD] processing file {i+1}/{len(file_keys)}: {fp}", flush=True)
 
             # Issue 2: update job progress so the UI can poll live status
             try:
                 job.progress_message = (
-                    f"Processing document {i+1} of {len(file_paths)}..."
+                    f"Processing document {i+1} of {len(file_keys)}..."
                 )
                 session.commit()
             except Exception:
                 pass
 
             try:
-                file_path = Path(fp)
-                is_img = _is_image_file(file_path)  # Issue 3: route image files
-                if template_data:
-                    if is_img:
-                        results = _extract_image_with_template(
-                            orchestrator, file_path, template_data
-                        )
-                    else:
-                        results = _extract_with_template(
-                            orchestrator, file_path, template_data,
-                            selected_pages=selected_pages,
-                        )
+                # `fp` is a storage KEY. Resolving it is what makes the worker
+                # independent of which machine received the upload: local
+                # returns the path under the storage root, the object store
+                # fetches to a temp file.
+                file_path = _resolve_source(storage, fp)
+                if file_path is None:
+                    # The source document is gone — an ephemeral disk lost it
+                    # between upload and processing, or retention deleted it.
+                    # That is an ordinary state, not a crash: it fails THIS
+                    # document with a message saying what happened, and the
+                    # result travels the same persistence path as any other, so
+                    # the job still completes and still reports.
+                    print(f"[THREAD] source missing: {fp}", flush=True)
+                    results = [_fail(Path(fp).name,
+                                     "Source document is no longer in storage "
+                                     "— upload it again to re-run this job.")]
+                elif _is_image_file(file_path):        # Issue 3: route image files
+                    results = _extract_image_with_template(
+                        orchestrator, file_path, template_data)
+                elif template_data:
+                    results = _extract_with_template(
+                        orchestrator, file_path, template_data,
+                        selected_pages=selected_pages,
+                    )
                 else:
-                    if is_img:
-                        results = _extract_image_with_template(
-                            orchestrator, file_path, None
-                        )
-                    else:
-                        # Phase 3 — no template: the engine infers one and runs
-                        # the same slot pipeline. Previously this went to the
-                        # orchestrator's schema path, which was bounded to the
-                        # 6 document types in demo_accounting.yaml and dropped
-                        # line items entirely.
-                        results = _extract_with_template(
-                            orchestrator, file_path, None,
-                            selected_pages=selected_pages,
-                            batch_schemas=batch_schemas,
-                        )
+                    # Phase 3 — no template: the engine infers one and runs the
+                    # same slot pipeline. Previously this went to the
+                    # orchestrator's schema path, which was bounded to the 6
+                    # document types in demo_accounting.yaml and dropped line
+                    # items entirely.
+                    results = _extract_with_template(
+                        orchestrator, file_path, None,
+                        selected_pages=selected_pages,
+                        batch_schemas=batch_schemas,
+                    )
 
                 for result in results:
                     try:
@@ -4180,7 +4216,7 @@ def _run_extraction_sync(job_id, file_paths, schema_path, db_url, template_data,
             # Rate limit protection: delay between documents
             # Prevents Groq/Gemini 429 errors on batch uploads
             # Default 3s — enough for Groq free tier (30 req/min = 2s min gap)
-            if i < len(file_paths) - 1:
+            if i < len(file_keys) - 1:
                 delay = float(getattr(settings, 'RATE_LIMIT_DELAY', 3.0))
                 print(f"[THREAD] rate limit delay {delay}s before next doc", flush=True)
                 time.sleep(delay)
