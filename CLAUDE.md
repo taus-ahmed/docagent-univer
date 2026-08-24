@@ -262,6 +262,17 @@ to medium with an explanatory note.
  "layout_sections": {}, "table_rows": []}        # kept empty for legacy readers
 ```
 
+**`flagged_fields` is a list of `{ref, value, reason}` dicts — one shape, from
+every producer** (`slot_extractor._flag`). It had three: plain strings on the
+slot path, `{ref, value, issue}` on the image path, `{ref, value, reason}` on
+the legacy one — while both consumers assumed the last. The job runner
+summarised each entry with `f['ref']`, which raises `TypeError` on a string, and
+that exception was caught by the per-document handler: **any document carrying a
+flagged field failed to save**, counted as a failure with the cause only on
+stdout. The review panel, reading `.reason` off a string, drew a row of blanks.
+`_flag_summary` in `extract.py` still tolerates the old shapes, because a
+summary line must never be the reason a document is lost.
+
 ### No template: inference, not a second engine (`shape_inference.py`)
 
 `_infer_template_data` makes ONE Gemini call that *designs a template*
@@ -455,7 +466,7 @@ Phase-flagged (not yet active): Redis/Celery (Phase 4), S3/R2 (Phase 3).
 6 tables, SQLAlchemy 2.0 style with `DeclarativeBase`:
 
 - **`users`** — `id`, `username`, `password_hash` (salt:sha256), `role`, `client_id`, `is_active`, `last_login`
-- **`extraction_jobs`** — `client_id`, `status` (pending/processing/completed/failed/cancelled), `total_docs/successful/failed/needs_review`, `input_source` (upload/drive/folder), `schema_id`, `total_tokens`, `total_cost`, `progress_message`
+- **`extraction_jobs`** — `client_id`, `status` (pending/processing/**completed/partial/failed**/cancelled), `total_docs/successful/failed/needs_review`, `input_source` (upload/drive/folder), `schema_id`, `total_tokens`, `total_cost`, `progress_message`. A terminal status states what the batch **produced**: `completed` = every document returned a result, `partial` = some did, `failed` = none did. A job where every document failed used to report `completed`, which made a total failure indistinguishable from an empty batch
 - **`document_results`** — `extraction_json` TEXT (JSON string, not `Column(JSON)`), accessed via `get_extracted_data()` / `set_extracted_data()`; `raw_llm_response`; `overall_confidence` (high/medium/low); `needs_review`, `reviewed`; `latency_ms`, `tokens_used`
 - **`column_templates`** — `columns_json` (column list), `description` (full grid JSON), `is_default`, `is_shared`, `client_id`. **Stores no derived structure** — see the comment in the model
 - **`watch_folders`** — `folder_id` (Drive ID), `processed_file_ids` (JSON list), `poll_interval_minutes`, `is_active`

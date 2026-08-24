@@ -28,7 +28,20 @@ tests/
   test_scoring.py        unit tests for the scorer itself (offline, green)
   test_adapter.py        unit tests for the output adapter (offline, green)
   test_known_bugs.py     tests that reproduce known unfixed bugs — FAIL on purpose
+  test_no_undefined_names.py     pyflakes gate: no undefined name in the backend
+  test_drive_worker_contract.py  pins drive.py's broken call into the worker
+  http/
+    conftest.py          the real ASGI app on a throwaway SQLite database
+    test_batch_end_to_end.py   upload -> job thread -> results -> downloaded xlsx
 ```
+
+**The harness measures accuracy; it does not exercise the job runner.**
+`run_pipeline` calls `_extract_with_template` directly, as does
+`test_batch_isolation.py`. The thread the upload endpoint actually starts,
+`_run_extraction_sync`, is covered only by `tests/http/test_batch_end_to_end.py`
+— which is where a `NameError` that failed every document of every upload was
+found, with 450 other tests green. Accuracy over a document is not evidence
+that a batch reaches the user.
 
 ## Running
 
