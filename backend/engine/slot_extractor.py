@@ -45,6 +45,7 @@ import time
 from pathlib import Path
 
 from extractor import _llm_json, _log, _num
+from micr import field_role, find_micr_line, parse_micr
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -400,6 +401,40 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 ungrounded += 1
             if lvl not in CONFIDENT_LEVELS:
                 flagged.append(f'{slot["row_label"]}: {reason or why}')
+
+    # ── MICR decomposition ──
+    # A cheque's routing and account numbers are printed only inside the MICR
+    # band, and the model returns that band whole: asked for a routing number
+    # it answers "A021000021A C7743882201C 001847D". No prompt fixes that,
+    # because the band is not prose — it is E-13B, with a sentinel character
+    # delimiting each field, so it is PARSED instead (engine/micr.py). The
+    # routing number is checked against the ABA checksum before it is used.
+    #
+    # Only slots the model left EMPTY are filled, so a real answer is never
+    # overwritten, and each derived value is grounded against the band itself —
+    # the digits are verbatim on the page — by the same rule as any other.
+    micr_line = find_micr_line(pages)
+    if micr_line:
+        parts = parse_micr(micr_line)
+        for slot in slots["fields"]:
+            if slot["ref"] in extracted_fields:
+                continue
+            role = field_role(slot["row_label"])
+            value = parts.get(f"{role}_number") if role else None
+            if not value:
+                continue
+            ok, why = verify_span(value, micr_line, 0, pages)
+            lvl, reason = confidence_for(value, micr_line, slot["row_label"], ok,
+                                         inferred=inferred)
+            extracted_fields[slot["ref"]] = value
+            conf_map[slot["ref"]] = lvl
+            if not ok:
+                ungrounded += 1
+            if lvl not in CONFIDENT_LEVELS:
+                flagged.append(f'{slot["row_label"]}: {reason or why}')
+        if parts:
+            _log("MICR", f"{file_path.name}: band decomposed -> "
+                         + ", ".join(sorted(parts)))
 
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:

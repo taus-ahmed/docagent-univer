@@ -1,99 +1,99 @@
 {
- "cells": {
-  "0,0": {
-   "value": "Cheque Number",
-   "extractTarget": false
+  "cells": {
+    "0,0": {
+      "value": "Cheque Number",
+      "extractTarget": false
+    },
+    "0,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "1,0": {
+      "value": "Date",
+      "extractTarget": false
+    },
+    "1,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "2,0": {
+      "value": "Bank Name",
+      "extractTarget": false
+    },
+    "2,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "3,0": {
+      "value": "Drawer Name",
+      "extractTarget": false
+    },
+    "3,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "4,0": {
+      "value": "Payee",
+      "extractTarget": false
+    },
+    "4,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "5,0": {
+      "value": "Amount in Figures",
+      "extractTarget": false
+    },
+    "5,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "6,0": {
+      "value": "Amount in Words",
+      "extractTarget": false
+    },
+    "6,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "7,0": {
+      "value": "Memo",
+      "extractTarget": false
+    },
+    "7,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "8,0": {
+      "value": "Authorized By",
+      "extractTarget": false
+    },
+    "8,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "9,0": {
+      "value": "Routing Number",
+      "extractTarget": false
+    },
+    "9,1": {
+      "value": "",
+      "extractTarget": true
+    },
+    "10,0": {
+      "value": "Account Number",
+      "extractTarget": false
+    },
+    "10,1": {
+      "value": "",
+      "extractTarget": true
+    }
   },
-  "0,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "1,0": {
-   "value": "Date",
-   "extractTarget": false
-  },
-  "1,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "2,0": {
-   "value": "Bank Name",
-   "extractTarget": false
-  },
-  "2,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "3,0": {
-   "value": "Payer Name",
-   "extractTarget": false
-  },
-  "3,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "4,0": {
-   "value": "Payee",
-   "extractTarget": false
-  },
-  "4,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "5,0": {
-   "value": "Amount",
-   "extractTarget": false
-  },
-  "5,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "6,0": {
-   "value": "Amount in Words",
-   "extractTarget": false
-  },
-  "6,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "7,0": {
-   "value": "Memo",
-   "extractTarget": false
-  },
-  "7,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "8,0": {
-   "value": "Authorized By",
-   "extractTarget": false
-  },
-  "8,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "9,0": {
-   "value": "Routing Number",
-   "extractTarget": false
-  },
-  "9,1": {
-   "value": "",
-   "extractTarget": true
-  },
-  "10,0": {
-   "value": "Account Number",
-   "extractTarget": false
-  },
-  "10,1": {
-   "value": "",
-   "extractTarget": true
-  }
- },
- "colWidths": [
-  180,
-  260
- ],
- "merges": {},
- "extractTargets": [],
- "repeatRows": []
+  "colWidths": [
+    180,
+    260
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": []
 }

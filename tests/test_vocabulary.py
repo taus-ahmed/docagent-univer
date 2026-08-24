@@ -32,10 +32,18 @@ class TestTheVocabularyIsStandardTerminology:
         assert "Amount" not in names
 
     def test_the_divergences_from_gold_are_recorded_not_hidden(self):
-        pairs = {(g, s) for g, s, _why in GOLD_DIVERGENCE["cheque"]}
+        pairs = {(g, s) for g, s, _why, _res in GOLD_DIVERGENCE["cheque"]}
         assert ("Payer Name", "Drawer Name") in pairs
-        for _gold, _std, why in GOLD_DIVERGENCE["cheque"]:
+        assert ("Amount", "Amount in Figures") in pairs
+        for _gold, _std, why, _res in GOLD_DIVERGENCE["cheque"]:
             assert len(why) > 40, "a divergence must say WHY"
+
+    def test_each_divergence_records_how_it_was_resolved(self):
+        """These two were settled by CORRECTING GOLD (policy P8), not by
+        bending the vocabulary to fit the fixtures. The record has to say
+        which way it went, or the next reader cannot tell."""
+        for _gold, _std, _why, resolution in GOLD_DIVERGENCE["cheque"]:
+            assert "gold corrected" in resolution and "P8" in resolution
 
     def test_money_and_dates_are_typed_from_the_registry(self):
         kinds = {f["name"]: f["kind"] for f in canonical_fields("sales_invoice")}

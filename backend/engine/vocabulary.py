@@ -103,20 +103,26 @@ _EXTRA = {
     ],
 }
 
-#: Recorded, not resolved. These are places where this repository's gold labels
-#: use a term that is NOT the standard one. The vocabulary uses the standard
-#: term; the harness will show these as `renamed` against gold, which is the
-#: correct reading — the engine is right and the label is not.
+#: Places where this repository's gold labels used a term that is NOT the
+#: standard one. RESOLVED on 2026-08-23 in the vocabulary's favour: the repo
+#: owner accepted both terms and GOLD WAS CORRECTED to match (policy P8 in
+#: tests/gold/README.md), rather than the vocabulary being bent to fit the
+#: fixtures. Kept here because the reason is worth more than the rename — the
+#: next person to meet a "Payer Name" in a customer's template should know why
+#: this engine calls it a drawer.
+#: (gold_term, standard_term, why, resolution)
 GOLD_DIVERGENCE = {
     "cheque": [
         ("Payer Name", "Drawer Name",
          "The party who writes and signs a cheque is the DRAWER (UCC Art. 3 "
          "and ordinary banking usage). 'Payer' is colloquial and is also "
-         "confusable with the payee."),
+         "confusable with the payee.",
+         "gold corrected 2026-08-23 (P8)"),
         ("Amount", "Amount in Figures",
          "A cheque states its amount twice — in figures and in words — and "
          "they can disagree, which is the whole reason both are printed. "
-         "'Amount' does not say which one was read."),
+         "'Amount' does not say which one was read.",
+         "gold corrected 2026-08-23 (P8)"),
     ],
 }
 

@@ -4566,6 +4566,18 @@ def coerce_cell_value(value):
     if value is None or str(value).strip() == "":
         return None
     txt = str(value).strip()
+
+    # IDENTIFIERS ARE NOT QUANTITIES. A bare run of digits with a leading zero,
+    # or one longer than any realistic amount written without separators, is an
+    # identifier — a routing number, an account number, a ZIP. Writing it as a
+    # number silently CORRUPTS it: "021000021" becomes 21000021 and the leading
+    # zero is gone, so the cheque exports a routing number that is not the
+    # bank's. A quantity, by contrast, arrives with money notation on it (a
+    # currency symbol, thousands separators, a decimal point, accounting
+    # parentheses) or is short enough to be a count.
+    if re.fullmatch(r"\d+", txt) and (txt[0] == "0" or len(txt) >= 9):
+        return txt
+
     num = txt.replace(",", "")
     for sym in "$£€₹¥":
         num = num.replace(sym, "")

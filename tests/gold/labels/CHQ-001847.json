@@ -7,9 +7,9 @@
     "Cheque Number": "CHQ-001847",
     "Date": "2024-01-31",
     "Bank Name": "First National Bank of New York",
-    "Payer Name": "Nexus Global Trading LLC",
+    "Drawer Name": "Nexus Global Trading LLC",
     "Payee": "Pacific Steel & Metals Co.",
-    "Amount": 8410.00,
+    "Amount in Figures": 8410.0,
     "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
     "Memo": "Payment for PO-2024-0018 – Steel materials",
     "Authorized By": "Janet Wu",
@@ -18,12 +18,12 @@
   },
   "field_types": {
     "Date": "date",
-    "Amount": "money",
+    "Amount in Figures": "money",
     "Routing Number": "string",
     "Account Number": "string"
   },
   "tables": {},
   "table_types": {},
   "uncertain": [],
-  "notes": "Single-page cheque (Non-Negotiable Copy). Routing 021000021 and account 7743882201 come from the MICR line 'A021000021A C7743882201C 001847D' and match the ABA/account printed on the invoices' payment instructions. Both are typed string — leading zeros matter. POLICY P5: 'Cheque Number' is the header 'No:' field form 'CHQ-001847', not the bare MICR serial '001847'. POLICY P6: 'Amount in Words' is the FULL printed string including the '*** U.S. DOLLARS ***' anti-tamper decoration."
+  "notes": "POLICY P8 (2026-08-23): 'Payer Name' renamed to 'Drawer Name' and 'Amount' to 'Amount in Figures'. The party who writes and signs a cheque is the DRAWER (UCC Art. 3 and ordinary banking usage); 'Payer' is colloquial and confusable with the payee. A cheque states its amount twice, in figures and in words, and they can disagree — which is why both are printed — so 'Amount' does not say which was read. GOLD WAS CORRECTED; the engine's vocabulary was already right. Values unchanged. Single-page cheque (Non-Negotiable Copy). Routing 021000021 and account 7743882201 come from the MICR line 'A021000021A C7743882201C 001847D' and match the ABA/account printed on the invoices' payment instructions. Both are typed string — leading zeros matter. POLICY P5: 'Cheque Number' is the header 'No:' field form 'CHQ-001847', not the bare MICR serial '001847'. POLICY P6: 'Amount in Words' is the FULL printed string including the '*** U.S. DOLLARS ***' anti-tamper decoration."
 }

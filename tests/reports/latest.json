@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-23 15:32:11",
- "git_commit": "71b5907",
+ "run_id": "2026-08-23 20:35:09",
+ "git_commit": "3992034",
  "config": {
-  "mode": "replay",
+  "mode": "record",
   "repeat": 1,
   "no_template": false,
   "env": {
@@ -2031,12 +2031,14 @@
      "Cheque Number": "CHQ-001847",
      "Date": "January 31, 2024",
      "Bank Name": "FIRST NATIONAL BANK OF NEW YORK",
-     "Payer Name": "Nexus Global Trading LLC",
+     "Drawer Name": "Nexus Global Trading LLC",
      "Payee": "Pacific Steel & Metals Co.",
-     "Amount": "$ 8,410.00",
+     "Amount in Figures": "$ 8,410.00",
      "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
      "Memo": "Payment for PO-2024-0018 — Steel materials",
-     "Authorized By": "Janet Wu"
+     "Authorized By": "Janet Wu",
+     "Routing Number": "021000021",
+     "Account Number": "7743882201"
     },
     "tables": {}
    },
@@ -2065,7 +2067,7 @@
       "type": "string",
       "in_gold_schema": true
      },
-     "Payer Name": {
+     "Drawer Name": {
       "outcome": "correct",
       "expected": "Nexus Global Trading LLC",
       "actual": "Nexus Global Trading LLC",
@@ -2079,7 +2081,7 @@
       "type": "string",
       "in_gold_schema": true
      },
-     "Amount": {
+     "Amount in Figures": {
       "outcome": "correct",
       "expected": 8410.0,
       "actual": "$ 8,410.00",
@@ -2108,24 +2110,23 @@
       "in_gold_schema": true
      },
      "Routing Number": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "021000021",
-      "actual": null,
+      "actual": "021000021",
       "type": "string",
       "in_gold_schema": true
      },
      "Account Number": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "7743882201",
-      "actual": null,
+      "actual": "7743882201",
       "type": "string",
       "in_gold_schema": true
      }
     },
     "tables": {},
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 11
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -2134,7 +2135,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 1.0,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -2163,7 +2164,7 @@
       "type": "string",
       "in_gold_schema": true
      },
-     "Payer Name": {
+     "Drawer Name": {
       "outcome": "correct",
       "expected": "Nexus Global Trading LLC",
       "actual": "Nexus Global Trading LLC",
@@ -2177,7 +2178,7 @@
       "type": "string",
       "in_gold_schema": true
      },
-     "Amount": {
+     "Amount in Figures": {
       "outcome": "correct",
       "expected": 8410.0,
       "actual": "$ 8,410.00",
@@ -2206,24 +2207,23 @@
       "in_gold_schema": true
      },
      "Routing Number": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "021000021",
-      "actual": null,
+      "actual": "021000021",
       "type": "string",
       "in_gold_schema": true
      },
      "Account Number": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "7743882201",
-      "actual": null,
+      "actual": "7743882201",
       "type": "string",
       "in_gold_schema": true
      }
     },
     "tables": {},
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 11
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -2232,7 +2232,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 1.0,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -2261,7 +2261,7 @@
       "type": "string",
       "in_gold_schema": true
      },
-     "Payer Name": {
+     "Drawer Name": {
       "outcome": "correct",
       "expected": "Nexus Global Trading LLC",
       "actual": "Nexus Global Trading LLC",
@@ -2275,7 +2275,7 @@
       "type": "string",
       "in_gold_schema": true
      },
-     "Amount": {
+     "Amount in Figures": {
       "outcome": "correct",
       "expected": 8410.0,
       "actual": 8410.0,
@@ -2304,24 +2304,23 @@
       "in_gold_schema": true
      },
      "Routing Number": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "021000021",
-      "actual": null,
+      "actual": "021000021",
       "type": "string",
       "in_gold_schema": true
      },
      "Account Number": {
-      "outcome": "missed",
+      "outcome": "correct",
       "expected": "7743882201",
-      "actual": null,
+      "actual": "7743882201",
       "type": "string",
       "in_gold_schema": true
      }
     },
     "tables": {},
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 11
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -2330,32 +2329,18 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 1.0,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 11
     },
     "gold_valued": 11,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 1.0,
     "unmatched": 0,
-    "mismatches": [
-     {
-      "key": "routing number",
-      "outcome": "missed",
-      "expected": "021000021",
-      "actual": null
-     },
-     {
-      "key": "account number",
-      "outcome": "missed",
-      "expected": "7743882201",
-      "actual": null
-     }
-    ]
+    "mismatches": []
    },
    "score_structure": {
     "gold_tables": 0,
@@ -16961,26 +16946,25 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 386,
-    "missed": 2,
+    "correct": 388,
     "near": 5,
     "wrong": 1,
     "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9796954314720813,
+   "accuracy": 0.9847715736040609,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
    "hallucinated": 4,
-   "hallucination_rate": 0.010101010101010102,
+   "hallucination_rate": 0.010050251256281407,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
    "out_of_schema": 0,
-   "defect_rate": 0.010101010101010102
+   "defect_rate": 0.010050251256281407
   },
   "by_document_type": {
    "balance_sheet": {
@@ -17022,11 +17006,10 @@
    },
    "cheque": {
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 11
     },
     "gold_valued": 11,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17195,49 +17178,48 @@
    },
    "string": {
     "counts": {
-     "correct": 184,
-     "missed": 2,
+     "correct": 186,
      "near": 5,
      "hallucinated": 2
     },
     "gold_valued": 191,
-    "accuracy": 0.9633507853403142,
+    "accuracy": 0.9738219895287958,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 2,
-    "hallucination_rate": 0.010471204188481676,
+    "hallucination_rate": 0.010362694300518135,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.010471204188481676
+    "defect_rate": 0.010362694300518135
    }
   }
  },
  "summary_raw": {
   "overall": {
    "counts": {
-    "correct": 186,
-    "missed": 202,
+    "correct": 188,
+    "missed": 200,
     "hallucinated": 204,
     "near": 5,
     "wrong": 1
    },
    "gold_valued": 394,
-   "accuracy": 0.4720812182741117,
+   "accuracy": 0.47715736040609136,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
    "hallucinated": 204,
-   "hallucination_rate": 0.5151515151515151,
+   "hallucination_rate": 0.5125628140703518,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
    "out_of_schema": 200,
-   "defect_rate": 0.010101010101010102
+   "defect_rate": 0.010050251256281407
   },
   "by_document_type": {
    "balance_sheet": {
@@ -17282,11 +17264,10 @@
    },
    "cheque": {
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 11
     },
     "gold_valued": 11,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17464,50 +17445,49 @@
    },
    "string": {
     "counts": {
-     "missed": 112,
+     "missed": 110,
      "hallucinated": 202,
-     "correct": 74,
+     "correct": 76,
      "near": 5
     },
     "gold_valued": 191,
-    "accuracy": 0.387434554973822,
+    "accuracy": 0.39790575916230364,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 202,
-    "hallucination_rate": 0.7188612099644128,
+    "hallucination_rate": 0.7137809187279152,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 200,
-    "defect_rate": 0.0071174377224199285
+    "defect_rate": 0.007067137809187279
    }
   }
  },
  "summary_export": {
   "overall": {
    "counts": {
-    "correct": 386,
-    "missed": 2,
+    "correct": 388,
     "near": 5,
     "wrong": 1,
     "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9796954314720813,
+   "accuracy": 0.9847715736040609,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
    "hallucinated": 4,
-   "hallucination_rate": 0.010101010101010102,
+   "hallucination_rate": 0.010050251256281407,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
    "out_of_schema": 0,
-   "defect_rate": 0.010101010101010102
+   "defect_rate": 0.010050251256281407
   },
   "by_document_type": {
    "balance_sheet": {
@@ -17549,11 +17529,10 @@
    },
    "cheque": {
     "counts": {
-     "correct": 9,
-     "missed": 2
+     "correct": 11
     },
     "gold_valued": 11,
-    "accuracy": 0.8181818181818182,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17722,38 +17701,36 @@
    },
    "string": {
     "counts": {
-     "correct": 184,
-     "missed": 2,
+     "correct": 186,
      "near": 5,
      "hallucinated": 2
     },
     "gold_valued": 191,
-    "accuracy": 0.9633507853403142,
+    "accuracy": 0.9738219895287958,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 2,
-    "hallucination_rate": 0.010471204188481676,
+    "hallucination_rate": 0.010362694300518135,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.010471204188481676
+    "defect_rate": 0.010362694300518135
    }
   }
  },
  "summary_content": {
   "counts": {
-   "correct": 233,
-   "missed": 2,
+   "correct": 235,
    "near": 5,
    "wrong": 1,
    "unmatched": 2
   },
   "gold_valued": 241,
   "unmatched": 2,
-  "accuracy": 0.966804979253112
+  "accuracy": 0.975103734439834
  },
  "summary_structure": {
   "gold_tables": 17,
@@ -17764,16 +17741,16 @@
  },
  "calibration": {
   "high": {
-   "n": 390,
-   "correct": 383,
+   "n": 391,
+   "correct": 384,
    "wrong": 1,
    "missed": 0,
    "near": 2,
    "hallucinated": 4
   },
   "low": {
-   "n": 6,
-   "correct": 3,
+   "n": 7,
+   "correct": 4,
    "wrong": 0,
    "missed": 0,
    "near": 3,
@@ -17781,6 +17758,2503 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-23 15:04:48"
+ "diff": [
+  {
+   "key": "BS-2024-Q1 :: TOTAL ASSETS",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: TOTAL LIABILITIES",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: TOTAL LIABILITIES & EQUITY",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Current Assets",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Current Liabilities",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Equity",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Long-Term Liabilities",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: Total Non-Current Assets",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_assets[row 4].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: current_liabilities[row 4].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: long_term_liabilities[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: non_current_assets[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Department",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Manager",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Purpose",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Report No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: Total Claimed",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 0].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 1].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 2].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 3].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 4].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 5].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 6].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 7].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Category",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "EXP-2024-0081 :: expenses[row 8].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Company",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Bill To Contact",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Due Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Invoice Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: PO Reference",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Payment Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Sales Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Shipping & Handling",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: Total Due",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 0].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 1].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 2].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0031 :: line_items[row 3].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Company",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Bill To Contact",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Due Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Invoice Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: PO Reference",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Payment Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Sales Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Shipping & Handling",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Status",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: Total Due",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 0].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 1].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 2].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 3].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "INV-2024-0047 :: line_items[row 4].Unit Price",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Gross Profit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Income Tax Provision",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Interest Income",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Income After Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Income Before Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Net Revenue",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Operating Income (EBIT)",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Total COGS",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: Total Operating Expenses",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: cost_of_goods_sold[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 2].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 3].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 4].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 5].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 6].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 7].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 8].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 9].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: operating_expenses[row 9].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 0].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "IS-2024-Q4 :: revenue[row 1].Label",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Annual Salary",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Employer Name",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Net Pay",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Pay Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Pay Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: SSN",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Title / Department",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Total Deductions",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: Total Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: YTD Gross Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: YTD Taxes Withheld",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: earnings[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Annual Salary",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employee Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Employer Name",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Net Pay",
+   "before": null,
+   "after": "wrong",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Pay Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Pay Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: SSN",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Title / Department",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Total Deductions",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Total Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: YTD Gross Earnings",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: YTD Taxes Withheld",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions :: row_count_mismatch",
+   "before": null,
+   "after": "1",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 2].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 3].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 4].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 5].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 6].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 7].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings :: row_count_mismatch",
+   "before": null,
+   "after": "1",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Amount",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Description",
+   "before": null,
+   "after": "hallucinated",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 0].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 1].Amount",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Authorised By",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Buyer Title",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Freight",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Order Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: PO Number",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Required By",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Ship Via",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Subtotal",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Tax",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Terms",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Address",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Contact",
+   "before": null,
+   "after": "near",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor ID",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: Vendor Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 0].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 1].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Item / Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Qty",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Total",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Unit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "PO-2024-0018 :: line_items[row 2].Unit Cost",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account Holder",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Account Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Bank Name",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Closing Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Opening Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Period",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Statement No",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Total Credits",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: Total Debits",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions :: row_count_mismatch",
+   "before": null,
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 0].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 10].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 11].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 1].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 2].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 3].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 4].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 5].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 6].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Credit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Debit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 7].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 8].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Balance",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Credit",
+   "before": null,
+   "after": "empty_ok",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Date",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Debit",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Description",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  },
+  {
+   "key": "STMT-2024-01 :: transactions[row 9].Type",
+   "before": null,
+   "after": "correct",
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-08-23 20:33:58"
 }
