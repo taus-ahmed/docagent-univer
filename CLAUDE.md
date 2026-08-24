@@ -480,13 +480,47 @@ SQLite dev config: WAL journal mode, foreign keys ON. PostgreSQL prod config: po
 - `get_current_user` dependency decodes the JWT and loads the user; `get_optional_user` returns None instead of raising; `require_admin` checks `role != "admin"`
 - **Tenant and template identity come from the token, never the request body** (`resolve_client_id`, `load_template_for_user` in `extract.py`)
 
-### `backend/app/core/storage.py`
+### `backend/app/core/storage.py` — one key namespace, two backends
 
-Singleton `StorageService` via `get_storage()`. Path patterns:
-`uploads/{job_id}/{filename}`, `outputs/{job_id}/{filename}`,
-`schemas/clients/{client_id}.yaml`. S3 keys mirror local paths;
-`get_local_path(key)` downloads from S3 to a temp file. Set
-`STORAGE_BACKEND=s3` + credentials to switch — no route changes needed.
+```
+clients/{client_id}/jobs/{job_id}/source/{filename}    an uploaded document
+clients/{client_id}/jobs/{job_id}/output/{filename}    a generated file
+schemas/clients/{client_id}.yaml                       a client's YAML schema
+```
+
+Local puts the key under the storage root **verbatim**, so path and key are the
+same string. `STORAGE_BACKEND=s3` + credentials switches to any S3-compatible
+store (Cloudflare R2 in production) — no route changes.
+
+- **The worker is handed keys, never paths.** A local absolute path is
+  meaningless to a separate worker process or a bucket. `_resolve_source` in
+  `extract.py` accepts either, so jobs queued before Phase 8 still run.
+- **`client_id` leads every tenant-owned key**, so a scoped bucket credential
+  or IAM prefix condition can later enforce what the code enforces now.
+- **Keys are built in one place** and validated by `_safe_key` (rejects `..`,
+  absolute paths, drive letters, backslashes, empty segments); `_local_path`
+  re-checks the *resolved* path is inside the root.
+- **Reads of a missing file return None, never raise.** A source that retention
+  deleted or an ephemeral disk lost is an ordinary state; the worker turns one
+  into a failed *document* with an explanatory message, on the same persistence
+  path as any other result, so the job still completes. **Writes raise**
+  (`StorageError`) — a write that silently failed leaves a job pointing at a
+  key holding nothing.
+- `signed_url()` (capped at 1 h; **None** on local, so a never-expiring link
+  cannot ship by accident) and `delete_job_sources()` (sources go, outputs
+  stay) exist for Phase 11 and are tested, but are not yet wired to a route.
+
+⚠ **Schemas must be materialised at boot.** A schema lives twice: the text in
+`client_schemas.yaml_content`, and a copy in storage that `get_schema_path()`
+hands the engine. `_seed_demo_schema` returns early whenever the table is
+non-empty — always, after the first boot — so on an ephemeral container there
+was no YAML on disk from the second deploy onward and **every upload answered
+404 "No schema found"**. `main.py::_materialise_schemas()` writes them back
+from the database at boot, idempotently. Do not remove it.
+
+⚠ **Exports are never stored.** `save_output` is not called by any route:
+`GET /api/jobs/{id}/export` rebuilds the workbook from `extraction_json` on
+every download. Nothing is lost on restart, and nothing needed migrating.
 
 ### `backend/app/api/routes/auth.py` — rate limiter
 
