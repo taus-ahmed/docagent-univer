@@ -59,6 +59,16 @@ backend\.venv\Scripts\python.exe -m tests.harness.runner --mode record          
 backend\.venv\Scripts\python.exe -m tests.harness.runner --mode record --repeat 3 # stability
 ```
 
+`tests/gold/hand_drawn/` holds five templates saved the way the EDITOR saves
+them — only cells a person typed, no styling and no markers. The nine in
+`tests/gold/templates/` came from the old `extractTarget` tool, which
+materialised an explicit empty cell for every slot, and both fixtures in
+`tests/fixtures/prod_templates/` work because someone dragged a border over the
+value column (`bank_statement_101`: 29 explicit-empty cells, all 29 styled). So
+the committed corpus satisfied a precondition the editor never satisfies, and
+the harness could read 98.5% while everything drawn by hand scored zero slots.
+Score across R1–R3: 4/15 → 11/15 → 13/15 → **15/15**.
+
 `pytest.ini` deselects `-m live` by default. `-m known_bug` tests **fail on
 purpose** — they are the proof the harness can see a bug. The old
 `tests/test_extraction.py` (live server, zero asserts) was **deleted**; do not
@@ -134,6 +144,23 @@ an empty cell           =  a SLOT
 shape. There is no second way to mark a cell extractable, so there is nothing
 that can disagree.
 
+**"Empty" means empty, not absent-from-the-dict (R1).** The editor saves a
+SPARSE grid — `applyStyle` writes an entry for every cell in the selection, and
+nothing writes one for a cell you leave alone — so presence in `grid["cells"]`
+was an artefact of bookkeeping, and *drawing a border was what made a template
+extractable*. `_used_range` is the bounding box of cells carrying **text**
+(widened to cover declared regions and merges); inside it, absent and empty are
+the same thing. **Styling deliberately does not extend the box.** A one-column
+box is widened by one, because a label column implies a value column and nothing
+else explains a template that is only labels.
+
+**Merges come from `grid["merges"]` (R4).** A covered cell is neither label nor
+slot but part of its parent, so a heading merged across `A1:E1` cannot mint a
+phantom slot. Per-cell `mergeParent`/`mergeSpan` are still *read* for grids
+saved by older editors and are no longer *written* — `bank_statement_101`
+carries them under one of its two merges and not the other, which is why the
+top-level list has to be the authority.
+
 `compute_shape(grid)` returns:
 
 ```python
@@ -142,15 +169,73 @@ that can disagree.
  "repeat_bands": [{name, header_row, start_row, end_row, columns, section}],
  "field_slots": [{slot_id, ref, row, col, row_label, col_header, section}],
  "required_columns": 6,        # the widest band — what a path must serve
+ "coverage": {...},            # R6, below
  "summary": "…"}               # human line, computed HERE, never in TypeScript
 ```
 
-Detection rules: a repeating band is **≥2 adjacent static cells with empty rows
+**Bands.** A repeating band is **≥2 adjacent static cells with empty rows
 beneath**; a two-column band is a label/value pair by construction; a band at
-the very bottom of the grid with ≥3 columns is treated as a band and expanded
-by the writer, while 2 columns stays ambiguous and is **skipped out loud**. A
-field slot is a static label with an empty cell beside it — *every* such pair
-across the row, so side-by-side layouts do not lose their right half.
+the very bottom of the grid with ≥3 columns is treated as a band and expanded by
+the writer, while 2 columns stays ambiguous and is **skipped out loud**.
+
+A band **ends (R3)** at the first row below its header that either fills at
+least **half** its columns (a row of the band's own shape) or is **trailing** —
+no blank row follows it before the span ends. Anything else, with the table
+continuing blank beneath, is a row label *inside* the band. The old rule was
+"the first row holding ANY static cell", so one typed `Subtotal` turned a ten-row
+table into a three-row band. Both halves are load-bearing: HALF, not "all but
+one", because `bs_luq` is two label/value pairs side by side whose totals row
+fills 2 of 4; TRAILING, because the gold bank statement's three summary lines
+under a six-column table are 1-of-6 each and FULL alone swallowed them.
+
+**Field slots are decided by COLUMN ROLE (R2), not a left-to-right scan.**
+Within a block of consecutive rows, a column is a *label column* if some body
+row has text in it, and a *value column* if none does. A value column becomes a
+slot on every row whose paired label holds text, addressed
+`(row_label, col_header)`. Three constraints, each of which a real template
+found:
+
+- **A value column must be justified** — named by the block's heading row, or
+  immediately right of a label column. The gold invoice's key/value block spans
+  A–E because the table below is five wide; unjustified, each of its nine labels
+  would sprout four slots.
+- **The owner is fixed by geometry** — the nearest label column to the left,
+  which must then hold text on that row. Searching further left for a filled one
+  hands column D to `Acct Type` and invents a value the row does not have.
+- **A block's heading row** is its first row when it has text in strictly more
+  columns than any row beneath it. That is the matrix signature (3, then 1s) and
+  does not fire on a key/value list (1, then 1s).
+
+The old scan made a slot immediately right of a static cell and then stepped
+*past* it, so a matrix lost every value column after the first — four slots
+where eight were drawn, no error, a half-filled sheet that looked like it worked.
+
+**A field slot has no detectable section.** `_section_for` answers "is the line
+above a title", which only means something when the line below is a band header.
+Asked about an ordinary field it returns the previous field's label, and that
+reached the model in every slot prompt. A section title is either **merged
+across columns** (unambiguous by geometry, so blank rows between it and its table
+do not matter) or **a lone static on the line directly above**; a row that titles
+a band is not also a field in it.
+
+### R6 — coverage: what the engine understood, and what it left behind
+
+`is_usable` answers one bit, and a template can be badly wrong while passing it.
+`shape["coverage"]` carries `labels`, `labels_with_slots`, `orphan_labels`,
+`field_slots`, `band_cells`, `skipped` and `complete`.
+
+It measures **labels, not empty cells** — counting unclaimed cells reads alarm
+into ordinary templates, since three of the gold invoice's columns are
+legitimately blank forever. Band headers, band interiors, section titles and a
+block's own heading row are excluded: they are labels doing a different job.
+`skipped` holds only what the engine **refused** (`_skip`), never what it
+narrates (`_say`) — "declared TRANSPOSED table: …" is a success.
+
+`POST /api/templates/shape` returns `coverage`, `usable` and the engine's own
+`error`. **The editor blocks a save the engine cannot act on and warns on a
+partial one**, using those values rather than re-deriving the rule in
+TypeScript. Partial coverage warns and proceeds — a notes column the engine will
+never fill is a legitimate thing to draw.
 
 **Shape is never stored.** It is a pure function of the grid, costs ~0.2 ms, and
 is recomputed on every extraction and every template API response
@@ -166,6 +251,14 @@ unaffected.
 
 - `orientation: "rows"` — headings across the region's first row, one record per row.
 - `orientation: "columns"` — headings down the first column, one record per column (**transposed**). Detection cannot express this shape at all: it finds no empty rows beneath and reads the headings as unrelated single fields, silently.
+
+**A declared table needs two columns, in both orientations (R5).** The rows
+branch tested `c2 < c1`, true only for a region of NEGATIVE width, so a
+one-column region passed and built a single unnamed value column with no label
+column to anchor it — the model was asked for one value per row with nothing
+saying what the value was, and returned cover-page text. The transposed branch
+had always checked `c2 <= c1`. A refused region is reported in
+`coverage["skipped"]`, not just logged.
 
 ⚠ Regions are absolute `(r1,c1,r2,c2)`. The editor can only edit cells in place
 today, so a declaration cannot go stale. **Anyone adding row/column insertion
@@ -758,6 +851,7 @@ PostgreSQL (`postgres:14-alpine`) + backend with hot reload via
 
 - **Poppler not installed**: `pdf2image` fails silently; text-based PDFs still work, image-based don't. `winget install poppler` on Windows.
 - **"No module named 'extractor'"**: uvicorn must be started from `backend/`, not the project root.
+- **A grid from the editor is SPARSE.** Only cells that were typed, styled, merged or pasted are in `grid["cells"]`. Never treat presence as meaning — use `_used_range`.
 - **Do not store derived template structure.** Shape is recomputed every run on purpose. `cell_binding_map` and `shape_json` are actively dropped at boot.
 - **Do not add a bare `except` fallback around extraction.** That was the `USE_NEW_EXTRACTOR` bug: it turned a visible failure into a silently different spreadsheet. A failure must be a failure.
 - **Declared regions are absolute coordinates.** Adding row/column insertion without shifting them in the same commit produces confidently wrong extractions.
