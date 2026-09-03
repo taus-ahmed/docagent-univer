@@ -1,4 +1,4 @@
-# Decision log — phases 1–7
+# Decision log — phases 1–7, plus the template-editor decision
 
 The architectural decisions behind the current extraction engine, and the
 reasoning that produced them. Until now this existed only in chat transcripts.
@@ -184,14 +184,90 @@ but never hide a disagreement.
 
 ---
 
+## 8. Keep the hand-written spreadsheet, fix its data model
+
+**Decided 2026-09-03. Reversing conditions are at the end of this section — read
+them before reopening the question.**
+
+The template editor, `DocAgentSpreadsheet.tsx`, is 844 hand-written lines. It had
+three defects its author named: `applyStyle` materialising cells (so drawing a
+border was what made a template extractable), merges writing a shape nothing
+read, and no real undo. The question was whether to replace it with an
+established grid rather than keep maintaining a spreadsheet.
+
+**The arithmetic decided it.** Eight defects were reported from an hour of real
+use. Traced to their mechanism, **two** live in the component — styling creating
+slots, and the merged heading. The other six live in `compute_shape`'s field-slot
+scan, its band-end rule, its region guard, `TemplateEditor.saveMutation`, and the
+extract page's failure panel. **Every one of those six survives a component swap
+unchanged.** Swapping buys 2 of 8 and costs a rewrite of the two things no
+library provides: the region-declaration UI and the slot-highlight overlay.
+
+### What the licences actually say (verified 2026-09-03, not from memory)
+
+| | Licence | Usable in a commercial SaaS |
+|---|---|---|
+| **Univer** | Apache-2.0. Verified on disk: `@univerjs/core`, `/sheets`, `/sheets-ui` LICENSE files. Pro (commercial) adds collaboration, import/export, printing, charts, pivot tables, server-side calc — none of which we need. Merges are in the OSS package (`AddWorksheetMergeCommand`). | Yes |
+| **Handsontable** | **Not open source.** v18.1.0 ships `SEE LICENSE IN LICENSE.txt`. The free key is `non-commercial-and-evaluation` only; their terms bar the production stage for anything "connected with your commercial activity". | **No** — disqualified |
+| **AG Grid** | `ag-grid-community` is MIT, **but Cell Selection (range selection) is Enterprise-only** — the docs page carries `enterprise: true` and needs `CellSelectionModule` from `ag-grid-enterprise`. No spreadsheet merge model. | Community insufficient |
+| **Luckysheet** | MIT, **archived 2025-10-30**. Its own README: "no longer maintained… use the upgraded version of Univer". Last npm release 2021-01-19. | Dead |
+| **FortuneSheet** | MIT, clean. v1.0.4 (2025-11-06). Value and style are flattened into one object and `mc` (merge) is written into the cell *and* duplicated in `config.merge` — two sources of truth, the mistake we are removing. | Yes, but repeats our defect |
+| **x-spreadsheet** | MIT. Last release 2021-05-20. | Dead |
+| **RevoGrid** | MIT core, very active — **but cell merge and column span are Pro-only** (`@revolist/revogrid-pro`). | Open-core where we need it |
+| **ReactGrid** | MIT community, PRO commercial. | Open-core |
+| **Jspreadsheet CE** | Repo LICENSE is MIT, but published v5.0.4 declares **no `license` field at all**. Would need written confirmation. | Unclear |
+| **Glide Data Grid** | MIT, but `latest` is 6.0.3 from 2024-02-03 — alphas only since. Row-object model, not a template editor. | Stale |
+| react-datasheet-grid | MIT, active. Column-typed; no merges, no per-cell styling. | Capability fails |
+
+Only **Univer** and **FortuneSheet** are permissively licensed, maintained, and
+actually spreadsheets. Univer is the better of the two: `ICellData` keeps `s`
+(style) in a separate field from `v` (value), `mergeData: IRange[]` lives on the
+worksheet rather than on cells, and `getLastRowWithContent()` is first-class — so
+it would solve the styling-creates-slots defect structurally rather than by rule.
+
+**It still lost**, on cost against benefit: ~1.35 MB gzipped (measured across the
+ESM entry points a sheets-core preset loads) versus 12 KB for what we ship, and
+its plugin architecture registers by side effect so that is a floor. This repo
+had already integrated Univer 0.21 and FortuneSheet and backed both out
+(`666170c`), which required 18 `transpilePackages` entries and a webpack
+`NormalModuleReplacementPlugin` for `opentype.js`. Re-adopting would put that
+between us and a harness reading 98.5%, for no accuracy gain.
+
+The three named defects were each bounded work in code we own: R1 made presence
+meaningless so `applyStyle` materialising is harmless (`baeedcd`); merges moved
+to the range list `SheetSaveData.merges` already had, deleting a second source of
+truth rather than adding one; and undo became a snapshot of all four state slices
+instead of one (`c4b0143`). The dead packages were deleted in `cd5c398`.
+
+### What would reverse this
+
+Two conditions, both pointing at Univer:
+
+1. **In-browser `.xlsx` import**, so a user can upload an existing spreadsheet as
+   a template. This is the one requirement our component cannot reach — it is a
+   multi-month build. Note it is in Univer **Pro**, not the Apache-2.0 core, so
+   it carries a licence cost as well.
+2. **Formulas becoming a requirement** rather than the bonus they are today.
+
+Neither is on the roadmap. If either arrives, take Univer and do not re-run the
+comparison — it is here.
+
+---
+
 ## What these decisions have in common
 
-Five of the seven replaced something that failed *silently* — placement matching,
-model self-confidence, keyword routing, the fallback flag, and shape detection.
-In each case the replacement was chosen less for accuracy than for making failure
-visible or impossible to represent, and the accuracy followed. The two that did
-not follow that pattern — the widening refactor and the labelling policy — were
-both about not letting the measuring instrument flatter the thing it measures.
+Five of the first seven replaced something that failed *silently* — placement
+matching, model self-confidence, keyword routing, the fallback flag, and shape
+detection. In each case the replacement was chosen less for accuracy than for
+making failure visible or impossible to represent, and the accuracy followed. The
+two that did not follow that pattern — the widening refactor and the labelling
+policy — were both about not letting the measuring instrument flatter the thing
+it measures.
+
+§8 is the same instinct turned on a build-or-buy question. The component was
+kept not because it was good but because counting where the defects actually
+lived — two of eight in the component, six in the engine and the wiring — showed
+that replacing it would have felt like progress while fixing almost nothing.
 
 The one place we did not live up to it is recorded in §6: the no-template balance
 sheet has been broken since the elimination refactor, it was visible in commit
