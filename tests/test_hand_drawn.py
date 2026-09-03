@@ -63,22 +63,22 @@ class TestAPlainLabelValueList:
 class TestAMatrixWithTwoValueColumns:
     """A1 "Payment Calculation", B1 "Years 1-7", C1 "Years 8-30", labels A2:A5.
 
-    Every value column after the first is dropped: a slot is only ever made
-    immediately to the right of a STATIC cell, and the scan then steps past it,
-    so column C — empty, inside the used range, under its own heading — is
-    never considered. Four slots come back where eight were drawn, with no
-    error, because `is_usable` is true and nothing holds an expectation to
-    compare against.
+    Fixed by R2. Every value column after the first used to be dropped: a slot
+    was only ever made immediately right of a STATIC cell and the scan then
+    stepped past it, so column C — empty, inside the used range, under its own
+    heading — was never considered. Four slots came back where eight were
+    drawn, with no error, because `is_usable` was true and nothing held an
+    expectation to compare against. Columns now carry a role within a block of
+    consecutive rows, and a value column is a slot on every row whose paired
+    label holds text.
     """
 
     def test_the_first_value_column_is_filled(self):
         assert {"B2", "B3", "B4", "B5"} <= _slots(_shape("matrix_two_value_columns"))
 
-    @pytest.mark.known_bug
     def test_the_second_value_column_is_filled(self):
         assert {"C2", "C3", "C4", "C5"} <= _slots(_shape("matrix_two_value_columns"))
 
-    @pytest.mark.known_bug
     def test_each_slot_knows_which_column_it_is_in(self):
         by_ref = {f["ref"]: f for f in _shape("matrix_two_value_columns")["field_slots"]}
         assert by_ref["B2"]["col_header"] == "Years 1-7"

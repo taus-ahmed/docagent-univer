@@ -118,10 +118,16 @@ def _used_range(raw, grid, cover):
     r1, r2 = max(0, min(rs)), max(rs)
     c1, c2 = max(0, min(cs)), max(cs)
     # A template one column wide is a column of labels with nowhere to put an
-    # answer — which is the single most ordinary thing a user draws, and it
-    # scored zero slots. A label column implies a value column beside it. The
-    # widening is deliberately limited to this case: widening every template
-    # by a column would mint a phantom slot to the right of every table.
+    # answer — the single most ordinary thing a user draws, and it scored zero
+    # slots. A label column implies a value column beside it.
+    #
+    # The widening stops here rather than applying to every grid, because a
+    # fully populated row is not a label waiting for a value: under THE ONE
+    # RULE "Total | 999" is two labels, and always reaching a column further
+    # would turn the second into a label with a slot beside it. A right-edge
+    # label column that DOES need a value column — the side-by-side layout
+    # "Bank Name | _ | ABA | _" — is handled in R2, where the block's own
+    # label/value alternation is known.
     if c2 == c1:
         c2 = c1 + 1
     return r1, c1, r2, c2
@@ -507,29 +513,139 @@ def compute_shape(grid, log=None):
     # lone label that titles nothing is still an ordinary field.
     section_rows = {b["header_row"] - 1 for b in bands if b.get("section")}
 
-    # ── field slots: a static label with an empty cell beside it ──
+    # ══════════════════════════════════════════════════════════════════════
+    # FIELD SLOTS — COLUMN ROLES, NOT A LEFT-TO-RIGHT SCAN (R2)
+    # ══════════════════════════════════════════════════════════════════════
+    #
+    # This used to walk each row left to right, make a slot in the cell
+    # immediately right of a static one, and then step PAST that slot. So a
+    # matrix — one label column and two headed value columns — lost its second
+    # value column entirely:
+    #
+    #        A                     B            C
+    #   1    Payment Calculation   Years 1-7    Years 8-30
+    #   2    Principal             <slot>       (never considered)
+    #
+    # At column C the scan asked "is C static?", found a slot rather than a
+    # label, and moved on. The rule could express "a label with AN empty cell
+    # beside it" and had no way to say "with N empty cells beside it". Four
+    # slots came back where eight were drawn, and because `is_usable` was true
+    # and nothing held an expectation, the document exported a half-filled
+    # sheet that looked like it had worked.
+    #
+    # Columns now get a ROLE within a block of consecutive rows:
+    #
+    #   label column   some row in the block's body has text in it
+    #   value column   no body row has text in it, AND it is justified — see
+    #                  below. It is a slot on every row whose label has text.
+    #
+    # A VALUE COLUMN HAS TO BE JUSTIFIED, or every blank column inside the
+    # used range becomes a slot. The gold invoice's key/value block spans
+    # columns A-E, because its line-item table below is five columns wide;
+    # without justification each of its nine labels would sprout four slots
+    # across C, D and E. Two things justify one:
+    #
+    #   headed    the block's heading row names it ("Years 8-30") — the user
+    #             wrote a column and expects it filled
+    #   beside    it sits immediately right of a label column — the ordinary
+    #             label/value pair, and what the old scan could see
+    #
+    # A block's HEADING ROW is its first row when that row has text in strictly
+    # more columns than any row beneath it in the block. That is the matrix
+    # signature (3 texts, then rows of 1) and it does not fire on a plain
+    # key/value list (1 text, then rows of 1), so those blocks have no headings
+    # and their slots carry `col_header: ""` exactly as before.
     field_slots, label_cols, value_cols = [], set(), set()
+
+    skip_rows = band_rows | set(header_rows) | section_rows
+    all_cols = range(max_col + 1)
+
+    def _text_cols(r):
+        return [c for c in all_cols if (r, c) in static and (r, c) not in claimed]
+
+    # blocks = maximal runs of CONSECUTIVE candidate rows. Roles are local to a
+    # block so a key/value header area and a wide table lower down cannot pool
+    # their columns and misclassify each other.
+    blocks, run = [], []
     for r in rows:
-        if r in band_rows or r in header_rows or r in section_rows:
+        if r in skip_rows:
+            if run:
+                blocks.append(run)
+                run = []
             continue
-        # EVERY label/slot pair across the row, not just the leftmost. Side-by-side
-        # layouts put two pairs on one line — "Total Current Assets | _ | Total
-        # Current Liabilities | _" — and taking only the first silently drops the
-        # right-hand half of the sheet.
-        c = 0
-        while c <= max_col:
-            if (r, c) not in static or (r, c) in claimed:
-                c += 1
-                continue
-            cc = c + 1
-            if (r, cc) in claimed:      # the slot belongs to a declared table
-                c += 1
-                continue
-            if (r, cc) in m and (r, cc) not in static:   # present and empty -> slot
+        if run and r != run[-1] + 1:
+            blocks.append(run)
+            run = []
+        run.append(r)
+    if run:
+        blocks.append(run)
+
+    def _open(r, c):
+        """Empty and available: inside the box, or the implied column."""
+        if c > max_col:
+            return True                         # only max_col + 1 reaches here
+        return (r, c) in m and (r, c) not in static
+
+    for block in blocks:
+        non_blank = [r for r in block if _text_cols(r)]
+        if not non_blank:
+            continue
+
+        head, rest = None, non_blank[1:]
+        if rest and len(_text_cols(non_blank[0])) > max(len(_text_cols(r))
+                                                        for r in rest):
+            head = non_blank[0]
+        body = [r for r in non_blank if r != head]
+        if not body:
+            continue
+
+        block_labels = sorted({c for r in body for c in _text_cols(r)})
+        if not block_labels:
+            continue
+        headed = set(_text_cols(head)) if head is not None else set()
+        beside = {c + 1 for c in block_labels}
+        block_values = sorted((headed | beside) - set(block_labels))
+
+        # A LABEL COLUMN AT THE RIGHT EDGE still needs its value column, and
+        # that column lies outside the bounding box of the text — nothing was
+        # ever written in it. "Bank Name | _ | ABA | _" is the case: the value
+        # for `ABA` belongs in column D, and D holds nothing anywhere.
+        #
+        # Only granted when the block ALREADY has a value column inside the
+        # box, which is what says these are label/value pairs at all. Without
+        # that test a fully populated row would qualify, and "Total | 999" —
+        # two labels under THE ONE RULE — would sprout a slot in column C.
+        in_box = [c for c in block_values if c <= max_col]
+        block_values = ([c for c in block_values if c <= max_col + 1]
+                        if in_box else in_box)
+
+        for r in body:
+            for vc in block_values:
+                if (r, vc) in claimed:
+                    continue
+                # Not in `m` means covered by a merge or outside the box;
+                # static means the user typed something there.
+                if not _open(r, vc):
+                    continue
+                # The label that owns this slot is fixed by GEOMETRY — the
+                # nearest label column to its left — and then that cell must
+                # actually hold text. Searching leftward for the nearest label
+                # that happens to be filled is wrong: in the side-by-side
+                # layout "Bank Name | _ | ABA | _", a row carrying only
+                # `Acct Type` in column A would hand column D to `Acct Type`
+                # as well, inventing a second slot for a value the row does
+                # not have. The right-hand pair is simply absent on that row.
+                owners = [c for c in block_labels if c < vc]
+                if not owners:
+                    continue
+                lc = max(owners)
+                if (r, lc) not in static:
+                    continue
                 field_slots.append({
                     "slot_id": f"F{len(field_slots) + 1}",
-                    "ref": _ref(r, cc), "row": r, "col": cc,
-                    "row_label": m[(r, c)], "col_header": "",
+                    "ref": _ref(r, vc), "row": r, "col": vc,
+                    "row_label": m[(r, lc)],
+                    "col_header": m.get((head, vc), "") if head is not None else "",
                     # A FIELD SLOT HAS NO DETECTABLE SECTION, and saying so is
                     # more honest than guessing. `_section_for` answers "is the
                     # line above a title", which is only meaningful when the
@@ -544,11 +660,8 @@ def compute_shape(grid, log=None):
                     # sections the grid cannot support.
                     "section": "",
                 })
-                label_cols.add(c)
-                value_cols.add(cc)
-                c = cc + 1
-            else:
-                c += 1
+                label_cols.add(lc)
+                value_cols.add(vc)
 
     for b in bands:
         if b.get("orientation") == "columns":

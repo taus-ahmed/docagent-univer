@@ -276,3 +276,81 @@ class TestSectionTitlesSurviveADenseGrid:
                  "4,0": "Total Earnings"}
         shape = compute_shape(_drawn(cells))
         assert "Earnings" not in [f["row_label"] for f in shape["field_slots"]]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# R2 — COLUMN ROLES, NOT A LEFT-TO-RIGHT SCAN
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TestEveryValueColumnIsFilled:
+    """A matrix has one label column and several value columns.
+
+    The old scan made a slot immediately right of a static cell and then
+    stepped past it, so at column C it asked "is C static?", found a slot
+    rather than a label, and moved on.
+    """
+
+    @staticmethod
+    def _matrix():
+        cells = {"0,0": "Payment Calculation",
+                 "0,1": "Years 1-7", "0,2": "Years 8-30"}
+        for r, n in enumerate(["Principal", "Interest", "Fees"], start=1):
+            cells[f"{r},0"] = n
+        return compute_shape(_drawn(cells))
+
+    def test_both_value_columns_become_slots(self):
+        assert {f["ref"] for f in self._matrix()["field_slots"]} == {
+            "B2", "B3", "B4", "C2", "C3", "C4"}
+
+    def test_each_slot_carries_its_column_heading(self):
+        by = {f["ref"]: f for f in self._matrix()["field_slots"]}
+        assert by["B2"]["col_header"] == "Years 1-7"
+        assert by["C2"]["col_header"] == "Years 8-30"
+
+    def test_the_heading_row_is_not_itself_a_field_row(self):
+        assert "Payment Calculation" not in [
+            f["row_label"] for f in self._matrix()["field_slots"]]
+
+
+class TestAValueColumnHasToBeJustified:
+    """Otherwise every blank column inside the used range becomes a slot.
+
+    The gold invoice's key/value block spans columns A-E, because the line-item
+    table below it is five columns wide. Without justification each of its nine
+    labels would sprout four slots across C, D and E.
+    """
+
+    def test_blank_columns_under_a_wide_table_do_not_become_slots(self):
+        cells = {"0,0": "Invoice Number", "1,0": "Total"}
+        for i, h in enumerate(["Item", "Qty", "Rate", "Tax", "Amount"]):
+            cells[f"4,{i}"] = h
+        cells["12,0"] = "Grand Total"
+        shape = compute_shape(_drawn(cells))
+        assert {f["ref"] for f in shape["field_slots"]} == {"B1", "B2", "B13"}
+
+
+class TestASlotBelongsToTheLabelBesideIt:
+    """Side by side: "Bank Name | _ | ABA | _" is two independent pairs."""
+
+    @staticmethod
+    def _side_by_side():
+        return compute_shape(_drawn({
+            "0,0": "Bank Name",  "0,2": "ABA",
+            "1,0": "Acct Holder", "1,2": "Acct No",
+            "2,0": "Acct Type",                      # no right-hand label
+        }))
+
+    def test_each_pair_keeps_its_own_label(self):
+        by = {f["ref"]: f["row_label"] for f in self._side_by_side()["field_slots"]}
+        assert by["B1"] == "Bank Name"
+        assert by["D1"] == "ABA"
+
+    def test_a_row_with_no_right_hand_label_gets_no_right_hand_slot(self):
+        refs = {f["ref"] for f in self._side_by_side()["field_slots"]}
+        assert "D3" not in refs, (
+            "the owner of a slot is the nearest label column to its LEFT, and "
+            "if that cell is blank on this row the pair is simply absent — "
+            "searching further left hands column D to `Acct Type` and invents "
+            "a value the row does not have")
+        assert refs == {"B1", "D1", "B2", "D2", "B3"}
