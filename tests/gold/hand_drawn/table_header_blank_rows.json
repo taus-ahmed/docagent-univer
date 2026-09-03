@@ -1,0 +1,32 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Date",
+   "style": {}
+  },
+  "0,1": {
+   "value": "Description",
+   "style": {}
+  },
+  "0,2": {
+   "value": "Qty",
+   "style": {}
+  },
+  "0,3": {
+   "value": "Rate",
+   "style": {}
+  },
+  "0,4": {
+   "value": "Amount",
+   "style": {}
+  },
+  "11,0": {
+   "value": "Total",
+   "style": {}
+  }
+ },
+ "colWidths": [],
+ "merges": {},
+ "repeatRows": [],
+ "regions": []
+}

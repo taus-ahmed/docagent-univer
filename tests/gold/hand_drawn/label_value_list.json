@@ -1,0 +1,32 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "Invoice Number",
+   "style": {}
+  },
+  "1,0": {
+   "value": "Invoice Date",
+   "style": {}
+  },
+  "2,0": {
+   "value": "Customer",
+   "style": {}
+  },
+  "3,0": {
+   "value": "Subtotal",
+   "style": {}
+  },
+  "4,0": {
+   "value": "Tax",
+   "style": {}
+  },
+  "5,0": {
+   "value": "Total Due",
+   "style": {}
+  }
+ },
+ "colWidths": [],
+ "merges": {},
+ "repeatRows": [],
+ "regions": []
+}

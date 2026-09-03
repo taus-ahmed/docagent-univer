@@ -1,0 +1,73 @@
+{
+ "cells": {
+  "0,0": {
+   "value": "QUARTERLY SUMMARY",
+   "style": {},
+   "mergeSpan": {
+    "rows": 1,
+    "cols": 5
+   }
+  },
+  "2,0": {
+   "value": "Date",
+   "style": {}
+  },
+  "2,1": {
+   "value": "Description",
+   "style": {}
+  },
+  "2,2": {
+   "value": "Debit",
+   "style": {}
+  },
+  "2,3": {
+   "value": "Credit",
+   "style": {}
+  },
+  "2,4": {
+   "value": "Balance",
+   "style": {}
+  },
+  "0,1": {
+   "value": "",
+   "style": {},
+   "mergeParent": [
+    0,
+    0
+   ]
+  },
+  "0,2": {
+   "value": "",
+   "style": {},
+   "mergeParent": [
+    0,
+    0
+   ]
+  },
+  "0,3": {
+   "value": "",
+   "style": {},
+   "mergeParent": [
+    0,
+    0
+   ]
+  },
+  "0,4": {
+   "value": "",
+   "style": {},
+   "mergeParent": [
+    0,
+    0
+   ]
+  }
+ },
+ "colWidths": [],
+ "merges": {
+  "0,0": {
+   "rows": 1,
+   "cols": 5
+  }
+ },
+ "repeatRows": [],
+ "regions": []
+}
