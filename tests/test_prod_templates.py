@@ -64,10 +64,25 @@ class TestBankStatement101:
         """A band at the grid edge must not swallow the KV rows above it."""
         shape, _ = _shape("bank_statement_101")
         labels = [f["row_label"] for f in shape["field_slots"]]
-        assert len(labels) == 13, labels
+        assert len(labels) == 11, labels
         for expected in ["Bank Name", "Acct Holder", "Stmt No", "Opening Bal",
                          "Closing Bal", "Total Credits", "Total Debits"]:
             assert expected in labels, (expected, labels)
+
+    def test_its_merged_section_headings_are_not_fields(self):
+        """`Account Info` and `Summary` are merged 1x4 headings, not labels.
+
+        This template declares merges at "1,0" and "6,0", each spanning four
+        columns. Before merges were read, the cell beside each heading looked
+        like an ordinary empty neighbour and became a field slot — so the
+        model was asked for "the value of Account Info" and the sheet carried
+        two cells that mean nothing. Two of the 13 slots this template used to
+        report were these; 11 is the honest count.
+        """
+        shape, _ = _shape("bank_statement_101")
+        labels = [f["row_label"] for f in shape["field_slots"]]
+        assert "Account Info" not in labels, labels
+        assert "Summary" not in labels, labels
 
     def test_it_routes_and_needs_four_columns(self):
         shape, _ = _shape("bank_statement_101")

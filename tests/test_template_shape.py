@@ -116,3 +116,163 @@ class TestRobustness:
                     {"cells": {"1,2,3": {"value": "a"}}}]:
             s = compute_shape(bad)
             assert s["required_columns"] == 0
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# R1 — THE USED RANGE IS DENSE
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# A cell the user never touched and a cell they touched and left empty are the
+# same thing to a template. They were not the same thing to `_matrix`, which
+# read `grid["cells"]` and so could only see cells the React editor happened to
+# serialise — it writes an entry when you type, style, merge or paste, and
+# never when you leave a cell alone. Drawing a border was therefore what made a
+# template extractable, and the most ordinary template anyone draws (a column
+# of labels) scored zero slots.
+
+
+def _drawn(cells, regions=None, merges=None):
+    """A grid holding ONLY the cells named — exactly what the editor saves."""
+    return {"cells": {k: {"value": v} for k, v in cells.items()},
+            "colWidths": [], "merges": merges or {}, "repeatRows": [],
+            "regions": regions or []}
+
+
+class TestAColumnOfLabelsIsATemplate:
+    """Case 1: labels down column A and nothing else."""
+
+    def test_it_has_a_slot_for_every_label(self):
+        g = _drawn({f"{r},0": n for r, n in
+                   enumerate(["Name", "Date", "Total", "Tax", "Net"])})
+        shape = compute_shape(g)
+        assert [f["ref"] for f in shape["field_slots"]] == [
+            "B1", "B2", "B3", "B4", "B5"]
+
+    def test_it_is_usable(self):
+        g = _drawn({"0,0": "Invoice Number", "1,0": "Total"})
+        assert is_usable(compute_shape(g))
+
+
+class TestStylingIsNotWhatMakesATemplateValid:
+    """Case 3: borders used to be an undocumented second path to validity.
+
+    `applyStyle` writes `{value: "", style: {...}}` for every cell in the
+    selection, so a bordered empty cell became "present and empty" — a slot —
+    while the identical unbordered cell did not exist at all. Two templates
+    that look the same on screen extracted differently.
+    """
+
+    def test_a_bordered_grid_and_a_bare_one_have_the_same_shape(self):
+        labels = {"0,0": "Headings", "0,1": "Value",
+                  "1,0": "Name", "2,0": "Date", "3,0": "Total"}
+        bare = compute_shape(_drawn(labels))
+
+        bordered = {k: {"value": v} for k, v in labels.items()}
+        for r in range(1, 4):                       # user dragged a border box
+            bordered[f"{r},1"] = {"value": "", "style": {"borderAll": True}}
+        drawn = compute_shape({"cells": bordered, "merges": {}, "regions": []})
+
+        assert [f["ref"] for f in bare["field_slots"]] == \
+               [f["ref"] for f in drawn["field_slots"]]
+
+
+class TestTheUsedRangeStopsAtTheContent:
+    """The box comes from TEXT, so styling cannot inflate it."""
+
+    def test_a_lone_label_does_not_mint_a_whole_sheet_of_slots(self):
+        shape = compute_shape(_drawn({"0,0": "Invoice Number"}))
+        assert len(shape["field_slots"]) == 1
+
+    def test_a_five_column_table_gains_no_sixth_column(self):
+        cells = {f"0,{i}": h for i, h in
+                 enumerate(["Date", "Item", "Qty", "Rate", "Amount"])}
+        cells["6,0"] = "Total"
+        shape = compute_shape(_drawn(cells))
+        for band in shape["repeat_bands"]:
+            assert len(band["columns"]) == 5, band
+        assert all(f["col"] <= 4 for f in shape["field_slots"])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# R4 — MERGES ARE READ FROM THE RANGE LIST
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TestAMergedHeadingIsNotAField:
+    """A heading spanning A1:E1 is a title, not a label with a value beside it.
+
+    `mergeCells` writes `{value: "", mergeParent: [r, c]}` into every covered
+    cell. Nothing read merges, so B1 looked like an ordinary empty neighbour
+    and became a slot labelled with the heading text — and the row then held
+    five cells rather than one, so the heading was not recognised as a section
+    and the table below it lost its name.
+    """
+
+    @staticmethod
+    def _merged_heading_grid():
+        cells = {"0,0": {"value": "QUARTERLY SUMMARY"}}
+        for c in range(1, 5):
+            cells[f"0,{c}"] = {"value": "", "mergeParent": [0, 0]}
+        for i, h in enumerate(["Date", "Description", "Debit",
+                               "Credit", "Balance"]):
+            cells[f"2,{i}"] = {"value": h}
+        return {"cells": cells, "merges": {"0,0": {"rows": 1, "cols": 5}},
+                "regions": []}
+
+    def test_the_heading_does_not_become_a_slot(self):
+        shape = compute_shape(self._merged_heading_grid())
+        assert shape["field_slots"] == [], shape["field_slots"]
+
+    def test_the_table_beneath_it_takes_its_name(self):
+        shape = compute_shape(self._merged_heading_grid())
+        assert [b["name"] for b in shape["repeat_bands"]] == [
+            "QUARTERLY SUMMARY"]
+
+    def test_the_top_level_merge_list_alone_is_enough(self):
+        """The editor is inconsistent about writing `mergeParent`.
+
+        In the committed `bank_statement_101` fixture the merge at "1,0" has
+        no `mergeParent` on its covered cells while the one at "6,0" does.
+        `grid["merges"]` is the authority; `mergeParent` is only read so grids
+        saved by older editors still resolve.
+        """
+        cells = {"0,0": {"value": "QUARTERLY SUMMARY"}}
+        for i, h in enumerate(["Date", "Description", "Debit",
+                               "Credit", "Balance"]):
+            cells[f"2,{i}"] = {"value": h}
+        shape = compute_shape({"cells": cells,
+                               "merges": {"0,0": {"rows": 1, "cols": 5}},
+                               "regions": []})
+        assert shape["field_slots"] == []
+        assert [b["name"] for b in shape["repeat_bands"]] == [
+            "QUARTERLY SUMMARY"]
+
+
+class TestSectionTitlesSurviveADenseGrid:
+    """A title sits on the line directly above the thing it titles.
+
+    Section detection used to require the title's row to hold exactly one cell
+    IN THE GRID — the same editor-bookkeeping artefact R1 removes. Under a
+    dense used range every row has a cell in every column, so the balance
+    sheet's bands would have been named after the running totals above them.
+    """
+
+    def test_a_title_against_its_header_names_the_band(self):
+        cells = {"0,0": "Earnings", "1,0": "Description", "1,1": "Amount",
+                 "4,0": "Total Earnings"}
+        shape = compute_shape(_drawn(cells))
+        assert [b["name"] for b in shape["repeat_bands"]] == ["Earnings"]
+
+    def test_a_total_a_blank_line_above_a_header_does_not(self):
+        cells = {"0,0": "Total Current Assets",
+                 "2,0": "NON-CURRENT ASSETS", "2,1": "Amount",
+                 "5,0": "Total Non-Current Assets"}
+        shape = compute_shape(_drawn(cells))
+        assert [b["name"] for b in shape["repeat_bands"]] == [
+            "NON-CURRENT ASSETS"]
+
+    def test_a_row_that_titles_a_band_is_not_also_a_field(self):
+        cells = {"0,0": "Earnings", "1,0": "Description", "1,1": "Amount",
+                 "4,0": "Total Earnings"}
+        shape = compute_shape(_drawn(cells))
+        assert "Earnings" not in [f["row_label"] for f in shape["field_slots"]]

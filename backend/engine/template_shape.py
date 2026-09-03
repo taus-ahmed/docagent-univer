@@ -41,10 +41,103 @@ SHAPE_VERSION = 1
 _EDGE_BAND_ROWS = 10
 
 
+# The largest grid we will densify. The editor is 50x26 = 1300 cells; this is
+# a guard against a malformed grid with a stray coordinate, not a real limit.
+_MAX_DENSE_CELLS = 20000
+
+
+def _merge_cover(grid, cells):
+    """{(row, col)} covered by a merge but not its own anchor.
+
+    A covered cell is not a label and not a slot — it is part of its parent,
+    and the only cell that means anything is the anchor. `grid["merges"]` is
+    the authority: `{"r,c": {rows, cols}}` keyed by the anchor. Cells saved by
+    older editors also carry a `mergeParent` of their own, which is read here
+    so grids saved before the editor stopped writing it still resolve.
+    """
+    cover = set()
+    for key, span in (grid.get("merges") or {}).items():
+        try:
+            r, c = map(int, str(key).split(","))
+            rows = int((span or {}).get("rows") or 1)
+            cols = int((span or {}).get("cols") or 1)
+        except (ValueError, AttributeError, TypeError):
+            continue
+        if rows < 1 or cols < 1:
+            continue
+        for rr in range(r, r + rows):
+            for cc in range(c, c + cols):
+                if (rr, cc) != (r, c):
+                    cover.add((rr, cc))
+    for key, cell in (cells or {}).items():           # legacy grids
+        if not isinstance(cell, dict) or not cell.get("mergeParent"):
+            continue
+        try:
+            r, c = map(int, str(key).split(","))
+            pr, pc = (int(x) for x in cell["mergeParent"])
+        except (ValueError, AttributeError, TypeError):
+            continue
+        if (r, c) != (pr, pc):
+            cover.add((r, c))
+    return cover
+
+
+def _used_range(raw, grid, cover):
+    """(r1, c1, r2, c2) — the rectangle the template actually occupies.
+
+    The box is the bounding box of every cell carrying TEXT, widened to cover
+    any declared region and any merge. STYLING DELIBERATELY DOES NOT EXTEND
+    IT, and that is the whole point of computing a box at all: presence in
+    `grid["cells"]` is an artefact of editor bookkeeping — `applyStyle` writes
+    an entry for every cell in the selection, so drawing a border used to be
+    what made a template extractable. Inside the box, absent and empty mean
+    the same thing, and formatting stops being load-bearing.
+    """
+    rs, cs = [], []
+    for (r, c), text in raw.items():
+        if text and (r, c) not in cover:
+            rs.append(r)
+            cs.append(c)
+    for reg in (grid.get("regions") or []):
+        if not isinstance(reg, dict):
+            continue
+        try:
+            rs += [int(reg["r1"]), int(reg["r2"])]
+            cs += [int(reg["c1"]), int(reg["c2"])]
+        except (KeyError, TypeError, ValueError):
+            continue
+    for key, span in (grid.get("merges") or {}).items():
+        try:
+            r, c = map(int, str(key).split(","))
+            rs += [r, r + int((span or {}).get("rows") or 1) - 1]
+            cs += [c, c + int((span or {}).get("cols") or 1) - 1]
+        except (ValueError, AttributeError, TypeError):
+            continue
+    if not rs:
+        return None
+    r1, r2 = max(0, min(rs)), max(rs)
+    c1, c2 = max(0, min(cs)), max(cs)
+    # A template one column wide is a column of labels with nowhere to put an
+    # answer — which is the single most ordinary thing a user draws, and it
+    # scored zero slots. A label column implies a value column beside it. The
+    # widening is deliberately limited to this case: widening every template
+    # by a column would mint a phantom slot to the right of every table.
+    if c2 == c1:
+        c2 = c1 + 1
+    return r1, c1, r2, c2
+
+
 def _matrix(grid):
-    """{(row, col): text} for every present cell; '' for present-but-empty."""
-    out, marked, marked_with_text = {}, 0, 0
-    for key, cell in (grid or {}).get("cells", {}).items():
+    """{(row, col): text} for every cell in the used range; '' for empty.
+
+    A cell that was never touched in the editor and a cell that was touched
+    and left empty are the SAME THING to a template, so both appear here as
+    ''. See `_used_range` for why that is not merely a convenience.
+    """
+    grid = grid or {}
+    cells = grid.get("cells") or {}
+    raw, marked, marked_with_text = {}, 0, 0
+    for key, cell in cells.items():
         try:
             r, c = map(int, str(key).split(","))
         except (ValueError, AttributeError):
@@ -52,13 +145,28 @@ def _matrix(grid):
         if not isinstance(cell, dict):
             continue
         text = str(cell.get("value") or "").strip()
-        out[(r, c)] = text
+        raw[(r, c)] = text
         if cell.get("extractTarget"):
             marked += 1
             if text:
                 marked_with_text += 1
+
+    cover = _merge_cover(grid, cells)
+    out = {rc: txt for rc, txt in raw.items() if rc not in cover}
+
+    box = _used_range(raw, grid, cover)
+    if box:
+        r1, c1, r2, c2 = box
+        if (r2 - r1 + 1) * (c2 - c1 + 1) <= _MAX_DENSE_CELLS:
+            for r in range(r1, r2 + 1):
+                for c in range(c1, c2 + 1):
+                    if (r, c) not in cover:
+                        out.setdefault((r, c), "")
+
     return out, {"extract_target_cells": marked,
-                 "extract_target_cells_with_text": marked_with_text}
+                 "extract_target_cells_with_text": marked_with_text,
+                 "merged_cells": len(cover),
+                 "used_range": list(box) if box else []}
 
 
 def _col_letter(c):
@@ -75,16 +183,78 @@ def _ref(r, c):
     return f"{_col_letter(c)}{r + 1}"
 
 
-def _section_for(m, static, row):
-    """Nearest lone static cell above `row` — a section title, not a label."""
+def _wide_headings(grid):
+    """{(row, col)} of merge anchors spanning 2+ COLUMNS.
+
+    A cell merged across columns and carrying text is a heading and nothing
+    else — no user merges four cells together to make a label for a value in
+    the fifth. That makes it the one section title that needs no adjacency
+    test to be believed.
+    """
+    out = set()
+    for key, span in (grid.get("merges") or {}).items():
+        try:
+            r, c = map(int, str(key).split(","))
+            if int((span or {}).get("cols") or 1) >= 2:
+                out.add((r, c))
+        except (ValueError, AttributeError, TypeError):
+            continue
+    return out
+
+
+def _section_for(m, static, row, wide=()):
+    """The section title above `row`, or "".
+
+    Two ways to be a title, because there are two kinds of certainty:
+
+    1. A cell MERGED ACROSS COLUMNS. Unambiguous — it is a heading by its own
+       geometry — so blank rows between it and the table it titles do not
+       matter. This is the ordinary "merged section heading across A1:E1 with
+       the table starting at row 3".
+
+    2. A lone static on the line IMMEDIATELY above. A title sits on the line
+       directly above the thing it titles; a blank line in between means the
+       label belongs to what came before it, not to what follows.
+
+    That adjacency is doing work the old test did by accident. This used to
+    scan upward past blank rows and accept the first lone static that ALSO had
+    no other cell present in its row — and "no other cell present" is exactly
+    the editor-bookkeeping artefact R1 removes. On the gold payslip it worked:
+
+        row  9  Earnings                    <- one static, column 1 ABSENT
+        row 10  Description | Amount        <- the band header it titles
+
+    and on the gold balance sheet it correctly declined:
+
+        row  6  Total Current Assets | ''   <- one static, column 1 EMPTY
+        row  7  (blank)
+        row  8  NON-CURRENT ASSETS | Amount
+
+    Under a dense used range those two rows are identical — both are a lone
+    static with an empty cell beside it — so presence can no longer separate
+    them and the balance sheet's bands would have been named after the running
+    totals above them ("Total Current Assets" instead of "NON-CURRENT
+    ASSETS"). Adjacency separates them for a reason that survives: row 9 is
+    against its header, row 6 is a blank line away from one.
+
+    A merged heading reads as one static here because the cells it covers are
+    not in `m` at all (see `_merge_cover`).
+    """
+    # (1) the nearest non-blank row above, if it is a merged heading
     for r in range(row - 1, -1, -1):
         cols = [c for (rr, c) in static if rr == r]
         if not cols:
             continue
-        present = [c for (rr, c) in m if rr == r]
-        if len(cols) == 1 and len(present) == 1:
+        if len(cols) == 1 and (r, cols[0]) in wide:
             return m[(r, cols[0])]
+        break                        # a real row, and not a wide heading
+    # (2) otherwise only the line directly above counts
+    r = row - 1
+    if r < 0:
         return ""
+    cols = [c for (rr, c) in static if rr == r]
+    if len(cols) == 1:
+        return m[(r, cols[0])]
     return ""
 
 
@@ -238,6 +408,7 @@ def compute_shape(grid, log=None):
     # ── what the template DECLARES comes first ────────────────────────────────
     # Detection stays — it is what every template in production relies on — but
     # it is no longer the only answer available for a shape it cannot express.
+    wide = _wide_headings(grid)
     bands = _declared_bands(grid, m, _say)
     claimed = set()
     for b in bands:
@@ -279,7 +450,7 @@ def compute_shape(grid, log=None):
                      f"({', '.join(m[(hr, c)] for c in cols)}) but has no empty "
                      f"rows beneath it — not treated as a repeating band")
                 continue
-        section = _section_for(m, static, hr)
+        section = _section_for(m, static, hr, wide)
         headers_raw = [m[(hr, c)] for c in cols]
 
         # A TWO-column band is a label/value pair by construction — there is
@@ -328,10 +499,18 @@ def compute_shape(grid, log=None):
         band_rows.update(range(b["start_row"], b["end_row"] + 1))
     header_rows = sorted({b["header_row"] for b in bands})
 
+    # A row that TITLES a band is not also a field in it. "Earnings" names the
+    # band beneath it; it is not a label waiting for a value. Under a sparse
+    # grid this never came up, because a lone heading had no cell beside it to
+    # become a slot — R1 gives it one, so the exclusion has to be said out
+    # loud. Only rows an actual band took its name from are excluded, so a
+    # lone label that titles nothing is still an ordinary field.
+    section_rows = {b["header_row"] - 1 for b in bands if b.get("section")}
+
     # ── field slots: a static label with an empty cell beside it ──
     field_slots, label_cols, value_cols = [], set(), set()
     for r in rows:
-        if r in band_rows or r in header_rows:
+        if r in band_rows or r in header_rows or r in section_rows:
             continue
         # EVERY label/slot pair across the row, not just the leftmost. Side-by-side
         # layouts put two pairs on one line — "Total Current Assets | _ | Total
@@ -351,7 +530,19 @@ def compute_shape(grid, log=None):
                     "slot_id": f"F{len(field_slots) + 1}",
                     "ref": _ref(r, cc), "row": r, "col": cc,
                     "row_label": m[(r, c)], "col_header": "",
-                    "section": _section_for(m, static, r),
+                    # A FIELD SLOT HAS NO DETECTABLE SECTION, and saying so is
+                    # more honest than guessing. `_section_for` answers "is the
+                    # line above a title", which is only meaningful when the
+                    # line below is a band header — the case it is called for.
+                    # Asked about an ordinary field it returns the PREVIOUS
+                    # FIELD'S LABEL ("Statement No" in section "Account
+                    # Holder"), because in a dense grid a lone label and a
+                    # section title are the same shape. That answer reached the
+                    # model in every slot prompt. It was empty for every field
+                    # slot in all 11 committed templates before R1, so this
+                    # keeps the prompts identical rather than inventing
+                    # sections the grid cannot support.
+                    "section": "",
                 })
                 label_cols.add(c)
                 value_cols.add(cc)
