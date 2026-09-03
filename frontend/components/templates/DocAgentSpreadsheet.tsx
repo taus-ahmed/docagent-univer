@@ -12,6 +12,13 @@ interface CellStyle {
 interface Cell {
   value: string;
   style: CellStyle;
+  /** LEGACY. A merge is a RANGE, and `SheetSaveData.merges` is the one place
+   *  it lives. These stamped the same fact onto the covered cells and the
+   *  anchor, giving three copies that nothing kept in step — the committed
+   *  bank_statement_101 template carries `mergeParent` under one of its two
+   *  merges and not the other. Read (see `mergeCover`, and
+   *  `template_shape._merge_cover` on the server) so grids saved before this
+   *  still render; never written. */
   mergeParent?: [number, number];
   mergeSpan?: { rows: number; cols: number };
   /** LEGACY. Written by the old "Repeat row" control, read by nothing: no
@@ -46,6 +53,14 @@ export interface SheetSaveData {
   merges: Record<string, { rows: number; cols: number }>;
   repeatRows: number[];
   regions?: TableRegion[];
+}
+
+/** Every slice of editor state an undo has to restore. */
+interface Snapshot {
+  cells: Record<string, Cell>;
+  merges: Record<string, { rows: number; cols: number }>;
+  colWidths: number[];
+  regions: TableRegion[];
 }
 
 interface Props {
@@ -124,8 +139,13 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   const [editR, setEditR] = useState<number | null>(null);
   const [editC, setEditC] = useState<number | null>(null);
   const [editVal, setEditVal] = useState("");
-  const [hist, setHist] = useState<Record<string, Cell>[]>([]);
-  const [redoStack, setRedoStack] = useState<Record<string, Cell>[]>([]);
+  // UNDO COVERS ALL FOUR SLICES OF EDITOR STATE.
+  // History used to hold `cells` alone, so undoing a merge restored the cell
+  // values and left the merge itself in place, and undoing a declared table
+  // was not possible at all — the region list was never snapshotted. A
+  // snapshot is the whole editable state or it is not an undo.
+  const [hist, setHist] = useState<Snapshot[]>([]);
+  const [redoStack, setRedoStack] = useState<Snapshot[]>([]);
   const [fcp, setFcp] = useState(false);
   const [bcp, setBcp] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -156,10 +176,48 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     onSheetsChange?.(buildSaveData(c, m, cw, rg ?? regions));
   }, [onSheetsChange, buildSaveData, regions]);
 
+  /** "r,c" of every cell a merge covers, excluding each merge's own anchor.
+   *
+   *  `merges` is the ONE source of truth for what is merged. The editor used
+   *  to also stamp `mergeParent` onto each covered cell and `mergeSpan` onto
+   *  the anchor, so the same fact lived in three places and nothing kept them
+   *  in step — the committed bank_statement_101 template has `mergeParent` on
+   *  the cells under one of its two merges and not the other. Legacy grids are
+   *  still read here so they render, but nothing writes those fields any more.
+   *  `template_shape._merge_cover` does exactly this on the server. */
+  const mergeCover = useMemo(() => {
+    const out = new Set<string>();
+    Object.entries(merges).forEach(([k, span]) => {
+      const [r, c] = k.split(",").map(Number);
+      for (let rr = r; rr < r + (span?.rows ?? 1); rr++)
+        for (let cc = c; cc < c + (span?.cols ?? 1); cc++)
+          if (rr !== r || cc !== c) out.add(ck(rr, cc));
+    });
+    Object.entries(cells).forEach(([k, cell]) => {   // legacy grids
+      const mp = cell?.mergeParent;
+      if (mp && ck(mp[0], mp[1]) !== k) out.add(k);
+    });
+    return out;
+  }, [merges, cells]);
+
   const cs: CellStyle = useMemo(() => cells[ck(selR, selC)]?.style ?? {}, [cells, selR, selC]);
   const curCell = useMemo(() => cells[ck(selR, selC)], [cells, selR, selC]);
 
-  const ph = useCallback(() => { setHist(h => [...h.slice(-49), { ...cells }]); setRedoStack([]); }, [cells]);
+  const snap = useCallback((): Snapshot => ({
+    cells: { ...cells }, merges: { ...merges },
+    colWidths: [...colWidths], regions: [...regions],
+  }), [cells, merges, colWidths, regions]);
+
+  const ph = useCallback(() => {
+    setHist(h => [...h.slice(-49), snap()]);
+    setRedoStack([]);
+  }, [snap]);
+
+  const restore = useCallback((p: Snapshot) => {
+    setCells(p.cells); setMerges(p.merges);
+    setColWidths(p.colWidths); setRegions(p.regions);
+    onSheetsChange?.(buildSaveData(p.cells, p.merges, p.colWidths, p.regions));
+  }, [onSheetsChange, buildSaveData]);
 
   const upd = useCallback((next: Record<string, Cell>, nm?: Record<string, { rows: number; cols: number }>, ncw?: number[]) => {
     setCells(next);
@@ -201,9 +259,10 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   // not declared is still inferred, so nothing that works today changes.
 
   const setRegionsAndNotify = useCallback((next: TableRegion[]) => {
+    ph();
     setRegions(next);
     onSheetsChange?.(buildSaveData(cells, merges, colWidths, next));
-  }, [cells, merges, colWidths, onSheetsChange, buildSaveData]);
+  }, [cells, merges, colWidths, onSheetsChange, buildSaveData, ph]);
 
   const regionAt = useCallback((r: number, c: number) =>
     regions.findIndex(g => r >= Math.min(g.r1, g.r2) && r <= Math.max(g.r1, g.r2)
@@ -236,15 +295,17 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
 
   const doUndo = useCallback(() => {
     if (!hist.length) return;
-    setRedoStack(r => [...r, cells]);
-    const p = hist[hist.length - 1]; setHist(h => h.slice(0, -1)); setCells(p); notify(p, merges, colWidths);
-  }, [hist, cells, merges, colWidths, notify]);
+    setRedoStack(r => [...r, snap()]);
+    setHist(h => h.slice(0, -1));
+    restore(hist[hist.length - 1]);
+  }, [hist, snap, restore]);
 
   const doRedo = useCallback(() => {
     if (!redoStack.length) return;
-    setHist(h => [...h, cells]);
-    const n = redoStack[redoStack.length - 1]; setRedoStack(r => r.slice(0, -1)); setCells(n); notify(n, merges, colWidths);
-  }, [redoStack, cells, merges, colWidths, notify]);
+    setHist(h => [...h, snap()]);
+    setRedoStack(r => r.slice(0, -1));
+    restore(redoStack[redoStack.length - 1]);
+  }, [redoStack, snap, restore]);
 
   // commitEdit with direction — SINGLE source of navigation after edit
   const commitEdit = useCallback((dr: number = 0, dc: number = 0) => {
@@ -433,9 +494,9 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     const nm = { ...merges, [ck(r1, c1)]: { rows: r2 - r1 + 1, cols: c2 - c1 + 1 } };
     const next = { ...cells };
     for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
-      if (r !== r1 || c !== c1) next[ck(r, c)] = { ...(next[ck(r, c)] ?? { style: {} }), value: "", mergeParent: [r1, c1] };
+      if (r !== r1 || c !== c1) next[ck(r, c)] = { ...(next[ck(r, c)] ?? { style: {} }), value: "" };
     }
-    next[ck(r1, c1)] = { ...(next[ck(r1, c1)] ?? { style: {} }), value: next[ck(r1, c1)]?.value ?? "", mergeSpan: { rows: r2 - r1 + 1, cols: c2 - c1 + 1 } };
+    next[ck(r1, c1)] = { ...(next[ck(r1, c1)] ?? { style: {} }), value: next[ck(r1, c1)]?.value ?? "" };
     setSelR(r1); setSelC(c1); setRng({ r1, c1, r2: r1, c2: c1 }); upd(next, nm);
   }, [selR, selC, rng, cells, merges, ph, upd]);
 
@@ -446,7 +507,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     for (let r = selR; r < selR + rows; r++) for (let c = selC; c < selC + cols; c++) {
       if (r !== selR || c !== selC) { const nc = { ...(next[ck(r, c)] ?? { style: {} }) }; delete nc.mergeParent; next[ck(r, c)] = nc; }
     }
-    const nc = { ...next[k] }; delete nc.mergeSpan; next[k] = nc; upd(next, nm);
+    const nc = { ...(next[k] ?? { value: "", style: {} }) }; delete nc.mergeSpan; next[k] = nc; upd(next, nm);
   }, [selR, selC, cells, merges, ph, upd]);
 
   const startColResize = useCallback((e: React.MouseEvent, c: number) => {
@@ -734,7 +795,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                   {Array.from({ length: COLS }, (_, c) => {
                     const k = ck(r, c);
                     const cell = cells[k];
-                    if (cell?.mergeParent) return null;
+                    if (mergeCover.has(k)) return null;
                     const span = merges[k];
                     const cs2 = span?.cols ?? 1, rs2 = span?.rows ?? 1;
                     const s = cell?.style ?? {};
