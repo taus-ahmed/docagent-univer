@@ -264,7 +264,7 @@ def _section_for(m, static, row, wide=()):
     return ""
 
 
-def _declared_bands(grid, m, say):
+def _declared_bands(grid, m, say, skip):
     """Read `grid["regions"]` — the template declaring its own tables.
 
     A declared region is the table AS THE USER SEES IT, heading line included,
@@ -314,7 +314,7 @@ def _declared_bands(grid, m, say):
             r1, r2 = int(reg["r1"]), int(reg["r2"])
             c1, c2 = int(reg["c1"]), int(reg["c2"])
         except (KeyError, TypeError, ValueError):
-            say(f"declared region {i + 1} is malformed — ignored")
+            skip(f"declared region {i + 1} is malformed — ignored")
             continue
         r1, r2 = min(r1, r2), max(r1, r2)
         c1, c2 = min(c1, c2), max(c1, c2)
@@ -322,9 +322,23 @@ def _declared_bands(grid, m, say):
         name = str(reg.get("name") or "").strip()
 
         if orient == "rows":
-            if r2 <= r1 or c2 < c1:
-                say(f"declared region {i + 1} has no data rows beneath its "
+            # R5 — a table needs a heading row AND data rows beneath it, and a
+            # label column AND at least one value column beside it. The column
+            # test used to be `c2 < c1`, which is only false for a region with
+            # NEGATIVE width: a single-column region passed, built one unnamed
+            # value column with no label column to anchor it, and asked the
+            # model for one value per row with nothing to say what the value
+            # was. It came back filled with cover-page text. The transposed
+            # branch below has always checked `c2 <= c1`; the two disagreed
+            # about what a degenerate region is.
+            if r2 <= r1:
+                skip(f"declared region {i + 1} has no data rows beneath its "
                     f"heading row — ignored")
+                continue
+            if c2 <= c1:
+                skip(f"declared region {i + 1} is one column wide — a table "
+                    f"needs a label column and at least one value column "
+                    f"beside it — ignored")
                 continue
             heads = [str(m.get((r1, c), "") or "").strip()
                      for c in range(c1, c2 + 1)]
@@ -348,7 +362,7 @@ def _declared_bands(grid, m, say):
                 f"{len(columns)} columns, one record per row")
         else:
             if c2 <= c1 or r2 < r1:
-                say(f"declared region {i + 1} has no data columns beside its "
+                skip(f"declared region {i + 1} has no data columns beside its "
                     f"heading column — ignored")
                 continue
             fields = []
@@ -357,7 +371,7 @@ def _declared_bands(grid, m, say):
                 if h:
                     fields.append({"row": r, "header": h, "key": h})
             if not fields:
-                say(f"declared region {i + 1} has no headings down its first "
+                skip(f"declared region {i + 1} has no headings down its first "
                     f"column — ignored")
                 continue
             out.append({
@@ -394,11 +408,81 @@ def declared_cells(band):
             for col in band["columns"]}
 
 
+def _coverage(m, static, wide, bands, field_slots, band_rows,
+              header_rows, section_rows, heading_rows, skipped):
+    """What the engine understood, and what it had to leave behind (R6).
+
+    `is_usable` answers one bit — is there anywhere at all to put anything —
+    and a template can be badly wrong while passing it. The reported matrix
+    had four slots where eight were drawn: not "0 slots", but "half of this
+    is not being read", and the shape had no vocabulary for that. Nothing
+    downstream could tell a template it fully understood from one it had
+    understood half of.
+
+    The measure is LABELS, not empty cells. Counting unclaimed cells reads
+    alarm into ordinary templates — the gold invoice's key/value block spans
+    columns A-E because the table below it is five wide, so three of its
+    columns are legitimately blank forever. A label the user wrote and the
+    engine could not give a slot to is the thing that is actually wrong.
+
+    Band headers, band interiors, section titles and a block's own heading row
+    are excluded: they are labels doing a different job — naming a column,
+    titling a table — and they are not waiting for a value. Counting a
+    matrix's "Years 1-7" as an unfilled label reported three orphans on a
+    template the engine had read perfectly.
+    """
+    owned = {f["row"] for f in field_slots}
+    skip_rows = (set(band_rows) | set(header_rows) | set(section_rows)
+                 | set(heading_rows))
+
+    labels, orphans = 0, []
+    for (r, c) in sorted(static):
+        if r in skip_rows or (r, c) in wide:
+            continue
+        labels += 1
+        if r not in owned:
+            orphans.append({"ref": _ref(r, c), "label": m[(r, c)]})
+
+    band_cells = 0
+    for b in bands:
+        if b.get("orientation") == "columns":
+            band_cells += (len(b.get("fields") or [])
+                           * max(0, b["end_col"] - b["start_col"] + 1))
+        else:
+            band_cells += (len(b.get("columns") or [])
+                           * max(0, b["end_row"] - b["start_row"] + 1))
+
+    return {
+        "labels": labels,
+        "labels_with_slots": labels - len(orphans),
+        "orphan_labels": orphans[:20],
+        "orphan_count": len(orphans),
+        "field_slots": len(field_slots),
+        "band_cells": band_cells,
+        "skipped": skipped,
+        "complete": not orphans and not skipped,
+    }
+
+
 def compute_shape(grid, log=None):
     """Grid -> shape dict. Never raises; an unusable grid yields an empty shape."""
+    skipped = []
+
     def _say(msg):
         if log:
             log(msg)
+
+    def _skip(msg):
+        """Something the engine DECLINED to read, kept on the shape (R6).
+
+        Distinct from `_say`, which also narrates what the engine DID —
+        "declared TRANSPOSED table: ..." is a success. Recording every message
+        made a correct transposed template report two skipped structures.
+        These messages used to reach a server log only, where the person
+        drawing the template would never see them.
+        """
+        skipped.append(msg)
+        _say(msg)
 
     try:
         m, migration = _matrix(grid)
@@ -415,7 +499,7 @@ def compute_shape(grid, log=None):
     # Detection stays — it is what every template in production relies on — but
     # it is no longer the only answer available for a shape it cannot express.
     wide = _wide_headings(grid)
-    bands = _declared_bands(grid, m, _say)
+    bands = _declared_bands(grid, m, _say, _skip)
     claimed = set()
     for b in bands:
         claimed |= declared_cells(b)
@@ -499,7 +583,7 @@ def compute_shape(grid, log=None):
                      f"({len(cols)} columns, no rows beneath) — treated as a "
                      f"band; the writer expands it to the document's rows")
             else:
-                _say(f"row {hr} looks like a band header "
+                _skip(f"row {hr} looks like a band header "
                      f"({', '.join(m[(hr, c)] for c in cols)}) but has no empty "
                      f"rows beneath it — not treated as a repeating band")
                 continue
@@ -603,6 +687,7 @@ def compute_shape(grid, log=None):
     # key/value list (1 text, then rows of 1), so those blocks have no headings
     # and their slots carry `col_header: ""` exactly as before.
     field_slots, label_cols, value_cols = [], set(), set()
+    heading_rows = set()
 
     skip_rows = band_rows | set(header_rows) | section_rows
     all_cols = range(max_col + 1)
@@ -642,6 +727,7 @@ def compute_shape(grid, log=None):
         if rest and len(_text_cols(non_blank[0])) > max(len(_text_cols(r))
                                                         for r in rest):
             head = non_blank[0]
+            heading_rows.add(head)
         body = [r for r in non_blank if r != head]
         if not body:
             continue
@@ -728,6 +814,8 @@ def compute_shape(grid, log=None):
         "repeat_bands": bands,
         "field_slots": field_slots,
         "required_columns": required,
+        "coverage": _coverage(m, static, wide, bands, field_slots, band_rows,
+                              header_rows, section_rows, heading_rows, skipped),
         "inferred": True,
         "migration": migration,
     }

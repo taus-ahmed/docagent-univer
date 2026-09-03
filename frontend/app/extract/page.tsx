@@ -901,7 +901,20 @@ export default function ExtractPage() {
                         : "The job encountered an error and could not complete."}
                     </p>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 320 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 420 }}>
+                    {/* The DOCUMENTS' own reason, when the backend gave one.
+                        It always had one — `_fail` writes it, the job thread
+                        stores it, the API returns it — and nothing rendered
+                        it, so "This template has no slots to fill…" showed up
+                        here as four guesses about password-protected PDFs.
+                        The guesses now appear only when there is no real
+                        message to show. */}
+                    {jobStatus?.error_message ? (
+                      <div style={{ padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--text2)", lineHeight: 1.55, textAlign: "left" }}>
+                        <p style={{ fontWeight: 600, color: "var(--text1)", marginBottom: 4, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>What went wrong</p>
+                        {jobStatus.error_message}
+                      </div>
+                    ) : (
                     <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 11, color: "var(--text3)" }}>
                       <p style={{ fontWeight: 600, color: "var(--text2)", marginBottom: 4 }}>Common causes:</p>
                       <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 3 }}>
@@ -911,6 +924,7 @@ export default function ExtractPage() {
                         <li>AI service temporarily unavailable — retry in a moment</li>
                       </ul>
                     </div>
+                    )}
                     <button
                       className="btn btn-secondary"
                       style={{ width: "100%" }}

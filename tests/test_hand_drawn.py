@@ -152,3 +152,27 @@ class TestASubtotalTypedInsideTheTable:
     def test_the_subtotal_does_not_become_a_stray_field(self):
         labels = [f["row_label"] for f in _shape("subtotal_inside_table")["field_slots"]]
         assert labels == ["Total"], labels
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# The sixth case: a one-column region declared as a table (R5)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestAOneColumnRegionDeclaredAsATable:
+    """Reported as: "accepted, and produced four rows of cover-page text"."""
+
+    @staticmethod
+    def _shape():
+        return compute_shape({
+            "cells": {"0,0": {"value": "Line Items", "style": {}}},
+            "colWidths": [], "merges": {}, "repeatRows": [],
+            "regions": [{"type": "table", "r1": 0, "c1": 0, "r2": 5, "c2": 0,
+                         "orientation": "rows"}],
+        })
+
+    def test_no_band_is_built_from_it(self):
+        assert self._shape()["repeat_bands"] == []
+
+    def test_the_refusal_is_on_the_shape_not_only_in_a_log(self):
+        assert any("one column wide" in m
+                   for m in self._shape()["coverage"]["skipped"])

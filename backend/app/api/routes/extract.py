@@ -3599,6 +3599,48 @@ def _make_table_result(rows, template_data, filename, doc_type, elapsed, method,
     print(f"[EXTRACT] {method}: {filename} -> {len(normalised)} rows @ {confidence}", flush=True)
     return r
 
+def _job_error_message(session, job_id, failed, produced):
+    """The DOCUMENTS' own reasons, not a count of them.
+
+    This used to read "N of M document(s) failed — open the job to see each
+    document's error", and there is no per-document error view to open. The
+    real reason was already being written to `DocumentResult.validation_errors`
+    and returned by the API, and no component read it: a grep across the
+    frontend found exactly one hit, the TypeScript type declaration. So a
+    template the engine refused with "This template has no slots to fill.
+    Every cell either contains text (a label) or is outside the used area..."
+    surfaced in the UI as four hardcoded guesses about password-protected PDFs.
+
+    Distinct messages, most common first, so five documents failing the same
+    way say it once rather than five times.
+    """
+    if not produced:
+        return "No documents were processed."
+
+    head = f"{failed} of {produced} document(s) failed."
+    try:
+        rows = (session.query(DocumentResult)
+                .filter(DocumentResult.job_id == job_id)
+                .filter(DocumentResult.validation_errors != "")
+                .all())
+        counts = {}
+        for r in rows:
+            msg = (r.validation_errors or "").strip()
+            if msg:
+                counts[msg] = counts.get(msg, 0) + 1
+        if not counts:
+            return head
+        ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+        parts = [f"{m} ({n} documents)" if n > 1 else m for m, n in ranked[:3]]
+        if len(ranked) > 3:
+            parts.append(f"and {len(ranked) - 3} other error(s)")
+        return head + " " + " ".join(parts)
+    except Exception as e:
+        # A summary line must never be the reason a job's status is lost.
+        print(f"[THREAD] could not summarise document errors: {e}", flush=True)
+        return head
+
+
 def _fail(filename, error):
     from orchestrator import DocumentExtractionResult
     r = DocumentExtractionResult(filename=filename)
@@ -4327,12 +4369,8 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
         else:
             job.status = "failed"
         if job.status != "completed":
-            job.error_message = (
-                f"{failed} of {produced} document(s) failed — open the job to "
-                f"see each document's error."
-                if produced else
-                "No documents were processed."
-            )
+            job.error_message = _job_error_message(session, job_id,
+                                                   failed, produced)
         job.successful = successful
         job.failed = failed
         job.needs_review = needs_review

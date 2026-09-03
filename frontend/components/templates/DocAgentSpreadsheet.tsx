@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { templatesApi } from "@/lib/api";
+import { templatesApi, type ShapePreview } from "@/lib/api";
 
 interface CellStyle {
   bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean;
@@ -67,6 +67,10 @@ interface Props {
   initialColumns?: { name: string; type: string; order: number }[];
   initialData?: SheetSaveData | null;
   onSheetsChange?: (data: SheetSaveData) => void;
+  /** The shape the ENGINE derived, lifted so the page wrapper can gate Save on
+   *  it. The count that should have blocked a zero-slot save was already on
+   *  screen in this component and simply unreachable from the save path. */
+  onShapeChange?: (shape: ShapePreview | null) => void;
   height?: number | string;
 }
 
@@ -97,7 +101,7 @@ const IconWrap = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="non
 const IconRepeat = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>;
 const IconFx = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 19h6m2 0h6M9 4l-4 8 4 8m6-16l4 8-4 8"/></svg>;
 
-export default function DocAgentSpreadsheet({ initialColumns = [], initialData, onSheetsChange, height = 500 }: Props) {
+export default function DocAgentSpreadsheet({ initialColumns = [], initialData, onSheetsChange, onShapeChange, height = 500 }: Props) {
   const initCells = (): Record<string, Cell> => {
     if (initialData?.cells) return initialData.cells;
     const c: Record<string, Cell> = {};
@@ -561,14 +565,20 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
         if (cancelled) return;
         setSlotKeys(new Set(d.field_cells ?? []));
         setBandKeys(new Set(d.band_cells ?? []));
+        onShapeChange?.(d);
       } catch {
         // On failure highlight NOTHING rather than guessing. A wrong highlight
         // is worse than none: it tells the user a cell will be filled when it
-        // will not.
-        if (!cancelled) { setSlotKeys(new Set()); setBandKeys(new Set()); }
+        // will not. The wrapper is told too, so Save falls back to its own
+        // check rather than trusting a stale shape.
+        if (!cancelled) {
+          setSlotKeys(new Set()); setBandKeys(new Set());
+          onShapeChange?.(null);
+        }
       }
     }, 400);
     return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cells, colWidths, merges, regions]);
 
   const isSlot = useCallback(

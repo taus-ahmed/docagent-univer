@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { templatesApi, type TemplateColumn, type ColumnTemplate } from "@/lib/api";
+import { templatesApi, type TemplateColumn, type ColumnTemplate,
+         type ShapePreview } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -35,6 +36,17 @@ export default function TemplateEditor({ templateId }: Props) {
   // It is pre-populated from existingLayout when the template data arrives
   // so that save works even if the user hasn't interacted with the sheet yet.
   const sheetDataRef = useRef<SheetSaveData | null>(null);
+
+  // THE SAVE GATE. The engine's own verdict on the current grid, pushed up by
+  // the spreadsheet. `slotCount` was already computed and rendered inside that
+  // component and was simply unreachable from here, so a template the engine
+  // cannot fill saved without complaint and failed later, per document, with
+  // its real reason landing in a field the UI never read.
+  //
+  // The numbers are NOT re-derived in TypeScript. That would be a second
+  // implementation of the rule, which is what retiring `extractTarget` was
+  // about; the editor asks the server and shows what it says.
+  const [shape, setShape] = useState<ShapePreview | null>(null);
   const nameRef = useRef("");
   const autoNameRef = useRef("Template-1");
 
@@ -155,6 +167,16 @@ export default function TemplateEditor({ templateId }: Props) {
       const hasCells = Object.values(sheetData.cells ?? {}).some((c: any) => c?.value?.trim());
       if (!hasCells) throw new Error("Add some content to the spreadsheet before saving");
 
+      // BLOCK a template the engine cannot fill, carrying ITS message rather
+      // than a paraphrase. `shape` is null only when the preview call failed,
+      // and a save is not the moment to guess — let it through, and let
+      // extraction report honestly if it really is unusable.
+      if (shape && shape.usable === false) {
+        throw new Error(shape.error
+          ?? "This template has no slots to fill. Leave a cell empty next to "
+             + "a label, or put column headings in a row with empty rows beneath.");
+      }
+
       // Build the columns list from the one rule (Phase 2a): a slot is an empty
       // cell, and its name is the nearest label to its left (then above). The
       // server derives the authoritative shape from the same grid; this list is
@@ -231,6 +253,24 @@ export default function TemplateEditor({ templateId }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["templates"] });
       toast.success("Template saved successfully");
+      // WARN, do not block, on a partial read. A notes column the engine will
+      // never fill is a legitimate thing to draw, and blocking it would be a
+      // new version of the bug this gate exists to fix — the save path
+      // deciding it knows better than the person drawing the template.
+      const cov = shape?.coverage;
+      if (cov && !cov.complete) {
+        const bits: string[] = [];
+        if (cov.orphan_count) {
+          const names = cov.orphan_labels.slice(0, 3)
+            .map(o => `"${o.label}"`).join(", ");
+          bits.push(`${cov.orphan_count} label${cov.orphan_count === 1 ? "" : "s"} `
+                    + `with nowhere to put a value (${names}`
+                    + `${cov.orphan_count > 3 ? ", …" : ""})`);
+        }
+        if (cov.skipped?.length) bits.push(cov.skipped[0]);
+        if (bits.length) toast(`Saved, but the engine could not read all of it: ${bits.join("; ")}`,
+                               { icon: "⚠️", duration: 8000 });
+      }
       router.push("/templates");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -387,6 +427,7 @@ export default function TemplateEditor({ templateId }: Props) {
                 initialColumns={existing?.columns ?? []}
                 initialData={existingLayout}
                 onSheetsChange={handleSheetsChange}
+                onShapeChange={setShape}
                 height="100%"
               />
             ) : (

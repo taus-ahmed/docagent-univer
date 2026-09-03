@@ -483,6 +483,44 @@ class TestAFailedDocumentIsVisible:
         assert job["successful"] == 0 and job["failed"] == 3, job
         assert job["error_message"], "a failed job with no explanation"
 
+    def test_the_jobs_message_carries_the_documents_own_reason(
+            self, client, auth, bank_template):
+        """Not a count of failures — the reason for them.
+
+        The message used to read "N of M document(s) failed — open the job to
+        see each document's error", and there is no per-document error view to
+        open. The reason was already on `DocumentResult.validation_errors` and
+        already returned by the API; a grep across the frontend found exactly
+        one reader, the TypeScript type declaration. So the extract page fell
+        back to four hardcoded guesses about password-protected PDFs.
+        """
+        up = _upload_raw(client, auth,
+                         [(f"broken-{i}.pdf", GARBAGE) for i in range(3)],
+                         template_id=bank_template.id)
+        job = _await_job(client, auth, up["job_id"])
+        msg = job["error_message"] or ""
+
+        docs = _results(client, auth, up["job_id"])
+        reasons = {(d["validation_errors"] or "").strip()
+                   for d in docs if (d["validation_errors"] or "").strip()}
+        assert reasons, "the documents recorded no reason to surface"
+        assert any(r in msg for r in reasons), (
+            f"the job says {msg!r} but the documents say {reasons!r}")
+
+    def test_identical_failures_are_stated_once(self, client, auth,
+                                                bank_template):
+        """Three documents failing the same way say it once, with a count."""
+        up = _upload_raw(client, auth,
+                         [(f"broken-{i}.pdf", GARBAGE) for i in range(3)],
+                         template_id=bank_template.id)
+        job = _await_job(client, auth, up["job_id"])
+        msg = job["error_message"] or ""
+        docs = _results(client, auth, up["job_id"])
+        reasons = [(d["validation_errors"] or "").strip() for d in docs]
+        if len(set(r for r in reasons if r)) == 1 and len(reasons) == 3:
+            assert msg.count(reasons[0]) == 1, (
+                f"the same reason is repeated in {msg!r}")
+
     def test_every_failed_document_carries_its_own_error(self, client, auth,
                                                          bank_template):
         up = _upload_raw(client, auth,

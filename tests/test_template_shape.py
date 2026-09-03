@@ -441,3 +441,105 @@ class TestTrailingSummaryLinesStayOutOfTheBand:
         assert (b["start_row"], b["end_row"]) == (1, 11)
         assert [f["row_label"] for f in shape["field_slots"]] == [
             "Total Credits", "Total Debits", "Closing Balance"]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# R5 — A DEGENERATE DECLARATION IS REFUSED, IN BOTH ORIENTATIONS
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def _region(**kw):
+    r = {"type": "table", "orientation": "rows"}
+    r.update(kw)
+    return r
+
+
+class TestAOneColumnTableIsRefused:
+    """A table needs a label column and at least one value column.
+
+    The rows branch tested `c2 < c1`, which is only true for a region of
+    NEGATIVE width. A single-column region passed, built one unnamed value
+    column with no label column to anchor it, and asked the model for one
+    value per row with nothing saying what the value was — it came back filled
+    with cover-page text. The transposed branch had always checked `c2 <= c1`;
+    the two disagreed about what a degenerate region is.
+    """
+
+    @staticmethod
+    def _shape():
+        return compute_shape(_drawn(
+            {"0,0": "Line Items"},
+            regions=[_region(r1=0, c1=0, r2=5, c2=0)]))
+
+    def test_it_produces_no_band(self):
+        assert self._shape()["repeat_bands"] == []
+
+    def test_it_says_so_rather_than_failing_quietly(self):
+        skipped = self._shape()["coverage"]["skipped"]
+        assert any("one column wide" in m for m in skipped), skipped
+
+    def test_the_two_orientations_agree(self):
+        """The SAME one-column region, declared each way, is refused both ways.
+
+        Both branches need a heading line and at least one line of data beside
+        it; the disagreement was that only the transposed branch enforced the
+        column half of that.
+        """
+        box = dict(r1=0, c1=0, r2=5, c2=0)
+        rows = compute_shape(_drawn({"0,0": "X"}, regions=[_region(**box)]))
+        cols = compute_shape(_drawn({"0,0": "X"},
+                                    regions=[_region(orientation="columns", **box)]))
+        assert rows["repeat_bands"] == [], rows["repeat_bands"]
+        assert cols["repeat_bands"] == [], cols["repeat_bands"]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# R6 — COVERAGE: WHAT THE ENGINE UNDERSTOOD, AND WHAT IT LEFT BEHIND
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TestCoverageReportsAPartialRead:
+    """`is_usable` answers one bit and a template can be badly wrong while
+    passing it. The reported matrix had four slots where eight were drawn —
+    not "0 slots", but "half of this is not being read"."""
+
+    def test_a_template_it_fully_understood_is_complete(self):
+        cov = compute_shape(_drawn({"0,0": "Name", "1,0": "Date"}))["coverage"]
+        assert cov["complete"] is True
+        assert (cov["labels_with_slots"], cov["labels"]) == (2, 2)
+
+    def test_a_label_with_nowhere_to_put_a_value_is_an_orphan(self):
+        cov = compute_shape(_drawn({"0,0": "Total", "0,1": "999"}))["coverage"]
+        assert cov["complete"] is False
+        assert [o["label"] for o in cov["orphan_labels"]] == ["Total", "999"]
+
+    def test_a_refused_structure_is_reported_even_when_usable(self):
+        shape = compute_shape(_drawn(
+            {"0,0": "Line Items"}, regions=[_region(r1=0, c1=0, r2=5, c2=0)]))
+        assert is_usable(shape)                      # detection still found a field
+        assert shape["coverage"]["complete"] is False
+
+    def test_column_headings_are_not_counted_as_unfilled_labels(self):
+        """A matrix's "Years 1-7" names a column; it is not waiting for a value.
+
+        Counting the heading row reported three orphans on a template the
+        engine had read perfectly.
+        """
+        cov = compute_shape(_drawn({
+            "0,0": "Payment Calculation", "0,1": "Years 1-7", "0,2": "Years 8-30",
+            "1,0": "Principal", "2,0": "Interest",
+        }))["coverage"]
+        assert cov["complete"] is True
+        assert cov["field_slots"] == 4
+
+    def test_narration_is_not_reported_as_a_skipped_structure(self):
+        """`_say` also describes what the engine DID.
+
+        "declared TRANSPOSED table: ..." is a success; recording every message
+        made a correct transposed template report two skipped structures.
+        """
+        shape = compute_shape(_drawn(
+            {"0,0": "Description", "1,0": "Amount"},
+            regions=[_region(r1=0, c1=0, r2=1, c2=4, orientation="columns")]))
+        assert shape["repeat_bands"], "the transposed table should be read"
+        assert shape["coverage"]["skipped"] == []

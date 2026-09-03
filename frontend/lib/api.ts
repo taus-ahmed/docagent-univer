@@ -258,6 +258,25 @@ export interface ShapePreview {
                  declared?: boolean }>;
   required_columns: number;
   summary: string;
+  /** R6 — what the engine understood, and what it had to leave behind.
+   *  Computed on the SERVER; the editor displays it rather than re-deriving
+   *  the rule in TypeScript, which is what retiring `extractTarget` was
+   *  about. `complete` is false when a label got no slot or a structure was
+   *  refused. */
+  coverage?: {
+    labels: number;
+    labels_with_slots: number;
+    orphan_labels: Array<{ ref: string; label: string }>;
+    orphan_count: number;
+    field_slots: number;
+    band_cells: number;
+    skipped: string[];
+    complete: boolean;
+  };
+  /** false when there is nowhere at all to put anything. */
+  usable?: boolean;
+  /** The engine's own refusal message when `usable` is false. */
+  error?: string | null;
 }
 
 export const templatesApi = {

@@ -101,15 +101,18 @@ def preview_shape(payload: dict, current_user: User = Depends(get_current_user))
             grid = None
     if not (isinstance(grid, dict) and isinstance(grid.get("cells"), dict)):
         return {"field_cells": [], "band_cells": [], "field_count": 0,
-                "band_count": 0, "summary": "", "error": "not a grid"}
+                "band_count": 0, "summary": "", "coverage": {},
+                "usable": False, "error": "not a grid"}
 
     try:
         from app.api.routes.extract import _compute_shape_for_grid
         shape = _compute_shape_for_grid(grid) or {}
+        from template_shape import choose_path, is_usable
     except Exception as e:
         print(f"[TEMPLATE] shape preview failed: {e}", flush=True)
         return {"field_cells": [], "band_cells": [], "field_count": 0,
-                "band_count": 0, "summary": "", "error": str(e)[:200]}
+                "band_count": 0, "summary": "", "coverage": {},
+                "usable": False, "error": str(e)[:200]}
 
     field_cells = [f"{f['row']},{f['col']}" for f in shape.get("field_slots") or []]
     band_cells, bands = [], []
@@ -141,6 +144,14 @@ def preview_shape(payload: dict, current_user: User = Depends(get_current_user))
         "bands": bands,
         "required_columns": shape.get("required_columns", 0),
         "summary": shape.get("summary", ""),
+        # R6 — what the engine understood and what it had to leave behind, so
+        # the editor can refuse a save the engine cannot act on and warn about
+        # a partial one. The numbers are the ENGINE's; re-deriving them in
+        # TypeScript would give two answers to the same question, which is what
+        # retiring `extractTarget` was about.
+        "coverage": shape.get("coverage") or {},
+        "usable": is_usable(shape),
+        "error": None if is_usable(shape) else choose_path(shape).get("error"),
     }
 
 
