@@ -435,10 +435,57 @@ def compute_shape(grid, log=None):
             continue                                    # a stack of labels
         header_candidates[r] = cols
 
+    def _static_count(r):
+        return sum(1 for c in range(max_col + 1) if (r, c) in static)
+
     for hr, cols in sorted(header_candidates.items()):
-        later = [r for r in rows
-                 if r > hr and any((r, c) in static for c in range(max_col + 1))]
-        end = (min(later) - 1) if later else max(rows)
+        # ── WHERE THE BAND ENDS (R3) ──────────────────────────────────────
+        # This used to be "the first row below the header holding ANY static
+        # cell, minus one". One typed cell anywhere inside a table therefore
+        # ended it there: a `Subtotal` in A5 turned a ten-row table into a
+        # three-row band, kept all five columns, and left `Subtotal` as a
+        # stray field competing with the table for the same data.
+        #
+        # A static row inside a band's span is a ROW LABEL unless it is really
+        # the start of what comes after the table. Two things say it is:
+        #
+        #   FULL     it fills the band's own shape — statics in at least half
+        #            its columns. On a two-column label/value band that is a
+        #            single label, which is why the balance sheet's "Total
+        #            Current Assets" still closes CURRENT ASSETS and stays a
+        #            field slot. On a five-column table one label is 1 of 5,
+        #            and closes nothing.
+        #
+        #            HALF, not "all but one", because a band can be several
+        #            label/value pairs side by side: the production BS Luq
+        #            template heads four columns "Current assets | Amount |
+        #            Non current assets | Amount", and its totals row fills
+        #            exactly two of them — one per pair. Requiring three left
+        #            that band running to row 49 and swallowing all six of its
+        #            field slots.
+        #
+        #   TRAILING no blank row follows it before the span ends — it is part
+        #            of the block of summary lines beneath the table. This is
+        #            what keeps the gold bank statement's `Total Credits /
+        #            Total Debits / Closing Balance` out of its transactions
+        #            band, which FULL alone would have swallowed.
+        #
+        # Anything else — an isolated label with the table continuing blank
+        # beneath it — is inside the band.
+        nxt = [r for r in sorted(header_candidates) if r > hr]
+        span_end = (min(nxt) - 1) if nxt else max(rows)
+        span = [r for r in rows if hr < r <= span_end]
+        need = max(1, (len(cols) + 1) // 2)
+
+        end = span_end
+        for r in span:
+            if not _static_count(r):
+                continue
+            full = _static_count(r) >= need
+            trailing = not any(rr > r and not _static_count(rr) for rr in span)
+            if full or trailing:
+                end = r - 1
+                break
         if end <= hr:
             # A header row at the very bottom of the grid, with nothing drawn
             # beneath it. Three or more adjacent headings can only be a table —

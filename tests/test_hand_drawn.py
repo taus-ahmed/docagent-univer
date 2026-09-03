@@ -14,13 +14,11 @@ hand scored zero slots.
 These are the counter-corpus. Each expectation is what the person who drew the
 template would say the answer obviously is.
 
-Cases still marked `known_bug` FAIL ON PURPOSE — they are the proof the harness
-can see the defect, per the marker's contract in pytest.ini. Deselect with
--m "not known_bug" for the green baseline.
+All fifteen expectations pass as of R3. They were 4/15 before R1, 11/15 after
+R1+R4, and 13/15 after R2 — the corpus is here to keep that from regressing,
+not to record a snapshot.
 """
 import json
-
-import pytest
 
 from tests.harness import bootstrap as bs  # noqa: F401  (puts engine on sys.path)
 from template_shape import compute_shape, is_usable  # noqa: E402
@@ -130,13 +128,15 @@ class TestAMergedSectionHeading:
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TestASubtotalTypedInsideTheTable:
-    """One typed cell inside a table ends the band at that row.
+    """Fixed by R3. One typed cell inside a table used to end the band there.
 
-    The band's extent is "the first row below the header holding ANY static
-    cell, minus one". A Subtotal in A5 therefore yields a three-row band out of
-    a ten-row table, keeping all five columns — which is the "2 rows and 5
-    columns with wrong values" case. A static in a band's own label column is a
-    ROW LABEL, not a terminator.
+    The extent was "the first row below the header holding ANY static cell,
+    minus one", so a Subtotal in A5 yielded a three-row band out of a ten-row
+    table while keeping all five columns — the "2 rows and 5 columns with wrong
+    values" case — and left `Subtotal` as a stray field competing with the
+    table for the same data. A static row now closes a band only when it fills
+    at least half the band's columns, or when no blank row follows it before
+    the span ends.
     """
 
     def test_it_is_still_one_band_of_five_columns(self):
@@ -144,13 +144,11 @@ class TestASubtotalTypedInsideTheTable:
         assert len(bands) == 1
         assert len(bands[0]["columns"]) == 5
 
-    @pytest.mark.known_bug
     def test_the_band_is_not_truncated_at_the_subtotal(self):
         b = _shape("subtotal_inside_table")["repeat_bands"][0]
         assert b["end_row"] - b["start_row"] + 1 >= 9, (
             f"band covers rows {b['start_row']}-{b['end_row']}")
 
-    @pytest.mark.known_bug
     def test_the_subtotal_does_not_become_a_stray_field(self):
         labels = [f["row_label"] for f in _shape("subtotal_inside_table")["field_slots"]]
         assert labels == ["Total"], labels

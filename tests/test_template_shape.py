@@ -354,3 +354,90 @@ class TestASlotBelongsToTheLabelBesideIt:
             "searching further left hands column D to `Acct Type` and invents "
             "a value the row does not have")
         assert refs == {"B1", "D1", "B2", "D2", "B3"}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# R3 — WHERE A BAND ENDS
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def _table(extra=None, ncols=5):
+    """A heading row, blank rows beneath, a total below that."""
+    heads = ["Date", "Description", "Qty", "Rate", "Amount"][:ncols]
+    cells = {f"0,{i}": h for i, h in enumerate(heads)}
+    cells["11,0"] = "Total"
+    cells.update(extra or {})
+    return compute_shape(_drawn(cells))
+
+
+class TestALabelInsideATableIsARowNotATerminator:
+    """A `Subtotal` typed in A5 used to end a ten-row band at row three."""
+
+    def test_the_band_keeps_its_rows(self):
+        b = _table({"4,0": "Subtotal"})["repeat_bands"][0]
+        assert (b["start_row"], b["end_row"]) == (1, 10)
+
+    def test_the_label_does_not_also_become_a_field(self):
+        labels = [f["row_label"] for f in _table({"4,0": "Subtotal"})["field_slots"]]
+        assert labels == ["Total"], labels
+
+    def test_an_undisturbed_table_is_unchanged_by_the_new_rule(self):
+        b = _table()["repeat_bands"][0]
+        assert (b["start_row"], b["end_row"]) == (1, 10)
+
+
+class TestARowFillingTheBandsShapeStillClosesIt:
+    """FULL: statics in at least half the band's columns.
+
+    On a two-column label/value band a single label is half of it, which is why
+    the balance sheet's running totals still close their sections and stay
+    field slots rather than being absorbed as rows.
+    """
+
+    def test_a_two_column_band_closes_at_its_total(self):
+        shape = compute_shape(_drawn({
+            "0,0": "CURRENT ASSETS", "0,1": "Amount",
+            "6,0": "Total Current Assets",
+            "8,0": "NON-CURRENT ASSETS", "8,1": "Amount",
+            "13,0": "Total Non-Current Assets",
+        }))
+        first = shape["repeat_bands"][0]
+        assert (first["start_row"], first["end_row"]) == (1, 5)
+        assert "Total Current Assets" in [
+            f["row_label"] for f in shape["field_slots"]]
+
+    def test_two_pairs_side_by_side_close_at_half_their_columns(self):
+        """The production BS Luq shape: four columns that are two pairs.
+
+        Its totals row fills exactly two of four — one per pair. Requiring
+        "all but one" left the band running to the bottom of the grid and
+        swallowing all six of its field slots.
+        """
+        shape = compute_shape(_drawn({
+            "0,0": "Current assets", "0,1": "Amount",
+            "0,2": "Non current assets", "0,3": "Amount",
+            "4,0": "Current assets Total", "4,2": "Non Current assets Total",
+        }))
+        b = shape["repeat_bands"][0]
+        assert (b["start_row"], b["end_row"]) == (1, 3)
+        assert len(shape["field_slots"]) == 2
+
+
+class TestTrailingSummaryLinesStayOutOfTheBand:
+    """TRAILING: no blank row follows it before the span ends.
+
+    The gold bank statement puts `Total Credits / Total Debits / Closing
+    Balance` under a six-column transactions table. One label out of six does
+    not fill the band's shape, so FULL alone would have swallowed all three.
+    """
+
+    def test_a_block_of_summary_lines_closes_a_wide_band(self):
+        cells = {f"0,{i}": h for i, h in enumerate(
+            ["Date", "Type", "Description", "Debit", "Credit", "Balance"])}
+        cells.update({"12,0": "Total Credits", "13,0": "Total Debits",
+                      "14,0": "Closing Balance"})
+        shape = compute_shape(_drawn(cells))
+        b = shape["repeat_bands"][0]
+        assert (b["start_row"], b["end_row"]) == (1, 11)
+        assert [f["row_label"] for f in shape["field_slots"]] == [
+            "Total Credits", "Total Debits", "Closing Balance"]
