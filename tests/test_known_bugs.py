@@ -162,10 +162,18 @@ class TestP3FabricatedLineItem:
     def test_the_phantom_row_is_reported_not_silently_dropped(
             self, model_returns_a_phantom_row):
         """Dropping it quietly would be a different bug. The document must say
-        that a row was discarded and why."""
+        that a row was discarded and why — and say it somewhere a reader will
+        actually meet it, which a validation note alone is not: the review
+        panel reads `flagged_fields`, and the job list reads `needs_review`."""
         results, _ws, _log = _run_and_export()
-        notes = (results[0].extracted_data or {}).get("validation_notes", [])
-        assert any("duplicate row dropped" in n for n in notes), notes
+        ed = results[0].extracted_data or {}
+        assert ed["validation"]["dropped_row_count"] == 1
+        assert ed["needs_review"] is True
+        assert any("dropped" in f["ref"]
+                   for f in ed["validation"]["flagged_fields"])
+        assert any("already-used source line" in n
+                   for n in ed.get("validation_notes", [])), ed.get(
+                       "validation_notes")
 
     def test_the_four_real_rows_all_survive(self, model_returns_a_phantom_row):
         """The guard must remove the fabrication WITHOUT removing real data —

@@ -167,6 +167,14 @@ Kept so that a reader who saw the old behaviour knows it changed.
   flattened text line carries no columns. A Debit reported as a Credit quoted
   the same source line and was marked `high`. Now checked against column bands
   read off the document's own heading line.
+- **Rows were deleted for quoting the same line as an earlier row.** Identity
+  was the source span's TEXT, so a group header, a repeated column heading or
+  any line a document prints twice cost every row after the first — silently,
+  reported only in a validation note nothing reads. Worst in exactly the case
+  the product is for: five merged invoices made 33 rows deletable, five
+  payslips 43, scaling linearly with documents per file. Identity is now the
+  document LINE a row was read from, and anything still dropped is flagged with
+  its content and marks the document for review.
 - **Currency symbols and trailing cents were lost on export.** The stored value
   was always correct; only the spreadsheet cell dropped the notation. Now
   carried as an Excel number format, so the cell still sums.

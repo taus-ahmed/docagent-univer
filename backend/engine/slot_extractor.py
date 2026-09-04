@@ -46,7 +46,8 @@ from pathlib import Path
 
 from extractor import _llm_json, _log, _num
 from micr import field_role, find_micr_line, parse_micr
-from text_layer import check_placement, column_bands, find_line
+from text_layer import (check_placement, column_bands, find_line,
+                        source_occurrences)
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -396,6 +397,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     extracted_fields, conf_map, flagged, notes = {}, {}, [], []
     ungrounded = 0
     misplaced = 0
+    dropped = 0
     all_lines = [ln for pg in (page_lines or []) for ln in (pg or [])]
 
     # ── field slots ──
@@ -493,19 +495,70 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if bands:
                 _log("PLACE", f'{t["name"]}: column bands read from the '
                               f'document for {sorted(bands)}')
-            seen_sources, rows_out = set(), []
+            # ROW IDENTITY IS POSITIONAL, NOT TEXTUAL.
+            #
+            # This used to key a row on the TEXT of its source span and drop
+            # every later row quoting the same words. That is only correct if
+            # the document prints those words once. Two rows legitimately
+            # quoting one line is ordinary — a group header, a repeated column
+            # heading, a document that simply prints the same line twice — and
+            # in a file holding twenty invoices the identifying lines repeat by
+            # construction: measured on five merged invoices, 9 lines repeat
+            # and 33 rows become deletable; five payslips, 11 and 43. It scales
+            # linearly with the number of documents in the file, and the whole
+            # point of the product is putting many documents in one file.
+            #
+            # A row is now identified by WHICH document line it was read from.
+            # Each row claims one occurrence; a row that can claim a free
+            # occurrence is a real row however many others quote the same text.
+            # Only a row claiming a line every copy of which is already spoken
+            # for is a duplicate — which is exactly the fabricated-row case the
+            # dedup existed for, stated precisely instead of approximately.
+            #
+            # Without geometry (the image path, or a caller that passes no
+            # page_lines) identity falls back to the source PLUS the row's own
+            # values, so two different rows quoting one line still both survive.
+            # That is weaker — it cannot catch a hallucinated variant of a real
+            # row — and it is why `page_lines` is worth threading through.
+            seen_rows, claimed_lines, rows_out = set(), set(), []
             for r in raw:
                 if not isinstance(r, dict):
                     continue
                 cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
                 source, page = r.get("source", ""), r.get("page", 0)
                 key = _flat(source)
-                if key and key in seen_sources:
-                    notes.append("duplicate row dropped — two rows claim the same "
-                                 f"source line: {str(source)[:60]!r}")
+                occurrences = (source_occurrences(all_lines, source)
+                               if (all_lines and key) else [])
+                if occurrences:
+                    free = next((i for i in occurrences
+                                 if i not in claimed_lines), None)
+                    duplicate = free is None
+                    if free is not None:
+                        claimed_lines.add(free)
+                else:
+                    ident = (key, tuple(sorted(
+                        (h, str(cells.get(h, "") or "")) for h in headers)))
+                    duplicate = bool(key) and ident in seen_rows
+                    seen_rows.add(ident)
+                if duplicate:
+                    # VISIBLY. A dropped row appeared only in validation_notes:
+                    # not flagged, not in needs_review, not in the confidence
+                    # map, invisible in the app and in the export. A silent
+                    # deletion is worse than a duplicate row, because nothing
+                    # tells the reader to go and look.
+                    dropped += 1
+                    shown = " | ".join(
+                        f"{h}={cells.get(h)}" for h in headers
+                        if str(cells.get(h, "") or "").strip()) or str(source)[:60]
+                    flagged.append(_flag(
+                        f'{t["name"]}[dropped]', shown,
+                        "row dropped: it was read from a document line that "
+                        "another row already used, and the document prints "
+                        "that line only once"))
+                    notes.append(
+                        f'{t["name"]}: dropped a row claiming an already-used '
+                        f"source line: {str(source)[:60]!r}")
                     continue
-                if key:
-                    seen_sources.add(key)
                 row, row_conf = {}, confident
                 for h in headers:
                     v = cells.get(h, "")
@@ -544,12 +597,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     total_cells = len(extracted_fields) + sum(
         len([v for k, v in r.items() if not k.startswith("_") and str(v).strip()])
         for rows in tables_out.values() for r in rows)
+    if dropped:
+        notes.append(f"{dropped} table row(s) were dropped as duplicates — see "
+                     f"the flagged rows")
     if misplaced:
         notes.append(f"{misplaced} table value(s) sit under a different column "
                      f"in the document than the slot they were written to")
     _log("SLOT", f"filled {len(extracted_fields)}/{len(slots['fields'])} field slots, "
                  f"table rows {row_counts}, {ungrounded} ungrounded value(s), "
-                 f"{misplaced} misplaced")
+                 f"{misplaced} misplaced, {dropped} dropped")
 
     # DOCUMENT-LEVEL GATE — a document where more than 30% of cells are low
     # confidence is sent for manual review as a whole, rather than handing the
@@ -578,7 +634,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         notes.append("No text layer — spans could not be verified against the "
                      "document; values are unverified, not low quality")
         conf_map = {k: UNVERIFIED for k in conf_map}
-    needs_review = bool(ungrounded) or bool(unanswered) or review_gate
+    needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
+                    or bool(dropped))
 
     r = DocumentExtractionResult(filename=file_path.name)
     r.document_type = default_doc_type
@@ -610,6 +667,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "confidence_map": conf_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
+            "dropped_row_count": dropped,
             "low_confidence_cells": low_cells,
             "graded_cells": graded,
             "low_confidence_ratio": round(low_ratio, 4),

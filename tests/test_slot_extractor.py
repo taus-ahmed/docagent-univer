@@ -175,8 +175,26 @@ class TestRun:
         ]}})
         rows = r.extracted_data[f"{BAND}_rows"]
         assert len(rows) == 1
-        assert any("duplicate row dropped" in n
+        assert any("already-used" in n
                    for n in r.extracted_data["validation_notes"])
+
+    def test_a_dropped_row_is_visible_not_just_noted(self):
+        """A deletion nothing reports is worse than a duplicate row: the
+        reader has no reason to go and look. It has to reach the review
+        panel, which reads flagged_fields, and the document's own status."""
+        line = PAGE.splitlines()[2]
+        r = _run({"tables": {BAND: [
+            {"cells": {"Date": "01/03", "Amount": "$15,000.00"}, "source": line, "page": 1},
+            {"cells": {"Date": "01/03", "Amount": "$15,000.00"}, "source": line, "page": 1},
+        ]}})
+        ed = r.extracted_data
+        assert ed["validation"]["dropped_row_count"] == 1
+        assert ed["needs_review"] is True
+        dropped = [f for f in ed["validation"]["flagged_fields"]
+                   if "dropped" in f["ref"]]
+        assert len(dropped) == 1
+        # the flag carries what was removed, not just that something was
+        assert "$15,000.00" in dropped[0]["value"]
 
     def test_blank_cell_stays_blank_and_is_not_filled_from_a_neighbour(self):
         line = PAGE.splitlines()[2]

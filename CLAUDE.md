@@ -299,6 +299,35 @@ ambiguity as *representable states*, rather than merely reducing them.
 - A transposed band is answered *identically* — one object per record. Only the
   writer transposes.
 
+**A row is identified by WHICH LINE it was read from, not by what that line
+says.** Identity used to be the TEXT of the source span, dropping every later
+row that quoted the same words — correct only if the document prints those words
+once. Two rows legitimately quoting one line is ordinary (a group header, a
+repeated column heading, a document that prints a line twice) and *structural*
+in the case this product exists for: five merged invoices repeat 9 lines and
+make 33 rows deletable; five payslips, 11 and 43 (`Description Amount` ×10).
+Linear in the number of documents in the file.
+
+Each row now claims one **occurrence** of its source line
+(`text_layer.source_occurrences`, exact line match preferred over a fragment
+match, multi-line quotes matched on their first line). A row that can claim a
+free occurrence is real, however many others quote the same text. Only a row
+claiming a line every copy of which is already spoken for is a duplicate —
+which *is* the fabricated-row case, stated precisely instead of approximately.
+Without geometry (the image path, callers passing no `page_lines`) identity
+falls back to the source **plus the row's own values**, so two different rows on
+one quoted line still both survive; that fallback cannot catch a hallucinated
+variant of a real row, which is why `page_lines` is worth threading through.
+
+**A dropped row is visible.** It appeared only in `validation_notes` — not
+flagged, not in `needs_review`, not in the confidence map, invisible in the app
+and in the export. It now raises a `flagged_fields` entry **carrying the row's
+own content**, sets `needs_review`, and increments
+`validation.dropped_row_count`. A silent deletion is worse than a duplicate row,
+because nothing tells the reader to go and look. It is deliberately *not* put in
+the export: the export is the file the client works in, and a row the engine
+believes is fabricated does not belong in it.
+
 **Grounding is mandatory.** Every filled slot returns `{value, source, page}`.
 `verify_span` checks the verbatim `source` against document text read with
 pdfplumber *independently of the model*, then checks the value sits inside its
@@ -425,7 +454,8 @@ one function at the export boundary, not a validation change.
  "slot_map": {"fields": [...], "tables": [...]}, # geometry for the writer
  "<band name>_rows": [ {col_key: value, "_confidence": "high"} ],
  "validation": {flagged_count, flagged_fields, confidence_map,
-                ungrounded_count, low_confidence_ratio,
+                ungrounded_count, misplaced_count, dropped_row_count,
+                low_confidence_ratio,
                 document_needs_review, grounded_count},
  "validation_notes": [...], "needs_review": bool,
  "template_type": "slot",                        # authoritative export routing

@@ -241,6 +241,37 @@ def find_line(lines, source):
     return best
 
 
+def source_occurrences(lines, source):
+    """Indices of every document line the quoted `source` could be read from.
+
+    This is what makes a row's IDENTITY positional rather than textual. Two
+    rows quoting the same words are only the same row if the document prints
+    those words once; if it prints them twice they are two rows, and dropping
+    the second deletes real data. That is not an edge case — in a file holding
+    twenty invoices the identifying lines repeat by construction.
+
+    Matching is on the source's FIRST line, because a record spanning several
+    printed lines is quoted as several lines and no single line contains the
+    whole span. An exact line match wins outright; only if there is none does a
+    source that is a FRAGMENT of a line count, so a short quote cannot claim
+    half the document.
+    """
+    first = next((p for p in str(source or "").splitlines() if p.strip()), "")
+    src = _flat(first)
+    if not src:
+        return []
+    exact, partial = [], []
+    for i, ln in enumerate(lines):
+        t = _flat(" ".join(str(w["text"]) for w in ln))
+        if not t:
+            continue
+        if t == src:
+            exact.append(i)
+        elif src in t:
+            partial.append(i)
+    return exact or partial
+
+
 def column_bands(lines, headers):
     """{header: (x0, x1)} for the headers this document actually prints.
 

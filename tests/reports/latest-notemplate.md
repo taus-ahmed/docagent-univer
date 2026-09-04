@@ -1,6 +1,6 @@
-# Accuracy report — 2026-09-04 11:54:24
+# Accuracy report — 2026-09-04 12:25:02
 
-- git: `11f5c8b`  mode: **record**  repeat: 1
+- git: `1fb945d`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -135,7 +135,3 @@
 | PO-2024-0018 | Buyer Signature Phone | hallucinated (misplaced) | None | (212) 555-0148 |
 | STMT-2024-01 | Bank Address | hallucinated (misplaced) | None | 330 Madison Avenue, New York, NY 10017 |
 | STMT-2024-01 | ABA | hallucinated (misplaced) | None | 021000021 |
-
-## Changes vs previous run
-
-- PAYSLIP-EMP-0012-APR2024 :: Net Pay: wrong -> correct

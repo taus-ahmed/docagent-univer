@@ -1,8 +1,8 @@
 {
- "run_id": "2026-09-04 11:54:24",
- "git_commit": "11f5c8b",
+ "run_id": "2026-09-04 12:25:02",
+ "git_commit": "1fb945d",
  "config": {
-  "mode": "record",
+  "mode": "replay",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 16,
-  "recorded": 4,
+  "hits": 20,
+  "recorded": 0,
   "live": 0,
   "misses": 0
  },
@@ -18624,13 +18624,6 @@
   }
  },
  "unstable_total": 0,
- "diff": [
-  {
-   "key": "PAYSLIP-EMP-0012-APR2024 :: Net Pay",
-   "before": "wrong",
-   "after": "correct",
-   "regression": false
-  }
- ],
- "diff_against": "2026-08-24 01:30:03"
+ "diff": [],
+ "diff_against": "2026-09-04 11:54:24"
 }
