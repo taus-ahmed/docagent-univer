@@ -1,0 +1,52 @@
+{
+  "what": "Three invoices in one PDF - the core use case. The template asks for ONE invoice number and the file contains three.",
+  "merge": [
+    "INV-2024-0031.pdf",
+    "INV-2024-0047.pdf",
+    "INV-2024-0063.pdf"
+  ],
+  "doc_type": "sales_invoice",
+  "grid": {
+    "cells": {
+      "0,0": {
+        "value": "Invoice Number"
+      },
+      "0,1": {
+        "value": ""
+      },
+      "1,0": {
+        "value": "Invoice Date"
+      },
+      "1,1": {
+        "value": ""
+      },
+      "2,0": {
+        "value": "Bill To Company"
+      },
+      "2,1": {
+        "value": ""
+      },
+      "3,0": {
+        "value": "Total Due"
+      },
+      "3,1": {
+        "value": ""
+      }
+    },
+    "colWidths": [],
+    "merges": {},
+    "repeatRows": [],
+    "regions": []
+  },
+  "expect": {
+    "documents": 3,
+    "invoice_numbers": [
+      "INV-2024-0031",
+      "INV-2024-0047",
+      "INV-2024-0063"
+    ],
+    "fields": {
+      "Invoice Number": "INV-2024-0031"
+    }
+  }
+}

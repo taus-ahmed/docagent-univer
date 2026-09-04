@@ -1,0 +1,72 @@
+{
+  "what": "D7, the hard half. A real AcroForm checkbox is a widget ANNOTATION: it carries no text, so the text layer shows every option and no marker at all. The selection state is genuinely absent from what the model is given, so the only honest answer is EMPTY. Picking one is invention that grounds perfectly, because every option is printed on the page. This is the shape that makes D7 dangerous - filing status, entity type, coverage tier: categorical fields that decide treatment.",
+  "text": "NEW YORK STATE DEPARTMENT OF TAXATION AND FINANCE\nFORM CT-3 - GENERAL BUSINESS CORPORATION FRANCHISE TAX RETURN\n\nLegal name: Nexus Global Trading LLC\nEIN: 47-3821654\n\nEntity type: Sole proprietor Limited liability company C corporation S corporation\nAccounting method: Accrual Cash\nIs this a final return? Yes No\nPrincipal business activity: Manufacturing Wholesale trade Retail trade Services\n\nTotal receipts: $8,412,500.00",
+  "doc_type": "tax_form",
+  "grid": {
+    "cells": {
+      "0,0": {
+        "value": "Legal Name"
+      },
+      "0,1": {
+        "value": ""
+      },
+      "1,0": {
+        "value": "EIN"
+      },
+      "1,1": {
+        "value": ""
+      },
+      "2,0": {
+        "value": "Entity type"
+      },
+      "2,1": {
+        "value": ""
+      },
+      "3,0": {
+        "value": "Accounting method"
+      },
+      "3,1": {
+        "value": ""
+      },
+      "4,0": {
+        "value": "Final return"
+      },
+      "4,1": {
+        "value": ""
+      },
+      "5,0": {
+        "value": "Principal business activity"
+      },
+      "5,1": {
+        "value": ""
+      },
+      "6,0": {
+        "value": "Total receipts"
+      },
+      "6,1": {
+        "value": ""
+      }
+    },
+    "colWidths": [],
+    "merges": {},
+    "repeatRows": [],
+    "regions": []
+  },
+  "expect": {
+    "fields": {
+      "Legal Name": "Nexus Global Trading LLC",
+      "EIN": "47-3821654",
+      "Entity type": "",
+      "Accounting method": "",
+      "Final return": "",
+      "Principal business activity": "",
+      "Total receipts": "$8,412,500.00"
+    }
+  },
+  "must_stay_empty": [
+    "Entity type",
+    "Accounting method",
+    "Final return",
+    "Principal business activity"
+  ]
+}

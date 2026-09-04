@@ -1,0 +1,71 @@
+{
+  "what": "Values the PDF wrapped inside narrow boxes. Before positional evidence this returned 11 wrong figures out of 12, every one marked high, with the single correct figure the only one low.",
+  "pdf": "FORM-W2-2023.pdf",
+  "doc_type": "form_w2",
+  "grid": {
+    "cells": {
+      "0,0": {
+        "value": "Employee"
+      },
+      "0,1": {
+        "value": "SSN"
+      },
+      "0,2": {
+        "value": "Box 1 Wages"
+      },
+      "0,3": {
+        "value": "Box 2 Fed Tax"
+      },
+      "0,4": {
+        "value": "Box 5 Medicare Wages"
+      },
+      "0,5": {
+        "value": "Box 6 Medicare Tax"
+      }
+    },
+    "colWidths": [],
+    "merges": {},
+    "repeatRows": [],
+    "regions": [
+      {
+        "type": "table",
+        "r1": 0,
+        "c1": 0,
+        "r2": 12,
+        "c2": 5,
+        "orientation": "rows",
+        "name": "W2"
+      }
+    ]
+  },
+  "expect": {
+    "tables": {
+      "W2": [
+        [
+          "Marcus A. Thompson",
+          "***-**-4821",
+          "$87,500.00",
+          "$14,210.00",
+          "$87,500.00",
+          "$1,268.75"
+        ],
+        [
+          "Janet L. Wu",
+          "***-**-3317",
+          "$144,583.00",
+          "$38,880.00",
+          "$144,583.00",
+          "$2,096.46"
+        ],
+        [
+          "Priya S. Nair",
+          "***-**-6092",
+          "$55,274.00",
+          "$7,440.00",
+          "$55,274.00",
+          "$801.47"
+        ]
+      ]
+    }
+  }
+}

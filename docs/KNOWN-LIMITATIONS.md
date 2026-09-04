@@ -86,7 +86,9 @@ note.** Line items from all three flow into a single band, flattened together.
 file — and it works only because a template was drawn to treat the three
 employees as three rows of one table.
 
-**Status.** Being fixed. This is the top item on the current work list.
+**Status.** Being fixed — the next piece of work. Pinned by
+`tests/fixtures/scenarios/multi_document.json` and an expected-to-fail test:
+three invoices in, one out, `needs_review=False`, `overall=high`.
 
 ---
 
@@ -107,6 +109,36 @@ across all four tax forms — so there is currently no fixture and no measuremen
 
 ---
 
+## Selection markers, second entry — see also above
+
+### A selection state absent from the text layer is invented, at high confidence
+
+**Trigger.** A form whose checkboxes are AcroForm widget *annotations* rather
+than printed characters — the normal construction for a real fillable tax form.
+The widget carries no text, so the text layer shows every option and no marker
+at all.
+
+**Behaviour.** The selection state is genuinely absent from what the model is
+given, so the only honest answer is empty. It picks one anyway. Measured on a
+fixture modelling `FORM CT-3`: four option fields, all four filled, all four
+`high`, `needs_review=False` — and on *Principal business activity* it answered
+`Services` where the form says `Wholesale trade`. Every option string is printed
+on the page, so grounding confirms whichever one it picked.
+
+**Contrast.** When the markers ARE in the text (`[X]` / `[ ]`), it is correct:
+9/9 fields right and not one unselected option reported. The failure is
+specific to the state being unreadable, which is the common real-world case.
+
+**Fix shape, not yet built.** `pypdf.PdfReader.get_fields()` reads widget state
+(`/FT /Btn` with `/AS`), so the marker can be recovered from the file and
+injected into the text layer the way wrapped values now are. No corpus PDF
+carries AcroForm fields (0 of 60), so a real fixture has to be made first.
+
+**Fixture.** `tests/fixtures/scenarios/selection_no_marker_in_text.json`,
+asserted by an expected-to-fail test.
+
+---
+
 ## Templates
 
 ### The save gate cannot warn about a pure-table template
@@ -118,9 +150,17 @@ blank rows, no label/value fields.
 template has no such labels, so it reports `labels: 0, complete: True` and the
 editor's save gate has nothing to warn on, however wrong the table is.
 
+**Measured.** Across the 23 real templates available (9 gold, 5 hand-drawn, 2
+production, 6 scenario, 1 fixture) **every one reports `complete: True`** — and
+so do four deliberately broken ones: a table with an unnamed first column, a
+region dragged one column too wide, a region dragged over blank cells with no
+headings at all, and two regions overlapping. All four also report `usable:
+True`. The gate currently sees none of them.
+
 **Note.** A band of three or more columns also assigns no column the `label`
 role — `role` is set to `label` only at exactly two columns. That field is
-currently written and read nowhere, so it is not itself a defect.
+currently written and read nowhere, so it is not itself a defect and nothing
+should be made to write it until something reads it.
 
 ### Declared table regions are absolute coordinates
 
@@ -167,6 +207,15 @@ Kept so that a reader who saw the old behaviour knows it changed.
   flattened text line carries no columns. A Debit reported as a Credit quoted
   the same source line and was marked `high`. Now checked against column bands
   read off the document's own heading line.
+- **Without geometry, row identity is weaker.** The image path, and any caller
+  that passes no `page_lines`, falls back to identifying a row by its source
+  span PLUS the row's own values. Two genuinely different rows quoting one line
+  both survive, which is the important case — but a HALLUCINATED VARIANT of a
+  real row (same source line, one value altered) also survives, where the
+  positional rule would catch it. The fix is to thread `page_lines` through the
+  image path in `_extract_image_with_template`; images have no text layer to
+  take word positions from, so it would need positions from the vision step or
+  an explicit statement that the image path cannot make this check.
 - **Rows were deleted for quoting the same line as an earlier row.** Identity
   was the source span's TEXT, so a group header, a repeated column heading or
   any line a document prints twice cost every row after the first — silently,

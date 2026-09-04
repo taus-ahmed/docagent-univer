@@ -1,0 +1,78 @@
+{
+  "what": "The two directions of ONE mechanism, in one document. Flexible label matching is what lets a template work across form variants; it is also what would let a field be filled from a DIFFERENTLY LABELLED value carrying a plausible number. 'Shipping' must be filled from the document's 'Freight' line. 'Discount', 'Deposit Paid' and 'Retainage' are absent and must come back EMPTY - and the page is full of tempting substitutes, including a $0.00 that would look entirely reasonable in any of them.",
+  "text": "NEXUS GLOBAL TRADING LLC PURCHASE ORDER\n142 West 57th Street, Suite 1800, New York, NY 10019\nPO Number: PO-2024-0301\nDate: March 4, 2024\nTerms: Net 30\n\nVendor: Pacific Steel & Metals Co.\nVendor ID: VND-0041\n\nItem / Description                        Qty   Unit Cost      Total\nSteel Wire Coils Grade A (SW-500A)         50     $155.00   $7,750.00\nSteel Sheet 2mm 1200x2400 (SS-2MM)         30      $88.00   $2,640.00\n\nSubtotal:                                                  $10,390.00\nFreight:                                                      $480.00\nTax (exempt):                                                   $0.00\nORDER TOTAL:                                               $10,870.00",
+  "doc_type": "purchase_order",
+  "grid": {
+    "cells": {
+      "0,0": {
+        "value": "PO Number"
+      },
+      "0,1": {
+        "value": ""
+      },
+      "1,0": {
+        "value": "Vendor Name"
+      },
+      "1,1": {
+        "value": ""
+      },
+      "2,0": {
+        "value": "Subtotal"
+      },
+      "2,1": {
+        "value": ""
+      },
+      "3,0": {
+        "value": "Shipping"
+      },
+      "3,1": {
+        "value": ""
+      },
+      "4,0": {
+        "value": "Discount"
+      },
+      "4,1": {
+        "value": ""
+      },
+      "5,0": {
+        "value": "Deposit Paid"
+      },
+      "5,1": {
+        "value": ""
+      },
+      "6,0": {
+        "value": "Retainage"
+      },
+      "6,1": {
+        "value": ""
+      },
+      "7,0": {
+        "value": "Order Total"
+      },
+      "7,1": {
+        "value": ""
+      }
+    },
+    "colWidths": [],
+    "merges": {},
+    "repeatRows": [],
+    "regions": []
+  },
+  "expect": {
+    "fields": {
+      "PO Number": "PO-2024-0301",
+      "Vendor Name": "Pacific Steel & Metals Co.",
+      "Subtotal": "$10,390.00",
+      "Shipping": "$480.00",
+      "Discount": "",
+      "Deposit Paid": "",
+      "Retainage": "",
+      "Order Total": "$10,870.00"
+    }
+  },
+  "must_stay_empty": [
+    "Discount",
+    "Deposit Paid",
+    "Retainage"
+  ]
+}

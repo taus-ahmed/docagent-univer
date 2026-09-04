@@ -1,0 +1,141 @@
+{
+  "what": "A grouped financial statement drawn as ONE band. Group headers, line items, section totals and the grand total all live in the same two columns. This is the D1/D2 trigger and the shape of almost every financial document; no gold template exercises it, because every gold template splits its groups into separate bands.",
+  "pdf": "IS-2024-Q4.pdf",
+  "doc_type": "income_statement",
+  "grid": {
+    "cells": {
+      "0,0": {
+        "value": "Description"
+      },
+      "0,1": {
+        "value": "Amount"
+      }
+    },
+    "colWidths": [],
+    "merges": {},
+    "repeatRows": [],
+    "regions": [
+      {
+        "type": "table",
+        "r1": 0,
+        "c1": 0,
+        "r2": 34,
+        "c2": 1,
+        "orientation": "rows",
+        "name": "Statement"
+      }
+    ]
+  },
+  "expect": {
+    "tables": {
+      "Statement": [
+        [
+          "Gross Sales",
+          "$1,980,000"
+        ],
+        [
+          "Less: Returns",
+          "$28,600"
+        ],
+        [
+          "Net Revenue",
+          "$1,951,400"
+        ],
+        [
+          "Opening Inventory",
+          "$648,000"
+        ],
+        [
+          "Purchases",
+          "$1,280,000"
+        ],
+        [
+          "Freight In",
+          "$52,000"
+        ],
+        [
+          "Less: Closing Inventory",
+          "$724,000"
+        ],
+        [
+          "Total COGS",
+          "$1,256,000"
+        ],
+        [
+          "GROSS PROFIT",
+          "$695,400"
+        ],
+        [
+          "Salaries & Wages",
+          "$190,000"
+        ],
+        [
+          "Rent",
+          "$85,500"
+        ],
+        [
+          "Marketing",
+          "$22,400"
+        ],
+        [
+          "Utilities",
+          "$12,100"
+        ],
+        [
+          "Depreciation",
+          "$10,300"
+        ],
+        [
+          "Insurance",
+          "$7,150"
+        ],
+        [
+          "Office & Misc",
+          "$5,800"
+        ],
+        [
+          "Professional Fees",
+          "$18,000"
+        ],
+        [
+          "Bank Charges & Interest",
+          "$3,800"
+        ],
+        [
+          "Bad Debt",
+          "$4,200"
+        ],
+        [
+          "Total Operating Expenses",
+          "$359,250"
+        ],
+        [
+          "OPERATING INCOME (EBIT)",
+          "$336,150"
+        ],
+        [
+          "Interest Income",
+          "$1,240"
+        ],
+        [
+          "NET INCOME (LOSS) BEFORE TAX",
+          "$337,390"
+        ],
+        [
+          "Est. Income Tax Provision (21%)",
+          "$70,852"
+        ],
+        [
+          "NET INCOME (LOSS) AFTER TAX",
+          "$266,538"
+        ]
+      ]
+    }
+  },
+  "structure_rows": [
+    "GROSS PROFIT",
+    "Total COGS",
+    "Total Operating Expenses",
+    "NET INCOME (LOSS) AFTER TAX"
+  ]
+}

@@ -69,8 +69,26 @@ the committed corpus satisfied a precondition the editor never satisfies, and
 the harness could read 98.5% while everything drawn by hand scored zero slots.
 Score across R1–R3: 4/15 → 11/15 → 13/15 → **15/15**.
 
-`pytest.ini` deselects `-m live` by default. `-m known_bug` tests **fail on
-purpose** — they are the proof the harness can see a bug. The old
+`tests/fixtures/scenarios/` holds six SCENARIO fixtures — the shapes the gold
+corpus cannot see: grouped rows in one band, wrapped cell values, selection
+markers printed in the text, a selection state absent from the text, no-invention
+against semantic matching in one document, and several documents in one file.
+They are scored by `tests/harness/scenarios.py` and asserted by
+`tests/test_scenarios.py`, and are **deliberately not wired into the main
+harness** — folding them into the gold set would move the headline accuracy
+number and make it incomparable with every figure recorded before, while mixing
+"how well does it do the things it does" with "does it do these things at all".
+
+`tests/test_protected_behaviours.py` pins the nine behaviours the defect
+analysis lists as already correct, written against the CONTRACT AS IT NOW IS
+rather than as observed — pinning the old behaviour would have frozen two
+defects in place.
+
+`pytest.ini` deselects `-m live` by default. `-m known_bug` marks a reproduction of an
+unfixed bug; those are additionally `xfail(strict=True)`, so the default suite
+stays green AND the marker cannot go stale — the day the fix lands, the
+unexpected pass is reported as a FAILURE and forces the marker off. Two are
+open: `multi_document` and `selection_no_marker_in_text`. The old
 `tests/test_extraction.py` (live server, zero asserts) was **deleted**; do not
 resurrect it. See `tests/README.md`.
 
