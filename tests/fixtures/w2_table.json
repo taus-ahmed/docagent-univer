@@ -1,0 +1,17 @@
+{
+  "cells": {
+    "0,0": {"value": "Employee"},
+    "0,1": {"value": "SSN"},
+    "0,2": {"value": "Box 1 Wages"},
+    "0,3": {"value": "Box 2 Fed Tax"},
+    "0,4": {"value": "Box 5 Medicare Wages"},
+    "0,5": {"value": "Box 6 Medicare Tax"}
+  },
+  "colWidths": [],
+  "merges": {},
+  "repeatRows": [],
+  "regions": [
+    {"type": "table", "r1": 0, "c1": 0, "r2": 12, "c2": 5,
+     "orientation": "rows", "name": "W2"}
+  ]
+}

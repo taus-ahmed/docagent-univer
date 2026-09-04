@@ -1,8 +1,8 @@
 {
- "run_id": "2026-08-24 01:30:03",
- "git_commit": "139135e",
+ "run_id": "2026-09-04 11:54:24",
+ "git_commit": "11f5c8b",
  "config": {
-  "mode": "replay",
+  "mode": "record",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 20,
-  "recorded": 0,
+  "hits": 16,
+  "recorded": 4,
   "live": 0,
   "misses": 0
  },
@@ -10714,7 +10714,7 @@
    "document_type": "payslip",
    "inferred_template": {
     "document_type": "payslip",
-    "title": "Pay Stub",
+    "title": "Nexus Global Trading Pay Stub",
     "fields": [
      "Employer Name",
      "Employer Address",
@@ -10725,7 +10725,8 @@
      "SSN",
      "Pay Period",
      "Pay Date",
-     "Annual Salary"
+     "Annual Salary",
+     "NET PAY"
     ],
     "tables": [
      {
@@ -10748,7 +10749,6 @@
     "totals": [
      "Total Earnings",
      "Total Deductions",
-     "NET PAY",
      "YTD Gross Earnings",
      "YTD Taxes Withheld"
     ],
@@ -10759,7 +10759,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2 text_len=888",
+    "route": "[ROUTE] PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2 text_len=887",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -10774,9 +10774,9 @@
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
      "Annual Salary": "$145,000.00",
+     "Net Pay": "$7,513.03",
      "Total Earnings": "$14,583.33",
      "Total Deductions": "($7,070.30)",
-     "Net Pay": "$7,513.0 3",
      "YTD Gross Earnings": "$58,333.33",
      "YTD Taxes Withheld": "$22,716.00",
      "Employer Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
@@ -10928,7 +10928,7 @@
      "Net Pay": {
       "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0 3",
+      "actual": "$7,513.03",
       "type": "money",
       "in_gold_schema": true
      },
@@ -11330,7 +11330,7 @@
      "Net Pay": {
       "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0 3",
+      "actual": "$7,513.03",
       "type": "money",
       "in_gold_schema": true
      },
@@ -11732,7 +11732,7 @@
      "Net Pay": {
       "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0 3",
+      "actual": 7513.03,
       "type": "money",
       "in_gold_schema": true
      },
@@ -12155,7 +12155,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2 text_len=853",
+    "route": "[ROUTE] PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2 text_len=852",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -12170,7 +12170,7 @@
      "Pay Period": "April 1–30, 2024",
      "Pay Date": "April 30, 2024",
      "Annual Salary": "$90,000.00",
-     "Net Pay": "$5,182.6",
+     "Net Pay": "$5,182.65",
      "Total Earnings": "$8,300.00",
      "Total Deductions": "($3,117.35)",
      "YTD Gross Earnings": "$33,500.00",
@@ -12312,9 +12312,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 5182.65,
-      "actual": "$5,182.6",
+      "actual": "$5,182.65",
       "type": "money",
       "in_gold_schema": true
      },
@@ -12583,9 +12583,8 @@
     },
     "counts": {
      "near": 1,
-     "correct": 30,
+     "correct": 31,
      "renamed": 1,
-     "wrong": 1,
      "hallucinated": 2
     },
     "renamed": 1,
@@ -12595,7 +12594,7 @@
      "out_of_schema": 2
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9090909090909091,
+    "accuracy": 0.9393939393939394,
     "hallucination_rate": 0.05714285714285714,
     "invention_rate": 0.0
    },
@@ -12675,9 +12674,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 5182.65,
-      "actual": "$5,182.6",
+      "actual": "$5,182.65",
       "type": "money",
       "in_gold_schema": true
      },
@@ -12946,9 +12945,8 @@
     },
     "counts": {
      "near": 1,
-     "correct": 30,
+     "correct": 31,
      "renamed": 1,
-     "wrong": 1,
      "hallucinated": 2
     },
     "renamed": 1,
@@ -12958,7 +12956,7 @@
      "out_of_schema": 2
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9090909090909091,
+    "accuracy": 0.9393939393939394,
     "hallucination_rate": 0.05714285714285714,
     "invention_rate": 0.0
    },
@@ -13038,9 +13036,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 5182.65,
-      "actual": 5182.6,
+      "actual": 5182.65,
       "type": "money",
       "in_gold_schema": true
      },
@@ -13309,9 +13307,8 @@
     },
     "counts": {
      "near": 1,
-     "correct": 30,
+     "correct": 31,
      "renamed": 1,
-     "wrong": 1,
      "hallucinated": 2
     },
     "renamed": 1,
@@ -13321,20 +13318,19 @@
      "out_of_schema": 2
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9090909090909091,
+    "accuracy": 0.9393939393939394,
     "hallucination_rate": 0.05714285714285714,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "near": 1,
-     "correct": 20,
+     "correct": 21,
      "missed": 1,
-     "wrong": 1,
      "unmatched": 3
     },
     "gold_valued": 23,
-    "accuracy": 0.8695652173913043,
+    "accuracy": 0.9130434782608695,
     "unmatched": 3,
     "mismatches": [
      {
@@ -13349,13 +13345,6 @@
       "outcome": "missed",
       "expected": "Purchasing Manager – Procurement",
       "actual": null
-     },
-     {
-      "key": "net pay",
-      "outcome": "wrong",
-      "matched_key": "net pay",
-      "expected": 5182.65,
-      "actual": "$5,182.6"
      }
     ]
    },
@@ -17799,15 +17788,14 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 386,
+    "correct": 387,
     "hallucinated": 66,
     "renamed": 3,
     "near": 4,
-    "wrong": 1,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9796954314720813,
+   "accuracy": 0.9822335025380711,
    "near_rate": 0.01015228426395939,
    "renamed": 3,
    "rename_rate": 0.007614213197969543,
@@ -17921,13 +17909,12 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 65,
+     "correct": 66,
      "renamed": 2,
-     "hallucinated": 4,
-     "wrong": 1
+     "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9285714285714286,
+    "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 2,
     "rename_rate": 0.02857142857142857,
@@ -18002,13 +17989,12 @@
    },
    "money": {
     "counts": {
-     "correct": 160,
+     "correct": 161,
      "hallucinated": 3,
-     "wrong": 1,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.9937888198757764,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -18065,16 +18051,15 @@
  "summary_raw": {
   "overall": {
    "counts": {
-    "correct": 279,
+    "correct": 280,
     "hallucinated": 164,
     "missed": 97,
     "renamed": 14,
     "near": 3,
-    "wrong": 1,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.7081218274111675,
+   "accuracy": 0.7106598984771574,
    "near_rate": 0.007614213197969543,
    "renamed": 14,
    "rename_rate": 0.03553299492385787,
@@ -18193,13 +18178,12 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 65,
+     "correct": 66,
      "renamed": 2,
-     "hallucinated": 4,
-     "wrong": 1
+     "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9285714285714286,
+    "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 2,
     "rename_rate": 0.02857142857142857,
@@ -18278,15 +18262,14 @@
    },
    "money": {
     "counts": {
-     "correct": 127,
+     "correct": 128,
      "renamed": 8,
      "missed": 25,
      "hallucinated": 3,
-     "wrong": 1,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.7888198757763976,
+    "accuracy": 0.7950310559006211,
     "near_rate": 0.0,
     "renamed": 8,
     "rename_rate": 0.049689440993788817,
@@ -18344,15 +18327,14 @@
  "summary_export": {
   "overall": {
    "counts": {
-    "correct": 386,
+    "correct": 387,
     "hallucinated": 68,
     "renamed": 3,
     "near": 4,
-    "wrong": 1,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9796954314720813,
+   "accuracy": 0.9822335025380711,
    "near_rate": 0.01015228426395939,
    "renamed": 3,
    "rename_rate": 0.007614213197969543,
@@ -18466,13 +18448,12 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 65,
+     "correct": 66,
      "renamed": 2,
-     "hallucinated": 4,
-     "wrong": 1
+     "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9285714285714286,
+    "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 2,
     "rename_rate": 0.02857142857142857,
@@ -18547,13 +18528,12 @@
    },
    "money": {
     "counts": {
-     "correct": 160,
+     "correct": 161,
      "hallucinated": 3,
-     "wrong": 1,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.9937888198757764,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -18609,15 +18589,14 @@
  },
  "summary_content": {
   "counts": {
-   "correct": 233,
+   "correct": 234,
    "unmatched": 66,
    "missed": 3,
-   "near": 4,
-   "wrong": 1
+   "near": 4
   },
   "gold_valued": 241,
   "unmatched": 66,
-  "accuracy": 0.966804979253112
+  "accuracy": 0.970954356846473
  },
  "summary_structure": {
   "gold_tables": 17,
@@ -18629,8 +18608,8 @@
  "calibration": {
   "grounded": {
    "n": 441,
-   "correct": 381,
-   "wrong": 1,
+   "correct": 382,
+   "wrong": 0,
    "missed": 0,
    "near": 3,
    "hallucinated": 56
@@ -18645,6 +18624,13 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-08-23 21:14:28"
+ "diff": [
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: Net Pay",
+   "before": "wrong",
+   "after": "correct",
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-08-24 01:30:03"
 }

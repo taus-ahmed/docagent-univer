@@ -1,15 +1,15 @@
-# Accuracy report — 2026-08-24 01:29:21
+# Accuracy report — 2026-09-04 12:02:11
 
-- git: `139135e`  mode: **replay**  repeat: 1
+- git: `11f5c8b`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
 
 | metric | value |
 |---|---|
-| **accuracy (correct / gold-valued)** | **98.5%** |
-| **accuracy RAW (all adapter widenings off)** | **47.7%** |
-| **accuracy CONTENT (container-blind)** | **97.5%** |
+| **accuracy (correct / gold-valued)** | **98.7%** |
+| **accuracy RAW (all adapter widenings off)** | **48.0%** |
+| **accuracy CONTENT (container-blind)** | **97.9%** |
 | **structure FIDELITY (gold tables returned as tables)** | **100.0%** (17/17; 15 with exact row count) |
 | **hallucination rate (hallucinated / extracted)** | **1.0%** |
 | **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
@@ -19,7 +19,7 @@
 | hallucinated values | 4 |
 | near misses | 5 |
 | **renamed (right value, different field name)** | **0** (0.0%) |
-| outcome counts | {"correct": 388, "near": 5, "wrong": 1, "hallucinated": 4, "empty_ok": 12} |
+| outcome counts | {"correct": 389, "near": 5, "hallucinated": 4, "empty_ok": 12} |
 
 ## By document type
 
@@ -30,7 +30,7 @@
 | cheque | 100.0% | 0.0% | 0 | 11 | 0 | 0 | 0 | 0 | 0 |
 | expense_report | 100.0% | 0.0% | 0 | 54 | 0 | 0 | 0 | 0 | 0 |
 | income_statement | 100.0% | 0.0% | 0 | 41 | 0 | 0 | 0 | 0 | 0 |
-| payslip | 95.7% | 5.4% | 0 | 67 | 2 | 0 | 1 | 0 | 4 |
+| payslip | 97.1% | 5.4% | 0 | 68 | 2 | 0 | 0 | 0 | 4 |
 | purchase_order | 96.8% | 0.0% | 0 | 30 | 1 | 0 | 0 | 0 | 0 |
 | sales_invoice | 97.2% | 0.0% | 0 | 69 | 2 | 0 | 0 | 0 | 0 |
 
@@ -39,7 +39,7 @@
 | field type | accuracy | halluc. rate | invented | correct | near | renamed | wrong | missed | halluc. |
 |---|---|---|---|---|---|---|---|---|---|
 | date | 100.0% | 0.0% | 0 | 30 | 0 | 0 | 0 | 0 | 0 |
-| money | 99.4% | 1.2% | 0 | 160 | 0 | 0 | 1 | 0 | 2 |
+| money | 100.0% | 1.2% | 0 | 161 | 0 | 0 | 0 | 0 | 2 |
 | number | 100.0% | 0.0% | 0 | 12 | 0 | 0 | 0 | 0 | 0 |
 | string | 97.4% | 1.0% | 0 | 186 | 5 | 0 | 0 | 0 | 2 |
 
@@ -54,7 +54,7 @@
 | INV-2024-0047 | sales_invoice | 97.4% | 31.6% | 0 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 61.0% | 0 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
 | PAYSLIP-EMP-0007-APR2024 | payslip | 97.3% | 97.3% | 0 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
-| PAYSLIP-EMP-0012-APR2024 | payslip | 93.9% | 93.9% | 4 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PAYSLIP-EMP-0012-APR2024 | payslip | 97.0% | 97.0% | 4 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PO-2024-0018 | purchase_order | 96.8% | 48.4% | 0 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
 | STMT-2024-01 | bank_statement | 100.0% | 14.3% | 0 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
 
@@ -66,7 +66,6 @@
 | INV-2024-0047 | Bill To Contact | near | Ms. Sarah Johnson | Ms. Sarah Johnson — sjohnson@pinnacleelec.com |
 | PAYSLIP-EMP-0007-APR2024 | Employer Name | near | Nexus Global Trading LLC | NEXUS GLOBAL TRADING |
 | PAYSLIP-EMP-0012-APR2024 | Employer Name | near | Nexus Global Trading LLC | NEXUS GLOBAL TRADING |
-| PAYSLIP-EMP-0012-APR2024 | Net Pay | wrong | 5182.65 | $5,182.6 |
 | PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2].Description | hallucinated (misplaced) | None | Total |
 | PAYSLIP-EMP-0012-APR2024 | earnings[pred_row 2].Amount | hallucinated (misplaced) | None | $8,300.00 |
 | PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8].Description | hallucinated (misplaced) | None | Total |

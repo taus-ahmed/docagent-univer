@@ -122,6 +122,7 @@ The reasoning for each is in `docs/DECISION-LOG.md`.
 | `backend/engine/template_shape.py` | 497 | grid → shape; declared regions; `choose_path` (the arithmetic router) |
 | `backend/engine/slot_extractor.py` | 474 | slot enumeration, the prompt, grounding, confidence, the result contract |
 | `backend/engine/shape_inference.py` | 253 | no-template: document → inferred template → grid → same path |
+| `backend/engine/text_layer.py` | 300 | positional evidence: words with x/y; wrapped-value repair; column bands; placement |
 | `backend/app/api/routes/extract.py` | 6064 | routes, the background job thread, template parsing, **all Excel writers** |
 
 `extract.py` is **no longer an extraction engine**. It is routes + the job
@@ -338,6 +339,83 @@ document is flagged for review rather than handing the user a wall of per-cell
 warnings; scanned/image input or `<50` chars of text ⇒ all confidences floored
 to medium with an explanatory note.
 
+### The text layer carries geometry, not just characters (`engine/text_layer.py`)
+
+`page.extract_text()` returns a flat string, and everything downstream — the
+prompt, grounding, the confidence vocabulary — saw a document with no geometry
+in it. Two defect classes follow directly, and neither is visible in the output.
+
+**Wrapped values.** A PDF that renders a figure inside a narrow box wraps it
+like any other text, so the page really does print `$1,268.7` on one line and
+`5` on the next. `extract_words()` agrees: **the split is in the file, not in
+the reader.** The model is handed `$1,268.7`, answers `5` for the next slot, and
+both halves ground perfectly because both halves are genuinely printed. On
+`FORM-W2-2023.pdf` this returned **11 wrong values out of 12, every one marked
+`high`, while the single correct value was the only one marked `low`** — the
+confidence signal exactly inverted. `_fix_cross_page_decimals` was a string-level
+patch for one instance of this; the general case needs geometry.
+
+A fragment is fused only when it is on the immediately following line, sits
+inside its parent's horizontal span, shares its parent's right edge to within
+1pt, and **completes the parent exactly**. `_shortfall` is the whole safety
+argument: only three shapes are incomplete —
+
+| parent | missing |
+|---|---|
+| `14,210.` | a bare decimal point → exactly 2 digits |
+| `1,268.7` | one decimal digit → exactly 1 |
+| `144,58` | a final comma group of 1–2 digits → the rest, optionally with cents |
+
+**A complete number is never repaired**, so two Balances stacked in a
+right-aligned column — identical right edges by construction — cannot be fused
+into each other. **A bare integer is never incomplete**: nothing in `18` says it
+was cut short, so `18` over `000` stays two numbers. A missed repair is a
+visible wrong value; a false repair invents a figure, which is worse.
+
+⚠ **Lines are clustered on the gap between tops, never bucketed on `top / tol`.**
+Bucketing splits any line straddling a bucket edge — on the W-2 it broke one
+printed line in two, put a fragment two lines below its parent, and lost 4 of
+20 repairs.
+
+⚠ **A page needing no repair is returned from `extract_text()` VERBATIM.**
+Rebuilding word lists into text is not byte-identical — 30 of the corpus's 77
+pages differ in whitespace — and the text is part of the prompt, so rewriting
+untouched pages would change what the model is asked and invalidate its cached
+answer for nothing. Only pages that genuinely need repair are rebuilt. In the
+60-document corpus that is 6 documents, 25 repairs.
+
+**Placement (D6).** Grounding answers "is this value in the document". It cannot
+answer "does this value belong in THIS column", because a flattened line has no
+columns — which is why a Debit written into the Credit column quoted the same
+source line and passed every check at `high`. `column_bands` reads the x-span of
+each heading off **the document's own heading line**; `check_placement` passes a
+value whose right edge is flush with its column (money columns are right-aligned
+and hold to well under a point) or whose span overlaps it (left-aligned text).
+Anything else is demoted to `low` and flagged with **the column it actually sits
+under**.
+
+The check is **opportunistic on purpose**: a band whose headings the document
+does not print gets no bands and no verdict, and a caller passing no
+`page_lines` behaves exactly as before. Calling a placement wrong on a guessed
+column would demote correct values, which is the failure it exists to prevent.
+
+**A misplaced value is kept, not dropped** — trading a visible wrong cell for an
+invisible missing one is not an improvement.
+
+### Export keeps the notation as well as the number (D8)
+
+`coerce_cell_value` writes money as a **number** so the cell sums and sorts;
+that is right, and it is also why the export lost the currency symbol and the
+trailing cents. `cell_format` derives an Excel number format **from the source
+string**, so the cell holds `7750.0` and reads `$7,750.00`, and a multi-currency
+document keeps the symbol printed on each line rather than one chosen globally.
+Accounting parentheses survive as `#,##0.00_);(#,##0.00)`. An identifier held as
+text gets no format — a routing number is not a quantity.
+
+The **stored** value was always the verbatim string and always did appear in the
+document: the grounding chain was never broken, only the presentation. This is
+one function at the export boundary, not a validation change.
+
 ### Result contract (`DocumentExtractionResult.extracted_data`)
 
 ```python
@@ -435,10 +513,10 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 
 | | templated | no-template |
 |---|---|---|
-| **accuracy** (container-aware headline) | **98.5%** | **98.0%** |
-| **content** (container-blind) | 97.5% | 96.7% |
+| **accuracy** (container-aware headline) | **98.7%** | **98.2%** |
+| **content** (container-blind) | 97.9% | 97.1% |
 | **structure fidelity** | **100%** (17/17) | **100%** (17/17) |
-| accuracy RAW (all adapter widenings off) | 47.7% | 70.8% |
+| accuracy RAW (all adapter widenings off) | 48.0% | 71.1% |
 | invented (value nowhere in the PDF) | **0** | **0** |
 | misfiled | 4 | 6 |
 | out-of-schema (*not* a defect) | 0 | 60 |

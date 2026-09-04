@@ -4775,6 +4775,53 @@ def coerce_cell_value(value):
         return txt
 
 
+#: Excel number formats, by the notation the document actually used. Money
+#: written in accounting parentheses keeps them; money written with a minus
+#: sign keeps that.
+_FMT_PLAIN = "#,##0"
+_FMT_2DP = "#,##0.00"
+
+
+def cell_format(value):
+    """The Excel number format that reproduces how the document wrote it.
+
+    `coerce_cell_value` deliberately writes money as a NUMBER, so the cell
+    sums, sorts and charts. That is right, and it is also why the exported
+    sheet lost the currency symbol and the trailing cents: "$7,750.00" became
+    7750 on screen. A number format restores the notation without giving up
+    the number — the cell still holds 7750.0, and still reads "$7,750.00".
+
+    Deriving the format from the SOURCE STRING rather than from a setting is
+    what keeps a multi-currency document honest: the symbol in the cell is the
+    symbol that was printed on that line, not one chosen globally.
+
+    Returns None when the value is not a number, or is an identifier held as
+    text — a routing number has no format and must not acquire one.
+    """
+    if value is None:
+        return None
+    txt = str(value).strip()
+    if not txt or coerce_cell_value(txt) is None:
+        return None
+    if isinstance(coerce_cell_value(txt), str):
+        return None                       # identifier or free text
+
+    sym = next((c for c in "$£€₹¥" if c in txt), "")
+    accounting = txt.replace(sym, "").strip().startswith("(")
+    frac = 0
+    body = txt.replace(",", "")
+    for c in "$£€₹¥()- ":
+        body = body.replace(c, "")
+    if "." in body:
+        frac = len(body.split(".")[-1])
+    base = _FMT_2DP if frac >= 2 else (f"#,##0.{'0' * frac}" if frac else _FMT_PLAIN)
+    if sym:
+        base = f'"{sym}"{base}'
+    if accounting:
+        return f"{base}_);({base})"
+    return base
+
+
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     """
     Writer for slot-directed extraction.
@@ -4829,6 +4876,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         out = coerce_cell_value(value)
         if out is not None:
             cell.value = out
+            # D8 — the cell keeps the number AND the notation the document
+            # printed it with. Without this the export drops the currency
+            # symbol and the trailing cents, which is what an accountant
+            # actually looks at.
+            fmt = cell_format(value)
+            if fmt:
+                cell.number_format = fmt
 
     for doc in doc_results:
         ed = doc.get_extracted_data()

@@ -18,6 +18,8 @@ from PIL import Image
 import pdfplumber
 from pypdf import PdfReader
 
+from text_layer import read_page
+
 
 @dataclass
 class ProcessedDocument:
@@ -30,6 +32,12 @@ class ProcessedDocument:
     has_meaningful_text: bool = False
     page_images_b64: list[str] = field(default_factory=list)
     page_texts: list[str] = field(default_factory=list)
+    # Positional evidence: one list of words per page, each carrying x0/x1/top,
+    # grouped into visual lines. This is what lets validation ask which COLUMN
+    # a value sits in — a flat string cannot be asked that. See
+    # engine/text_layer.py.
+    page_lines: list[list] = field(default_factory=list)
+    text_repairs: list[tuple] = field(default_factory=list)
     processing_notes: str = ""
 
     @property
@@ -134,7 +142,22 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
         with pdfplumber.open(file_path) as pdf:
             doc.total_pages = len(pdf.pages)
             for page_num, page in enumerate(pdf.pages):
-                text = page.extract_text() or ""
+                # Read the page WITH its geometry. A page whose values the PDF
+                # wrapped inside a table cell comes back reassembled; a page
+                # that needed nothing comes back exactly as extract_text()
+                # produced it, so the prompt for an untouched document does
+                # not change.
+                text, lines, repairs = read_page(page)
+                doc.page_lines.append(lines)
+                if repairs:
+                    doc.text_repairs.extend(repairs)
+                    print(
+                        f"[TEXTLAYER] page {page_num+1}: reassembled "
+                        f"{len(repairs)} value(s) the PDF wrapped inside a "
+                        f"cell: " + ", ".join(f"{a!r}+{b!r}->{f!r}"
+                                              for a, b, f in repairs[:6]),
+                        flush=True
+                    )
                 # Fix within-page decimal splits
                 text = _fix_within_page_decimals(text)
                 doc.page_texts.append(text)

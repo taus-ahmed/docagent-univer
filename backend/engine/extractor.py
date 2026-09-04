@@ -238,6 +238,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     # ── Preprocess (shared by all paths) ──
     doc = preprocess_file(file_path)
     doc_text_pages = list(getattr(doc, "page_texts", []) or [])
+    # Positional evidence, one list of visual lines per page. Kept alongside
+    # the text rather than replacing it: the model reads text, validation
+    # reads geometry. See engine/text_layer.py.
+    doc_page_lines = list(getattr(doc, "page_lines", []) or [])
     doc_text = doc.extracted_text or ""
     page_images = doc.page_images_b64 or []
     if selected_pages and page_images:
@@ -245,6 +249,7 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         if keep:
             page_images = [page_images[i] for i in keep]
             doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
+            doc_page_lines = [doc_page_lines[i] for i in keep if i < len(doc_page_lines)]
 
     ftype = (doc.file_type if getattr(doc, "file_type", "") == "image"
              else ("digital_pdf" if getattr(doc, "has_meaningful_text", False) else "scanned_pdf"))
@@ -259,7 +264,8 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     ctx = dict(orchestrator=orchestrator, file_path=file_path, template_data=template_data,
                binding_map=binding_map, page_images=page_images, doc_text=doc_text,
                doc_text_pages=doc_text_pages, file_type=ftype,
-               default_doc_type=default_doc_type, start=start)
+               default_doc_type=default_doc_type, start=start,
+               page_lines=doc_page_lines)
 
     # ── NO TEMPLATE (Phase 3) — infer one, then take the SAME path ──
     # An empty grid (no labels, no headers) gives extraction nothing to anchor

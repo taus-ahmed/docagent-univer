@@ -46,6 +46,7 @@ from pathlib import Path
 
 from extractor import _llm_json, _log, _num
 from micr import field_role, find_micr_line, parse_micr
+from text_layer import check_placement, column_bands, find_line
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -360,7 +361,7 @@ def verify_span(value, source, page, page_texts):
 
 def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         page_images, doc_text, doc_text_pages, file_type,
-                        default_doc_type, start):
+                        default_doc_type, start, page_lines=None):
     """Slot-directed extraction for one file. Returns list[DocumentExtractionResult]."""
     from orchestrator import DocumentExtractionResult
 
@@ -394,6 +395,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     by_id = {f["slot_id"]: f for f in slots["fields"]}
     extracted_fields, conf_map, flagged, notes = {}, {}, [], []
     ungrounded = 0
+    misplaced = 0
+    all_lines = [ln for pg in (page_lines or []) for ln in (pg or [])]
 
     # ── field slots ──
     answers = parsed.get("fields") or {}
@@ -473,6 +476,23 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if not isinstance(raw, list):
                 continue
             headers = table_headers(t)
+            # PLACEMENT (D6). Grounding says the value is in the document; it
+            # cannot say the value belongs in THIS column, because a flattened
+            # line carries no columns. The document's own heading line does:
+            # where it prints a heading this band also has, that heading's
+            # x-span is the column, and a value whose span sits under a
+            # DIFFERENT column is misplaced however well it grounds. A Debit
+            # written into the Credit column quotes the same source line and
+            # passes every other check there is.
+            #
+            # The check is opportunistic on purpose. A band whose headings the
+            # document does not print gets no bands and no verdict — calling a
+            # placement wrong on a guessed column would demote correct values,
+            # which is the failure this is meant to prevent.
+            bands = column_bands(all_lines, headers) if all_lines else {}
+            if bands:
+                _log("PLACE", f'{t["name"]}: column bands read from the '
+                              f'document for {sorted(bands)}')
             seen_sources, rows_out = set(), []
             for r in raw:
                 if not isinstance(r, dict):
@@ -505,6 +525,16 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         flagged.append(_flag(
                             f'{t["name"]}[{len(rows_out)}].{h}', v,
                             reason or why))
+                if bands and t.get("orientation") != "columns":
+                    line = find_line(all_lines, source)
+                    for bad_key, why in check_placement(
+                            row, t.get("columns") or [], line, bands):
+                        row_conf = LOW
+                        ungrounded += 1
+                        misplaced += 1
+                        flagged.append(_flag(
+                            f'{t["name"]}[{len(rows_out)}].{bad_key}',
+                            row.get(bad_key, ""), why))
                 if any(str(v).strip() for v in row.values()):
                     row["_confidence"] = row_conf
                     rows_out.append(row)
@@ -514,8 +544,12 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     total_cells = len(extracted_fields) + sum(
         len([v for k, v in r.items() if not k.startswith("_") and str(v).strip()])
         for rows in tables_out.values() for r in rows)
+    if misplaced:
+        notes.append(f"{misplaced} table value(s) sit under a different column "
+                     f"in the document than the slot they were written to")
     _log("SLOT", f"filled {len(extracted_fields)}/{len(slots['fields'])} field slots, "
-                 f"table rows {row_counts}, {ungrounded} ungrounded value(s)")
+                 f"table rows {row_counts}, {ungrounded} ungrounded value(s), "
+                 f"{misplaced} misplaced")
 
     # DOCUMENT-LEVEL GATE — a document where more than 30% of cells are low
     # confidence is sent for manual review as a whole, rather than handing the
@@ -575,6 +609,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "flagged_fields": flagged,
             "confidence_map": conf_map,
             "ungrounded_count": ungrounded,
+            "misplaced_count": misplaced,
             "low_confidence_cells": low_cells,
             "graded_cells": graded,
             "low_confidence_ratio": round(low_ratio, 4),

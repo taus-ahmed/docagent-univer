@@ -1,15 +1,15 @@
-# Accuracy report — 2026-08-24 01:30:03
+# Accuracy report — 2026-09-04 11:54:24
 
-- git: `139135e`  mode: **replay**  repeat: 1
+- git: `11f5c8b`  mode: **record**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
 
 | metric | value |
 |---|---|
-| **accuracy (correct / gold-valued)** | **98.0%** |
-| **accuracy RAW (all adapter widenings off)** | **70.8%** |
-| **accuracy CONTENT (container-blind)** | **96.7%** |
+| **accuracy (correct / gold-valued)** | **98.2%** |
+| **accuracy RAW (all adapter widenings off)** | **71.1%** |
+| **accuracy CONTENT (container-blind)** | **97.1%** |
 | **structure FIDELITY (gold tables returned as tables)** | **100.0%** (17/17; 14 with exact row count) |
 | **hallucination rate (hallucinated / extracted)** | **14.3%** |
 | **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
@@ -19,7 +19,7 @@
 | hallucinated values | 66 |
 | near misses | 4 |
 | **renamed (right value, different field name)** | **3** (0.8%) |
-| outcome counts | {"correct": 386, "hallucinated": 66, "renamed": 3, "near": 4, "wrong": 1, "empty_ok": 12} |
+| outcome counts | {"correct": 387, "hallucinated": 66, "renamed": 3, "near": 4, "empty_ok": 12} |
 
 ## By document type
 
@@ -30,7 +30,7 @@
 | cheque | 100.0% | 31.2% | 0 | 11 | 0 | 0 | 0 | 0 | 5 |
 | expense_report | 98.1% | 11.5% | 0 | 53 | 0 | 1 | 0 | 0 | 7 |
 | income_statement | 100.0% | 22.6% | 0 | 41 | 0 | 0 | 0 | 0 | 12 |
-| payslip | 92.9% | 5.4% | 0 | 65 | 2 | 2 | 1 | 0 | 4 |
+| payslip | 94.3% | 5.4% | 0 | 66 | 2 | 2 | 0 | 0 | 4 |
 | purchase_order | 96.8% | 29.5% | 0 | 30 | 1 | 0 | 0 | 0 | 13 |
 | sales_invoice | 98.6% | 19.3% | 0 | 70 | 1 | 0 | 0 | 0 | 17 |
 
@@ -39,7 +39,7 @@
 | field type | accuracy | halluc. rate | invented | correct | near | renamed | wrong | missed | halluc. |
 |---|---|---|---|---|---|---|---|---|---|
 | date | 100.0% | 0.0% | 0 | 30 | 0 | 0 | 0 | 0 | 0 |
-| money | 99.4% | 1.8% | 0 | 160 | 0 | 0 | 1 | 0 | 3 |
+| money | 100.0% | 1.8% | 0 | 161 | 0 | 0 | 0 | 0 | 3 |
 | number | 100.0% | 0.0% | 0 | 12 | 0 | 0 | 0 | 0 | 0 |
 | string | 96.3% | 24.8% | 0 | 184 | 4 | 3 | 0 | 0 | 63 |
 
@@ -54,7 +54,7 @@
 | INV-2024-0047 | sales_invoice | 100.0% | 31.6% | 10 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 51.2% | 12 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
 | PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 94.6% | 2 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
-| PAYSLIP-EMP-0012-APR2024 | payslip | 90.9% | 90.9% | 2 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PAYSLIP-EMP-0012-APR2024 | payslip | 93.9% | 93.9% | 2 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PO-2024-0018 | purchase_order | 96.8% | 45.2% | 13 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
 | STMT-2024-01 | bank_statement | 100.0% | 95.7% | 2 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
 
@@ -117,7 +117,6 @@
 | PAYSLIP-EMP-0007-APR2024 | Employer EIN | hallucinated (misplaced) | None | 47-3821654 |
 | PAYSLIP-EMP-0012-APR2024 | Employer Name | near | Nexus Global Trading LLC | NEXUS GLOBAL TRADING |
 | PAYSLIP-EMP-0012-APR2024 | Title / Department | renamed | Purchasing Manager – Procurement | Purchasing Manager – Procurement |
-| PAYSLIP-EMP-0012-APR2024 | Net Pay | wrong | 5182.65 | $5,182.6 |
 | PAYSLIP-EMP-0012-APR2024 | Employer Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
 | PAYSLIP-EMP-0012-APR2024 | Employer EIN | hallucinated (misplaced) | None | 47-3821654 |
 | PO-2024-0018 | Authorised By | near | Janet Wu – VP Operations | Janet Wu |
@@ -136,3 +135,7 @@
 | PO-2024-0018 | Buyer Signature Phone | hallucinated (misplaced) | None | (212) 555-0148 |
 | STMT-2024-01 | Bank Address | hallucinated (misplaced) | None | 330 Madison Avenue, New York, NY 10017 |
 | STMT-2024-01 | ABA | hallucinated (misplaced) | None | 021000021 |
+
+## Changes vs previous run
+
+- PAYSLIP-EMP-0012-APR2024 :: Net Pay: wrong -> correct

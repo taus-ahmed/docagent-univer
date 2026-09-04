@@ -1,6 +1,6 @@
 {
- "run_id": "2026-08-24 01:29:21",
- "git_commit": "139135e",
+ "run_id": "2026-09-04 12:02:11",
+ "git_commit": "11f5c8b",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -9575,7 +9575,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2 text_len=888",
+    "route": "[ROUTE] PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2 text_len=887",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -9593,7 +9593,7 @@
      "Annual Salary": "$145,000.00",
      "Total Earnings": "$14,583.33",
      "Total Deductions": "($7,070.30)",
-     "Net Pay": "$7,513.0 3",
+     "Net Pay": "$7,513.03",
      "YTD Gross Earnings": "$58,333.33",
      "YTD Taxes Withheld": "$22,716.00"
     },
@@ -9741,7 +9741,7 @@
      "Net Pay": {
       "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0 3",
+      "actual": "$7,513.03",
       "type": "money",
       "in_gold_schema": true
      },
@@ -10122,7 +10122,7 @@
      "Net Pay": {
       "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0 3",
+      "actual": "$7,513.03",
       "type": "money",
       "in_gold_schema": true
      },
@@ -10503,7 +10503,7 @@
      "Net Pay": {
       "outcome": "correct",
       "expected": 7513.03,
-      "actual": "$7,513.0 3",
+      "actual": 7513.03,
       "type": "money",
       "in_gold_schema": true
      },
@@ -10857,7 +10857,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2 text_len=853",
+    "route": "[ROUTE] PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2 text_len=852",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -10875,7 +10875,7 @@
      "Annual Salary": "$90,000.00",
      "Total Earnings": "$8,300.00",
      "Total Deductions": "($3,117.35)",
-     "Net Pay": "$5,182.6",
+     "Net Pay": "$5,182.65",
      "YTD Gross Earnings": "$33,500.00",
      "YTD Taxes Withheld": "$7,508.70"
     },
@@ -11021,9 +11021,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 5182.65,
-      "actual": "$5,182.6",
+      "actual": "$5,182.65",
       "type": "money",
       "in_gold_schema": true
      },
@@ -11340,8 +11340,7 @@
     },
     "counts": {
      "near": 1,
-     "correct": 31,
-     "wrong": 1,
+     "correct": 32,
      "hallucinated": 4
     },
     "renamed": 0,
@@ -11351,7 +11350,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9393939393939394,
+    "accuracy": 0.9696969696969697,
     "hallucination_rate": 0.10810810810810811,
     "invention_rate": 0.0
    },
@@ -11430,9 +11429,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 5182.65,
-      "actual": "$5,182.6",
+      "actual": "$5,182.65",
       "type": "money",
       "in_gold_schema": true
      },
@@ -11749,8 +11748,7 @@
     },
     "counts": {
      "near": 1,
-     "correct": 31,
-     "wrong": 1,
+     "correct": 32,
      "hallucinated": 4
     },
     "renamed": 0,
@@ -11760,7 +11758,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9393939393939394,
+    "accuracy": 0.9696969696969697,
     "hallucination_rate": 0.10810810810810811,
     "invention_rate": 0.0
    },
@@ -11839,9 +11837,9 @@
       "in_gold_schema": true
      },
      "Net Pay": {
-      "outcome": "wrong",
+      "outcome": "correct",
       "expected": 5182.65,
-      "actual": 5182.6,
+      "actual": 5182.65,
       "type": "money",
       "in_gold_schema": true
      },
@@ -12156,8 +12154,7 @@
     },
     "counts": {
      "near": 1,
-     "correct": 31,
-     "wrong": 1,
+     "correct": 32,
      "hallucinated": 4
     },
     "renamed": 0,
@@ -12167,19 +12164,18 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9393939393939394,
+    "accuracy": 0.9696969696969697,
     "hallucination_rate": 0.10810810810810811,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "near": 1,
-     "correct": 21,
-     "wrong": 1,
+     "correct": 22,
      "unmatched": 2
     },
     "gold_valued": 23,
-    "accuracy": 0.9130434782608695,
+    "accuracy": 0.9565217391304348,
     "unmatched": 2,
     "mismatches": [
      {
@@ -12188,13 +12184,6 @@
       "matched_key": "employer name",
       "expected": "Nexus Global Trading LLC",
       "actual": "NEXUS GLOBAL TRADING"
-     },
-     {
-      "key": "net pay",
-      "outcome": "wrong",
-      "matched_key": "net pay",
-      "expected": 5182.65,
-      "actual": "$5,182.6"
      }
     ]
    },
@@ -16946,14 +16935,13 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 388,
+    "correct": 389,
     "near": 5,
-    "wrong": 1,
     "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9847715736040609,
+   "accuracy": 0.9873096446700508,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
@@ -17061,12 +17049,11 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 67,
-     "wrong": 1,
+     "correct": 68,
      "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9571428571428572,
+    "accuracy": 0.9714285714285714,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17139,13 +17126,12 @@
    },
    "money": {
     "counts": {
-     "correct": 160,
-     "wrong": 1,
+     "correct": 161,
      "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.9937888198757764,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17201,14 +17187,13 @@
  "summary_raw": {
   "overall": {
    "counts": {
-    "correct": 188,
+    "correct": 189,
     "missed": 200,
     "hallucinated": 204,
-    "near": 5,
-    "wrong": 1
+    "near": 5
    },
    "gold_valued": 394,
-   "accuracy": 0.47715736040609136,
+   "accuracy": 0.4796954314720812,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
@@ -17323,12 +17308,11 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 67,
-     "wrong": 1,
+     "correct": 68,
      "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9571428571428572,
+    "accuracy": 0.9714285714285714,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17406,13 +17390,12 @@
    },
    "money": {
     "counts": {
-     "correct": 103,
+     "correct": 104,
      "missed": 57,
-     "wrong": 1,
      "hallucinated": 2
     },
     "gold_valued": 161,
-    "accuracy": 0.639751552795031,
+    "accuracy": 0.6459627329192547,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17469,14 +17452,13 @@
  "summary_export": {
   "overall": {
    "counts": {
-    "correct": 388,
+    "correct": 389,
     "near": 5,
-    "wrong": 1,
     "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9847715736040609,
+   "accuracy": 0.9873096446700508,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
@@ -17584,12 +17566,11 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 67,
-     "wrong": 1,
+     "correct": 68,
      "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9571428571428572,
+    "accuracy": 0.9714285714285714,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17662,13 +17643,12 @@
    },
    "money": {
     "counts": {
-     "correct": 160,
-     "wrong": 1,
+     "correct": 161,
      "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.9937888198757764,
+    "accuracy": 1.0,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17723,14 +17703,13 @@
  },
  "summary_content": {
   "counts": {
-   "correct": 235,
+   "correct": 236,
    "near": 5,
-   "wrong": 1,
    "unmatched": 2
   },
   "gold_valued": 241,
   "unmatched": 2,
-  "accuracy": 0.975103734439834
+  "accuracy": 0.979253112033195
  },
  "summary_structure": {
   "gold_tables": 17,
@@ -17741,16 +17720,16 @@
  },
  "calibration": {
   "high": {
-   "n": 391,
-   "correct": 384,
-   "wrong": 1,
+   "n": 392,
+   "correct": 386,
+   "wrong": 0,
    "missed": 0,
    "near": 2,
    "hallucinated": 4
   },
   "low": {
-   "n": 7,
-   "correct": 4,
+   "n": 6,
+   "correct": 3,
    "wrong": 0,
    "missed": 0,
    "near": 3,
@@ -17759,5 +17738,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-08-23 21:14:09"
+ "diff_against": "2026-09-04 11:53:46"
 }
