@@ -1,0 +1,171 @@
+{
+ "key": "c61fd67a9c26656c4ad4b9a1a07dc9c7c6b7fe9da91bf504886746948d9adf7e",
+ "meta": {
+  "method": "extract",
+  "context": "INV-2024-0031",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3401,
+  "captured_at": "2026-09-04 17:30:23",
+  "prompt_preview": "Fill in a sales_invoice spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC INVOICE\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nBill To: Invoice: INV-2024-0031\nApex Industrial Supplies Inc. Date: January 15, 20"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"NEXUS GLOBAL TRADING LLC\",\n      \"source\": \"NEXUS GLOBAL TRADING LLC INVOICE\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"(212) 555-0148\",\n      \"source\": \"(212) 555-0148 | EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"(212) 555-0148 | EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"Apex Industrial Supplies Inc.\",\n      \"source\": \"Apex Industrial Supplies Inc.\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"500 Commerce Drive, Chicago, IL 60601\",\n      \"source\": \"500 Commerce Drive, Chicago, IL 60601\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"Mr. Robert Chen — rchen@apexindustrial.com\",\n      \"source\": \"Mr. Robert Chen — rchen@apexindustrial.com\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"INV-2024-0031\",\n      \"source\": \"Invoice: INV-2024-0031\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"January 15, 2024\",\n      \"source\": \"Date: January 15, 2024\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"February 14, 2024\",\n      \"source\": \"Due: February 14, 2024\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"PO-2024-0018\",\n      \"source\": \"PO Ref: PO-2024-0018\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"Net 30\",\n      \"source\": \"Terms: Net 30\",\n      \"page\": 1\n    },\n    \"F13\": {\n      \"value\": \"PAID\",\n      \"source\": \"PAID\",\n      \"page\": 1\n    },\n    \"F14\": {\n      \"value\": \"Wire: First National Bank of New York\\nABA: 021000021 Account: 7743882201\\nCheque payable to: Nexus Global Trading LLC\",\n      \"source\": \"Wire: First National Bank of New York\\nABA: 021000021 Account: 7743882201\\nCheque payable to: Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F15\": {\n      \"value\": \"Feb 10, 2024\",\n      \"source\": \"Payment received via wire transfer Feb 10, 2024. Ref:\",\n      \"page\": 1\n    },\n    \"F16\": {\n      \"value\": \"WT-20240210-4421\",\n      \"source\": \"WT-20240210-4421.\",\n      \"page\": 1\n    },\n    \"F17\": {\n      \"value\": \"$10,892.50\",\n      \"source\": \"Subtotal: $10,892.50\",\n      \"page\": 1\n    },\n    \"F18\": {\n      \"value\": \"$320.00\",\n      \"source\": \"Shipping & Handling: $320.00\",\n      \"page\": 1\n    },\n    \"F19\": {\n      \"value\": \"$966.71\",\n      \"source\": \"Sales Tax (8.88%): $966.71\",\n      \"page\": 1\n    },\n    \"F20\": {\n      \"value\": \"$12,179.21\",\n      \"source\": \"TOTAL DUE: $12,179.21\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"Description Qty Unit Unit Price Amount\": [\n      {\n        \"cells\": {\n          \"Description\": \"Steel Wire Coils Grade A 500m\",\n          \"Qty\": \"40\",\n          \"Unit\": \"pcs\",\n          \"Unit Price\": \"$185.00\",\n          \"Amount\": \"$7,400.00\"\n        },\n        \"source\": \"Steel Wire Coils Grade A 500m 40 pcs $185.00 $7,400.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Industrial Lubricant 5L Drum\",\n          \"Qty\": \"25\",\n          \"Unit\": \"drums\",\n          \"Unit Price\": \"$68.00\",\n          \"Amount\": \"$1,700.00\"\n        },\n        \"source\": \"Industrial Lubricant 5L Drum 25 drums $68.00 $1,700.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Safety Gloves Heavy Duty Box/12\",\n          \"Qty\": \"60\",\n          \"Unit\": \"boxes\",\n          \"Unit Price\": \"$22.50\",\n          \"Amount\": \"$1,350.00\"\n        },\n        \"source\": \"Safety Gloves Heavy Duty Box/12 60 boxes $22.50 $1,350.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Description\": \"Hex Bolt Set M10 Qty-500\",\n          \"Qty\": \"30\",\n          \"Unit\": \"sets\",\n          \"Unit Price\": \"$14.75\",\n          \"Amount\": \"$442.50\"\n        },\n        \"source\": \"Hex Bolt Set M10 Qty-500 30 sets $14.75 $442.50\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "NEXUS GLOBAL TRADING LLC",
+     "source": "NEXUS GLOBAL TRADING LLC INVOICE",
+     "page": 1
+    },
+    "F2": {
+     "value": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "page": 1
+    },
+    "F3": {
+     "value": "(212) 555-0148",
+     "source": "(212) 555-0148 | EIN: 47-3821654",
+     "page": 1
+    },
+    "F4": {
+     "value": "47-3821654",
+     "source": "(212) 555-0148 | EIN: 47-3821654",
+     "page": 1
+    },
+    "F5": {
+     "value": "Apex Industrial Supplies Inc.",
+     "source": "Apex Industrial Supplies Inc.",
+     "page": 1
+    },
+    "F6": {
+     "value": "500 Commerce Drive, Chicago, IL 60601",
+     "source": "500 Commerce Drive, Chicago, IL 60601",
+     "page": 1
+    },
+    "F7": {
+     "value": "Mr. Robert Chen — rchen@apexindustrial.com",
+     "source": "Mr. Robert Chen — rchen@apexindustrial.com",
+     "page": 1
+    },
+    "F8": {
+     "value": "INV-2024-0031",
+     "source": "Invoice: INV-2024-0031",
+     "page": 1
+    },
+    "F9": {
+     "value": "January 15, 2024",
+     "source": "Date: January 15, 2024",
+     "page": 1
+    },
+    "F10": {
+     "value": "February 14, 2024",
+     "source": "Due: February 14, 2024",
+     "page": 1
+    },
+    "F11": {
+     "value": "PO-2024-0018",
+     "source": "PO Ref: PO-2024-0018",
+     "page": 1
+    },
+    "F12": {
+     "value": "Net 30",
+     "source": "Terms: Net 30",
+     "page": 1
+    },
+    "F13": {
+     "value": "PAID",
+     "source": "PAID",
+     "page": 1
+    },
+    "F14": {
+     "value": "Wire: First National Bank of New York\nABA: 021000021 Account: 7743882201\nCheque payable to: Nexus Global Trading LLC",
+     "source": "Wire: First National Bank of New York\nABA: 021000021 Account: 7743882201\nCheque payable to: Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F15": {
+     "value": "Feb 10, 2024",
+     "source": "Payment received via wire transfer Feb 10, 2024. Ref:",
+     "page": 1
+    },
+    "F16": {
+     "value": "WT-20240210-4421",
+     "source": "WT-20240210-4421.",
+     "page": 1
+    },
+    "F17": {
+     "value": "$10,892.50",
+     "source": "Subtotal: $10,892.50",
+     "page": 1
+    },
+    "F18": {
+     "value": "$320.00",
+     "source": "Shipping & Handling: $320.00",
+     "page": 1
+    },
+    "F19": {
+     "value": "$966.71",
+     "source": "Sales Tax (8.88%): $966.71",
+     "page": 1
+    },
+    "F20": {
+     "value": "$12,179.21",
+     "source": "TOTAL DUE: $12,179.21",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Description Qty Unit Unit Price Amount": [
+     {
+      "cells": {
+       "Description": "Steel Wire Coils Grade A 500m",
+       "Qty": "40",
+       "Unit": "pcs",
+       "Unit Price": "$185.00",
+       "Amount": "$7,400.00"
+      },
+      "source": "Steel Wire Coils Grade A 500m 40 pcs $185.00 $7,400.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Industrial Lubricant 5L Drum",
+       "Qty": "25",
+       "Unit": "drums",
+       "Unit Price": "$68.00",
+       "Amount": "$1,700.00"
+      },
+      "source": "Industrial Lubricant 5L Drum 25 drums $68.00 $1,700.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Safety Gloves Heavy Duty Box/12",
+       "Qty": "60",
+       "Unit": "boxes",
+       "Unit Price": "$22.50",
+       "Amount": "$1,350.00"
+      },
+      "source": "Safety Gloves Heavy Duty Box/12 60 boxes $22.50 $1,350.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Hex Bolt Set M10 Qty-500",
+       "Qty": "30",
+       "Unit": "sets",
+       "Unit Price": "$14.75",
+       "Amount": "$442.50"
+      },
+      "source": "Hex Bolt Set M10 Qty-500 30 sets $14.75 $442.50",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3401,
+  "success": true,
+  "error": ""
+ }
+}

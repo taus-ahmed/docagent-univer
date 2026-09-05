@@ -48,5 +48,6 @@
     "fields": {
       "Invoice Number": "INV-2024-0031"
     }
-  }
+  },
+  "via": "pipeline"
 }

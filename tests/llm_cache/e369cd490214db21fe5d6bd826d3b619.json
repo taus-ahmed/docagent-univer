@@ -1,0 +1,103 @@
+{
+ "key": "e369cd490214db21fe5d6bd826d3b6191826838e903358e180501ea4fb780653",
+ "meta": {
+  "method": "extract",
+  "context": "CHQ-001847",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2204,
+  "captured_at": "2026-09-04 17:30:10",
+  "prompt_preview": "Fill in a cheque spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nFIRST NATIONAL BANK OF NEW YORK 330 Madison Ave, New York, NY 10017 | Member FDIC\nNo: CHQ-001847\nNexus Global Trading LLC\n142 West 57th Street, Suite 1800, New York, NY 10019 Date: January 31, 2024\nEIN: 47-38"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"FIRST NATIONAL BANK OF NEW YORK\",\n      \"source\": \"FIRST NATIONAL BANK OF NEW YORK 330 Madison Ave, New York, NY 10017 | Member FDIC\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"330 Madison Ave, New York, NY 10017\",\n      \"source\": \"FIRST NATIONAL BANK OF NEW YORK 330 Madison Ave, New York, NY 10017 | Member FDIC\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"CHQ-001847\",\n      \"source\": \"No: CHQ-001847\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Nexus Global Trading LLC\",\n      \"source\": \"Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"source\": \"142 West 57th Street, Suite 1800, New York, NY 10019\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"EIN: 47-3821654 | (212) 555-0148\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"(212) 555-0148\",\n      \"source\": \"EIN: 47-3821654 | (212) 555-0148\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"January 31, 2024\",\n      \"source\": \"Date: January 31, 2024\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"Pacific Steel & Metals Co.\",\n      \"source\": \"Pacific Steel & Metals Co.\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***\",\n      \"source\": \"Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"Payment for PO-2024-0018 — Steel materials\",\n      \"source\": \"MEMO: Payment for PO-2024-0018 — Steel materials\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"Janet Wu\",\n      \"source\": \"Janet Wu\",\n      \"page\": 1\n    },\n    \"F13\": {\n      \"value\": \"A021000021A C7743882201C 001847D\",\n      \"source\": \"A021000021A C7743882201C 001847D Non-Negotiable Copy\",\n      \"page\": 1\n    },\n    \"F14\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F15\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F16\": {\n      \"value\": \"$ 8,410.00\",\n      \"source\": \"$ 8,410.00\",\n      \"page\": 1\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "FIRST NATIONAL BANK OF NEW YORK",
+     "source": "FIRST NATIONAL BANK OF NEW YORK 330 Madison Ave, New York, NY 10017 | Member FDIC",
+     "page": 1
+    },
+    "F2": {
+     "value": "330 Madison Ave, New York, NY 10017",
+     "source": "FIRST NATIONAL BANK OF NEW YORK 330 Madison Ave, New York, NY 10017 | Member FDIC",
+     "page": 1
+    },
+    "F3": {
+     "value": "CHQ-001847",
+     "source": "No: CHQ-001847",
+     "page": 1
+    },
+    "F4": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F5": {
+     "value": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "source": "142 West 57th Street, Suite 1800, New York, NY 10019",
+     "page": 1
+    },
+    "F6": {
+     "value": "47-3821654",
+     "source": "EIN: 47-3821654 | (212) 555-0148",
+     "page": 1
+    },
+    "F7": {
+     "value": "(212) 555-0148",
+     "source": "EIN: 47-3821654 | (212) 555-0148",
+     "page": 1
+    },
+    "F8": {
+     "value": "January 31, 2024",
+     "source": "Date: January 31, 2024",
+     "page": 1
+    },
+    "F9": {
+     "value": "Pacific Steel & Metals Co.",
+     "source": "Pacific Steel & Metals Co.",
+     "page": 1
+    },
+    "F10": {
+     "value": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
+     "source": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
+     "page": 1
+    },
+    "F11": {
+     "value": "Payment for PO-2024-0018 — Steel materials",
+     "source": "MEMO: Payment for PO-2024-0018 — Steel materials",
+     "page": 1
+    },
+    "F12": {
+     "value": "Janet Wu",
+     "source": "Janet Wu",
+     "page": 1
+    },
+    "F13": {
+     "value": "A021000021A C7743882201C 001847D",
+     "source": "A021000021A C7743882201C 001847D Non-Negotiable Copy",
+     "page": 1
+    },
+    "F14": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F15": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F16": {
+     "value": "$ 8,410.00",
+     "source": "$ 8,410.00",
+     "page": 1
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2204,
+  "success": true,
+  "error": ""
+ }
+}

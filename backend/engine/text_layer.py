@@ -194,7 +194,107 @@ def text_from_lines(lines) -> str:
     return "\n".join(" ".join(str(w["text"]) for w in ln) for ln in lines if ln)
 
 
-def read_page(page):
+# ── selection state that is not in the text at all ──────────────────────────
+
+def acroform_widgets(path):
+    """{page index: [{x0, x1, top, bottom, on}]} for every checkbox widget.
+
+    A real fillable form's checkbox is a WIDGET ANNOTATION, not a printed
+    character. It carries no text, so the text layer shows every option and no
+    marker, and the selection state — which is the entire content of the field
+    — is invisible to anything reading text. Measured on a fixture modelling
+    FORM CT-3: four option fields, all four filled from thin air at HIGH
+    confidence with `needs_review` false, and "Services" answered where the
+    form says "Wholesale trade". Every option string is printed on the page, so
+    grounding confirms whichever one was picked.
+
+    The state is in the file the whole time, in `/AS` (the widget's appearance
+    state) falling back to `/V` (the field value). Anything that is not `/Off`
+    is on.
+
+    Rects are PDF user space, origin bottom-left; pdfplumber measures `top`
+    from the top of the page, so y is flipped here and nowhere else.
+    """
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return {}
+    try:
+        reader = PdfReader(str(path))
+    except Exception:
+        return {}
+
+    out = {}
+    for i, page in enumerate(reader.pages):
+        try:
+            height = float(page.mediabox.height)
+        except Exception:
+            continue
+        items = []
+        for ref in (page.get("/Annots") or []):
+            try:
+                obj = ref.get_object()
+                if str(obj.get("/Subtype")) != "/Widget":
+                    continue
+                ft = obj.get("/FT")
+                if ft is None and obj.get("/Parent") is not None:
+                    ft = obj.get("/Parent").get_object().get("/FT")
+                if str(ft) != "/Btn":
+                    continue
+                rect = [float(v) for v in obj.get("/Rect")]
+                state = obj.get("/AS")
+                if state is None:
+                    state = obj.get("/V")
+            except Exception:
+                continue
+            x0, x1 = min(rect[0], rect[2]), max(rect[0], rect[2])
+            y0, y1 = min(rect[1], rect[3]), max(rect[1], rect[3])
+            items.append({"x0": x0, "x1": x1,
+                          "top": height - y1, "bottom": height - y0,
+                          "on": str(state) not in ("/Off", "None", "")})
+        if items:
+            out[i] = items
+    return out
+
+
+def inject_markers(lines, widgets):
+    """Put a `[X]` / `[ ]` word where each checkbox actually sits.
+
+    Written into the text at the widget's own x, so it lands immediately
+    before the option it belongs to once the line is sorted left to right —
+    the same thing a form that PRINTS its boxes would have given us, and a
+    shape the model already reads correctly (9 of 9 on the printed-marker
+    fixture).
+    """
+    if not widgets:
+        return lines, 0
+    out = [list(ln) for ln in lines]
+    placed = 0
+    for w in widgets:
+        mid = (w["top"] + w["bottom"]) / 2.0
+        word = {"text": "[X]" if w["on"] else "[ ]",
+                "x0": w["x0"], "x1": w["x1"],
+                "top": w["top"], "bottom": w["bottom"]}
+        target = None
+        for ln in out:
+            if not ln:
+                continue
+            top = min(float(x["top"]) for x in ln)
+            bottom = max(float(x.get("bottom", x["top"] + 10)) for x in ln)
+            if top - LINE_TOL <= mid <= bottom + LINE_TOL:
+                target = ln
+                break
+        if target is None:
+            out.append([word])
+        else:
+            target.append(word)
+            target.sort(key=lambda x: float(x["x0"]))
+        placed += 1
+    out.sort(key=lambda ln: min(float(x["top"]) for x in ln) if ln else 0.0)
+    return out, placed
+
+
+def read_page(page, widgets=()):
     """(text, lines, repairs) for one pdfplumber page.
 
     `text` is `extract_text()` VERBATIM when the page needed no repair — see
@@ -207,7 +307,8 @@ def read_page(page):
     except Exception:
         return raw, [], []
     lines, repairs = repair_wrapped(words)
-    if not repairs:
+    lines, placed = inject_markers(lines, widgets)
+    if not repairs and not placed:
         return raw, lines, []
     return text_from_lines(lines), lines, repairs
 
@@ -270,6 +371,35 @@ def source_occurrences(lines, source):
         elif src in t:
             partial.append(i)
     return exact or partial
+
+
+#: A record may span this many printed lines before we stop believing the two
+#: belong together. Eight covers a boxed tax form; a runaway span would let a
+#: value from further down the page ground a cell it has nothing to do with.
+MAX_RECORD_LINES = 8
+
+
+def record_span(lines, start, stop=None):
+    """The text of the lines one record actually occupies.
+
+    A row's cells are verified against the ONE line the model quoted, which is
+    right for a table and wrong for a form: FORM-W2-2023 lays each employee out
+    across four printed lines, the model quotes the first two, and the values on
+    the other two are reported as ungrounded even though they are correct and
+    printed inches away. That is not a grounding failure, it is a
+    misidentification of what the record IS.
+
+    The span runs from the line this record was read from to the line the NEXT
+    record was read from, so it can never reach into a neighbouring record —
+    which is what keeps the check meaningful. A record with no successor is
+    capped at `MAX_RECORD_LINES`.
+    """
+    if start is None or not lines:
+        return ""
+    end = stop if stop is not None else start + MAX_RECORD_LINES
+    end = min(max(end, start + 1), start + MAX_RECORD_LINES, len(lines))
+    return "\n".join(" ".join(str(w["text"]) for w in ln)
+                     for ln in lines[start:end])
 
 
 def column_bands(lines, headers):

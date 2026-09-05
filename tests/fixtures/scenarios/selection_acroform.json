@@ -1,0 +1,81 @@
+{
+  "what": "D7's dangerous half, against a REAL fillable form. The checkboxes are widget annotations carrying no text, so the text layer shows every option and no marker at all - which is why the model invented an answer for every option field at high confidence, and answered 'Services' where the form says 'Wholesale trade'. The state is in the file the whole time, in the widget's /AS. Built by tests/fixtures/make_fillable_form.py because zero of the 60 corpus PDFs carry AcroForm fields.",
+  "fixture_pdf": "FORM-CT3-FILLABLE.pdf",
+  "doc_type": "tax_form",
+  "grid": {
+    "cells": {
+      "0,0": {
+        "value": "Legal Name"
+      },
+      "0,1": {
+        "value": ""
+      },
+      "1,0": {
+        "value": "EIN"
+      },
+      "1,1": {
+        "value": ""
+      },
+      "2,0": {
+        "value": "Entity type"
+      },
+      "2,1": {
+        "value": ""
+      },
+      "3,0": {
+        "value": "Accounting method"
+      },
+      "3,1": {
+        "value": ""
+      },
+      "4,0": {
+        "value": "Final return"
+      },
+      "4,1": {
+        "value": ""
+      },
+      "5,0": {
+        "value": "Principal business activity"
+      },
+      "5,1": {
+        "value": ""
+      },
+      "6,0": {
+        "value": "Total receipts"
+      },
+      "6,1": {
+        "value": ""
+      },
+      "7,0": {
+        "value": "Tax due"
+      },
+      "7,1": {
+        "value": ""
+      }
+    },
+    "colWidths": [],
+    "merges": {},
+    "repeatRows": [],
+    "regions": []
+  },
+  "expect": {
+    "fields": {
+      "Legal Name": "Nexus Global Trading LLC",
+      "EIN": "47-3821654",
+      "Entity type": "Limited liability company",
+      "Accounting method": "Accrual",
+      "Final return": "No",
+      "Principal business activity": "Wholesale trade",
+      "Total receipts": "$8,412,500.00",
+      "Tax due": "$412,180.00"
+    }
+  },
+  "negated": [
+    "Sole proprietor",
+    "C corporation",
+    "S corporation",
+    "Manufacturing",
+    "Retail trade",
+    "Services"
+  ]
+}

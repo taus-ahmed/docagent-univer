@@ -140,7 +140,8 @@ The reasoning for each is in `docs/DECISION-LOG.md`.
 | `backend/engine/template_shape.py` | 497 | grid → shape; declared regions; `choose_path` (the arithmetic router) |
 | `backend/engine/slot_extractor.py` | 474 | slot enumeration, the prompt, grounding, confidence, the result contract |
 | `backend/engine/shape_inference.py` | 253 | no-template: document → inferred template → grid → same path |
-| `backend/engine/text_layer.py` | 300 | positional evidence: words with x/y; wrapped-value repair; column bands; placement |
+| `backend/engine/text_layer.py` | 470 | positional evidence: words with x/y; wrapped-value repair; column bands; placement; record spans; AcroForm state |
+| `backend/engine/doc_boundaries.py` | 170 | one file → many documents, deterministically |
 | `backend/app/api/routes/extract.py` | 6064 | routes, the background job thread, template parsing, **all Excel writers** |
 
 `extract.py` is **no longer an extraction engine**. It is routes + the job
@@ -408,6 +409,81 @@ document is flagged for review rather than handing the user a wall of per-cell
 warnings; scanned/image input or `<50` chars of text ⇒ all confidences floored
 to medium with an explanatory note.
 
+### One file can be many documents (`engine/doc_boundaries.py`)
+
+One file was one document, unconditionally. Three invoices merged into one PDF
+gave **13 field slots where 3 × 13 were needed** — a single slot addressed
+"Invoice Number" against three distinct invoice numbers — and the two the model
+did not answer for were lost with no error, no flag and no note. That is the
+product's own core use case.
+
+`run_extraction` splits the file and runs the ordinary pipeline once per
+document. **Slot addressing is unchanged**: each document gets the full slot
+set, its own grounding, its own confidence and its own result, and the Excel
+writer already stacks a list of results. Cost scales linearly, which is honest —
+twenty invoices is twenty documents of work.
+
+Two signals, both deterministic, neither a model call:
+
+| signal | catches |
+|---|---|
+| **repeated title** — within a run of pages of one type, a page whose first line is that run's title. A title is the run's first line, **or a line printed on two CONSECUTIVE pages** | a homogeneous batch |
+| **type change** — a page classifying as a different type from the last page that classified as anything (`classify_by_hints`, no model call) | a mixed batch, where nothing repeats |
+
+Measured: **0 false positives across all 60 corpus documents** (17 of them
+multi-page), and **14 of 14 merged files split at exactly the right pages** —
+twenty invoices, five two-page payslips, mixed batches with runs inside them.
+
+Three details each fix a real miss:
+- **Adjacency** is what tells a title from a repeated footer. Two income
+  statements give `[title, "Prepared by…", title, "Prepared by…"]` and *both*
+  lines repeat; only the title opens its segment and neither is adjacent to
+  itself.
+- **Anchoring per segment**, not to page 0, finds two receipts in the middle of
+  a mixed batch — they classify as `None`, so the type never changes.
+- **The type is compared to the last KNOWN type**, because a continuation page
+  often classifies as nothing and letting that erase the segment's type hid the
+  next document's start entirely.
+- A candidate whose document would be **page furniture is folded into the one
+  above** rather than abandoning the whole split.
+
+⚠ **The costs are deliberately asymmetric.** Splitting wrongly produces N
+stacked blocks, mostly empty — ugly, obvious, fixed in one look. NOT splitting
+produces one plausible result and silently discards the rest. A running header
+on every page of a long report is the shape that would split wrongly; nothing in
+the corpus has one, and the failure is visible rather than silent.
+
+### A record is not a line
+
+A row's cells were verified against the ONE line the model quoted, which is
+right for a table and wrong for a form. `FORM-W2-2023` lays each employee across
+four printed lines, the model quotes the first two, and the values on the others
+were reported ungrounded — correct, and marked `low`. `record_span` runs from
+the line this row was read from to the line the NEXT row was read from, so a
+cell can be checked against its own record and **can never reach into a
+neighbouring one**. Capped at 8 lines.
+
+### Selection state (D7)
+
+A field offering options is only answerable if something says which is chosen.
+Three cases, and they are not the same:
+
+| the marker is… | behaviour |
+|---|---|
+| **printed** (`[X]` / `[ ]`) | correct — 9/9, not one unselected option reported |
+| **an AcroForm widget** | **recovered from the file.** `acroform_widgets` reads `/AS` (falling back to `/V`) off every `/FT /Btn` widget and `inject_markers` writes `[X]`/`[ ]` into the text at the widget's own x, so it lands before its option. 8/8 |
+| **neither** (flattened/scanned; the tick is vector graphics) | **not recoverable.** A prompt rule takes it from 3/7 to 6/7 and costs nothing elsewhere, but a prompt rule is a request, not a guarantee |
+
+Before this, a widget-checkbox form had its selection state invented for every
+option field at `high` confidence with `needs_review=False` — answering
+`Services` where the form says `Wholesale trade`. Every option is printed on the
+page, so grounding confirms whichever one is picked. These are the fields that
+decide treatment.
+
+Zero of the 60 corpus PDFs carry AcroForm fields, so the fixture is built by
+`tests/fixtures/make_fillable_form.py` — committed as a script as well as a PDF
+so it can be read and argued with.
+
 ### The text layer carries geometry, not just characters (`engine/text_layer.py`)
 
 `page.extract_text()` returns a flat string, and everything downstream — the
@@ -588,9 +664,9 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 | **structure fidelity** | **100%** (17/17) | **100%** (17/17) |
 | accuracy RAW (all adapter widenings off) | 48.0% | 71.1% |
 | invented (value nowhere in the PDF) | **0** | **0** |
-| misfiled | 4 | 6 |
+| misfiled | 4 | **0** |
 | out-of-schema (*not* a defect) | 0 | 60 |
-| **defect rate** | 1.0% | 1.3% |
+| **defect rate** | 1.0% | **0.0%** |
 | fields varying across 3 live repeats | 0 | 1 |
 
 `BS-2024-Q1`, `CHQ-001847`, `IS-2024-Q4` and `STMT-2024-01` score 100% in both

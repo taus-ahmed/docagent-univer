@@ -1,0 +1,63 @@
+{
+ "key": "2eabc82e8851c71e7e34f5c7d0fd89c57ff18d26a4cd48737bbb1f9db392f894",
+ "meta": {
+  "method": "extract",
+  "context": "no_invention_vs_semantic_match",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1476,
+  "captured_at": "2026-09-04 17:28:10",
+  "prompt_preview": "Fill in a purchase_order spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC PURCHASE ORDER\n142 West 57th Street, Suite 1800, New York, NY 10019\nPO Number: PO-2024-0301\nDate: March 4, 2024\nTerms: Net 30\n\nVendor: Pacific Steel & Metals Co.\nVendor ID: VN"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"PO-2024-0301\",\n      \"source\": \"PO Number: PO-2024-0301\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"Pacific Steel & Metals Co.\",\n      \"source\": \"Vendor: Pacific Steel & Metals Co.\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"$10,390.00\",\n      \"source\": \"Subtotal:                                                  $10,390.00\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"$480.00\",\n      \"source\": \"Freight:                                                      $480.00\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F6\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F7\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F8\": {\n      \"value\": \"$10,870.00\",\n      \"source\": \"ORDER TOTAL:                                               $10,870.00\",\n      \"page\": 1\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "PO-2024-0301",
+     "source": "PO Number: PO-2024-0301",
+     "page": 1
+    },
+    "F2": {
+     "value": "Pacific Steel & Metals Co.",
+     "source": "Vendor: Pacific Steel & Metals Co.",
+     "page": 1
+    },
+    "F3": {
+     "value": "$10,390.00",
+     "source": "Subtotal:                                                  $10,390.00",
+     "page": 1
+    },
+    "F4": {
+     "value": "$480.00",
+     "source": "Freight:                                                      $480.00",
+     "page": 1
+    },
+    "F5": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F6": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F7": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F8": {
+     "value": "$10,870.00",
+     "source": "ORDER TOTAL:                                               $10,870.00",
+     "page": 1
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1476,
+  "success": true,
+  "error": ""
+ }
+}

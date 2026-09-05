@@ -267,6 +267,58 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                default_doc_type=default_doc_type, start=start,
                page_lines=doc_page_lines)
 
+    # ── DOCUMENT BOUNDARIES ──
+    # One file was one document, unconditionally: three invoices merged into
+    # one PDF produced 13 field slots where 3 x 13 were needed, the model
+    # answered for one of them, and the other two were lost with no error and
+    # no note. Splitting keeps slot addressing exactly as it is — each
+    # document gets the full slot set, its own grounding and its own result —
+    # and the Excel writer already stacks a list of results.
+    from doc_boundaries import split as _split_documents
+
+    slices, why = _split_documents(doc_text_pages, doc_page_lines, page_images)
+    if len(slices) > 1:
+        _log("SPLIT", f"{file_path.name}: {len(slices)} documents in one file "
+                      f"({why}) — extracting each separately")
+        results = []
+        for n, (texts, lines, images, first_page) in enumerate(slices, 1):
+            sub = dict(ctx)
+            sub["doc_text"] = "\n\n".join(texts)
+            sub["doc_text_pages"] = texts
+            sub["page_lines"] = lines
+            sub["page_images"] = images
+            part = _extract_one(orchestrator, file_path, template_data, sub,
+                                sub["doc_text"], texts, images,
+                                default_doc_type, batch_schemas)
+            last = first_page + max(len(texts) - 1, 0)
+            span = (f"page {first_page}" if first_page == last
+                    else f"pages {first_page}-{last}")
+            for r in part:
+                r.filename = f"{file_path.name} [{n} of {len(slices)}]"
+                ed = getattr(r, "extracted_data", None)
+                if isinstance(ed, dict):
+                    ed["document_index"] = n
+                    ed["document_count"] = len(slices)
+                    ed["source_pages"] = [first_page, last]
+                    ed.setdefault("validation_notes", []).append(
+                        f"document {n} of {len(slices)} in "
+                        f"{file_path.name} ({span})")
+            results += part
+        return results
+
+    return _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
+                        doc_text_pages, page_images, default_doc_type,
+                        batch_schemas)
+
+
+def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
+                 doc_text_pages, page_images, default_doc_type, batch_schemas):
+    """One DOCUMENT — infer a template if there is none, route, extract.
+
+    Split out of `run_extraction` so a file holding several documents can run
+    it once per document. Everything in here is exactly what a single-document
+    file always did; the only thing that changed is how many times it happens.
+    """
     # ── NO TEMPLATE (Phase 3) — infer one, then take the SAME path ──
     # An empty grid (no labels, no headers) gives extraction nothing to anchor
     # to and is treated exactly like no template at all.
@@ -355,3 +407,5 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
 
     from slot_extractor import run_slot_extraction
     return run_slot_extraction(**ctx)
+
+

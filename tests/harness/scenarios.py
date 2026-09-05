@@ -60,35 +60,61 @@ def document(scenario, tmp_dir):
     import pdfplumber
     from text_layer import read_page
 
-    if scenario.get("merge"):
-        from pypdf import PdfReader, PdfWriter
-        path = Path(tmp_dir) / f"{scenario['name']}.pdf"
-        w = PdfWriter()
-        for n in scenario["merge"]:
-            for p in PdfReader(str(_bs.PDF_DIR / n)).pages:
-                w.add_page(p)
-        w.write(str(path))
-    else:
-        path = _bs.PDF_DIR / scenario["pdf"]
-
+    path = path_for(scenario, tmp_dir)
+    from text_layer import acroform_widgets
+    widgets = acroform_widgets(path)
     texts, lines = [], []
     with pdfplumber.open(path) as pdf:
-        for page in pdf.pages:
-            t, ln, _ = read_page(page)
+        for i, page in enumerate(pdf.pages):
+            t, ln, _ = read_page(page, widgets.get(i) or [])
             texts.append(t)
             lines.append(ln)
     return texts, lines
 
 
+def path_for(scenario, tmp_dir):
+    """The file on disk this scenario reads, building it if it is a merge."""
+    if scenario.get("merge"):
+        from pypdf import PdfReader, PdfWriter
+        out = Path(tmp_dir) / f"{scenario['name']}.pdf"
+        if not out.exists():
+            w = PdfWriter()
+            for n in scenario["merge"]:
+                for p in PdfReader(str(_bs.PDF_DIR / n)).pages:
+                    w.add_page(p)
+            w.write(str(out))
+        return out
+    if scenario.get("fixture_pdf"):
+        return _bs.REPO_DIR / "tests/fixtures" / scenario["fixture_pdf"]
+    return _bs.PDF_DIR / scenario["pdf"] if scenario.get("pdf") else None
+
+
 def run(scenario, tmp_dir, orchestrator):
-    """The real pipeline on one scenario. Returns `extracted_data`."""
+    """The real pipeline on one scenario.
+
+    `via: "pipeline"` goes through `run_extraction` from a real file, which is
+    the only way to exercise anything happening BEFORE slot extraction —
+    document boundaries above all. Everything else calls `run_slot_extraction`
+    directly, which is cheaper and keeps the scenario's own text layer.
+
+    Returns `extracted_data`, or a LIST of them when the file held several
+    documents.
+    """
     import time
 
     from slot_extractor import run_slot_extraction
     from template_shape import compute_shape
 
-    texts, lines = document(scenario, tmp_dir)
     grid = scenario["grid"]
+    if scenario.get("via") == "pipeline":
+        from extractor import run_extraction
+        results = run_extraction(
+            orchestrator, path_for(scenario, tmp_dir),
+            {"mode": "layout", "layout": grid,
+             "doc_type": scenario.get("doc_type", "")})
+        return [r.extracted_data for r in results]
+
+    texts, lines = document(scenario, tmp_dir)
     shape = compute_shape(grid, log=lambda _m: None)
     return run_slot_extraction(
         orchestrator, f"{scenario['name']}.pdf",
@@ -115,9 +141,15 @@ def _norm(v):
 
 
 def score(scenario, ed):
-    """(percent, [(what, expected, got, ok)]) — one line per checked cell."""
+    """(percent, [(what, expected, got, ok)]) — one line per checked cell.
+
+    A scenario whose file held several documents is scored on the FIRST of
+    them; `extras` is what checks the others are there at all.
+    """
     checks = []
     expect = scenario.get("expect") or {}
+    if isinstance(ed, list):
+        ed = ed[0] if ed else {}
 
     by_label = {k: d.get("value", "")
                 for k, d in (ed.get("extracted_data") or {}).items()}
@@ -157,14 +189,30 @@ def extras(scenario, ed):
     out = []
     blob = json.dumps(ed, ensure_ascii=False)
 
+    first = ed[0] if isinstance(ed, list) and ed else ed
+    want_docs = (scenario.get("expect") or {}).get("documents")
+    if want_docs:
+        got = len(ed) if isinstance(ed, list) else 1
+        out.append((f"the file is read as {want_docs} documents",
+                    got == want_docs, str(got)))
+    if isinstance(ed, list):
+        ed = ed[0] if ed else {}
+
     for label in scenario.get("must_stay_empty") or []:
         got = ((ed.get("extracted_data") or {}).get(label) or {}).get("value", "")
         out.append((f"{label!r} must stay empty", not str(got).strip(),
                     repr(got)))
 
+    # Checked against the extracted VALUES, not the whole payload: a source
+    # span legitimately quotes the entire line an option sits on, unselected
+    # neighbours included, and that is evidence rather than an answer.
+    values = " | ".join(
+        str((d or {}).get("value", ""))
+        for d in ((first if isinstance(ed, list) else ed)
+                  .get("extracted_data") or {}).values())
     for phrase in scenario.get("negated") or []:
         out.append((f"{phrase!r} (an UNSELECTED option) must not be reported",
-                    phrase.casefold() not in blob.casefold(), phrase))
+                    phrase.casefold() not in values.casefold(), phrase))
 
     for label in scenario.get("structure_rows") or []:
         out.append((f"structure row {label!r} present",

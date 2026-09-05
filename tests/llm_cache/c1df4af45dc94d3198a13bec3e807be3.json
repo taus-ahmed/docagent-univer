@@ -1,0 +1,58 @@
+{
+ "key": "c1df4af45dc94d3198a13bec3e807be360d29692cec04182985a30ffc2a599f1",
+ "meta": {
+  "method": "extract",
+  "context": "selection_no_marker_in_text",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1170,
+  "captured_at": "2026-09-04 17:28:13",
+  "prompt_preview": "Fill in a tax_form spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNEW YORK STATE DEPARTMENT OF TAXATION AND FINANCE\nFORM CT-3 - GENERAL BUSINESS CORPORATION FRANCHISE TAX RETURN\n\nLegal name: Nexus Global Trading LLC\nEIN: 47-3821654\n\nEntity type: Sole proprietor Limited li"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"Nexus Global Trading LLC\",\n      \"source\": \"Legal name: Nexus Global Trading LLC\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"47-3821654\",\n      \"source\": \"EIN: 47-3821654\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"\",\n      \"source\": \"Entity type: Sole proprietor Limited liability company C corporation S corporation\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Accrual\",\n      \"source\": \"Accounting method: Accrual Cash\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"\",\n      \"source\": \"Is this a final return? Yes No\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"\",\n      \"source\": \"Principal business activity: Manufacturing Wholesale trade Retail trade Services\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"$8,412,500.00\",\n      \"source\": \"Total receipts: $8,412,500.00\",\n      \"page\": 1\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Legal name: Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F2": {
+     "value": "47-3821654",
+     "source": "EIN: 47-3821654",
+     "page": 1
+    },
+    "F3": {
+     "value": "",
+     "source": "Entity type: Sole proprietor Limited liability company C corporation S corporation",
+     "page": 1
+    },
+    "F4": {
+     "value": "Accrual",
+     "source": "Accounting method: Accrual Cash",
+     "page": 1
+    },
+    "F5": {
+     "value": "",
+     "source": "Is this a final return? Yes No",
+     "page": 1
+    },
+    "F6": {
+     "value": "",
+     "source": "Principal business activity: Manufacturing Wholesale trade Retail trade Services",
+     "page": 1
+    },
+    "F7": {
+     "value": "$8,412,500.00",
+     "source": "Total receipts: $8,412,500.00",
+     "page": 1
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1170,
+  "success": true,
+  "error": ""
+ }
+}

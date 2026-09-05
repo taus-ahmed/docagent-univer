@@ -1,8 +1,8 @@
 {
- "run_id": "2026-09-04 17:11:29",
- "git_commit": "11171af",
+ "run_id": "2026-09-04 17:29:51",
+ "git_commit": "b234a4b",
  "config": {
-  "mode": "replay",
+  "mode": "record",
   "repeat": 1,
   "no_template": false,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 10,
-  "recorded": 0,
+  "hits": 0,
+  "recorded": 10,
   "live": 0,
   "misses": 0
  },
@@ -33,14 +33,14 @@
    "adapter_notes": [],
    "adapted": {
     "fields": {
-     "Total Current Assets": "1,129,003",
-     "Total Non-Current Assets": "236,500",
-     "TOTAL ASSETS": "1,365,503",
-     "Total Current Liabilities": "421,200",
-     "Total Long-Term Liabilities": "129,400",
-     "TOTAL LIABILITIES": "550,600",
-     "Total Equity": "698,104",
-     "TOTAL LIABILITIES & EQUITY": "1,248,704"
+     "Total Current Assets": "$1,129,003",
+     "Total Non-Current Assets": "$236,500",
+     "TOTAL ASSETS": "$1,365,503",
+     "Total Current Liabilities": "$421,200",
+     "Total Long-Term Liabilities": "$129,400",
+     "TOTAL LIABILITIES": "$550,600",
+     "Total Equity": "$698,104",
+     "TOTAL LIABILITIES & EQUITY": "$1,248,704"
     },
     "tables": {
      "current_assets": [
@@ -157,56 +157,56 @@
      "Total Current Assets": {
       "outcome": "correct",
       "expected": 1129003,
-      "actual": "1,129,003",
+      "actual": "$1,129,003",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Non-Current Assets": {
       "outcome": "correct",
       "expected": 236500,
-      "actual": "236,500",
+      "actual": "$236,500",
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL ASSETS": {
       "outcome": "correct",
       "expected": 1365503,
-      "actual": "1,365,503",
+      "actual": "$1,365,503",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Current Liabilities": {
       "outcome": "correct",
       "expected": 421200,
-      "actual": "421,200",
+      "actual": "$421,200",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Long-Term Liabilities": {
       "outcome": "correct",
       "expected": 129400,
-      "actual": "129,400",
+      "actual": "$129,400",
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL LIABILITIES": {
       "outcome": "correct",
       "expected": 550600,
-      "actual": "550,600",
+      "actual": "$550,600",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Equity": {
       "outcome": "correct",
       "expected": 698104,
-      "actual": "698,104",
+      "actual": "$698,104",
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL LIABILITIES & EQUITY": {
       "outcome": "correct",
       "expected": 1248704,
-      "actual": "1,248,704",
+      "actual": "$1,248,704",
       "type": "money",
       "in_gold_schema": true
      }
@@ -684,56 +684,56 @@
      "Total Current Assets": {
       "outcome": "correct",
       "expected": 1129003,
-      "actual": "1,129,003",
+      "actual": "$1,129,003",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Non-Current Assets": {
       "outcome": "correct",
       "expected": 236500,
-      "actual": "236,500",
+      "actual": "$236,500",
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL ASSETS": {
       "outcome": "correct",
       "expected": 1365503,
-      "actual": "1,365,503",
+      "actual": "$1,365,503",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Current Liabilities": {
       "outcome": "correct",
       "expected": 421200,
-      "actual": "421,200",
+      "actual": "$421,200",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Long-Term Liabilities": {
       "outcome": "correct",
       "expected": 129400,
-      "actual": "129,400",
+      "actual": "$129,400",
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL LIABILITIES": {
       "outcome": "correct",
       "expected": 550600,
-      "actual": "550,600",
+      "actual": "$550,600",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Equity": {
       "outcome": "correct",
       "expected": 698104,
-      "actual": "698,104",
+      "actual": "$698,104",
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL LIABILITIES & EQUITY": {
       "outcome": "correct",
       "expected": 1248704,
-      "actual": "1,248,704",
+      "actual": "$1,248,704",
       "type": "money",
       "in_gold_schema": true
      }
@@ -17738,5 +17738,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-09-04 14:08:25"
+ "diff_against": "2026-09-04 17:11:29"
 }

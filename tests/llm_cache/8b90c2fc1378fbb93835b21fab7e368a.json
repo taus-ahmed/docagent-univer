@@ -1,0 +1,61 @@
+{
+ "key": "8b90c2fc1378fbb93835b21fab7e368a5cac1dc109536b5e3c18da5fc97c4a54",
+ "meta": {
+  "method": "extract",
+  "context": "wrapped_values",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2556,
+  "captured_at": "2026-09-04 17:28:15",
+  "prompt_preview": "Fill in a form_w2 spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nForm W-2 — Wage and Tax Statement — Tax Year 2023\nEmployer: Nexus Global Trading LLC | EIN: 47-3821654 | Department of the Treasury — Internal Revenue Service\nMarcus A. Thompson EMP: EMP-0012 | SSN: ***-**-4"
+ },
+ "response": {
+  "raw_text": "{\n  \"tables\": {\n    \"W2\": [\n      {\n        \"cells\": {\n          \"Employee\": \"Marcus A. Thompson\",\n          \"SSN\": \"***-**-4821\",\n          \"Box 1 Wages\": \"$87,500.00\",\n          \"Box 2 Fed Tax\": \"$14,210.00\",\n          \"Box 5 Medicare Wages\": \"$87,500.00\",\n          \"Box 6 Medicare Tax\": \"$1,268.75\"\n        },\n        \"source\": \"Marcus A. Thompson EMP: EMP-0012 | SSN: ***-**-4821\\nBox 1 — Wages, tips, other $87,500.00 Box 2 — Federal income tax $14,210.00 $87,500.00 $5,425.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Employee\": \"Janet L. Wu\",\n          \"SSN\": \"***-**-3317\",\n          \"Box 1 Wages\": \"$144,583.00\",\n          \"Box 2 Fed Tax\": \"$38,880.00\",\n          \"Box 5 Medicare Wages\": \"$144,583.00\",\n          \"Box 6 Medicare Tax\": \"$2,096.46\"\n        },\n        \"source\": \"Janet L. Wu EMP: EMP-0007 | SSN: ***-**-3317\\nBox 1 — Wages, tips, other $144,583.00 Box 2 — Federal income tax $38,880.00 $160,200.00 $9,932.40\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Employee\": \"Priya S. Nair\",\n          \"SSN\": \"***-**-6092\",\n          \"Box 1 Wages\": \"$55,274.00\",\n          \"Box 2 Fed Tax\": \"$7,440.00\",\n          \"Box 5 Medicare Wages\": \"$55,274.00\",\n          \"Box 6 Medicare Tax\": \"$801.47\"\n        },\n        \"source\": \"Priya S. Nair EMP: EMP-0021 | SSN: ***-**-6092\\nBox 1 — Wages, tips, other $55,274.00 Box 2 — Federal income tax $7,440.00 $55,274.00 $3,427.00\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "tables": {
+    "W2": [
+     {
+      "cells": {
+       "Employee": "Marcus A. Thompson",
+       "SSN": "***-**-4821",
+       "Box 1 Wages": "$87,500.00",
+       "Box 2 Fed Tax": "$14,210.00",
+       "Box 5 Medicare Wages": "$87,500.00",
+       "Box 6 Medicare Tax": "$1,268.75"
+      },
+      "source": "Marcus A. Thompson EMP: EMP-0012 | SSN: ***-**-4821\nBox 1 — Wages, tips, other $87,500.00 Box 2 — Federal income tax $14,210.00 $87,500.00 $5,425.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Employee": "Janet L. Wu",
+       "SSN": "***-**-3317",
+       "Box 1 Wages": "$144,583.00",
+       "Box 2 Fed Tax": "$38,880.00",
+       "Box 5 Medicare Wages": "$144,583.00",
+       "Box 6 Medicare Tax": "$2,096.46"
+      },
+      "source": "Janet L. Wu EMP: EMP-0007 | SSN: ***-**-3317\nBox 1 — Wages, tips, other $144,583.00 Box 2 — Federal income tax $38,880.00 $160,200.00 $9,932.40",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Employee": "Priya S. Nair",
+       "SSN": "***-**-6092",
+       "Box 1 Wages": "$55,274.00",
+       "Box 2 Fed Tax": "$7,440.00",
+       "Box 5 Medicare Wages": "$55,274.00",
+       "Box 6 Medicare Tax": "$801.47"
+      },
+      "source": "Priya S. Nair EMP: EMP-0021 | SSN: ***-**-6092\nBox 1 — Wages, tips, other $55,274.00 Box 2 — Federal income tax $7,440.00 $55,274.00 $3,427.00",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2556,
+  "success": true,
+  "error": ""
+ }
+}

@@ -47,7 +47,7 @@ from pathlib import Path
 from extractor import _llm_json, _log, _num
 from micr import field_role, find_micr_line, parse_micr
 from text_layer import (check_placement, column_bands, find_line,
-                        source_occurrences)
+                        record_span, source_occurrences)
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -227,6 +227,16 @@ def build_prompt(slots, page_texts, doc_type=""):
              "Credit, and an empty cell is a real answer.")
     p.append("- One row object per document line. Never merge two lines into one row, and "
              "never repeat a line as two rows.")
+    # SELECTION FIELDS. Where the document marks which option is chosen — a
+    # printed [X], or a form widget whose state was written into the text —
+    # this is read correctly. Where NOTHING marks it, every option is equally
+    # printed and equally groundable, so any answer is a guess that passes
+    # every check the pipeline has. An invented entity type is worse than a
+    # blank one: these are the fields that decide treatment.
+    p.append('- A slot whose line offers SEVERAL OPTIONS and marks none of '
+             'them as chosen has no answer: give "". Do not pick the first, '
+             'the most likely, or the most common. Only a marked option '
+             '([X], a tick, "Yes"/"No" written in) is an answer.')
     p.append("- Give the value only, not the label. For a slot labelled "
              '"Closing Balance" on the line "Closing Balance: 125,357.26", '
              'answer "125,357.26" — NOT "Closing Balance: 125,357.26", and '
@@ -323,13 +333,23 @@ def confidence_for(value, source, label, grounded, inferred=False):
     return (GROUNDED if inferred else HIGH), ""
 
 
-def verify_span(value, source, page, page_texts):
-    """(grounded, reason). An empty answer needs no grounding."""
+def verify_span(value, source, page, page_texts, record=""):
+    """(grounded, reason). An empty answer needs no grounding.
+
+    `record` is the span of document lines this row actually occupies, when
+    geometry could tell us. A value the model did not manage to quote — it
+    quoted the first line of a four-line W-2 record and the value is on the
+    third — is checked against that instead, which is a statement about the
+    same record rather than about the document at large. The record span
+    stops at the next row's line, so this can never reach into a neighbour.
+    """
     if value is None or str(value).strip() == "":
         return True, "empty"
     src = _flat(source)
-    if not src:
+    if not src and not _flat(record):
         return False, "no source span given"
+    if not src:
+        source, src = record, _flat(record)
 
     haystacks = [_flat(t) for t in page_texts]
     try:
@@ -340,19 +360,24 @@ def verify_span(value, source, page, page_texts):
     if not any(src in h for h in ordered if h):
         return False, "source span not found in document"
 
-    # the value must sit inside the span it claims to come from
-    val = _flat(value)
-    if val and val in src:
-        return True, ""
-    dv, ds = _digits(value), _digits(source)
-    if dv and dv in ds:
-        return True, ""
-    n = _num(value)
-    if n is not None:
-        for tok in re.findall(r"\(?-?[\d,]*\.?\d+\)?", str(source)):
-            t = _num(tok)
-            if t is not None and round(abs(t), 2) == round(abs(n), 2):
-                return True, ""
+    # the value must sit inside the span it claims to come from — or, failing
+    # that, inside the record that span belongs to
+    for span in (source, record):
+        if not str(span or "").strip():
+            continue
+        flat = _flat(span)
+        val = _flat(value)
+        if val and val in flat:
+            return True, ""
+        dv, ds = _digits(value), _digits(span)
+        if dv and dv in ds:
+            return True, ""
+        n = _num(value)
+        if n is not None:
+            for tok in re.findall(r"\(?-?[\d,]*\.?\d+\)?", str(span)):
+                t = _num(tok)
+                if t is not None and round(abs(t), 2) == round(abs(n), 2):
+                    return True, ""
     return False, "value not found inside its own source span"
 
 
@@ -520,7 +545,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # values, so two different rows quoting one line still both survive.
             # That is weaker — it cannot catch a hallucinated variant of a real
             # row — and it is why `page_lines` is worth threading through.
+            #
+            # CLAIMING IS A PASS OF ITS OWN, because a record's extent is only
+            # known once the NEXT record has claimed its line. A row's cells
+            # are verified against the line the model quoted and, failing that,
+            # against the lines between this row's line and the next one's —
+            # which is what a record spanning several printed lines needs, and
+            # cannot reach into a neighbouring record.
             seen_rows, claimed_lines, rows_out = set(), set(), []
+            claims = []
             for r in raw:
                 if not isinstance(r, dict):
                     continue
@@ -529,6 +562,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 key = _flat(source)
                 occurrences = (source_occurrences(all_lines, source)
                                if (all_lines and key) else [])
+                free = None
                 if occurrences:
                     free = next((i for i in occurrences
                                  if i not in claimed_lines), None)
@@ -540,6 +574,14 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         (h, str(cells.get(h, "") or "")) for h in headers)))
                     duplicate = bool(key) and ident in seen_rows
                     seen_rows.add(ident)
+                claims.append((cells, source, page, free, duplicate))
+
+            later = sorted(i for _c, _s, _p, i, _d in claims if i is not None)
+            for cells, source, page, line_no, duplicate in claims:
+                record = ""
+                if line_no is not None and all_lines:
+                    nxt = next((i for i in later if i > line_no), None)
+                    record = record_span(all_lines, line_no, nxt)
                 if duplicate:
                     # VISIBLY. A dropped row appeared only in validation_notes:
                     # not flagged, not in needs_review, not in the confidence
@@ -567,7 +609,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     if str(v).strip() == "" or is_label_echo(v, h):
                         row[h] = ""
                         continue
-                    ok, why = verify_span(v, source, page, pages)
+                    ok, why = verify_span(v, source, page, pages, record)
                     lvl, reason = confidence_for(v, source, h, ok,
                                                  inferred=inferred)
                     row[h] = v
@@ -579,7 +621,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                             f'{t["name"]}[{len(rows_out)}].{h}', v,
                             reason or why))
                 if bands and t.get("orientation") != "columns":
-                    line = find_line(all_lines, source)
+                    line = (all_lines[line_no] if line_no is not None
+                            else find_line(all_lines, source))
                     for bad_key, why in check_placement(
                             row, t.get("columns") or [], line, bands):
                         row_conf = LOW

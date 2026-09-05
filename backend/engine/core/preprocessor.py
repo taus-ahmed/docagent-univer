@@ -18,7 +18,7 @@ from PIL import Image
 import pdfplumber
 from pypdf import PdfReader
 
-from text_layer import read_page
+from text_layer import acroform_widgets, read_page
 
 
 @dataclass
@@ -141,13 +141,21 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
     try:
         with pdfplumber.open(file_path) as pdf:
             doc.total_pages = len(pdf.pages)
+            # A fillable form's checkboxes are widget annotations carrying no
+            # text at all, so the selection state — the whole content of the
+            # field — never reaches the model. It is in the file; read it.
+            widgets = acroform_widgets(file_path)
+            if widgets:
+                print(f"[TEXTLAYER] {sum(len(v) for v in widgets.values())} "
+                      f"form checkbox(es) found — writing their state into "
+                      f"the text", flush=True)
             for page_num, page in enumerate(pdf.pages):
                 # Read the page WITH its geometry. A page whose values the PDF
                 # wrapped inside a table cell comes back reassembled; a page
                 # that needed nothing comes back exactly as extract_text()
                 # produced it, so the prompt for an untouched document does
                 # not change.
-                text, lines, repairs = read_page(page)
+                text, lines, repairs = read_page(page, widgets.get(page_num) or [])
                 doc.page_lines.append(lines)
                 if repairs:
                     doc.text_repairs.extend(repairs)

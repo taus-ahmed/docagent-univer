@@ -13,13 +13,13 @@ the model: they will catch the engine losing a row, misplacing a value or
 inventing a cell, and they will not notice the model getting better or worse.
 Re-record with `--mode record` when a prompt changes.
 
-Two scenarios are expected to fail and are marked `known_bug` AND
-`xfail(strict=True)`: `multi_document` (three invoices go in, one comes out,
-nothing says so) and `selection_no_marker_in_text` (a selection state that is
-not in the text layer is invented at high confidence). Strict xfail is chosen
-over a plain failure so the default suite stays green AND the marker cannot go
-stale — the day the fix lands, the unexpected pass is reported as a FAILURE and
-forces the marker off.
+One scenario is expected to fail and is marked `known_bug` AND
+`xfail(strict=True)`: `selection_no_marker_in_text`, where a selection state
+that is not in the text layer at all is invented at high confidence. Strict
+xfail is chosen over a plain failure so the default suite stays green AND the
+marker cannot go stale — the day the fix lands, the unexpected pass is reported
+as a FAILURE and forces the marker off. That is exactly how `multi_document`
+came off this list.
 """
 import json
 import tempfile
@@ -90,13 +90,16 @@ class TestWrappedCellValues:
         pct, misses = _report(sc, ed)
         assert pct == 100.0, misses
 
-    def test_a_partially_quoted_record_is_reported_not_hidden(self, results):
-        """The residual limitation, pinned so it cannot quietly change: a
-        record spanning several printed lines is verified against the ONE line
-        the model quoted, so correct values on its other lines come back low.
-        Conservative, not wrong — and it must stay conservative."""
+    def test_a_multi_line_record_is_confident_as_well_as_correct(self, results):
+        """A W-2 lays each employee across four printed lines and the model
+        quotes the first two, so the values on the others used to be reported
+        ungrounded — correct, and marked low. A record is not a line: cells are
+        now checked against the lines between this row's and the next row's,
+        which cannot reach into a neighbouring record."""
         _sc, ed = results["wrapped_values"]
-        assert ed["needs_review"] is True
+        assert ed["validation"]["ungrounded_count"] == 0
+        assert ed["needs_review"] is False
+        assert all(r["_confidence"] == "high" for r in ed["W2_rows"])
 
 
 class TestSelectionMarkersPrintedInTheText:
@@ -116,21 +119,74 @@ class TestSelectionMarkersPrintedInTheText:
             assert ok, what
 
 
+class TestARealFillableForm:
+    """`FORM-CT3-FILLABLE.pdf` — checkboxes that are WIDGET ANNOTATIONS.
+
+    A widget carries no text, so the text layer shows every option and no
+    marker at all: the selection state, which is the entire content of the
+    field, never reached the model. It invented one for every option field at
+    `high` confidence and answered "Services" where the form says "Wholesale
+    trade".
+
+    The state was in the file the whole time, in the widget's `/AS`. It is now
+    read and written into the text as `[X]` / `[ ]` — the same shape a form
+    that PRINTS its boxes gives, which the model already reads correctly.
+
+    Zero of the 60 corpus PDFs carry AcroForm fields, so the fixture is built
+    by `tests/fixtures/make_fillable_form.py`.
+    """
+
+    def test_every_field_is_right_including_all_four_choices(self, results):
+        sc, ed = results["selection_acroform"]
+        pct, misses = _report(sc, ed)
+        assert pct == 100.0, misses
+
+    def test_not_one_unselected_option_is_reported_as_a_value(self, results):
+        sc, ed = results["selection_acroform"]
+        for what, ok, detail in S.extras(sc, ed):
+            assert ok, f"{what} — got {detail}"
+
+    def test_the_state_is_recovered_from_the_file_not_guessed(self, repo_dir):
+        """Deterministic, and the reason this one is a fix rather than a
+        mitigation: it reads the answer out of the PDF."""
+        from text_layer import acroform_widgets
+        widgets = acroform_widgets(
+            repo_dir / "tests/fixtures/FORM-CT3-FILLABLE.pdf")
+        assert sum(len(v) for v in widgets.values()) == 12
+        assert sum(1 for v in widgets.values() for w in v if w["on"]) == 4
+
+    def test_the_markers_land_in_the_text(self, repo_dir):
+        import pdfplumber
+        from text_layer import acroform_widgets, read_page
+        path = repo_dir / "tests/fixtures/FORM-CT3-FILLABLE.pdf"
+        widgets = acroform_widgets(path)
+        with pdfplumber.open(path) as pdf:
+            text, _lines, _r = read_page(pdf.pages[0], widgets.get(0) or [])
+        assert "[X] Limited liability company" in text
+        assert "[ ] Sole proprietor" in text
+        assert "[X] Wholesale trade" in text
+
+
 @pytest.mark.known_bug
-@pytest.mark.xfail(strict=True, reason="D7: selection state absent from the "
-                                       "text layer is invented, at high confidence")
-class TestSelectionStateAbsentFromTheTextLayer:
-    """EXPECTED TO FAIL — this is D7's dangerous half, unfixed.
+@pytest.mark.xfail(strict=True, reason="a selection state that is in NEITHER "
+                                       "the text nor a form widget cannot be "
+                                       "recovered; the prompt rule is a "
+                                       "mitigation, not a guarantee")
+class TestSelectionStateInNeitherTextNorWidget:
+    """EXPECTED TO FAIL — the residual, and it is a real one.
 
-    A real AcroForm checkbox is a widget annotation carrying no text. The text
-    layer shows every option and no marker, so the selection state is genuinely
-    absent from what the model is given and the only honest answer is empty.
-    Measured: it picks one anyway, at `high` confidence with
-    `needs_review=False`, and on Principal business activity it picked
-    "Services" where the form says "Wholesale trade".
+    A form that neither prints its markers nor stores them as widgets — a
+    flattened or scanned one, where the tick is vector graphics — has put the
+    selection state somewhere nothing here reads. Every option is printed and
+    grounds perfectly, so any answer passes every check.
 
-    These are categorical fields that decide treatment — filing status, entity
-    type, coverage tier. A wrong one is not a formatting problem.
+    A prompt rule ("a line offering several options and marking none has no
+    answer") took this fixture from 3/7 cells to 6/7 and costs nothing
+    elsewhere — the gold harness is unchanged and no-template improved. But a
+    prompt rule is a request, not a guarantee: `Accounting method` still comes
+    back "Accrual" out of "Accrual Cash". The deterministic fix would be to
+    read ticks out of the page's vector graphics, which is a different piece of
+    work.
     """
 
     def test_it_does_not_invent_a_selection(self, results):
@@ -164,30 +220,47 @@ class TestNoInventionAndSemanticMatchingTogether:
         assert any("returned no value" in n for n in ed["validation_notes"])
 
 
-@pytest.mark.known_bug
-@pytest.mark.xfail(strict=True, reason="one file is one document: the other "
-                                       "documents are lost silently")
 class TestSeveralDocumentsInOneFile:
-    """EXPECTED TO FAIL — the core use case, unfixed.
+    """The core use case. Three invoices in one PDF.
 
-    Three invoices in one PDF. The template asks for one invoice number, the
-    file holds three, the model returns one, and the other two are lost with
-    no error, no flag and no note. `needs_review` is False and the document
-    reports `high`.
+    One file was one document unconditionally: 13 field slots where 3 x 13 were
+    needed, one slot addressed "Invoice Number" against three distinct invoice
+    numbers, and the two the model did not answer for were lost with no error
+    and no note. This scenario runs through `run_extraction` (`via: pipeline`)
+    rather than calling slot extraction directly, because the split happens
+    before slot extraction and nothing else would exercise it.
     """
+
+    def test_the_file_is_read_as_three_documents(self, results):
+        _sc, ed = results["multi_document"]
+        assert isinstance(ed, list) and len(ed) == 3
 
     def test_every_document_in_the_file_is_represented(self, results):
         sc, ed = results["multi_document"]
         for what, ok, detail in S.extras(sc, ed):
             assert ok, f"{what} — found only [{detail}]"
 
+    def test_each_one_says_which_pages_it_came_from(self, results):
+        _sc, ed = results["multi_document"]
+        assert [d["document_index"] for d in ed] == [1, 2, 3]
+        assert all(d["document_count"] == 3 for d in ed)
+        assert [d["source_pages"] for d in ed] == [[1, 1], [2, 2], [3, 3]]
+
+    def test_the_invoice_numbers_are_all_different(self, results):
+        """The failure this replaces returned ONE invoice number three times
+        over, or once and nothing else."""
+        _sc, ed = results["multi_document"]
+        got = [(d["extracted_data"].get("Invoice Number") or {}).get("value")
+               for d in ed]
+        assert len(set(got)) == 3, got
+
 
 class TestTheScenariosThemselves:
-    def test_all_six_are_present(self):
+    def test_all_seven_are_present(self):
         assert {s["name"] for s in S.load()} == {
             "grouped_one_band", "wrapped_values", "selection_markers",
-            "selection_no_marker_in_text", "no_invention_vs_semantic_match",
-            "multi_document"}
+            "selection_acroform", "selection_no_marker_in_text",
+            "no_invention_vs_semantic_match", "multi_document"}
 
     def test_each_one_says_what_it_is_for(self):
         for s in S.load():
