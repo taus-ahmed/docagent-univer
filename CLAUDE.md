@@ -579,6 +579,26 @@ is not knowable, so the value is kept, marked `low` and flagged.
 > value is a visible fault where a swallowed one is not. Truncation therefore
 > stays a model behaviour rather than being papered over.
 
+### The export carries the look, not just the values (D13)
+
+`_write_slot_excel` wrote values and nothing else, so merges, centring, shading
+and borders were in the editor and absent from the file. **`_apply_cell_style`
+already existed and four legacy writers called it** — the slot writer simply
+never did, so this is a reuse rather than a new implementation, and there is
+still exactly one place that knows the editor's `CellStyle`.
+
+- **Style travels with a cell whether or not it holds text.** A bordered empty
+  value cell is a box the user drew, and it is precisely the cells *without*
+  text that the slots fill.
+- **A merge widens the writer's extent.** `_find_template_dimensions` counts
+  content cells, and a heading merged across A:D has content only in A, so the
+  range fell outside the sheet and was dropped. `template_shape._used_range`
+  already widened for merges on the shape side; the writer now does the same.
+- ⚠ **A merge crossing a band is SKIPPED.** The writer expands a band to the
+  document's row count, so the cells the range used to cover are not the cells
+  it would cover now, and a merge landing on the wrong rows hides real values
+  behind a heading.
+
 ### Every written column gets a width (D14)
 
 Widths were applied **before** the writer ran, across
@@ -796,7 +816,18 @@ Still open: per-client schema persistence.
 
 ### `backend/app/main.py` — app factory + lifespan
 
-Startup order: `init_db()` → `_run_migrations()` → `ensure_storage_dirs()` → `_seed_admin()` → `_seed_demo_schema()`.
+Startup order: `init_db()` → `_run_migrations()` → `ensure_storage_dirs()` →
+`_seed_admin()` → `_seed_demo_schema()` → `_materialise_schemas()` →
+`_release_stranded_jobs()`.
+
+⚠ **`_release_stranded_jobs()` fails any job left `pending`/`processing`.**
+Extraction runs on a daemon thread, so it dies with the process — a deploy, a
+restart, an OOM kill — and the job row stayed `processing` for ever while the UI
+polled it every two seconds. A hung job is worse than a failed one: a failed one
+can be retried. Boot is the one moment the answer is certain, because this
+process owns no threads yet, so no age threshold is needed or used. **This
+assumes ONE instance.** Phase 4 moves extraction to Celery, where the queue owns
+liveness; anyone scaling past one worker must rework this in the same commit.
 
 - Default admin: username=`admin`, password=`admin123` (created if no admin exists)
 - Demo schema seeded from `backend/engine/demo_accounting.yaml` as `client_id=demo_001` if `client_schemas` table is empty

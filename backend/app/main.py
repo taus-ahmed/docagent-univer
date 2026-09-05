@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from datetime import datetime
+
 from app.models import init_db
 from app.core.auth import hash_password
 
@@ -45,6 +47,9 @@ async def lifespan(app: FastAPI):
     # Copy demo schema if no schemas exist
     _seed_demo_schema()
     _materialise_schemas()
+
+    # Nothing can still be running: this process just started
+    _release_stranded_jobs()
 
     logger.info("DocAgent ready.")
     yield
@@ -173,6 +178,60 @@ def _run_migrations():
         return {"dialect": dialect, "applied": applied,
                 "failed": len(failures)}
 
+    finally:
+        db.close()
+
+
+def _release_stranded_jobs():
+    """Any job left `pending`/`processing` by a dead process is FAILED.
+
+    Extraction runs on a daemon thread, so it dies with the process — a
+    deploy, a restart, an OOM kill. The job row stays `processing` for ever:
+    the UI polls it every two seconds until the tab is closed, no result is
+    ever written, and nothing anywhere says what happened. A hung job is worse
+    than a failed one, because a failed one can be retried and a hung one
+    cannot even be diagnosed.
+
+    This runs at BOOT, which is the one moment the answer is certain: this
+    process has just started, so it owns no threads, and any job still marked
+    running belongs to a process that no longer exists. That is a fact about
+    the world rather than a timeout guess, which is why there is no age
+    threshold here.
+
+    ⚠ Single-instance reasoning. With more than one container serving the same
+    database this would fail a job another instance is genuinely working on.
+    Phase 4 moves extraction to Celery, where the queue owns liveness; until
+    then the deploy is one instance and this is the honest cleanup. Anyone
+    scaling past one worker must remove or rework this in the same commit.
+    """
+    from sqlalchemy import text as _sql
+
+    from app.models import SessionLocal
+
+    db = SessionLocal()
+    try:
+        rows = db.execute(_sql(
+            "SELECT id FROM extraction_jobs WHERE status IN "
+            "('pending', 'processing')")).fetchall()
+        if not rows:
+            return
+        ids = [r[0] for r in rows]
+        db.execute(_sql(
+            "UPDATE extraction_jobs SET status = 'failed', "
+            "error_message = :msg, progress_message = :msg, "
+            "completed_at = :now "
+            "WHERE status IN ('pending', 'processing')"),
+            {"msg": "Interrupted by a server restart before it finished. "
+                    "Nothing was saved for this job — upload the files again.",
+             "now": datetime.utcnow()})
+        db.commit()
+        logger.warning(
+            "Released %d job(s) stranded by a previous restart: %s",
+            len(ids), ", ".join(str(i) for i in ids[:20]))
+    except Exception as e:
+        db.rollback()
+        # Never block boot on housekeeping.
+        logger.error("Could not release stranded jobs: %s", e)
     finally:
         db.close()
 

@@ -4872,6 +4872,36 @@ def cell_format(value):
     return base
 
 
+def _apply_template_merges(ws, merges, addr, band_rows, openpyxl_mod):
+    """Re-create the template's merges at their shifted addresses.
+
+    A merge is a RANGE, so it can only be re-created where the range still
+    means the same thing. A merge crossing a band whose rows moved is SKIPPED:
+    the writer expands a band to the document's row count, so the cells the
+    range used to cover are not the cells it would cover now, and a merge
+    landing on the wrong rows would hide real values behind a heading.
+    """
+    for key, span in (merges or {}).items():
+        try:
+            tr, tc = map(int, str(key).split(","))
+            rows = max(1, int((span or {}).get("rows") or 1))
+            cols = max(1, int((span or {}).get("cols") or 1))
+        except (ValueError, AttributeError, TypeError):
+            continue
+        if rows == 1 and cols == 1:
+            continue
+        if any(r in band_rows for r in range(tr, tr + rows)):
+            continue
+        start, end = addr(tr, tc), addr(tr + rows - 1, tc + cols - 1)
+        if not start or not end:
+            continue
+        try:
+            ws.merge_cells(start_row=start[0], start_column=start[1],
+                           end_row=end[0], end_column=end[1])
+        except Exception:
+            continue
+
+
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     """
     Writer for slot-directed extraction.
@@ -4895,6 +4925,18 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     # was dropped at export. The slots say where the values go, so they define
     # the extent alongside the labels.
     max_r, max_c = _find_template_dimensions(cells_tpl)
+    # A merge is part of the extent too. `_find_template_dimensions` counts
+    # content cells, and a heading merged across A:D has content only in A —
+    # so the sheet stopped short of the range and the merge was dropped for
+    # being outside it. `template_shape._used_range` already widens for merges
+    # on the shape side; this is the same fact on the writer side.
+    for key, span in (sheet_data.get("merges") or {}).items():
+        try:
+            mr, mc = map(int, str(key).split(","))
+            max_r = max(max_r, mr + max(1, int((span or {}).get("rows") or 1)) - 1)
+            max_c = max(max_c, mc + max(1, int((span or {}).get("cols") or 1)) - 1)
+        except (ValueError, AttributeError, TypeError):
+            continue
     for doc in doc_results:
         ed = doc.get_extracted_data()
         if not isinstance(ed, dict):
@@ -4984,6 +5026,14 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             text = str(cell_def.get("value") or "").strip()
             if text:
                 put(doc_offset + out_row(tr), tc, text)
+            # The look travels with the cell whether or not it holds text: a
+            # bordered empty value cell is a box the user drew, and it is the
+            # cells WITHOUT text that the slots fill.
+            style = cell_def.get("style")
+            if style:
+                cell = ws.cell(row=doc_offset + out_row(tr) + 1, column=tc + 1)
+                if not isinstance(cell, MergedCell):
+                    _apply_cell_style(cell, style, openpyxl_mod)
 
         # 2. field slots, each at the exact address it was asked for
         for ref, value in fields.items():
@@ -5011,6 +5061,16 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                 for col in t["columns"]:
                     key = col.get("key") or col["header"]
                     put(r, col["col"], row.get(key, ""))
+
+        # 4. the template's own merges, last, so nothing is written into a
+        #    cell that a merge has since swallowed
+        def _addr(tr, tc):
+            if tr > max_r or tc > max_c:
+                return None
+            return (doc_offset + out_row(tr) + 1, tc + 1)
+
+        _apply_template_merges(ws, sheet_data.get("merges"), _addr, band_rows,
+                               openpyxl_mod)
 
         block_height = max_r + 1 + sum(ov for _, ov in shifts)
         doc_offset += block_height + GAP_BETWEEN_DOCS

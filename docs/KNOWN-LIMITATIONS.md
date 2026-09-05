@@ -1,248 +1,215 @@
-# DocAgent — Known Limitations
+# DocAgent — what it does not do yet
 
-What this system does **not** do yet, with the condition that triggers each one.
+A plain-language list of the limits, written for someone who will use this
+system rather than read its code.
 
-This file exists so the limits can be stated plainly rather than discovered by
-someone relying on them. Every entry gives the **trigger condition** — the
-structural property of a document or template that brings the fault out — not
-the specific document that happened to expose it.
+**The one distinction that matters:** for every limitation below, the answer is
+either **WRONG** or **ABSENT**.
 
-Part 1 is what is still wrong. Part 2 is what has never been tried, so nothing
-is claimed about it either way. Part 3 is what has been fixed, kept because each
-of those failures was invisible in the output, and a reader who saw the old
-behaviour deserves to know it changed.
+> **ABSENT** — the value is missing, blank, or the document is refused outright.
+> You can see that something is not there. Annoying; not dangerous.
+>
+> **WRONG** — a plausible value appears in a cell and it is not what the
+> document says. You cannot tell by looking at the spreadsheet. **These are the
+> ones to check against the source.**
 
-Last reviewed: 2026-09-04, against `tests/test_pdfs/` (60 documents), the 10
-gold-labelled documents in `tests/gold/labels/`, and the 7 scenario fixtures in
-`tests/fixtures/scenarios/`.
+There are **two WRONG entries** in this file. Everything else is ABSENT.
 
----
-
-# Part 1 — Still wrong
-
-## A tick that is neither printed nor a form widget cannot be recovered
-
-**Trigger.** A flattened or scanned form where the tick is vector graphics or
-pixels — present in neither the text layer nor an AcroForm widget.
-
-**Behaviour.** Every option is printed on the page and grounds perfectly, so any
-answer passes every check the pipeline has. A prompt rule ("a line offering
-several options and marking none has no answer") takes a fixture of four such
-fields from 1 correct to 3, and costs nothing elsewhere — the gold harness is
-unchanged and no-template improved. **A prompt rule is a request, not a
-guarantee**: one field still answers `Accrual` out of `Accrual Cash`, at `high`.
-
-**Blast radius.** Categorical fields decide treatment — filing status, entity
-type, coverage tier, loan class. A wrong one is not a formatting problem.
-
-**The deterministic fix** is to look for ticks in the page's vector graphics
-(`page.curves` / `page.rects` inside a checkbox rectangle). Separate work.
-
-**Fixture.** `tests/fixtures/scenarios/selection_no_marker_in_text.json`, with
-an expected-to-fail test.
+Last checked 5 September 2026, against 60 test documents and 7 purpose-built
+awkward cases.
 
 ---
 
-## European decimal comma is read as a thousands separator
+# The two that produce a WRONG value
 
-**Trigger.** Any document using `,` as the decimal separator and `.` as the
-thousands separator — the convention across most of continental Europe.
+## 1. Ticked boxes that were "flattened" or scanned
 
-**Behaviour.** `coerce_cell_value` strips commas before parsing, so `€45,00`
-(forty-five euros) becomes `4500.0`. Wrong by a factor of 100, and nothing flags
-it: `4500.0` is plausible, and `€45,00` really is printed on the page, so
-grounding passes.
+**WRONG** ⚠
 
-**Scope.** The exported cell and the stored numeric value. The verbatim string
-in `extraction_json` is still correct.
+**When it happens.** A form with tick-boxes — filing status, entity type,
+coverage tier, "is this a final return?" — where the tick is part of the picture
+of the page rather than a real form field. This is what you get from a scanned
+form, or one that has been printed to PDF and re-saved ("flattened").
 
-**Why not fixed.** Deciding a document's numeric convention needs evidence
-across the whole document — a single value is ambiguous (`1,234` is valid in
-both). Guessing per cell would corrupt US documents to fix European ones.
+**What happens.** The system can read every option printed on the line —
+*Accrual*, *Cash* — but nothing tells it which one is ticked. **It picks one and
+reports it as confidently as anything else on the page.** On our test form it
+answered *Services* where the form said *Wholesale trade*.
 
-**Same cause, equally untested:** multi-currency documents, values carrying a
-trailing `CR`/`DR`, non-Latin digit shapes.
+**What is already handled.** If the tick-boxes are real form fields (a proper
+fillable PDF), the state is read from the file and is correct. If the ticks are
+printed as characters — `[X]` and `[ ]` — that is correct too. It is only the
+flattened/scanned kind that guesses.
 
----
+**We reduced it but did not fix it.** On a four-option test form, it went from 1
+right to 3 right. The remaining one still guesses.
 
-## A running header on every page would split a long report wrongly
-
-**Trigger.** A multi-page document printing the SAME first line on every page.
-
-**Behaviour.** Each page would be read as a separate document, producing N
-stacked blocks most of which are mostly empty.
-
-**Why it is accepted.** The costs are not symmetric. Splitting wrongly is ugly,
-obvious and fixed in one look; NOT splitting silently discards every document
-but one, which is what this replaced. No document in the 60-document corpus has
-a running header — all 17 multi-page ones have a different first line on page 2
-— and the detector has **0 false positives across the whole corpus**.
-
-**If it happens**, the run logs `N documents in one file` and every result
-carries `document_index` and `source_pages`, so the cause is visible rather than
-mysterious.
+**What to do.** On any form with tick-boxes, check the tick-box answers against
+the original. If you can get the form as a proper fillable PDF rather than a
+scan, this problem disappears.
 
 ---
 
-## Cost scales with documents per file
+## 2. European number format (45,00 meaning forty-five)
 
-**Trigger.** A large merged upload.
+**WRONG** ⚠
 
-**Behaviour.** Splitting a file into N documents makes N extraction calls, not
-one. That is honest — twenty invoices is twenty documents of work — but someone
-uploading a 200-page merged file is buying 200 calls, and nothing warns them
-first.
+**When it happens.** A document that writes decimals with a comma and thousands
+with a full stop — `€1.234,56` — which is normal across most of continental
+Europe.
 
----
+**What happens.** `€45,00` is read as **4500**. The figure is wrong by a factor
+of one hundred, looks perfectly ordinary in the spreadsheet, and nothing flags
+it.
 
-## Without geometry, row identity is weaker
+**Why it is not fixed.** A single number cannot tell you which convention it is
+in — `1,234` is valid in both. Deciding it needs evidence from the whole
+document, and guessing per number would break US documents to fix European ones.
 
-**Trigger.** The image path, or any caller that passes no `page_lines`.
+**What to do.** Do not use this on European-format documents yet. US and UK
+formatting is safe.
 
-**Behaviour.** A row is identified by its source span PLUS its own values rather
-than by which document line it came from. Two genuinely different rows quoting
-one line both survive, which is the important case — but a **hallucinated
-variant** of a real row (same source line, one value altered) also survives,
-where the positional rule would catch it.
-
-**Fix.** Thread `page_lines` through `_extract_image_with_template`. An image
-has no text layer to take word positions from, so this needs positions from the
-vision step, or an explicit statement that the image path cannot make this
-check.
+**Same family, also untested:** documents in more than one currency, and amounts
+written with a trailing `CR` / `DR`.
 
 ---
 
-## The save gate's pure-table rules are calibrated on 23 templates we drew
+# Things that come back ABSENT
 
-**Trigger.** A template shape none of the repo's 23 templates resembles.
+Missing or refused. Visible, not dangerous.
 
-**Behaviour.** Three rules fire on a pure-table template — a band column with no
-heading (warn), a band with no headings at all (block), two declared regions
-overlapping (warn). All three fire on **0 of 23** real templates and on four
-deliberately broken ones. But that sample was drawn by us, and the shapes a real
-user draws are exactly the ones not in it.
+## Scanned documents and photographs
 
-**Mitigation.** Only the unambiguous rule blocks; the others warn and let the
-save through. A fourth candidate — duplicate headings inside one band — was
-rejected for firing on `bs_luq`, a real production template doing a legitimate
-thing.
+**ABSENT.** There is no OCR. A PDF that is a picture of a page — a scan, a photo
+— has no text to read. Nothing is invented: values come back blank or marked as
+unverified, and the document is flagged for review. A PDF produced by accounting
+software or exported from a system is fine; a scanned one is not.
 
-**If a legitimate template is blocked**, the rule is likelier wrong than the
-template: `tests/test_save_gate.py::TestNoRealTemplateTripsTheGate` runs every
-template in the repo and is where to add it.
+## A long report with the same heading on every page
+
+**ABSENT.** The system decides where one document ends and the next begins,
+which is what lets you put twenty invoices in one file. It does that partly by
+noticing a repeated heading. A single long report that prints the same line at
+the top of every page could therefore be split into one "document" per page.
+
+You would see it immediately — a stack of mostly-empty blocks — and the run
+records how many documents it found. None of the 60 test documents does this.
+
+## A form field printed across several lines, in a crowded layout
+
+**ABSENT.** Where a value wraps onto a second line, it is joined correctly. What
+it will **not** do is reach onto the next line and take words the model did not
+claim. That is deliberate: a field that helps itself to the line below is how a
+"Name" ends up containing an address, and a short value is something you can
+see, where a swallowed one is not.
+
+Occasionally a value comes back shorter than the printed one.
+
+## Two side-by-side blocks merged into one answer
+
+**ABSENT (flagged).** On a page with two columns of notes side by side, an
+answer can occasionally run across the gap and pick up both. This is **detected**
+— the cell is marked low confidence and appears in the review list with the
+reason. The value is kept rather than trimmed, because which half you wanted
+cannot be worked out automatically.
+
+## Very large merged files: page pictures stop after 20 pages
+
+**ABSENT (no measured cost).** As well as reading the text, the system converts
+the first 20 pages to images. In a file with more than about 20 documents, the
+later ones are read from their text only.
+
+We measured this on a 25-document file: **all 25 came back complete**, with the
+same number of filled cells as the first twenty. It is written down because it
+is a real difference in how later documents are handled, not because it cost
+anything.
+
+## Large uploads take proportionally longer, and cost proportionally more
+
+**ABSENT.** Each document in a merged file is processed separately, which is why
+twenty invoices produce twenty results instead of one. Measured: **20 documents
+in 76 seconds**, about 3.6 seconds each. So roughly 3 minutes for 50, 6 for 100,
+12 for 200.
+
+Nothing times out — the upload returns straight away and the page polls for
+progress. But a 200-page file is 200 documents' worth of processing and cost,
+and nothing warns you before you start.
+
+## A job interrupted by a server restart
+
+**ABSENT (fixed to fail rather than hang).** If the server restarts mid-run — a
+deployment, for instance — that run is lost. It now reports **"Interrupted by a
+server restart before it finished. Nothing was saved for this job — upload the
+files again."** rather than sitting at *processing* for ever.
+
+Nothing partial is kept, so there is no half-finished spreadsheet to mistake for
+a finished one.
+
+## Templates: a table with no column headings is refused
+
+**ABSENT (by design).** If you mark a table but leave its heading row empty, the
+save is blocked with a message: the system would be asking for columns it cannot
+name. Type a heading in each column.
+
+If **one** column is missing a heading you get a warning and the save goes
+through — the value in that column is likely to come back blank.
+
+**A caveat we would rather state.** These checks fire on none of the 23 real
+templates we have, but every one of those was drawn by us. If one of yours is
+blocked and it looks perfectly reasonable, the check is more likely wrong than
+your template — tell us.
+
+## Confidence is worked out per cell but only shown per document
+
+**ABSENT (from the screen, not from the data).** Every value carries its own
+confidence, and low-confidence cells are listed for review. The results grid
+shows a document-level status rather than colouring each cell. The information
+exists; it is not all on screen yet.
+
+## Cancelling a running job does not stop it
+
+**ABSENT.** The cancel button marks the job cancelled in the list, but work
+already under way runs to completion in the background. Nothing is corrupted —
+you simply do not get the time or cost back.
+
+## Editing a template's rows and columns
+
+**ABSENT.** The template editor can change cells in place but cannot insert or
+delete whole rows and columns. If that is added without care, any table you have
+marked would point at the wrong cells afterwards — so it is deliberately not
+there yet.
 
 ---
 
-## Declared table regions are absolute coordinates
+# Never tried
 
-**Trigger.** Inserting or deleting a row or column in a template that declares a
-table region.
+No test covers these. We are not claiming they work **or** that they fail.
 
-**Behaviour.** The editor cannot insert or delete rows today, so this cannot
-happen yet. If insertion is added without shifting declarations in the same
-commit, a declaration will point confidently at the wrong cells — worse than no
-declaration at all. The required arithmetic is in the box comment in
-`template_shape.py`.
-
----
-
-# Part 2 — Not yet exercised
-
-No fixture exists for any of these, so nothing is claimed about them either way.
-
-| Condition | Status |
+| | |
 |---|---|
-| Scans and image-only PDFs | Unsupported — no OCR. Values are marked `unverified`, never confident |
-| Tables spanning a page break | Untested |
-| Non-US decimal and thousands separators | **Known wrong** — see Part 1 |
-| Multi-currency documents | Untested |
-| Rotated or landscape pages | Untested |
-| Colour or shading carrying meaning | Untested — no colour is read |
-| Footnote markers attached to values | Untested |
-| Values split across merged cells | Untested |
-| Right-to-left or non-Latin scripts | Untested |
-| Negative values in parentheses | Handled at export (`(1,234.50)` → `-1234.5`, accounting format kept); untested end to end |
+| A table that runs across a page break | untested |
+| Documents in more than one currency | untested |
+| Rotated or landscape pages | untested |
+| Colour or shading that carries meaning | untested — no colour is read |
+| Footnote markers attached to figures (`1,234 *`) | untested |
+| A value split across merged cells | untested |
+| Right-to-left or non-Latin scripts | untested |
+| Negative figures in brackets, `(1,234.50)` | handled on export; not tested end to end |
 
 ---
 
-# Part 3 — Fixed
+# Recently fixed
 
-Each of these failed *invisibly*: the output looked right.
+Listed because each of these produced a **wrong** answer that looked right, so
+anyone who saw the old behaviour should know it changed.
 
-## Several documents in one file were read as one
-
-Three invoices merged into one PDF gave **13 field slots where 3 × 13 were
-needed** — one slot addressed "Invoice Number" against three distinct invoice
-numbers. The model answered for one; the other two were lost with no error, no
-flag and no note.
-
-`engine/doc_boundaries.py` splits the file and runs the pipeline once per
-document; each result carries `document_index`, `document_count` and
-`source_pages`. Two deterministic signals, no model call: a repeated title
-within a run of same-type pages, and a change of document type. **0 false
-positives across all 60 corpus documents; 14 of 14 merged files split at exactly
-the right pages**, including twenty invoices, five two-page payslips, and mixed
-batches with runs of one type inside them.
-
-## Values the PDF wrapped inside a narrow cell
-
-`$1,268.7` on one line and `5` on the next — the split is in the file, not the
-reader, so both halves ground. On `FORM-W2-2023.pdf`: **11 of 12 figures wrong,
-every one `high`, and the single correct figure the only one marked `low`.** Now
-12 of 12, reassembled on shared right edge (`engine/text_layer.py`).
-
-## A value written into the wrong column
-
-A flattened text line carries no columns, so a Debit reported as a Credit quoted
-the same source line and was marked `high`. Now checked against column bands
-read off the document's own heading line; a misplaced value is demoted and
-flagged with the column it actually sits under, and kept rather than deleted.
-
-## A record spanning several printed lines came back low
-
-Cells were verified against the ONE line the model quoted, which is right for a
-table and wrong for a form. `record_span` runs from a row's line to the next
-row's line, so a cell is checked against its own record and **cannot reach into
-a neighbouring one**. Grounding was *not* loosened to "appears somewhere in the
-document" — that would have removed the check that catches fabricated rows.
-
-## A selection state stored as a form widget was invented
-
-A real fillable form's checkbox is a widget annotation carrying no text, so the
-text layer showed every option and no marker. Four option fields, all four
-filled from thin air at `high` with `needs_review=False`, answering `Services`
-where the form says `Wholesale trade`. `acroform_widgets` now reads `/AS`
-(falling back to `/V`) off every `/FT /Btn` widget and writes `[X]` / `[ ]` into
-the text at the widget's own x. 8/8, and not one unselected option reported.
-
-Fixture: `tests/fixtures/FORM-CT3-FILLABLE.pdf`, built by
-`tests/fixtures/make_fillable_form.py` — committed as a script as well as a PDF
-so it can be read and argued with. Zero of the 60 corpus PDFs carry AcroForm
-fields, which is why this had never been testable.
-
-*(With markers printed in the text, `[X]` / `[ ]`, it was always correct — 9 of
-9, not one unselected option reported. The defect as originally written does not
-reproduce in that form.)*
-
-## Rows were deleted for quoting the same line as an earlier row
-
-Identity was the source span's TEXT, so a group header, a repeated column
-heading or any line a document prints twice cost every row after the first —
-silently, reported only in a validation note nothing reads. Worst in exactly the
-case the product is for: five merged invoices made 33 rows deletable, five
-payslips 43, scaling linearly with documents per file. Identity is now the
-document LINE a row was read from, and anything still dropped is flagged with
-its content and marks the document for review.
-
-## Currency symbols and trailing cents were lost on export
-
-The stored value was always correct; only the spreadsheet cell dropped the
-notation. Now carried as an Excel number format, so the cell still sums.
-
-## The save gate could not warn about a pure-table template
-
-`coverage` measures labels that should have slots. A pure-table template has
-none, so it reported `labels: 0, complete: True` and the gate had nothing to say
-however wrong the table was — as did four deliberately broken templates. Now
-covered by `coverage["warnings"]` and `coverage["blocking"]`; see Part 1 for
-what remains uncertain about the calibration.
+| Was | Now |
+|---|---|
+| **Only the first document in a merged file was read.** Three invoices in one PDF produced one result; the other two vanished with no message. | Each document is found and processed separately. 14 of 14 merged test files split at exactly the right pages; no single document is ever split. |
+| **Figures printed inside narrow boxes were cut in half.** On a W-2, `$1,268.75` was read as `5`. Eleven of twelve figures were wrong and all eleven were reported as confident. | All twelve correct. The two halves are rejoined by their position on the page. |
+| **A figure could land in the wrong column** — a payment reported as a receipt — and still be marked confident, because the check only asked whether the number was on the page. | The column a figure sits under is now checked. A misplaced one is flagged and named. |
+| **Rows were deleted for quoting the same line as an earlier row**, so repeated headings and group totals silently cost you rows — worst in exactly the merged files this is built for. | Rows are told apart by where they sit on the page. Anything still dropped is listed with its contents. |
+| **Currency symbols and pence disappeared on export.** | The cell keeps `$7,750.00` on screen and still adds up as a number. |
+| **Column widths were applied inconsistently**, so labels you typed came back truncated. | Every written column is sized; a width you set yourself is kept as you set it. |
+| **Merging, centring, shading and borders were lost on export.** | The formatting you drew comes back with the values. |
+| **Tick-boxes in proper fillable forms were guessed at.** | Read from the file itself. |

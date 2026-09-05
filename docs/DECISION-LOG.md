@@ -338,6 +338,52 @@ grounding defect would have pointed at the wrong layer entirely.
 
 ---
 
+## 11. D10 and D11 were the same dropper, or the wrong writer
+
+**D10 — "a multi-column header band is emitted twice"**, once collapsed into a
+single cell and once correctly split across its columns.
+
+Reproduced against the slot writer: a heading merged across three columns above
+a declared band writes **once**.
+
+```
+['TRANSACTION DETAIL', '', '', '']
+['Date', 'Description', 'Amount', '']
+['01/03', 'Wire deposit', 15000.0, '']
+```
+
+The defect survives only in `_write_form_excel` / `_write_mixed_excel`, which
+serve the image path and re-exports of pre-slot jobs. The analysis says as much
+itself — "carried forward from the first production run; not re-triggered by the
+test templates". It is not a defect of the current pipeline, and fixing a legacy
+writer that no live templated extraction reaches would be motion rather than
+progress.
+
+**D11 — "a sub-header that redefines a column is dropped"**, leaving the column
+holding answers to two different questions with no marker at the boundary.
+
+Reproduced: a `WITHDRAWALS` row inside a band, with its value columns empty,
+comes back as its own row between the two data rows it separates.
+
+```
+{'Date': '01/03', 'Description': 'Wire deposit', 'Amount': '$15,000.00'}
+{'Date': '',      'Description': 'WITHDRAWALS',  'Amount': ''}
+{'Date': '01/05', 'Description': 'Payroll',      'Amount': '$18,450.00'}
+```
+
+Almost certainly a symptom of the `seen_sources` dropper (§9): a structural row
+carries little text of its own and is exactly the kind of row whose quoted
+source another row would also claim. The row-emission rule has always kept a
+row with any non-empty cell — `if any(str(v).strip() for v in row.values())` —
+so nothing ever discarded it for being structural.
+
+**Why both are written down.** Neither should be re-opened from the analysis
+document, and neither should be "fixed", because there is nothing in the
+current path to fix. What would reverse this is a *declared* band on a live
+templated extraction that loses a sub-header while `dropped_row_count` is 0.
+
+---
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
