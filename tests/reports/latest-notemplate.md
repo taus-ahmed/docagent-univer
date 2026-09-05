@@ -1,6 +1,6 @@
-# Accuracy report — 2026-09-04 17:30:58
+# Accuracy report — 2026-09-04 23:54:57
 
-- git: `b234a4b`  mode: **record**  repeat: 1
+- git: `d5f20be`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -97,7 +97,7 @@
 | INV-2024-0047 | Wire Bank Name | hallucinated (misplaced) | None | First National Bank of New York |
 | INV-2024-0047 | Wire ABA | hallucinated (misplaced) | None | 021000021 |
 | INV-2024-0047 | Wire Account Number | hallucinated (misplaced) | None | 7743882201 |
-| INV-2024-0047 | Cheque Payable To | hallucinated (misplaced) | None | Nexus Global Trading LLC |
+| INV-2024-0047 | Cheque Payable To | hallucinated (misplaced) | None | NEXUS GLOBAL TRADING LLC |
 | INV-2024-0047 | Notes | hallucinated (misplaced) | None | Balance due March 4, 2024. Late payments subject to 1.5% mon |
 | IS-2024-Q4 | Company Name | hallucinated (misplaced) | None | Nexus Global Trading LLC |
 | IS-2024-Q4 | Company Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
@@ -129,15 +129,3 @@
 | PO-2024-0018 | Buyer Signature Phone | hallucinated (misplaced) | None | (212) 555-0148 |
 | STMT-2024-01 | Bank Address | hallucinated (misplaced) | None | 330 Madison Avenue, New York, NY 10017 |
 | STMT-2024-01 | ABA | hallucinated (misplaced) | None | 021000021 |
-
-## Changes vs previous run
-
-- IS-2024-Q4 :: cost_of_goods_sold :: row_count_mismatch: 1 -> 0
-- IS-2024-Q4 :: cost_of_goods_sold[pred_row 4].Amount: hallucinated -> None
-- IS-2024-Q4 :: cost_of_goods_sold[pred_row 4].Label: hallucinated -> None
-- IS-2024-Q4 :: operating_expenses :: row_count_mismatch: 1 -> 0
-- IS-2024-Q4 :: operating_expenses[pred_row 10].Amount: hallucinated -> None
-- IS-2024-Q4 :: operating_expenses[pred_row 10].Label: hallucinated -> None
-- IS-2024-Q4 :: revenue :: row_count_mismatch: 1 -> 0
-- IS-2024-Q4 :: revenue[pred_row 2].Amount: hallucinated -> None
-- IS-2024-Q4 :: revenue[pred_row 2].Label: hallucinated -> None

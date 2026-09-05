@@ -194,6 +194,82 @@ def text_from_lines(lines) -> str:
     return "\n".join(" ".join(str(w["text"]) for w in ln) for ln in lines if ln)
 
 
+# ── multi-line values ───────────────────────────────────────────────────────
+
+#: A horizontal gap wider than this is a COLUMN GUTTER, not a space between
+#: words. Measured on INV-2024-0031, whose "Payment Instructions" and "Notes"
+#: sit side by side: ordinary inter-word gaps are 2.3-2.6pt, the gutter is
+#: 122pt. Anything in between is a wide space in one column.
+GUTTER = 24.0
+
+#: How far a value may run. A field value is a phrase, not a page.
+MAX_VALUE_WORDS = 60
+
+
+def canonical_value(value, lines):
+    """(the document's own text for `value`, crossed_a_gutter), or None.
+
+    THE RULE: a field's value is the document's own words, in reading order,
+    joined by a single space.
+
+    The join was previously whatever the model returned, and it returned three
+    different things for one field on one document — `INV-2024-0031`'s Notes
+    came back truncated at the first line, joined with a literal newline, and
+    joined with a space, across cached runs of the same document. Adjacent
+    fields in one run disagreed too. There is no reason for that to be a model
+    decision: the words are at known positions, so the join can be re-derived.
+
+    Nothing is added and nothing is dropped — the run of words has to spell
+    exactly what the model claimed, ignoring whitespace. A value that matches
+    no run of words is returned unchanged rather than guessed at, which is what
+    happens to anything the model normalised or derived (a MICR field, a
+    reformatted number).
+
+    `crossed_a_gutter` says the run jumped a column boundary, which means two
+    side-by-side blocks were merged into one value — the fourth outcome seen
+    on that same field, where the payment-instructions column and the notes
+    column came back interleaved. That is reported, not silently trimmed:
+    choosing which half to keep would be a guess.
+    """
+    target = re.sub(r"\s+", "", str(value or "")).casefold()
+    if len(target) < 4:
+        return None
+    flat = [(w, li) for li, ln in enumerate(lines) for w in ln]
+    if not flat:
+        return None
+
+    for i in range(len(flat)):
+        acc, gutter, taken = "", False, []
+        lo = hi = None
+        prev_line, prev_x1 = None, None
+        for j in range(i, min(i + MAX_VALUE_WORDS * 3, len(flat))):
+            w, li = flat[j]
+            x0, x1 = float(w["x0"]), float(w["x1"])
+            if lo is not None and li != prev_line:
+                # A NEW LINE continues this value only inside its own column
+                # block. Reading order interleaves side-by-side columns, so
+                # the words of a two-column layout arrive as
+                # left-right-left-right and the right column's own
+                # continuation is never the next word. Anything outside the
+                # run's horizontal span belongs to another block and is
+                # stepped over rather than swallowed.
+                if x1 < lo - 2.0 or x0 > hi + 2.0:
+                    continue
+            if lo is not None and li == prev_line and prev_x1 is not None:
+                if x0 - prev_x1 > GUTTER:
+                    gutter = True
+            acc += re.sub(r"\s+", "", str(w["text"])).casefold()
+            taken.append(w)
+            lo = x0 if lo is None else min(lo, x0)
+            hi = x1 if hi is None else max(hi, x1)
+            prev_line, prev_x1 = li, x1
+            if len(acc) > len(target):
+                break
+            if acc == target:
+                return " ".join(str(x["text"]) for x in taken), gutter
+    return None
+
+
 # ── selection state that is not in the text at all ──────────────────────────
 
 def acroform_widgets(path):

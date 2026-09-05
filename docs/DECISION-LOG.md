@@ -1,4 +1,5 @@
-# Decision log — phases 1–7, plus the template-editor decision
+# Decision log — phases 1–7, the template-editor decision, and
+# what the defect analysis got wrong
 
 The architectural decisions behind the current extraction engine, and the
 reasoning that produced them. Until now this existed only in chat transcripts.
@@ -251,6 +252,89 @@ Two conditions, both pointing at Univer:
 
 Neither is on the roadmap. If either arrives, take Univer and do not re-run the
 comparison — it is here.
+
+---
+
+## 9. D1, D2, D3 did not reproduce — the mechanism was somewhere else
+
+**The claim.** The defect analysis reported three severity-1 data-loss defects
+in row classification: grouped tables losing the value column their group
+headers occupy (D1), rows not matching the dominant pattern being discarded
+entirely (D2), and rows carrying values in several value columns losing all but
+one (D3). All three were attributed to the extractor, the writer or a
+suppression filter, with four candidate fix locations named.
+
+**What was measured.** Each was reproduced against the pipeline directly, by
+injecting a controlled model response so the deterministic half could be
+observed on its own.
+
+| test | result |
+|---|---|
+| one band, `Description \| Amount`, over the grouped income statement; 13 rows sent including 3 group headers and 3 totals | **13/13 kept**, all `high`, nothing lost, no notes |
+| a row carrying values in all five columns of a declared band | survives the pipeline **and** the writer intact |
+| a totals row with four empty value columns | survives — not discarded as empty |
+| multi-band grid where the first band overflows its drawn rows | all 14 rows written in the right order; the row-shift arithmetic is correct |
+| a value present but UNGROUNDED | **kept**, marked `low` — never dropped |
+
+Then live, at the analysis's own scale: a 5-column, 39-row declared band over a
+grouped budget-vs-actual statement with group headers carrying their own values,
+per-group subtotals and a grand total. **29 rows expected, 29 returned** —
+every group header, every subtotal, the grand total, all four value columns on
+every row, parentheses negatives preserved.
+
+**The mechanism that was actually there.** `seen_sources` identified a row by
+the TEXT of its source span and dropped every later row quoting the same words.
+Injecting a response where a group's rows all quote the group header line — a
+plausible model habit — sent 13 rows and kept 10: **the whole second group
+gone, label and value together**, which is D1's stated signature ("first group
+survives, later groups drop") and D2's ("rows discarded entirely") at once. The
+loss was reported only in `validation_notes` — not flagged, not in
+`needs_review`, not in the confidence map, invisible in the app and the export.
+
+That is fixed (row identity is now positional), and the three defects are
+closed. What made them look like three defects in row classification was one
+defect in row identity.
+
+**Why this is written down.** The analysis is a good document and will be read
+again. Without this entry, D1–D3 read as open severity-1 defects with named fix
+locations, and the obvious next step is to go and change row classification —
+which is correct code that four separate tests now pin
+(`tests/test_protected_behaviours.py`).
+
+**What would reverse this.** A document where a grouped table loses values with
+`dropped_row_count == 0`. That would be a real D1, and none of the evidence
+above would apply to it.
+
+---
+
+## 10. D4 and D8 were one defect and one non-defect
+
+**D4** — "a label ending in digits absorbs the leading digits of the value
+beside it" — was reported as a label/value boundary error and ranked above the
+other data-loss defects because it produces a plausible wrong number rather than
+a visible gap.
+
+It was neither a label problem nor a boundary problem. The PDF **wraps the value
+inside its own cell**: `FORM-W2-2023` prints `$1,268.7` on one line and `5` on
+the next, and `extract_words()` agrees with `extract_text()` — the split is in
+the file. The model was handed a truncated number and answered the orphan for
+the next slot, and both halves grounded because both are genuinely printed. The
+`EIN: 47-38` sighting from the first production run is the same mechanism.
+
+Fixed by reassembling on shared right edge (§`engine/text_layer.py`). Measured:
+11 of 12 figures wrong and every one `high` → **12 of 12 correct**, with the
+confidence no longer inverted.
+
+**D8** — "numeric normalisation breaks the grounding chain" — is half right and
+the wrong half is the important one. The **stored** value was always the
+verbatim string and always did appear in the document; the grounding chain was
+never broken. Only the exported spreadsheet cell dropped the currency symbol and
+the trailing cents, because `coerce_cell_value` writes money as a number so the
+cell can sum.
+
+That made the fix one function at the export boundary — a number format derived
+from the source string — rather than a rework of validation. Diagnosing it as a
+grounding defect would have pointed at the wrong layer entirely.
 
 ---
 

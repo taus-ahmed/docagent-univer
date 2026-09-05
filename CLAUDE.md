@@ -547,6 +547,55 @@ column would demote correct values, which is the failure it exists to prevent.
 **A misplaced value is kept, not dropped** — trading a visible wrong cell for an
 invisible missing one is not an improvement.
 
+### One join rule for a multi-line value (D9)
+
+**A field's value is the document's own words, in reading order, joined by a
+single space.** The join used to be whatever the model returned, and it returned
+three different things for ONE field on ONE document — `INV-2024-0031`'s Notes
+came back truncated at the first line, joined with a literal newline, and joined
+with a space, across cached runs; adjacent fields disagreed inside one run. The
+words are at known positions, so `canonical_value` re-derives the join instead
+of trusting the string.
+
+**Nothing is added and nothing is dropped.** The run of words must spell exactly
+what the model claimed, ignoring whitespace; a value matching no run is returned
+unchanged, which is what happens to anything derived or renotated (a MICR field,
+a reformatted number).
+
+**A value continues onto the next line only inside its own column block.**
+Reading order interleaves side-by-side columns — on that invoice, the word after
+`Ref:` is the LEFT column's `ABA:`, not this value's own continuation — so the
+walk steps over anything outside the run's horizontal span.
+
+**A run that crosses a column gutter is reported, not trimmed.** Ordinary
+inter-word gaps on those lines are 2.3–2.6 pt; the gutter is 122 pt
+(`GUTTER = 24.0`). Crossing it means two side-by-side blocks were merged into
+one answer — the fourth outcome seen on that same field. Which half was wanted
+is not knowable, so the value is kept, marked `low` and flagged.
+
+> **A field does not absorb the next line just because one is there.** Whether a
+> name field should take its address is a design question and this is the
+> answer: no. Absorbing is how one field swallows another's value, and a short
+> value is a visible fault where a swallowed one is not. Truncation therefore
+> stays a model behaviour rather than being papered over.
+
+### Every written column gets a width (D14)
+
+Widths were applied **before** the writer ran, across
+`_find_template_dimensions` — which counts only cells carrying TEXT. Under the
+one rule a value column carries no text, so the extent was routinely narrower
+than the sheet the writer then filled, and every column past it got no width and
+fell back to Excel's 8.43, truncating extracted values and the user's own
+labels. Which columns that hit depended on where the template happened to have
+headings, which is why it looked like auto-fit applying on some runs and not
+others.
+
+`_fit_columns` runs **after** the writer, when `ws.max_column` is the real
+extent. A width the user dragged wins as given; a column without one is fitted
+to its longest cell and clamped to 8–60 characters — the clamp stops one long
+note dominating a sheet nobody sized, and deliberately does not apply to an
+explicit choice.
+
 ### Export keeps the notation as well as the number (D8)
 
 `coerce_cell_value` writes money as a **number** so the cell sums and sorts;

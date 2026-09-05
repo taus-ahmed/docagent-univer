@@ -46,8 +46,8 @@ from pathlib import Path
 
 from extractor import _llm_json, _log, _num
 from micr import field_role, find_micr_line, parse_micr
-from text_layer import (check_placement, column_bands, find_line,
-                        record_span, source_occurrences)
+from text_layer import (canonical_value, check_placement, column_bands,
+                        find_line, record_span, source_occurrences)
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -423,6 +423,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     ungrounded = 0
     misplaced = 0
     dropped = 0
+    merged_columns = 0
     all_lines = [ln for pg in (page_lines or []) for ln in (pg or [])]
 
     # ── field slots ──
@@ -443,6 +444,39 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 notes.append(f'{slot["row_label"]}: the model returned the '
                              f"slot's own label instead of a value — dropped")
                 continue
+
+            # ONE JOIN RULE (D9). A field's value is the document's own words,
+            # in reading order, joined by a single space. The join used to be
+            # whatever the model returned, and it returned three different
+            # things for ONE field on ONE document — INV-2024-0031's Notes came
+            # back truncated, joined with a literal newline, and joined with a
+            # space across cached runs, with adjacent fields disagreeing inside
+            # a single run. The words are at known positions, so the join is
+            # re-derived rather than trusted. Nothing is added and nothing
+            # dropped: the run of words must spell exactly what the model
+            # claimed. A value matching no run is left alone.
+            if all_lines:
+                canon = canonical_value(value, all_lines)
+                if canon:
+                    fixed, crossed = canon
+                    if fixed != value:
+                        notes.append(f'{slot["row_label"]}: re-joined from the '
+                                     f"document's own words")
+                        value = fixed
+                    if crossed:
+                        # The run jumped a column gutter, so two side-by-side
+                        # blocks were merged into one value. Which half was
+                        # wanted is not knowable here, so it is reported rather
+                        # than trimmed.
+                        merged_columns += 1
+                        flagged.append(_flag(
+                            slot["row_label"], value,
+                            "value runs across a column gutter — two "
+                            "side-by-side blocks were merged into one answer"))
+                        extracted_fields[slot["ref"]] = value
+                        conf_map[slot["ref"]] = LOW
+                        continue
+
             ok, why = verify_span(value, source, page, pages)
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
                                          inferred=inferred)
@@ -640,6 +674,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     total_cells = len(extracted_fields) + sum(
         len([v for k, v in r.items() if not k.startswith("_") and str(v).strip()])
         for rows in tables_out.values() for r in rows)
+    if merged_columns:
+        notes.append(f"{merged_columns} value(s) run across a column gutter — "
+                     f"two side-by-side blocks merged into one answer")
     if dropped:
         notes.append(f"{dropped} table row(s) were dropped as duplicates — see "
                      f"the flagged rows")
@@ -678,7 +715,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                      "document; values are unverified, not low quality")
         conf_map = {k: UNVERIFIED for k in conf_map}
     needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
-                    or bool(dropped))
+                    or bool(dropped) or bool(merged_columns))
 
     r = DocumentExtractionResult(filename=file_path.name)
     r.document_type = default_doc_type
@@ -711,6 +748,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
             "dropped_row_count": dropped,
+            "merged_column_count": merged_columns,
             "low_confidence_cells": low_cells,
             "graded_cells": graded,
             "low_confidence_ratio": round(low_ratio, 4),

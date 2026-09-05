@@ -1,8 +1,8 @@
 {
- "run_id": "2026-09-04 17:30:58",
- "git_commit": "b234a4b",
+ "run_id": "2026-09-04 23:54:57",
+ "git_commit": "d5f20be",
  "config": {
-  "mode": "record",
+  "mode": "replay",
   "repeat": 1,
   "no_template": true,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 10,
-  "recorded": 10,
+  "hits": 20,
+  "recorded": 0,
   "live": 0,
   "misses": 0
  },
@@ -6517,7 +6517,7 @@
      "Wire Bank Name": "First National Bank of New York",
      "Wire ABA": "021000021",
      "Wire Account Number": "7743882201",
-     "Cheque Payable To": "Nexus Global Trading LLC",
+     "Cheque Payable To": "NEXUS GLOBAL TRADING LLC",
      "Notes": "Balance due March 4, 2024. Late payments subject to 1.5% monthly interest."
     },
     "tables": {
@@ -6735,7 +6735,7 @@
      "Cheque Payable To": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Nexus Global Trading LLC",
+      "actual": "NEXUS GLOBAL TRADING LLC",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -7203,7 +7203,7 @@
      "Cheque Payable To": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Nexus Global Trading LLC",
+      "actual": "NEXUS GLOBAL TRADING LLC",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -8068,7 +8068,7 @@
      "Cheque Payable To": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Nexus Global Trading LLC",
+      "actual": "NEXUS GLOBAL TRADING LLC",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -18274,61 +18274,6 @@
   }
  },
  "unstable_total": 0,
- "diff": [
-  {
-   "key": "IS-2024-Q4 :: cost_of_goods_sold :: row_count_mismatch",
-   "before": "1",
-   "after": "0",
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: cost_of_goods_sold[pred_row 4].Amount",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: cost_of_goods_sold[pred_row 4].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: operating_expenses :: row_count_mismatch",
-   "before": "1",
-   "after": "0",
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: operating_expenses[pred_row 10].Amount",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: operating_expenses[pred_row 10].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: revenue :: row_count_mismatch",
-   "before": "1",
-   "after": "0",
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: revenue[pred_row 2].Amount",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "IS-2024-Q4 :: revenue[pred_row 2].Label",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  }
- ],
- "diff_against": "2026-09-04 14:08:45"
+ "diff": [],
+ "diff_against": "2026-09-04 17:30:58"
 }

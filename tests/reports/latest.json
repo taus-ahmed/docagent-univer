@@ -1,8 +1,8 @@
 {
- "run_id": "2026-09-04 17:29:51",
- "git_commit": "b234a4b",
+ "run_id": "2026-09-04 23:52:31",
+ "git_commit": "d5f20be",
  "config": {
-  "mode": "record",
+  "mode": "replay",
   "repeat": 1,
   "no_template": false,
   "env": {
@@ -11,8 +11,8 @@
   }
  },
  "cache_stats": {
-  "hits": 0,
-  "recorded": 10,
+  "hits": 10,
+  "recorded": 0,
   "live": 0,
   "misses": 0
  },
@@ -17738,5 +17738,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-09-04 17:11:29"
+ "diff_against": "2026-09-04 17:29:51"
 }

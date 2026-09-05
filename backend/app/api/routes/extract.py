@@ -4547,18 +4547,62 @@ def export_job_zip(
     })
 
 
+#: Excel column widths, in characters. The floor keeps a narrow column
+#: readable; the ceiling stops one long note from pushing every other column
+#: off the screen.
+_MIN_COL_WIDTH = 8
+_MAX_COL_WIDTH = 60
+
+
+def _fit_columns(ws, col_widths=()):
+    """Give EVERY written column a width (D14).
+
+    Widths used to be applied before the writer ran, across
+    `_find_template_dimensions`, which counts only cells carrying TEXT. Under
+    the one rule a value column carries no text, so the extent was routinely
+    narrower than the sheet the writer then filled — every column past it got
+    no width at all and fell back to Excel's 8.43, truncating extracted values
+    and the user's own labels. Which columns that hit depended on where the
+    template happened to have headings, so it looked like auto-fit applying on
+    some runs and not others.
+
+    Running afterwards means the real extent is known: `ws.max_column` is what
+    was actually written. The template's own stored width wins where there is
+    one — it is the width the user dragged — and any column without one is
+    fitted to its longest cell.
+    """
+    from openpyxl.utils import get_column_letter
+
+    for c in range(1, (ws.max_column or 0) + 1):
+        stored = None
+        if c - 1 < len(col_widths or []):
+            try:
+                px = float((col_widths or [])[c - 1] or 0)
+                stored = round(px / 7) if px > 0 else None
+            except (TypeError, ValueError):
+                stored = None
+        if stored:
+            # Honoured as given. The clamp below exists to stop ONE long value
+            # from dominating a sheet nobody sized; a width the user dragged is
+            # not a guess to be corrected.
+            width = stored
+        else:
+            longest = 0
+            for r in range(1, (ws.max_row or 0) + 1):
+                v = ws.cell(row=r, column=c).value
+                if v is not None:
+                    longest = max(longest, len(str(v)))
+            width = max(_MIN_COL_WIDTH, min(_MAX_COL_WIDTH, longest + 2))
+        ws.column_dimensions[get_column_letter(c)].width = width
+
+
 def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
     """Route to the correct writer based on template regions primary_mode.
     Always uses the template structure for routing — never relies on AI output
     flags which can be stale or wrong from a previous extraction run."""
-    from openpyxl.utils import get_column_letter
     cells_tpl = sheet_data.get("cells", {})
     col_widths = sheet_data.get("colWidths", [])
     max_r, max_c = _find_template_dimensions(cells_tpl)
-
-    for c_idx, width_px in enumerate(col_widths):
-        if width_px and c_idx <= max_c:
-            ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(8, round(width_px / 7))
 
     # Deterministic writer routing that mirrors the extraction routing.
     # The authoritative signal is the template_type saved in extraction_json:
@@ -4588,10 +4632,12 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
         print("[EXPORT] routing: template_type=slot -> slot writer "
               "(values written to the addresses they were requested for)", flush=True)
         _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        _fit_columns(ws, col_widths)
         return
     if template_type == "structural":
         print("[EXPORT] routing: template_type=structural -> layout-mode writer", flush=True)
         _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        _fit_columns(ws, col_widths)
         return
     if template_type in ("labeled", "mixed"):
         # field path — never the layout writer, even if a stale layout_sections exists
@@ -4602,16 +4648,20 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
         if any(_has_layout(d) for d in doc_results):
             print("[EXPORT] routing: layout-mode writer (legacy layout_sections)", flush=True)
             _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+            _fit_columns(ws, col_widths)
             return
         print(f"[EXPORT] routing: legacy primary_mode={primary_mode}", flush=True)
 
     if primary_mode == "table":
         _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod)
+        _fit_columns(ws, col_widths)
     elif primary_mode == "mixed":
         _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, template_regions, openpyxl_mod)
+        _fit_columns(ws, col_widths)
     else:
         # form_with_targets, form_kv, two_column — all use form writer
         _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
+        _fit_columns(ws, col_widths)
 
 
 def _calculate_layout(sections):
