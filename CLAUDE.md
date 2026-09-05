@@ -577,11 +577,32 @@ Reading order interleaves side-by-side columns — on that invoice, the word aft
 `Ref:` is the LEFT column's `ABA:`, not this value's own continuation — so the
 walk steps over anything outside the run's horizontal span.
 
-**A run that crosses a column gutter is reported, not trimmed.** Ordinary
-inter-word gaps on those lines are 2.3–2.6 pt; the gutter is 122 pt
-(`GUTTER = 24.0`). Crossing it means two side-by-side blocks were merged into
-one answer — the fourth outcome seen on that same field. Which half was wanted
-is not knowable, so the value is kept, marked `low` and flagged.
+**Across a line break, a space only when the seam is not mid-token.** Joining
+everything with a space is right within a line and wrong across one: a PDF wraps
+`joesmith@ficusbank.com` into two fragments, and gluing those with a space
+produced `sarah@ epsilontitle.com` — an address that looks ordinary in a
+spreadsheet and bounces when anyone uses it, which is the exact failure class the
+text layer exists to remove, reintroduced by its own repair. `_joiner` gives no
+space when the fragment ends `@ / - \ _`, when the next begins `@`, or when it
+ends `.` and the next starts lowercase (`ficusbank.` + `com`); a `.` before a
+capital keeps its space, so `123 Commerce Pl.` + `Somecity` is safe.
+
+**The gutter is measured from the PAGE.** A fixed threshold cannot work —
+`INV-2024-0031`'s note columns sit 122 pt apart, the Closing Disclosure's
+five-party contact matrix packs its columns 10–26 pt apart, and 24 pt read that
+matrix as one continuous line. Per LINE fails too, and instructively: on a row of
+one-word cells (five email addresses) *every* gap is a gutter, so the line's own
+median gap is one. The page is the right scale, because the ordinary gap between
+two words of a phrase is a font property (1.5–2.6 pt on both documents) and most
+gaps on a page are of that kind. `gutter_for_page` = `max(6, 4 × median gap)`.
+
+**The in-column reading is tried first.** `_walk` runs twice: once stepping over
+same-line words beyond a gutter, once allowing the crossing. That is what lets an
+email in the third column of a contact matrix find its own continuation on the
+next line instead of swallowing the fourth column's, and it means the merged-
+columns flag now fires only when there is no in-column reading at all. A merged
+value is still kept, marked `low` and flagged — which half was wanted is not
+knowable.
 
 > **A field does not absorb the next line just because one is there.** Whether a
 > name field should take its address is a design question and this is the
@@ -763,6 +784,25 @@ slots the model left **empty**, so a real answer is never overwritten, and the
 routing number is checked against the **ABA checksum** before use — nine digits
 in the transit position that fail it are not reported. `Account Holder` is a
 person and is deliberately not matched. `CHQ-001847`: 45.5% → **100%**.
+
+**The cell's LABEL decides what a digit run is.** `NMLS ID 222222` exported as
+`222222.0`: six digits, no leading zero, so no rule about the *shape* of the
+digits could save it — 222222 is a perfectly ordinary number. The column is
+headed `NMLS ID`, and that is evidence the value does not carry.
+`labels_an_identifier` matches identifier words (`id`, `no`, `number`, `#`,
+`code`, `ref`, `nmls`, `ein`, `ssn`, `routing`, `account`, `licence`, `policy`,
+`zip`, `phone`, …) as whole words, so `Paid` does not contain `id`.
+
+⚠ **Quantity words WIN over identifier words**, because the overlap is real and
+always resolves the same way: `Account Balance` and `Invoice Total` are money,
+`Account No` and `Invoice Number` are not. A rule that turns quantities into text
+is the mirror-image failure and breaks every sum in the sheet — a `Qty` of 40
+stays a number.
+
+**What it still costs:** a 6–8 digit identifier in a cell whose label says
+nothing is read as a number. The label is the only evidence there is, and
+without it `222222` is just a number. Leading zeros and runs of 9+ digits are
+still caught by shape alone.
 
 ⚠ **Identifiers are not quantities.** `coerce_cell_value` numified any bare
 digit run, so extraction held `"021000021"` and the exported cell held

@@ -169,6 +169,22 @@ templates we have, but every one of those was drawn by us. If one of yours is
 blocked and it looks perfectly reasonable, the check is more likely wrong than
 your template — tell us.
 
+## A reference number in an unlabelled cell may be read as a number
+
+**ABSENT (visible in the cell).** A cell holding something like an NMLS ID or a
+licence number stays text — and keeps its exact digits — when its column says so:
+headed `NMLS ID`, `Account No`, `Policy`, `Ref`, and so on. Money columns are
+unaffected: `Account Balance` and `Invoice Total` are still numbers you can add
+up.
+
+Where a column heading gives no clue, a 6-to-8 digit reference with no leading
+zero is still read as a number, so it may show as `222222` with Excel's
+right-alignment rather than as text. **The digits are not changed.** Longer
+references and anything starting with a zero — routing numbers, account numbers
+— are safe whatever the heading says.
+
+**What to do.** Name the column for what it holds: `NMLS ID` rather than `NMLS`.
+
 ## Confidence is worked out per cell but only shown per document
 
 **ABSENT (from the screen, not from the data).** Every value carries its own
@@ -221,6 +237,8 @@ anyone who saw the old behaviour should know it changed.
 | **A figure could land in the wrong column** — a payment reported as a receipt — and still be marked confident, because the check only asked whether the number was on the page. | The column a figure sits under is now checked. A misplaced one is flagged and named. |
 | **Rows were deleted for quoting the same line as an earlier row**, so repeated headings and group totals silently cost you rows — worst in exactly the merged files this is built for. | Rows are told apart by where they sit on the page. Anything still dropped is listed with its contents. |
 | **Currency symbols and pence disappeared on export.** | The cell keeps `$7,750.00` on screen and still adds up as a number. |
+| **A wrapped email address came back with a space in it** — `sarah@ epsilontitle.com`. It looked ordinary in the spreadsheet and would have bounced. | Joined the way the page joins it: no space when the break falls inside a word or an address, a space when it falls between words. |
+| **Reference numbers were turned into figures on export** — an NMLS ID of 222222 became 222222.0. | A cell whose column names it as a reference keeps its digits exactly. Quantities are untouched. |
 | **Column widths were applied inconsistently**, so labels you typed came back truncated. | Every written column is sized; a width you set yourself is kept as you set it. |
 | **Merging, centring, shading and borders were lost on export.** | The formatting you drew comes back with the values. |
 | **Tick-boxes in proper fillable forms were guessed at.** | Read from the file itself. |

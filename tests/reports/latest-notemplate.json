@@ -1,6 +1,6 @@
 {
- "run_id": "2026-09-05 07:58:13",
- "git_commit": "25c6796",
+ "run_id": "2026-09-05 08:10:00",
+ "git_commit": "bc158bd",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -4859,7 +4859,7 @@
      "Vendor Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Vendor Phone": "(212) 555-0148",
      "Vendor Tax ID": "47-3821654",
-     "Payment Instructions Notes": "Wire: First National Bank of New York\nABA: 021000021 Account: 7743882201\nCheque payable to: Nexus Global Trading LLC",
+     "Payment Instructions Notes": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
      "Payment Received Date": "Feb 10, 2024",
      "Payment Reference": "WT-20240210-4421"
     },
@@ -5034,7 +5034,7 @@
      "Payment Instructions Notes": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Wire: First National Bank of New York\nABA: 021000021 Account: 7743882201\nCheque payable to: Nexus Global Trading LLC",
+      "actual": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -5427,7 +5427,7 @@
      "Payment Instructions Notes": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Wire: First National Bank of New York\nABA: 021000021 Account: 7743882201\nCheque payable to: Nexus Global Trading LLC",
+      "actual": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -6140,7 +6140,7 @@
      "Payment Instructions Notes": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Wire: First National Bank of New York\nABA: 021000021 Account: 7743882201\nCheque payable to: Nexus Global Trading LLC",
+      "actual": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -18275,5 +18275,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-09-05 07:31:38"
+ "diff_against": "2026-09-05 07:58:13"
 }

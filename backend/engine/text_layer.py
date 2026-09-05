@@ -1,3 +1,46 @@
+#: A column gutter is derived from the PAGE, not fixed and not per line.
+#:
+#: A fixed threshold cannot work: INV-2024-0031's two note columns sit 122pt
+#: apart, while the Closing Disclosure's five-party contact matrix packs its
+#: columns 10-26pt apart. A constant of 24pt read that matrix as one
+#: continuous line, so an email in the third column ran on into the fourth
+#: column's and matched nothing.
+#:
+#: Per LINE does not work either, and the way it fails is instructive: on a
+#: line that is nothing but one-word cells — a row of five email addresses —
+#: EVERY gap is a gutter, so the line's median gap is itself a gutter and the
+#: threshold lands above all of them.
+#:
+#: The page is the right scale. The ordinary gap between two words of the same
+#: phrase is a property of the font and is remarkably stable (1.5-2.6pt on both
+#: documents), and most gaps on a page are of that kind, so the page's median
+#: gap measures word spacing while the line's may not.
+GUTTER_MULTIPLE = 4.0
+
+#: Never call a gap this small a gutter, however tight the spacing.
+GUTTER_FLOOR = 6.0
+
+#: Below this many gaps there is no reliable median; fall back.
+_MIN_GAPS_FOR_MEDIAN = 8
+
+#: The fallback, and the value used before this was derived.
+GUTTER = 24.0
+
+
+def gutter_for_page(lines):
+    """The gap width that separates COLUMNS on this page."""
+    gaps = []
+    for line in lines:
+        xs = sorted(line, key=lambda w: float(w["x0"]))
+        gaps += [float(b["x0"]) - float(a["x1"]) for a, b in zip(xs, xs[1:])]
+    gaps = sorted(g for g in gaps if g >= 0)
+    if len(gaps) < _MIN_GAPS_FOR_MEDIAN:
+        return GUTTER
+    mid = len(gaps) // 2
+    median = gaps[mid] if len(gaps) % 2 else (gaps[mid - 1] + gaps[mid]) / 2.0
+    return max(GUTTER_FLOOR, median * GUTTER_MULTIPLE)
+
+
 """
 DocAgent — Text Layer (positional evidence)
 ===========================================
@@ -196,21 +239,151 @@ def text_from_lines(lines) -> str:
 
 # ── multi-line values ───────────────────────────────────────────────────────
 
-#: A horizontal gap wider than this is a COLUMN GUTTER, not a space between
-#: words. Measured on INV-2024-0031, whose "Payment Instructions" and "Notes"
-#: sit side by side: ordinary inter-word gaps are 2.3-2.6pt, the gutter is
-#: 122pt. Anything in between is a wide space in one column.
+#: A column gutter is derived PER LINE, not fixed. A single threshold cannot
+#: work: INV-2024-0031's two note columns are 122pt apart, while the Closing
+#: Disclosure's five-party contact matrix packs its columns 10-26pt apart. A
+#: constant of 24pt read that matrix as one continuous line, so an email in
+#: the third column ran on into the fourth column's and matched nothing.
+#:
+#: Within a line the ordinary word gap is remarkably stable (1.5-2.6pt on both
+#: documents) and a gutter is a large multiple of it, so the line's own median
+#: gap is the scale to measure against.
+GUTTER_MULTIPLE = 4.0
+
+#: Never call a gap this small a gutter, however tight the line's spacing.
+GUTTER_FLOOR = 6.0
+
+#: A line with fewer gaps than this has no reliable median; fall back.
+_MIN_GAPS_FOR_MEDIAN = 3
+
+#: The fallback, and the value used before this was derived per line.
 GUTTER = 24.0
+
+
+def gutter_for(line):
+    """The gap width that separates COLUMNS on this particular line."""
+    xs = sorted(line, key=lambda w: float(w["x0"]))
+    gaps = [float(b["x0"]) - float(a["x1"]) for a, b in zip(xs, xs[1:])]
+    gaps = [g for g in gaps if g >= 0]
+    if len(gaps) < _MIN_GAPS_FOR_MEDIAN:
+        return GUTTER
+    gaps.sort()
+    mid = len(gaps) // 2
+    median = gaps[mid] if len(gaps) % 2 else (gaps[mid - 1] + gaps[mid]) / 2.0
+    return max(GUTTER_FLOOR, median * GUTTER_MULTIPLE)
 
 #: How far a value may run. A field value is a phrase, not a page.
 MAX_VALUE_WORDS = 60
+
+
+#: Characters that end a fragment mid-token, so a line break after one is a
+#: WRAP rather than a space. `joesmith@` + `ficusbank.com` is one address.
+_MID_TOKEN_END = "@/-\\_"
+
+
+def _joiner(prev_word, next_word, same_line):
+    """The character between two words of one value: " " or nothing.
+
+    Joining everything with a space is right within a line and wrong across
+    one. A PDF wraps `joesmith@ficusbank.com` into `joesmith@` and
+    `ficusbank.com`, and gluing those with a space produces
+    `sarah@ epsilontitle.com` — an address that looks perfectly ordinary in a
+    spreadsheet and bounces when anyone uses it. That is exactly the failure
+    this module exists to remove, reintroduced by its own repair.
+
+    Within a line the PDF really did put whitespace there, so a space is
+    always right. Across a line break it depends on the characters at the
+    seam, and only these say "mid-token":
+
+        the fragment ends with @ / - \ _        joesmith@ + ficusbank.com
+        the next fragment starts with @          joesmith + @ficusbank.com
+        it ends with "." and the next is lower   ficusbank. + com
+
+    A "." before a capital is a sentence or an abbreviation and keeps its
+    space, so `123 Commerce Pl.` + `Somecity, ST` does not become
+    `Pl.Somecity`. Everything else is ordinary wrapped prose:
+    `Omega Real Estate` + `Broker Inc.` keeps its space.
+    """
+    if same_line:
+        return " "
+    prev, nxt = str(prev_word or ""), str(next_word or "")
+    p, n = prev[-1:], nxt[:1]
+    if p and p in _MID_TOKEN_END:
+        return ""
+    if n == "@":
+        return ""
+    if p == "." and n.islower():
+        return ""
+    return " "
+
+
+def _walk(flat, target, cross_gutters, gutter):
+    """(joined text, crossed) for the first run of words spelling `target`.
+
+    Run TWICE by the caller. The first pass stays inside the value's own
+    column: a same-line word beyond a gutter belongs to a different column and
+    is stepped over, which is what lets an email in the third column of a
+    contact matrix find its own continuation on the next line rather than
+    swallowing the fourth column's address.
+
+    The second pass allows the crossing, and is how a value that really did
+    merge two side-by-side blocks is still detected and reported. Trying the
+    in-column reading first means the merge flag now means what it says
+    instead of firing on any multi-column page.
+    """
+    for i in range(len(flat)):
+        acc, crossed, taken = "", False, []
+        lo = hi = None
+        prev_line, prev_x1 = None, None
+        for j in range(i, min(i + MAX_VALUE_WORDS * 3, len(flat))):
+            w, li = flat[j]
+            x0, x1 = float(w["x0"]), float(w["x1"])
+            if lo is not None and li != prev_line:
+                # A NEW LINE continues this value only inside its own column
+                # block. Reading order interleaves side-by-side columns, so a
+                # value's own continuation is never simply the next word.
+                if x1 < lo - 2.0 or x0 > hi + 2.0:
+                    continue
+            gutter_here = False
+            if lo is not None and li == prev_line and prev_x1 is not None:
+                gutter_here = (x0 - prev_x1) > gutter
+                if gutter_here and not cross_gutters:
+                    continue
+            if taken:
+                acc_sep = _joiner(taken[-1]["text"], w["text"],
+                                  same_line=(li == prev_line))
+            else:
+                acc_sep = ""
+            acc += re.sub(r"\s+", "", str(w["text"])).casefold()
+            taken.append(w)
+            crossed = crossed or gutter_here
+            lo = x0 if lo is None else min(lo, x0)
+            hi = x1 if hi is None else max(hi, x1)
+            prev_line, prev_x1 = li, x1
+            if len(acc) > len(target):
+                break
+            if acc == target:
+                return _join(taken, flat), crossed
+    return None
+
+
+def _join(taken, flat):
+    """The words as the document would read them, joined by one rule."""
+    line_of = {id(w): li for w, li in flat}
+    out = str(taken[0]["text"])
+    for prev, w in zip(taken, taken[1:]):
+        out += _joiner(prev["text"], w["text"],
+                       same_line=line_of.get(id(prev)) == line_of.get(id(w)))
+        out += str(w["text"])
+    return out
 
 
 def canonical_value(value, lines):
     """(the document's own text for `value`, crossed_a_gutter), or None.
 
     THE RULE: a field's value is the document's own words, in reading order,
-    joined by a single space.
+    joined the way the page joins them — a space within a line, and across a
+    line break a space unless the seam is mid-token.
 
     The join was previously whatever the model returned, and it returned three
     different things for one field on one document — `INV-2024-0031`'s Notes
@@ -225,11 +398,10 @@ def canonical_value(value, lines):
     happens to anything the model normalised or derived (a MICR field, a
     reformatted number).
 
-    `crossed_a_gutter` says the run jumped a column boundary, which means two
-    side-by-side blocks were merged into one value — the fourth outcome seen
-    on that same field, where the payment-instructions column and the notes
-    column came back interleaved. That is reported, not silently trimmed:
-    choosing which half to keep would be a guess.
+    `crossed_a_gutter` says the run had to jump a column boundary to spell the
+    value, which means two side-by-side blocks were merged into one answer.
+    The in-column reading is tried first, so this now fires only when there is
+    no in-column reading at all.
     """
     target = re.sub(r"\s+", "", str(value or "")).casefold()
     if len(target) < 4:
@@ -237,37 +409,9 @@ def canonical_value(value, lines):
     flat = [(w, li) for li, ln in enumerate(lines) for w in ln]
     if not flat:
         return None
-
-    for i in range(len(flat)):
-        acc, gutter, taken = "", False, []
-        lo = hi = None
-        prev_line, prev_x1 = None, None
-        for j in range(i, min(i + MAX_VALUE_WORDS * 3, len(flat))):
-            w, li = flat[j]
-            x0, x1 = float(w["x0"]), float(w["x1"])
-            if lo is not None and li != prev_line:
-                # A NEW LINE continues this value only inside its own column
-                # block. Reading order interleaves side-by-side columns, so
-                # the words of a two-column layout arrive as
-                # left-right-left-right and the right column's own
-                # continuation is never the next word. Anything outside the
-                # run's horizontal span belongs to another block and is
-                # stepped over rather than swallowed.
-                if x1 < lo - 2.0 or x0 > hi + 2.0:
-                    continue
-            if lo is not None and li == prev_line and prev_x1 is not None:
-                if x0 - prev_x1 > GUTTER:
-                    gutter = True
-            acc += re.sub(r"\s+", "", str(w["text"])).casefold()
-            taken.append(w)
-            lo = x0 if lo is None else min(lo, x0)
-            hi = x1 if hi is None else max(hi, x1)
-            prev_line, prev_x1 = li, x1
-            if len(acc) > len(target):
-                break
-            if acc == target:
-                return " ".join(str(x["text"]) for x in taken), gutter
-    return None
+    gutter = gutter_for_page(lines)
+    return _walk(flat, target, False, gutter) or \
+        _walk(flat, target, True, gutter)
 
 
 # ── selection state that is not in the text at all ──────────────────────────

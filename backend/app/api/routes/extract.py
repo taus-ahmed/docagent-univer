@@ -4783,7 +4783,47 @@ def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod):
     return True
 
 
-def coerce_cell_value(value):
+#: Words that make a cell an IDENTIFIER — something you quote, not something
+#: you add up. Matched as whole words so "Paid" does not contain "id".
+_ID_LABEL = re.compile(
+    r"\b(id|ids|no|nos|num|number|#|code|ref|reference|nmls|ein|ssn|tin|itin"
+    r"|routing|aba|account|acct|licen[cs]e|policy|serial|iban|swift|sort"
+    r"|zip|postcode|postal|phone|tel|fax|mobile|mic|file|folio|batch)\b",
+    re.I)
+
+#: Words that make it a QUANTITY, and which WIN. "Account Balance" and
+#: "Invoice Total" both contain an identifier word and are both numbers; a rule
+#: that turns quantities into text is the mirror-image failure of the one it
+#: fixes, and a Qty of 40 must stay a number.
+_QTY_LABEL = re.compile(
+    r"\b(amount|amt|total|subtotal|balance|qty|quantity|count|price|cost|rate"
+    r"|sum|due|paid|payment|charge|fee|tax|discount|credit|debit|value|units"
+    r"|hours|days|percent|pct)\b|%",
+    re.I)
+
+
+def labels_an_identifier(label) -> bool:
+    """Does this cell's own label say its contents are an identifier?
+
+    An NMLS ID of 222222 was exported as 222222.0: six digits, no leading
+    zero, so the digit-shape rule below let it through as a quantity. No
+    digit-shape rule can fix that on its own — 222222 is a perfectly ordinary
+    number — but the column it sits in is headed "NMLS ID", and that settles
+    it. The label is evidence the value does not carry.
+
+    Quantity words WIN over identifier words, because the overlap is real and
+    always resolves the same way: "Account Balance" and "Invoice Total" are
+    money, "Account No" and "Invoice Number" are not.
+    """
+    text = str(label or "")
+    if not text.strip():
+        return False
+    if _QTY_LABEL.search(text):
+        return False
+    return bool(_ID_LABEL.search(text))
+
+
+def coerce_cell_value(value, label=""):
     """The value as it will actually appear in the spreadsheet cell.
 
     Money and numbers are written as NUMBERS: the currency symbol, thousands
@@ -4809,6 +4849,14 @@ def coerce_cell_value(value):
     # bank's. A quantity, by contrast, arrives with money notation on it (a
     # currency symbol, thousands separators, a decimal point, accounting
     # parentheses) or is short enough to be a count.
+    # THE CELL'S OWN LABEL FIRST. A digit run in a cell headed "NMLS ID",
+    # "Account No" or "Routing" is an identifier however short it is, and no
+    # rule about digit shape can know that.
+    if re.fullmatch(r"\d+", txt) and labels_an_identifier(label):
+        return txt
+    # Then the shape of the digits themselves, for a cell whose label says
+    # nothing: a leading zero, or longer than any amount written without
+    # separators.
     if re.fullmatch(r"\d+", txt) and (txt[0] == "0" or len(txt) >= 9):
         return txt
 
@@ -4832,7 +4880,7 @@ _FMT_PLAIN = "#,##0"
 _FMT_2DP = "#,##0.00"
 
 
-def cell_format(value):
+def cell_format(value, label=""):
     """The Excel number format that reproduces how the document wrote it.
 
     `coerce_cell_value` deliberately writes money as a NUMBER, so the cell
@@ -4851,9 +4899,9 @@ def cell_format(value):
     if value is None:
         return None
     txt = str(value).strip()
-    if not txt or coerce_cell_value(txt) is None:
+    if not txt or coerce_cell_value(txt, label) is None:
         return None
-    if isinstance(coerce_cell_value(txt), str):
+    if isinstance(coerce_cell_value(txt, label), str):
         return None                       # identifier or free text
 
     sym = next((c for c in "$£€₹¥" if c in txt), "")
@@ -4961,18 +5009,18 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     GAP_BETWEEN_DOCS = 2
     doc_offset = 0
 
-    def put(r, c, value):
+    def put(r, c, value, label=""):
         cell = ws.cell(row=r + 1, column=c + 1)
         if isinstance(cell, MergedCell):
             return
-        out = coerce_cell_value(value)
+        out = coerce_cell_value(value, label)
         if out is not None:
             cell.value = out
             # D8 — the cell keeps the number AND the notation the document
             # printed it with. Without this the export drops the currency
             # symbol and the trailing cents, which is what an accountant
             # actually looks at.
-            fmt = cell_format(value)
+            fmt = cell_format(value, label)
             if fmt:
                 cell.number_format = fmt
 
@@ -5036,6 +5084,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                     _apply_cell_style(cell, style, openpyxl_mod)
 
         # 2. field slots, each at the exact address it was asked for
+        slot_label = {f.get("ref"): f.get("row_label", "")
+                      for f in (slot_map.get("fields") or [])}
         for ref, value in fields.items():
             rc = _ref_to_rowcol(ref)
             if rc is None:
@@ -5043,7 +5093,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             tr, tc = rc
             if tr > max_r or tc > max_c:
                 continue
-            put(doc_offset + out_row(tr), tc, value)
+            put(doc_offset + out_row(tr), tc, value, slot_label.get(ref, ""))
 
         # 3. table rows, in their band, by column header address
         for t in tables:
@@ -5054,13 +5104,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                     c = t["start_col"] + i
                     for f in t.get("fields") or []:
                         put(doc_offset + out_row(f["row"]), c,
-                            rec.get(f["header"], ""))
+                            rec.get(f["header"], ""), f.get("header", ""))
                 continue
             for i, row in enumerate(rows):
                 r = doc_offset + out_row(t["start_row"]) + i
                 for col in t["columns"]:
                     key = col.get("key") or col["header"]
-                    put(r, col["col"], row.get(key, ""))
+                    put(r, col["col"], row.get(key, ""), col.get("header", ""))
 
         # 4. the template's own merges, last, so nothing is written into a
         #    cell that a merge has since swallowed
