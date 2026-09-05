@@ -408,8 +408,93 @@ def declared_cells(band):
             for col in band["columns"]}
 
 
+def _gate_findings(grid, m, bands):
+    """(warnings, blocking) — what the save gate should say about this grid.
+
+    `coverage` measures LABELS that should have slots, which is the right
+    question for a form and no question at all for a pure table: a template
+    that is only a declared band has no such labels, so it reported
+    `labels: 0, complete: True` and the gate had nothing to say however wrong
+    the table was. Measured across the 23 real templates in the repo, all 23
+    report complete — and so did four deliberately broken ones, which is the
+    hole these rules fill.
+
+    Each rule was chosen on its FALSE-POSITIVE rate against those 23, because
+    a gate that fires on a legitimate template is the same class of bug as the
+    silent failures it is meant to replace:
+
+        A  a band column with no heading          0/23   WARN
+        D  a band with no headings at all         0/23   BLOCK
+        E  two declared regions overlapping       0/23   WARN
+        G  duplicate headings inside one band     1/23   REJECTED — it fires
+                                                         on bs_luq, a real
+                                                         production template
+                                                         laying two label/value
+                                                         pairs side by side,
+                                                         which the engine
+                                                         already handles by
+                                                         disambiguating the key
+                                                         with a column letter
+
+    A is the one that earns its place: it is the only rule that catches a table
+    whose top-left cell was left blank, where the engine synthesises a name
+    ("Column A") and asks the model to fill a column it cannot describe. A user
+    has no way to see that from the editor.
+
+    D is a severity split on A rather than a separate detector — every column
+    unnamed cannot be anything but a mistake, so it blocks where A warns.
+
+    23 templates is evidence, not proof, and every one of them was drawn by us.
+    That is why A warns instead of blocking: the shapes a real user draws are
+    exactly the ones not in this sample.
+    """
+    warnings, blocking = [], []
+
+    for b in bands:
+        if b.get("orientation") == "columns":
+            # A transposed band's headings run down its first column, and a
+            # region with none is already refused by R5 before it gets here.
+            continue
+        cols = b.get("columns") or []
+        unnamed = [c for c in cols
+                   if not str(m.get((b["header_row"], c["col"]), "") or "").strip()]
+        if not cols:
+            continue
+        if len(unnamed) == len(cols):
+            blocking.append(
+                f'the table at row {b["header_row"] + 1} has no column headings '
+                f"— the engine would ask the model to fill {len(cols)} columns "
+                f"it cannot name. Put a heading in each column of that row.")
+        elif unnamed:
+            where = ", ".join(_col_letter(c["col"]) for c in unnamed)
+            warnings.append(
+                f'the table at row {b["header_row"] + 1} has no heading in '
+                f'column {where} — the engine will ask for a column it can '
+                f'only call "{unnamed[0]["header"]}", and the model has nothing '
+                f"to go on. Type a heading there.")
+
+    regions = [r for r in ((grid or {}).get("regions") or [])
+               if isinstance(r, dict) and r.get("type") == "table"]
+    for i, a in enumerate(regions):
+        for b in regions[i + 1:]:
+            try:
+                ar = (min(a["r1"], a["r2"]), max(a["r1"], a["r2"]),
+                      min(a["c1"], a["c2"]), max(a["c1"], a["c2"]))
+                br = (min(b["r1"], b["r2"]), max(b["r1"], b["r2"]),
+                      min(b["c1"], b["c2"]), max(b["c1"], b["c2"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+            if ar[0] <= br[1] and br[0] <= ar[1] and ar[2] <= br[3] and br[2] <= ar[3]:
+                warnings.append(
+                    f'two declared tables overlap ("{a.get("name") or "?"}" and '
+                    f'"{b.get("name") or "?"}") — the same cells belong to both, '
+                    f"and which one claims them is not defined.")
+    return warnings, blocking
+
+
 def _coverage(m, static, wide, bands, field_slots, band_rows,
-              header_rows, section_rows, heading_rows, skipped):
+              header_rows, section_rows, heading_rows, skipped,
+              warnings=(), blocking=()):
     """What the engine understood, and what it had to leave behind (R6).
 
     `is_usable` answers one bit — is there anywhere at all to put anything —
@@ -460,7 +545,11 @@ def _coverage(m, static, wide, bands, field_slots, band_rows,
         "field_slots": len(field_slots),
         "band_cells": band_cells,
         "skipped": skipped,
-        "complete": not orphans and not skipped,
+        # A: the user should look at it. E: the user should look at it.
+        "warnings": list(warnings),
+        # D: the engine would ask for something it cannot describe.
+        "blocking": list(blocking),
+        "complete": not orphans and not skipped and not warnings and not blocking,
     }
 
 
@@ -815,7 +904,8 @@ def compute_shape(grid, log=None):
         "field_slots": field_slots,
         "required_columns": required,
         "coverage": _coverage(m, static, wide, bands, field_slots, band_rows,
-                              header_rows, section_rows, heading_rows, skipped),
+                              header_rows, section_rows, heading_rows, skipped,
+                              *_gate_findings(grid, m, bands)),
         "inferred": True,
         "migration": migration,
     }

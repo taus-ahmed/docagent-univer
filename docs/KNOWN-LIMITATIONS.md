@@ -141,14 +141,35 @@ asserted by an expected-to-fail test.
 
 ## Templates
 
-### The save gate cannot warn about a pure-table template
+### The save gate's pure-table rules are calibrated on 23 templates we drew
+
+**Trigger.** A template shape none of the repo's 23 templates resembles.
+
+**Behaviour.** Three rules now fire on a pure-table template — a band column
+with no heading (warn), a band with no headings at all (block), two declared
+regions overlapping (warn). All three fire on **0 of 23** real templates and on
+four deliberately broken ones. But that sample was drawn by us, and the shapes
+a real user draws are exactly the ones not in it.
+
+**Mitigation.** Only the unambiguous rule blocks; the other two warn and let the
+save through. A fourth candidate — duplicate headings inside one band — was
+rejected because it fired on `bs_luq`, a real production template doing a
+legitimate thing.
+
+**If a legitimate template is blocked**, the rule is more likely wrong than the
+template: `tests/test_save_gate.py::TestNoRealTemplateTripsTheGate` runs every
+template in the repo and is the place to add it.
+
+### (fixed) The save gate could not warn about a pure-table template
 
 **Trigger.** A template that is only a declared table — column headings and
 blank rows, no label/value fields.
 
-**Behaviour.** `coverage` measures labels that should have slots. A pure-table
-template has no such labels, so it reports `labels: 0, complete: True` and the
-editor's save gate has nothing to warn on, however wrong the table is.
+**Was.** `coverage` measures labels that should have slots. A pure-table
+template has no such labels, so it reported `labels: 0, complete: True` and the
+save gate had nothing to warn on, however wrong the table was. Now covered by
+`coverage["warnings"]` and `coverage["blocking"]` — see the entry above for what
+is still uncertain about them.
 
 **Measured.** Across the 23 real templates available (9 gold, 5 hand-drawn, 2
 production, 6 scenario, 1 fixture) **every one reports `complete: True`** — and

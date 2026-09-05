@@ -271,6 +271,14 @@ export interface ShapePreview {
     field_slots: number;
     band_cells: number;
     skipped: string[];
+    /** Things the user should look at but which do not stop a save: a band
+     *  column with no heading, two declared tables overlapping. Chosen on
+     *  their false-positive rate against every real template in the repo —
+     *  a gate that fires on a legitimate template is the bug it replaces. */
+    warnings: string[];
+    /** Things the engine cannot act on: a band with NO column headings, so it
+     *  would ask the model to fill columns it cannot name. Blocks the save. */
+    blocking: string[];
     complete: boolean;
   };
   /** false when there is nowhere at all to put anything. */

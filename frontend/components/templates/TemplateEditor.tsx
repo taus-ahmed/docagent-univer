@@ -177,6 +177,15 @@ export default function TemplateEditor({ templateId }: Props) {
              + "a label, or put column headings in a row with empty rows beneath.");
       }
 
+      // BLOCK on something the engine could act on but could not DESCRIBE —
+      // a table with no column headings at all. `usable` is true for it
+      // (there are plenty of cells to fill), so this is a separate question
+      // from "is there anywhere to put anything", and it has its own list.
+      // Only rules that fired on none of the repo's real templates are in it.
+      if (shape?.coverage?.blocking?.length) {
+        throw new Error(shape.coverage.blocking[0]);
+      }
+
       // Build the columns list from the one rule (Phase 2a): a slot is an empty
       // cell, and its name is the nearest label to its left (then above). The
       // server derives the authoritative shape from the same grid; this list is
@@ -268,6 +277,7 @@ export default function TemplateEditor({ templateId }: Props) {
                     + `${cov.orphan_count > 3 ? ", …" : ""})`);
         }
         if (cov.skipped?.length) bits.push(cov.skipped[0]);
+        if (cov.warnings?.length) bits.push(...cov.warnings.slice(0, 2));
         if (bits.length) toast(`Saved, but the engine could not read all of it: ${bits.join("; ")}`,
                                { icon: "⚠️", duration: 8000 });
       }

@@ -256,6 +256,28 @@ partial one**, using those values rather than re-deriving the rule in
 TypeScript. Partial coverage warns and proceeds — a notes column the engine will
 never fill is a legitimate thing to draw.
 
+**`coverage` measures labels, which is no question at all for a pure table.** A
+template that is only a declared band has no labels waiting for slots, so it
+reported `labels: 0, complete: True` and the gate had nothing to say however
+wrong the table was. All 23 real templates in the repo report complete — and so
+did four deliberately broken ones. `_gate_findings` adds `coverage["warnings"]`
+and `coverage["blocking"]`:
+
+| rule | false positives | verdict |
+|---|---|---|
+| **A** a band column with no heading | 0/23 | **warn** — the only rule that catches a blank top-left corner (D12a), which a user cannot diagnose from the editor |
+| **D** a band with NO headings at all | 0/23 | **block** — a severity split on A, not a separate detector |
+| **E** two declared regions overlapping | 0/23 | **warn** |
+| ~~G~~ duplicate headings in a band | **1/23** | **rejected** — fires on `bs_luq`, a real production template laying two label/value pairs side by side under two `Amount` columns, which the engine already disambiguates by column letter |
+
+Each rule was chosen on its false-positive rate, because a gate that fires on a
+legitimate template is the same class of bug as the silent failure it replaces.
+A warns rather than blocks because 23 templates is evidence, not proof, and
+every one of them was drawn by us — the shapes a real user draws are the ones
+not in that sample. **`is_usable` is unchanged**: it asks whether there is
+anywhere to put anything, and a headless band has plenty of cells, so blocking
+is its own list rather than an overload of that bit.
+
 **Shape is never stored.** It is a pure function of the grid, costs ~0.2 ms, and
 is recomputed on every extraction and every template API response
 (`templates.py::template_shape_of`). `POST /api/templates/shape` previews it
