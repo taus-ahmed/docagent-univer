@@ -22,8 +22,8 @@ Work top to bottom. Do not start a step until the previous one verified.
 | Postgres service | `a074e1e1-6723-4121-9959-fd82574129d4` |
 | **Live backend deployment** | `92b54699-a53f-4486-a636-570b4ac9df19`, commit **`2584bb6`**, deployed 2026-08-18 04:16 UTC, status SUCCESS |
 | Deploy diff | the commits on `feat/accuracy-harness`; `2584bb6` is its merge-base, so no unrelated drift |
-| Both services build from | branch **`main`** — nothing ships until you merge |
-| Autodeploy | off |
+| Both services build from | branch **`main`** |
+| Autodeploy | **ON, on BOTH services** — corrected 2026-09-05. This runbook said "off"; it is not, and has not been for some time. **A push to `main` deploys backend and frontend immediately and simultaneously.** There is no merge-then-deploy gap to work in |
 | Healthcheck | `railway.json` sets `deploy.healthcheckPath=/health`, `healthcheckTimeout=120`. **The live deployment predates that file**, so `get-service-config` still shows no healthcheck: it takes effect on the deploy you are about to make. Config in code overrides the dashboard |
 | Backend volume | **none mounted.** `./storage` is the container's ephemeral overlay filesystem and is new at every deploy. This is the whole reason Phase 8 exists |
 
@@ -169,12 +169,35 @@ if re-saved. **This is what dictates the deploy order.**
 
 ---
 
-## 2. Deploy order: backend first. Not optional.
+## 2. Deploy order — and why you cannot choose it any more
+
+**Corrected 2026-09-05.** Both services autodeploy from `main` on the same push,
+so they build and go live **together**. The ordering below is not something a
+`git push` can honour, and every deploy since autodeploy was enabled has in fact
+shipped both at once.
 
 | order | outcome |
 |---|---|
 | **Backend → frontend** | Safe. The old editor still writes `extractTargets`; the new backend ignores them and reaches the same result |
 | Frontend → backend | **Breaks extraction.** The new editor saves grids with zero `extractTarget` flags. The live backend builds `explicit_targets` from exactly that flag, and `has_explicit_targets` drives `primary_mode`. Any template saved in that window extracts wrongly |
+
+That hazard was specific to the `extractTarget` migration, **which has already
+shipped** — the live backend no longer reads the flag, so the two services are
+no longer order-coupled by it.
+
+**Before any future change that couples them again**, one of these has to happen
+FIRST, and neither is a step you can improvise on the day:
+
+1. **Turn autodeploy off on `loving-grace`**, deploy the backend, verify, then
+   deploy the frontend by hand. This restores the procedure this runbook was
+   written for.
+2. **Make the frontend change backward-compatible** with the running backend —
+   a new field treated as optional, a new response key defaulted — so either
+   order is safe. This is what the September gate's frontend change did
+   (`coverage.blocking` is read with `?.` and absent means "no block").
+
+Option 2 is the cheaper habit. Option 1 is the one to reach for when a change
+genuinely cannot be made compatible.
 
 ---
 
@@ -311,7 +334,9 @@ export WEB=https://loving-grace-production.up.railway.app
   git checkout main && git merge --no-ff feat/accuracy-harness && git push origin main
   git log --oneline -1 main
   ```
-  **Expect:** the merge commit. Autodeploy is off, so nothing ships yet.
+  ⚠ **Autodeploy is ON (see §0).** This push IS the deploy, for both services
+  at once — there is no gap between merging and shipping. Do the pre-deploy
+  checklist in §4 *before* this command, not after it.
 
 - [ ] **2 — Decide the storage backend.**
 
