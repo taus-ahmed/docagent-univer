@@ -67,9 +67,17 @@ def _merge(page_texts, names):
 # ══════════════════════════════════════════════════════════════════════════
 
 class TestNoSingleDocumentIsEverSplit:
-    def test_not_one_of_the_sixty(self, page_texts):
+    def test_not_one_of_them(self, page_texts):
         """Every document in the corpus, on its own. A split here shreds a
-        real document into fragments."""
+        real document into fragments.
+
+        This now includes `201403_cfpb_closing-disclosure_cover-H25B.pdf` —
+        the six-page form that exposed the over-split, and the corpus's first
+        multi-page SINGLE document. Before it, all 17 multi-page documents
+        were two-page financial statements whose second page is a continuation
+        with a different first line, so "0 false positives across 60
+        documents" was a true statement about a condition the corpus could not
+        express."""
         split_up = {n: find_starts(t)[0] for n, t in page_texts.items()
                     if find_starts(t)[0] != [0]}
         assert split_up == {}, split_up
@@ -193,3 +201,168 @@ class TestAContinuationPageIsNotADocument:
                  "ACME INVOICE\nInvoice 2\nTotal 200",
                  "continued"]
         assert find_starts(pages)[0] == [0, 2]
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# THE CASE THE CORPUS COULD NOT EXPRESS
+# ══════════════════════════════════════════════════════════════════════════
+
+@pytest.fixture(scope="module")
+def closing_disclosure(repo_dir):
+    """A five-page form that restates its parties on every page.
+
+    The corpus has 60 documents and 17 of them are multi-page, so a false
+    positive WAS observable — but not one of those 17 reopens with its own
+    title, which is the exact condition that breaks a title-repetition rule.
+    "0 false positives across 60 documents" was therefore a true statement
+    about a condition the corpus cannot express, and this was the first real
+    multi-page form ever put through the splitter. It split on the first try.
+    """
+    import json
+    return json.loads(
+        (repo_dir / "tests/fixtures/closing_disclosure_pages.json").read_text(
+            encoding="utf-8"))
+
+
+class TestTheRealClosingDisclosure:
+    """The actual file, not a reconstruction.
+
+    Six pages: a cover sheet plus the five-page form. Every page from the
+    second on prints `PAGE n OF 5` and repeats `Loan ID # 123456789`.
+    """
+
+    @pytest.fixture(scope="class")
+    def cd(self, pdf_dir):
+        import pdfplumber
+        with pdfplumber.open(
+                pdf_dir / "201403_cfpb_closing-disclosure_cover-H25B.pdf") as p:
+            return [pg.extract_text() or "" for pg in p.pages]
+
+    def test_it_is_one_document(self, cd):
+        got, why = find_starts(cd)
+        assert got == [0], (got, why)
+
+    def test_two_of_its_pages_classify_as_other_document_types(self, cd):
+        """This is why it split, and why the page-count veto is load-bearing
+        rather than decorative: page 4 reads as a bank statement and page 6 as
+        a tax form. Type change is otherwise an uncorroborated boundary."""
+        from doc_boundaries import _doc_type
+        types = [_doc_type(t) for t in cd]
+        assert types[3] == "bank_statement"
+        assert types[5] == "tax_form"
+
+    def test_the_form_states_its_own_extent_on_every_page_but_the_cover(self, cd):
+        from doc_boundaries import page_of
+        assert [page_of(t) for t in cd] == [None, (1, 5), (2, 5), (3, 5),
+                                            (4, 5), (5, 5)]
+
+    def test_the_loan_id_recurs_but_not_perfectly(self, cd):
+        """Four of the five form pages carry `123456789`. The fifth prints
+        `LOAN ID # 1234567890` — ten digits — in the published CFPB sample
+        itself.
+
+        That is the argument against leaning on reference continuity alone:
+        a real document's own reference chain has a typo in it. The page-count
+        veto is what carries the split across the break, and this test exists
+        so that nobody later "simplifies" the veto away."""
+        from doc_boundaries import references
+        with_id = [t for t in cd[1:] if "123456789" in references(t)]
+        assert len(with_id) == 4
+        assert "1234567890" in references(cd[4])
+
+    def test_it_stays_one_document_across_that_break(self, cd):
+        assert find_starts(cd)[0] == [0]
+
+    def test_the_whole_file_reaches_extraction_as_one_slice(self, cd):
+        slices, _why = split(cd)
+        assert len(slices) == 1
+        assert len(slices[0][0]) == 6
+
+
+class TestAMultiPageFormIsOneDocument:
+    @pytest.mark.parametrize("variant", ["distinct_headings",
+                                         "tail_repeats_title",
+                                         "running_header"])
+    def test_it_does_not_split(self, closing_disclosure, variant):
+        """All three shapes, because which one a generator produces decides
+        whether the old rule fired: `tail_repeats_title` cut the form in two
+        and `running_header` cut it into five."""
+        pages = closing_disclosure["variants"][variant]
+        got, why = find_starts(pages)
+        assert got == [0], (got, why)
+
+    def test_the_contact_page_is_not_a_document_of_its_own(
+            self, closing_disclosure):
+        """The reported failure exactly: a near-empty second block carrying
+        only the three values the contact page restates."""
+        pages = closing_disclosure["variants"]["tail_repeats_title"]
+        slices, _why = split(pages)
+        assert len(slices) == 1
+        assert len(slices[0][0]) == 5
+
+    def test_every_page_shares_the_loan_id(self, closing_disclosure):
+        """The signal that saves it. Recurrence of a reference means
+        CONTINUATION — the old rule read it as a boundary."""
+        from doc_boundaries import references
+        pages = closing_disclosure["variants"]["distinct_headings"]
+        shared = set.intersection(*[references(p) for p in pages])
+        assert "123456789" in shared
+
+    def test_the_form_states_its_own_extent(self, closing_disclosure):
+        from doc_boundaries import page_of
+        pages = closing_disclosure["variants"]["distinct_headings"]
+        assert [page_of(p) for p in pages] == [(1, 5), (2, 5), (3, 5),
+                                               (4, 5), (5, 5)]
+
+
+class TestCorroborationAndVeto:
+    def test_a_repeated_title_alone_no_longer_splits(self):
+        """A repeated title means "a new document" in a concatenation and "a
+        continuation" in a form — the SAME observation. It is now a candidate,
+        not a verdict."""
+        pages = ["ACME FORM\nRef No 778899\nSection A",
+                 "ACME FORM\nRef No 778899\nSection B"]
+        assert find_starts(pages)[0] == [0]
+
+    def test_a_repeated_title_WITH_a_new_reference_still_splits(self):
+        pages = ["ACME FORM\nRef No 778899\nSection A",
+                 "ACME FORM\nRef No 112233\nSection A"]
+        assert find_starts(pages)[0] == [0, 1]
+
+    def test_a_numbered_run_vetoes_a_split_inside_it(self):
+        """"Page 2 of 3" after "page 1 of 3" is the document saying outright
+        that these are one document."""
+        pages = ["ACME FORM Page 1 of 3\nRef No 778899\nA",
+                 "ACME FORM Page 2 of 3\nRef No 445566\nB",
+                 "ACME FORM Page 3 of 3\nRef No 990011\nC"]
+        assert find_starts(pages)[0] == [0]
+
+    def test_the_veto_is_per_run_not_per_file(self):
+        """A stack of forms each opening at "page 1 of 2" must still split
+        between them — a per-file reading of the same marker would have
+        treated the whole stack as one document."""
+        pages = ["ACME FORM Page 1 of 2\nRef No 778899\nA",
+                 "ACME FORM Page 2 of 2\nRef No 778899\nB",
+                 "ACME FORM Page 1 of 2\nRef No 112233\nA",
+                 "ACME FORM Page 2 of 2\nRef No 112233\nB"]
+        assert find_starts(pages)[0] == [0, 2]
+
+    def test_a_restart_splits_even_when_the_reference_is_identical(self):
+        """Two copies of ONE form share every reference, so nothing but the
+        document's own page count can see the seam. This is the single
+        boundary allowed without a reference change."""
+        pages = ["ACME FORM Page 1 of 2\nRef No 778899\nA",
+                 "ACME FORM Page 2 of 2\nRef No 778899\nB",
+                 "ACME FORM Page 1 of 2\nRef No 778899\nA",
+                 "ACME FORM Page 2 of 2\nRef No 778899\nB"]
+        assert find_starts(pages)[0] == [0, 2]
+
+
+class TestItUnderSplitsRatherThanOverSplits:
+    def test_a_concatenation_with_no_readable_reference_stays_one_document(self):
+        """The cost of the fix, taken deliberately. Falling back to the old
+        title rule here would reintroduce over-splitting exactly where there
+        is least information to justify it. Recorded in KNOWN-LIMITATIONS."""
+        pages = ["DELIVERY NOTE\nGoods received in good order",
+                 "DELIVERY NOTE\nGoods received in good order"]
+        assert find_starts(pages)[0] == [0]

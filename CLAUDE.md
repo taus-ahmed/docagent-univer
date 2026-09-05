@@ -423,12 +423,19 @@ set, its own grounding, its own confidence and its own result, and the Excel
 writer already stacks a list of results. Cost scales linearly, which is honest —
 twenty invoices is twenty documents of work.
 
-Two signals, both deterministic, neither a model call:
+**A repeated title means "a new document" in a concatenation and "a
+continuation" in a form, and it is the same observation in both.** Treating it
+as sufficient cut a six-page Closing Disclosure in two and lost its entire
+Contact Information page — five parties by nine rows — because the second block
+was asked for the first page's slots. Signals are now ranked:
 
-| signal | catches |
-|---|---|
-| **repeated title** — within a run of pages of one type, a page whose first line is that run's title. A title is the run's first line, **or a line printed on two CONSECUTIVE pages** | a homogeneous batch |
-| **type change** — a page classifying as a different type from the last page that classified as anything (`classify_by_hints`, no model call) | a mixed batch, where nothing repeats |
+| | signal | role |
+|---|---|---|
+| suggests | **repeated title** — within a run of same-type pages, that run's first line, or a line on two CONSECUTIVE pages | a candidate, never a verdict |
+| decides | **type change** — a page classifying differently from the last page that classified at all | 0 of 17 multi-page corpus documents change type, so no corroboration is required — and requiring it cost a real boundary, since an invoice and the cheque paying it share the PO they both quote |
+| corroborates | **the reference changes** | recurrence means CONTINUATION. A CD repeats `Loan ID # 123456789` on every page; twenty invoices carry twenty numbers. The old rule had this backwards |
+| vetoes | **"page 3 of 5" after "page 2 of 5"** | per RUN, so a stack of forms still splits. Load-bearing on the real CD, whose page 4 reads as a bank statement and page 6 as a tax form |
+| overrides | **"page 1 of N" after a later page** | the one boundary allowed on no other evidence — two copies of one form share every reference |
 
 Measured: **0 false positives across all 60 corpus documents** (17 of them
 multi-page), and **14 of 14 merged files split at exactly the right pages** —
@@ -447,11 +454,14 @@ Three details each fix a real miss:
 - A candidate whose document would be **page furniture is folded into the one
   above** rather than abandoning the whole split.
 
-⚠ **The costs are deliberately asymmetric.** Splitting wrongly produces N
-stacked blocks, mostly empty — ugly, obvious, fixed in one look. NOT splitting
-produces one plausible result and silently discards the rest. A running header
-on every page of a long report is the shape that would split wrongly; nothing in
-the corpus has one, and the failure is visible rather than silent.
+⚠ **The costs are asymmetric the other way round from what was first assumed.**
+Over-splitting loses everything on the split pages *silently*, because the slots
+asked for belong to a different page. Under-splitting returns one document where
+there were several, which is visible. The rule now under-splits by construction,
+and the case it gives up is recorded: **a concatenation whose documents carry no
+readable reference is treated as one document.** Falling back to the title rule
+there was considered and rejected — it reintroduces guessing exactly where there
+is least information to justify it.
 
 ### A record is not a line
 

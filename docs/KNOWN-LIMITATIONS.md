@@ -85,15 +85,25 @@ Missing or refused. Visible, not dangerous.
 unverified, and the document is flagged for review. A PDF produced by accounting
 software or exported from a system is fine; a scanned one is not.
 
-## A long report with the same heading on every page
+## A merged file whose documents carry no reference number stays one document
 
-**ABSENT.** The system decides where one document ends and the next begins,
-which is what lets you put twenty invoices in one file. It does that partly by
-noticing a repeated heading. A single long report that prints the same line at
-the top of every page could therefore be split into one "document" per page.
+**ABSENT.** Deciding where one document ends and the next begins now needs the
+**reference number to change** — the invoice number, the loan number, the
+employee ID. Repeating the same one is how a form's later pages say "this is
+still me", so a repeated heading is no longer enough on its own.
 
-You would see it immediately — a stack of mostly-empty blocks — and the run
-records how many documents it found. None of the 60 test documents does this.
+The cost is deliberate: merge a stack of documents carrying **no reference
+number at all** — unnumbered delivery notes, plain letters — and they are read
+as **one** document, so only the first one's values come back.
+
+**Why it is taken this way.** The alternative is guessing from a repeated
+heading, and that is what cut a six-page form in half and lost a whole page of
+it. Guessing where there is least information is where guessing does the most
+damage.
+
+**What to do.** Split those files before uploading, or put a reference number on
+the documents. A file whose documents *are* numbered — invoices, statements,
+cheques, payslips, purchase orders — splits correctly.
 
 ## A form field printed across several lines, in a crowded layout
 
@@ -205,6 +215,7 @@ anyone who saw the old behaviour should know it changed.
 
 | Was | Now |
 |---|---|
+| **A multi-page form was cut into pieces.** A six-page Closing Disclosure came back as two blocks — page 1, then a near-empty repeat with only the lender, title company and loan ID. The whole Contact Information page, about thirty values, was never extracted. | A repeated heading is no longer a boundary on its own: the reference number must change too, and a document that prints “Page 3 of 5” is taken at its word. Verified on the real form — one document, and the contact matrix comes back as a full five-by-nine grid. |
 | **Only the first document in a merged file was read.** Three invoices in one PDF produced one result; the other two vanished with no message. | Each document is found and processed separately. 14 of 14 merged test files split at exactly the right pages; no single document is ever split. |
 | **Figures printed inside narrow boxes were cut in half.** On a W-2, `$1,268.75` was read as `5`. Eleven of twelve figures were wrong and all eleven were reported as confident. | All twelve correct. The two halves are rejoined by their position on the page. |
 | **A figure could land in the wrong column** — a payment reported as a receipt — and still be marked confident, because the check only asked whether the number was on the page. | The column a figure sits under is now checked. A misplaced one is flagged and named. |
