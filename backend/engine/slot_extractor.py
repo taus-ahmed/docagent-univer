@@ -47,7 +47,8 @@ from pathlib import Path
 from extractor import _llm_json, _log, _num
 from micr import field_role, find_micr_line, parse_micr
 from text_layer import (canonical_value, check_placement, column_bands,
-                        find_line, record_span, source_occurrences)
+                        find_line, matches_loosely, overprinted_value,
+                        record_span, source_occurrences, unprinted_headers)
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -424,7 +425,47 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     misplaced = 0
     dropped = 0
     merged_columns = 0
+    overprinted = 0
+    unwitnessed = 0
     all_lines = [ln for pg in (page_lines or []) for ln in (pg or [])]
+
+    # PLACEMENT FOR FIELD SLOTS (I9). This check used to run on table rows
+    # only — one call site, inside the table loop — so a key/value template
+    # got no positional verdict of any kind. That is most of what a user
+    # draws, and the column a value sits under is most of its meaning.
+    #
+    # A field slot carries the heading of the column it was drawn in, so it
+    # can be checked by exactly the rule a table row is: find where the
+    # document prints that heading, and see whether the value sits under it.
+    field_headers = [f.get("col_header", "") for f in slots["fields"]]
+    field_bands = (column_bands(all_lines, field_headers)
+                   if (all_lines and any(field_headers)) else {})
+    if field_bands:
+        _log("PLACE", "field slots: column bands read from the document for "
+                      f"{sorted(field_bands)}")
+
+    # A TEMPLATE COLUMN THE DOCUMENT NEVER NAMES (I9). `column_bands` returning
+    # nothing was treated as "no verdict", which is correct as a placement
+    # decision and silent as a report. The user drew a column meaning
+    # something; if the document does not say it anywhere, nothing chose which
+    # source column filled it except position, and that is worth saying out
+    # loud rather than leaving to be discovered in the spreadsheet.
+    if all_lines:
+        declared = list(field_headers)
+        for t in slots["tables"]:
+            declared += [c.get("header", "") for c in (t.get("columns") or [])]
+            declared += [f.get("header", "") for f in (t.get("fields") or [])]
+        missing = unprinted_headers(all_lines, declared)
+        if missing:
+            shown = ", ".join(repr(m) for m in missing[:6])
+            notes.append(
+                f"{len(missing)} template column heading(s) are not printed "
+                f"anywhere in this document ({shown}) — values under them were "
+                f"placed by position, not by what the heading means")
+            flagged.append(_flag(
+                "template columns", shown,
+                "these column headings do not appear in the document, so "
+                "nothing but position decided which source column filled them"))
 
     # ── field slots ──
     answers = parsed.get("fields") or {}
@@ -476,6 +517,53 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         extracted_fields[slot["ref"]] = value
                         conf_map[slot["ref"]] = LOW
                         continue
+                elif not matches_loosely(value, all_lines):
+                    # NO RUN OF WORDS ON THE PAGE SPELLS THIS, even allowing
+                    # for renotation. `canonical_value` has always known that
+                    # and the answer was dropped on the floor: the branch read
+                    # `if canon:` and a None fell through to be reported like
+                    # any grounded value.
+                    #
+                    # The exit exists for values that are DERIVED rather than
+                    # read — a reformatted number, a date rewritten to ISO —
+                    # so it is kept for anything that matches a run once
+                    # punctuation is ignored (`$7,750.00` against a printed
+                    # `7,750.00`). What is left is a string assembled from
+                    # words that are not next to each other, which is the
+                    # shape of a flattening artifact.
+                    #
+                    # MICR is unaffected: those slots are filled in a separate
+                    # pass below and never reach this code.
+                    unwitnessed += 1
+                    flagged.append(_flag(
+                        slot["row_label"], value,
+                        "no run of words on the page spells this value — it "
+                        "was assembled from words that are not adjacent"))
+                    extracted_fields[slot["ref"]] = value
+                    conf_map[slot["ref"]] = LOW
+                    continue
+
+                # TWO TEXTS PRINTED OVER ONE ANOTHER (I7). The characters of
+                # both interleave, and pdfplumber returns the interleaving as a
+                # single word — so the flattened text, the word boxes and
+                # `canonical_value` all agree the string is on the page. It is
+                # not: nothing printed it. Only the character geometry can say
+                # so, and it says so plainly.
+                #
+                # The value is KEPT. Which of the two overprinted texts was
+                # wanted is not recoverable, and a visible wrong cell beats an
+                # invisible missing one — the same trade already made for a
+                # misplaced value.
+                if overprinted_value(value, all_lines):
+                    overprinted += 1
+                    flagged.append(_flag(
+                        slot["row_label"], value,
+                        "two texts are printed over one another here, so this "
+                        "string is the two of them interleaved rather than "
+                        "anything the page prints"))
+                    extracted_fields[slot["ref"]] = value
+                    conf_map[slot["ref"]] = LOW
+                    continue
 
             ok, why = verify_span(value, source, page, pages)
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
@@ -486,6 +574,16 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 ungrounded += 1
             if lvl not in CONFIDENT_LEVELS:
                 flagged.append(_flag(slot["row_label"], value, reason or why))
+            head = slot.get("col_header", "")
+            if field_bands and head and lvl in CONFIDENT_LEVELS:
+                line = find_line(all_lines, source)
+                for _k, why_p in check_placement(
+                        {head: value}, [{"key": head, "header": head}],
+                        line, field_bands):
+                    misplaced += 1
+                    ungrounded += 1
+                    conf_map[slot["ref"]] = LOW
+                    flagged.append(_flag(slot["row_label"], value, why_p))
 
     # ── MICR decomposition ──
     # A cheque's routing and account numbers are printed only inside the MICR
@@ -681,11 +779,20 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         notes.append(f"{dropped} table row(s) were dropped as duplicates — see "
                      f"the flagged rows")
     if misplaced:
-        notes.append(f"{misplaced} table value(s) sit under a different column "
+        notes.append(f"{misplaced} value(s) sit under a different column "
                      f"in the document than the slot they were written to")
+    if overprinted:
+        notes.append(f"{overprinted} value(s) were read off a region where two "
+                     f"texts are printed over one another — the string is the "
+                     f"two of them interleaved, not anything the page prints")
+    if unwitnessed:
+        notes.append(f"{unwitnessed} value(s) are spelled by no run of words on "
+                     f"the page — they were assembled from words that are not "
+                     f"adjacent")
     _log("SLOT", f"filled {len(extracted_fields)}/{len(slots['fields'])} field slots, "
                  f"table rows {row_counts}, {ungrounded} ungrounded value(s), "
-                 f"{misplaced} misplaced, {dropped} dropped")
+                 f"{misplaced} misplaced, {dropped} dropped, "
+                 f"{overprinted} overprinted, {unwitnessed} unwitnessed")
 
     # DOCUMENT-LEVEL GATE — a document where more than 30% of cells are low
     # confidence is sent for manual review as a whole, rather than handing the
@@ -749,6 +856,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "misplaced_count": misplaced,
             "dropped_row_count": dropped,
             "merged_column_count": merged_columns,
+            "overprinted_count": overprinted,
+            "unwitnessed_count": unwitnessed,
             "low_confidence_cells": low_cells,
             "graded_cells": graded,
             "low_confidence_ratio": round(low_ratio, 4),

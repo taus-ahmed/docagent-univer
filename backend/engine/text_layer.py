@@ -414,6 +414,178 @@ def canonical_value(value, lines):
         _walk(flat, target, True, gutter)
 
 
+# ── two texts printed over one another ──────────────────────────────────────
+
+# A fraction of the NARROWER character's width. Adjacent characters in ordinary
+# text are contiguous or gapped; kerning can make a pair overlap slightly, so
+# the threshold is half a character rather than any overlap at all.
+OVERPRINT_FRAC = 0.5
+# An ISOLATED overlap is kerning — "'s" set tight in a serif face. A RUN of
+# them is two texts printed over one another, because the second text's
+# characters interleave with the first's all the way along.
+OVERPRINT_MIN_RUN = 3
+
+
+def overprinted_spans(page):
+    """[(x0, x1, top)] for every region where two texts are printed over each other.
+
+    THE DEFECT. `SampleBill.pdf` page 4 prints its account number twice, in two
+    font sizes, at the same place:
+
+        size 11.00, top 100.183   0 0 0 0 1 2 3 4 5 6   ->  0000123456
+        size 10.21, top  99.916   0 0 0 0 1 5 8 6 5 9   ->  0000158659
+
+    The two runs overlap in x by about 2.7pt per character. Every reader that
+    orders characters left to right — pdfplumber's `extract_text` AND its
+    `extract_words` — interleaves them into `00000000112538645596`, and
+    `extract_words` returns that as ONE word. So the contamination is in the
+    word box itself, below everything built on top of it: the flattened text,
+    `canonical_value`'s re-derivation, and `verify_span`'s grounding all agree
+    the string is on the page, because by the time they look, it is.
+
+    That is why this is measured on CHARACTERS. It is the only level at which
+    the two texts are still separable, and the geometry says plainly what
+    happened even though neither string can be recovered from it.
+
+    Measured over all 70 PDFs in the repo: 9 documents carry overprinted
+    regions and every one of them is genuine — including five gold-corpus
+    audit letters whose letterhead has been interleaving
+    (`NSou:i tAe U2D20-200`) since the day they were committed, unnoticed
+    because no slot ever asked for that line.
+
+    NOTHING IS REPAIRED. Which of the two texts was wanted is not recoverable
+    from the page — both are printed, in full, in the same place. A caller is
+    told the region is contaminated and keeps the value; the alternative is
+    inventing one of the two readings.
+    """
+    try:
+        chars = [c for c in page.chars if str(c.get("text", "")).strip()]
+    except Exception:
+        return []
+    if not chars:
+        return []
+    out = []
+    for ln in group_lines(chars):
+        hits = []
+        for a, b in zip(ln, ln[1:]):
+            try:
+                narrow = min(float(a["x1"]) - float(a["x0"]),
+                             float(b["x1"]) - float(b["x0"]))
+                if narrow <= 0:
+                    continue
+                if float(a["x1"]) - float(b["x0"]) > OVERPRINT_FRAC * narrow:
+                    hits.append((a, b))
+            except (KeyError, TypeError, ValueError):
+                continue
+        if len(hits) >= OVERPRINT_MIN_RUN:
+            out.append((min(float(a["x0"]) for a, _ in hits),
+                        max(float(b["x1"]) for _, b in hits),
+                        float(ln[0]["top"])))
+    return out
+
+
+def mark_overprints(lines, spans):
+    """Tag every word sitting in an overprinted region. Returns how many."""
+    if not spans:
+        return 0
+    n = 0
+    for ln in lines:
+        for w in ln:
+            try:
+                wx0, wx1, wt = float(w["x0"]), float(w["x1"]), float(w["top"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            for x0, x1, top in spans:
+                if wx0 < x1 and x0 < wx1 and abs(wt - top) <= LINE_TOL:
+                    w["overprinted"] = True
+                    n += 1
+                    break
+    return n
+
+
+def matches_loosely(value, lines):
+    """True when some run of words spells `value` once punctuation is ignored.
+
+    `canonical_value` demands an exact spelling, which is right for the join it
+    re-derives and too strict for deciding whether the page witnesses a value
+    at all. A number the model renotated (`$7,750.00` against a printed
+    `7,750.00`) is still read off the page; a string assembled from words that
+    are not adjacent is not, and that is the distinction this draws.
+    """
+    target = re.sub(r"[^0-9a-z]+", "", str(value or "").casefold())
+    if len(target) < 4:
+        return True                      # too short to conclude anything
+    for ln in lines:
+        toks = [re.sub(r"[^0-9a-z]+", "", str(w.get("text", "")).casefold())
+                for w in ln]
+        for i in range(len(toks)):
+            if not toks[i]:
+                continue
+            run = ""
+            for j in range(i, min(i + MAX_VALUE_WORDS, len(toks))):
+                run += toks[j]
+                if run == target:
+                    return True
+                if len(run) > len(target):
+                    break
+    return False
+
+
+def unprinted_headers(lines, headers):
+    """The template headings this document does not print anywhere.
+
+    `column_bands` answers a narrower question — where on the page a heading
+    sits — and returns nothing at all when it cannot find two of them on one
+    line. That "nothing" was read downstream as "no verdict", which is right
+    for a placement check and wrong as a report to the user: a template whose
+    column means `Variance` against a document that never says `Variance` is
+    not an unchecked template, it is a template describing something the
+    document does not contain, and its columns can only have been filled
+    positionally.
+
+    A heading counts as printed when EVERY significant word of it appears
+    somewhere on the page. Neither a per-line match nor a reading-order match
+    survives contact with a real column heading: the CFPB Closing Disclosure
+    sets `Paid by Others` stacked in a narrow column, and prints `Paid by` on
+    one line with `Others` at the far END of the next, after `Before Closing`.
+    Both stricter rules called it missing.
+
+    Erring loose is deliberate. This warning exists to be read, and one that
+    fires on a heading the document plainly does print is one the user learns
+    to scroll past — the same reason rule G was rejected from the save gate.
+    Words shorter than three characters (`of`, `by`, `at`) carry no evidence
+    either way and are not required.
+    """
+    hay = " ".join(re.sub(r"[^0-9a-z]+", " ", str(w.get("text", "")).casefold())
+                   for ln in lines for w in ln)
+    out = []
+    for h in dict.fromkeys(headers):
+        words = [w for w in re.split(r"[^0-9a-z]+", str(h or "").casefold())
+                 if len(w) >= 3]
+        if words and not all(w in hay for w in words):
+            out.append(h)
+    return out
+
+
+def overprinted_value(value, lines):
+    """True when `value` is spelled by a word carrying overprinted characters.
+
+    Matched both ways round — the word may be the whole value, or the value
+    may be one word of a longer overprinted run.
+    """
+    flat = _flat(value).replace(" ", "")
+    if len(flat) < 4:
+        return False
+    for ln in lines:
+        for w in ln:
+            if not w.get("overprinted"):
+                continue
+            t = _flat(w.get("text", "")).replace(" ", "")
+            if len(t) >= 4 and (t in flat or flat in t):
+                return True
+    return False
+
+
 # ── selection state that is not in the text at all ──────────────────────────
 
 def acroform_widgets(path):
@@ -528,6 +700,9 @@ def read_page(page, widgets=()):
         return raw, [], []
     lines, repairs = repair_wrapped(words)
     lines, placed = inject_markers(lines, widgets)
+    # Marked on the FINAL word list and by geometry, so a fused fragment or an
+    # injected marker cannot lose the tag.
+    mark_overprints(lines, overprinted_spans(page))
     if not repairs and not placed:
         return raw, lines, []
     return text_from_lines(lines), lines, repairs

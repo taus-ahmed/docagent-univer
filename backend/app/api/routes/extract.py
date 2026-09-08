@@ -4554,6 +4554,10 @@ _MIN_COL_WIDTH = 8
 _MAX_COL_WIDTH = 60
 
 
+# DocAgentSpreadsheet.tsx's DCW — the width every column starts at.
+_EDITOR_DEFAULT_COL_PX = 120
+
+
 def _fit_columns(ws, col_widths=()):
     """Give EVERY written column a width (D14).
 
@@ -4572,6 +4576,18 @@ def _fit_columns(ws, col_widths=()):
     fitted to its longest cell.
     """
     from openpyxl.utils import get_column_letter
+
+    # A GRID SAVED BY THE OLD EDITOR DECLARES A WIDTH FOR EVERY COLUMN.
+    # `colWidths` was initialised to Array(26).fill(120) and persisted verbatim,
+    # so "the width the user dragged" was true of all 26 columns of every
+    # template ever saved and the fit branch below was unreachable. The editor
+    # now persists 0 for a column nobody touched; this handles the grids
+    # already in the database, where a uniform array of the editor's own
+    # default carries no per-column information and cannot be a choice.
+    if col_widths:
+        vals = [v for v in col_widths if v]
+        if vals and len(set(vals)) == 1 and vals[0] == _EDITOR_DEFAULT_COL_PX:
+            col_widths = ()
 
     for c in range(1, (ws.max_column or 0) + 1):
         stored = None
@@ -5074,14 +5090,65 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             text = str(cell_def.get("value") or "").strip()
             if text:
                 put(doc_offset + out_row(tr), tc, text)
-            # The look travels with the cell whether or not it holds text: a
-            # bordered empty value cell is a box the user drew, and it is the
-            # cells WITHOUT text that the slots fill.
-            style = cell_def.get("style")
-            if style:
-                cell = ws.cell(row=doc_offset + out_row(tr) + 1, column=tc + 1)
-                if not isinstance(cell, MergedCell):
-                    _apply_cell_style(cell, style, openpyxl_mod)
+
+        # 1b. THE LOOK — including inside a band.
+        #
+        # Style used to be applied in the loop above, which `continue`s past
+        # every band row before it gets there. A TABLE TEMPLATE BORDERS ITS
+        # BODY: the band is the part of the sheet a user draws a box around,
+        # and it was the one part that arrived unstyled. D13 was verified on a
+        # form template, which has no band, so the gap was invisible.
+        #
+        # The look travels with a cell whether or not it holds text — a
+        # bordered empty value cell is a box the user drew, and it is the cells
+        # WITHOUT text that the slots fill.
+        styles = {}
+        for key, cell_def in cells_tpl.items():
+            if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
+                continue
+            try:
+                tr, tc = map(int, str(key).split(","))
+            except ValueError:
+                continue
+            if cell_def.get("style"):
+                styles[(tr, tc)] = cell_def["style"]
+
+        def dress(out_r, out_c, src):
+            st = styles.get(src)
+            if not st:
+                return
+            cell = ws.cell(row=doc_offset + out_r + 1, column=out_c + 1)
+            if not isinstance(cell, MergedCell):
+                _apply_cell_style(cell, st, openpyxl_mod)
+
+        for (tr, tc) in styles:
+            if tr > max_r or tc > max_c:
+                continue
+            if tr in band_rows or (tr, tc) in band_cells:
+                continue
+            dress(out_row(tr), tc, (tr, tc))
+
+        # A band grows to the document's row count, so the rows the user drew
+        # are not the rows that get written. Each drawn row keeps its own look;
+        # rows BEYOND what was drawn take the look of the band's FIRST body
+        # row, because that is the row the user drew as "a row of this table".
+        # Repeating the LAST one instead would stamp a closing bottom border
+        # onto every overflow row and draw the table as a stack of one-row
+        # boxes.
+        for t in tables:
+            rows_n = len(ed.get(f"{t['name']}_rows") or [])
+            if t.get("orientation") == "columns":
+                first, last = t["start_col"], t["end_col"]
+                for i in range(max(last - first + 1, rows_n)):
+                    src_c = first + i if i <= last - first else first
+                    for r in range(t["start_row"], t["end_row"] + 1):
+                        dress(out_row(r), first + i, (r, src_c))
+                continue
+            height = t["end_row"] - t["start_row"] + 1
+            for i in range(max(height, rows_n)):
+                src_r = t["start_row"] + (i if i < height else 0)
+                for c in range(0, max_c + 1):
+                    dress(out_row(t["start_row"]) + i, c, (src_r, c))
 
         # 2. field slots, each at the exact address it was asked for
         slot_label = {f.get("ref"): f.get("row_label", "")

@@ -112,7 +112,28 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   };
 
   const [cells, setCells] = useState<Record<string, Cell>>(initCells);
-  const [colWidths, setColWidths] = useState<number[]>(() => initialData?.colWidths ?? Array(COLS).fill(DCW));
+  // A WIDTH THE USER DID NOT SET IS NOT A WIDTH.
+  //
+  // `colWidths` was initialised to Array(COLS).fill(DCW) and saved verbatim, so
+  // every template arrived at the server declaring an explicit width for all 26
+  // columns. The exporter honours a stored width as "the width the user
+  // dragged" and auto-fits only where there is none — so auto-fit never ran on
+  // any real template, every column came out 17 characters wide, and long
+  // labels were truncated. Every fixture in the repo has `colWidths: []`, which
+  // is why the export test and the harness both passed.
+  //
+  // The array still has to be dense for RENDERING, so what changes is what is
+  // PERSISTED: a column the user never dragged is saved as 0, which the
+  // exporter reads as "no stored width, fit it".
+  const hydrate = (w?: number[]) =>
+    Array.from({ length: COLS }, (_, i) => (w?.[i] ?? 0) > 0 ? (w as number[])[i] : DCW);
+  const sizedFrom = (w?: number[]) =>
+    new Set<number>((w ?? []).map((v, i) => (v > 0 && v !== DCW ? i : -1)).filter(i => i >= 0));
+
+  const [colWidths, setColWidths] = useState<number[]>(() => hydrate(initialData?.colWidths));
+  // Which columns the user actually dragged. A legacy grid saved by the old
+  // editor reads as "none of them", which is exactly what it means.
+  const sizedCols = useRef<Set<number>>(sizedFrom(initialData?.colWidths));
   const [merges, setMerges] = useState<Record<string, { rows: number; cols: number }>>(() => initialData?.merges ?? {});
   const [regions, setRegions] = useState<TableRegion[]>(() => initialData?.regions ?? []);
 
@@ -130,7 +151,8 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
     loadedTimestampRef.current = savedAt;
     setCells(initialData.cells ?? {});
     setMerges(initialData.merges ?? {});
-    setColWidths(initialData.colWidths ?? Array(COLS).fill(DCW));
+    setColWidths(hydrate(initialData.colWidths));
+    sizedCols.current = sizedFrom(initialData.colWidths);
     setRegions(initialData.regions ?? []);
     // Notify parent so sheetDataRef is populated — but only with the loaded data
     // NOT called again after user edits (notify is called by upd/markExtract etc.)
@@ -172,7 +194,9 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       if (g.orientation !== "rows") return;
       for (let r = Math.min(g.r1, g.r2) + 1; r <= Math.max(g.r1, g.r2); r++) rows.add(r);
     });
-    return { cells: c, colWidths: cw, merges: m,
+    return { cells: c,
+             colWidths: cw.map((w, i) => (sizedCols.current.has(i) ? w : 0)),
+             merges: m,
              repeatRows: [...rows].sort((a, b) => a - b), regions: rg ?? [] };
   }, []);
 
@@ -526,6 +550,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       document.removeEventListener("mouseup", up);
       // Notify parent with updated colWidths so the new width is saved
       const nw = Math.max(30, sw + ev.clientX - sx);
+      sizedCols.current.add(c);
       setColWidths(p => {
         const n = [...p]; n[c] = nw;
         notify(cells, merges, n);
