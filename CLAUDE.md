@@ -1163,6 +1163,11 @@ Railway (backend) and Vercel (frontend) auto-deploy from `main`. See
 `docs/DEPLOY-RUNBOOK.md`.
 
 **Local repo path**: `E:\docagent-univer`
+**Working branch**: `main`. Not `feat/accuracy-harness` — that branch is a
+fully-merged ancestor of `main`, last touched 2026-08-24, and carries nothing
+`main` does not have (`git merge-base --is-ancestor feat/accuracy-harness main`
+is true; `rev-list --left-right --count` gives `0 22`). Checking it out silently
+reverts R1–R6, the text layer, document boundaries and everything after.
 **Production URL**: `https://loving-grace-production.up.railway.app`
 
 ---
