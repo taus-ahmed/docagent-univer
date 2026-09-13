@@ -1,0 +1,41 @@
+{
+ "_reconstruction": "RECONSTRUCTION \u2014 not the template used in round 2. The original was never saved to the repo; this was rebuilt on 2026-09-13 from the description in docs/DocAgent_round2_report.md (run 4: 'E1 \u2014 bill header, key-value'). The run names Bill Account Number, Billing Period and a multi-line address; the other labels are guesses at a bill header.",
+ "cells": {
+  "0,0": {
+   "value": "Customer Name",
+   "style": {}
+  },
+  "1,0": {
+   "value": "Service Address",
+   "style": {}
+  },
+  "2,0": {
+   "value": "Bill Account Number",
+   "style": {}
+  },
+  "3,0": {
+   "value": "Statement ID",
+   "style": {}
+  },
+  "4,0": {
+   "value": "ESI ID Number",
+   "style": {}
+  },
+  "5,0": {
+   "value": "Billing Period",
+   "style": {}
+  },
+  "6,0": {
+   "value": "Due Date",
+   "style": {}
+  },
+  "7,0": {
+   "value": "Amount Due",
+   "style": {}
+  }
+ },
+ "colWidths": [],
+ "merges": {},
+ "repeatRows": [],
+ "regions": []
+}

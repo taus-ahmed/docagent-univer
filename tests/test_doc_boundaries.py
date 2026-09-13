@@ -121,8 +121,6 @@ MERGES = {
     "five two-page balance sheets": ["BS-2024-Q1", "BS-2024-Q2", "BS-2023-YE",
                                      "BS-2024-INTERIM", "BS-2024-PROJ-YE"],
     "two income statements": ["IS-2024-Q3", "IS-2024-Q4"],
-    "four different types": ["INV-2024-0031", "CHQ-001847", "STMT-2024-01",
-                             "PAYSLIP-EMP-0007-APR2024"],
     "eight, mixed, with runs": ["INV-2024-0031", "INV-2024-0047", "CHQ-001847",
                                 "CHQ-001848", "STMT-2024-01",
                                 "PAYSLIP-EMP-0007-APR2024", "EXP-2024-0081",
@@ -151,9 +149,24 @@ class TestMergedFilesSplitAtTheRightPages:
         assert find_starts(pages)[0] == expected
         assert len(expected) == 20
 
+    def test_an_invoice_and_the_cheque_paying_it_stay_together(self,
+                                                               page_texts):
+        """THE COST OF I1's FIX, pinned so it cannot be forgotten.
+
+        This merge used to be listed above, splitting at [0, 1, 2, 3]. A type
+        change no longer decides a boundary on its own (round 2: it cut the
+        ENGIE bill at its glossary page), and INV-2024-0031 and CHQ-001847
+        both quote PO-2024-0018 — so the cheque page shares a reference with
+        the invoice and reads as its continuation. One document where there
+        were two: the visible direction."""
+        pages, _ = _merge(page_texts, ["INV-2024-0031", "CHQ-001847",
+                                       "STMT-2024-01",
+                                       "PAYSLIP-EMP-0007-APR2024"])
+        assert find_starts(pages)[0] == [0, 2, 3]
+
     def test_it_says_why_it_split(self, page_texts):
         """A silent split would be as bad as a silent merge."""
-        pages, _ = _merge(page_texts, MERGES["four different types"])
+        pages, _ = _merge(page_texts, MERGES["eight, mixed, with runs"])
         _starts, why = find_starts(pages)
         assert "document type changes" in why
 
@@ -195,11 +208,16 @@ class TestAContinuationPageIsNotADocument:
     def test_page_furniture_is_folded_into_the_document_above(self):
         """A candidate whose whole document would be one line of furniture is
         a continuation. Discarding the split entirely on account of it — which
-        is what an earlier version did — lost the real boundaries too."""
-        pages = ["ACME INVOICE\nInvoice 1\nTotal 100",
-                 "continued",
-                 "ACME INVOICE\nInvoice 2\nTotal 200",
-                 "continued"]
+        is what an earlier version did — lost the real boundaries too.
+
+        The pages carry references since I1's fix. Without them this fixture
+        is a concatenation with no readable reference, which is one document
+        by rule; it only ever split because `classify_by_hints` reads the word
+        "continued" as a tax form, and a type change used to decide alone."""
+        pages = ["ACME INVOICE\nInvoice No 100001\nTotal 100",
+                 "continued Ref No 555555",
+                 "ACME INVOICE\nInvoice No 100002\nTotal 200",
+                 "continued Ref No 666666"]
         assert find_starts(pages)[0] == [0, 2]
 
 
@@ -365,4 +383,43 @@ class TestItUnderSplitsRatherThanOverSplits:
         is least information to justify it. Recorded in KNOWN-LIMITATIONS."""
         pages = ["DELIVERY NOTE\nGoods received in good order",
                  "DELIVERY NOTE\nGoods received in good order"]
+        assert find_starts(pages)[0] == [0]
+
+
+class TestATypeChangeIsACandidateNotAVerdict:
+    """Round 2, I1: `SampleBill.pdf` page 4 — a meter summary and a glossary —
+    classifies as `tax_form` after three pages reading as an invoice, and the
+    bill was cut in two."""
+
+    def test_a_type_change_alone_does_not_split(self):
+        pages = ["INVOICE\nInvoice No 123456\nTotal Due 50.00",
+                 "Form W-2 Wage and Tax Statement\nEmployer identification"]
+        assert find_starts(pages)[0] == [0]
+
+    def test_a_type_change_with_a_new_reference_splits(self):
+        pages = ["INVOICE\nInvoice No 123456\nTotal Due 50.00",
+                 "Form W-2 Wage and Tax Statement\nEmployer identification\n"
+                 "Ref No 998877"]
+        from doc_boundaries import _doc_type
+        assert _doc_type(pages[0]) != _doc_type(pages[1])
+        assert find_starts(pages)[0] == [0, 1]
+
+    def test_a_bare_page_number_matching_its_position_vetoes(self):
+        """ENGIE prints `Page 4` alone on its fourth page. Without this, its
+        page-4 reference — the overprinted, interleaved account number, which
+        shares nothing with pages 1-3 — would corroborate the split."""
+        pages = ["ACME FORM\nRef No 778899\nA", "Page 2\nB",
+                 "ACME FORM\nRef No 778899\nC",
+                 "Page 4\nACME FORM\nRef No 112233\nD"]
+        assert find_starts(pages)[0] == [0]
+
+    def test_a_page_number_in_prose_is_not_a_veto(self):
+        pages = ["ACME FORM\nRef No 778899\nA",
+                 "ACME FORM\nRef No 112233\nsee page 2 for terms"]
+        assert find_starts(pages)[0] == [0, 1]
+
+    def test_the_real_bill(self, pdf_dir):
+        import pdfplumber
+        with pdfplumber.open(pdf_dir / "round2" / "SampleBill.pdf") as pdf:
+            pages = [p.extract_text() or "" for p in pdf.pages]
         assert find_starts(pages)[0] == [0]

@@ -41,18 +41,15 @@ two-page statements whose page 2 opens with a different line entirely.
                      is that run's title — the run's first line, or a line
                      printed on two CONSECUTIVE pages.
 
-    DECIDES
-
     type change      a page classifying as a different document type from the
                      last page that classified as anything (`classify_by_hints`,
-                     keyword pre-screening, no model call). Measured: NO
-                     multi-page document in the corpus changes type between its
-                     own pages (0 of 17), so this needs no corroboration —
-                     and requiring it cost a real boundary, because an invoice
-                     and the cheque that pays it share the PO number they both
-                     quote.
+                     keyword pre-screening, no model call). This used to DECIDE
+                     on its own, and it cut the round-2 ENGIE bill in two at a
+                     glossary page reading as `tax_form`. It is a candidate
+                     now. The price: an invoice and the cheque paying it share
+                     the PO number both quote, and stay one document.
 
-    CORROBORATES      the REFERENCE must change. Recurrence of a reference means
+    CORROBORATES      the REFERENCE must change, for every candidate. Recurrence of a reference means
                      CONTINUATION: a Closing Disclosure repeats
                      `Loan ID # 123456789` on every page, while twenty
                      concatenated invoices carry twenty different numbers. The
@@ -64,6 +61,10 @@ two-page statements whose page 2 opens with a different line entirely.
                      Disclosure this is load-bearing rather than decorative:
                      its page 4 reads as a bank statement and its page 6 as a
                      tax form, and only the page count keeps them together.
+                     A bare "Page 4" on the run's fourth page vetoes the same
+                     way — the ENGIE bill's page 4 carries a reference (the
+                     overprinted account number) sharing nothing with pages
+                     1-3, so without it the split was corroborated.
 
     OVERRIDES         a "page 1 of N" directly after a later page of a run. The
                      one boundary allowed on no other evidence, because two
@@ -170,9 +171,9 @@ def find_starts(page_texts):
     sigs = [_signature(t) for t in page_texts]
     types = [_doc_type(t) for t in page_texts]
 
-    # SIGNAL 2 first: where the document TYPE changes, a document certainly
-    # begins. A page the classifier is unsure about (None) continues whatever
-    # came before rather than starting something.
+    # SIGNAL 2 first: where the document TYPE changes, a document MAY begin —
+    # a candidate, corroborated below like any other. A page the classifier
+    # is unsure about (None) continues whatever came before.
     # Compared against the last KNOWN type, not the previous page's. A
     # continuation page often classifies as nothing at all — an income
     # statement's second page is a sentence of small print — and letting that
@@ -257,26 +258,30 @@ def find_starts(page_texts):
             # "Page 3 of 5" after "page 2 of 5" outranks every other signal.
             carried |= refs[i]
             continue
-        if i in changed:
-            # A TYPE CHANGE NEEDS NO CORROBORATION. It is a far narrower claim
-            # than a repeated title — a page reading as a cheque directly after
-            # one reading as an invoice — and measured across the corpus, NO
-            # multi-page document changes type between its own pages (0 of 17),
-            # nor does the Closing Disclosure. Requiring corroboration here
-            # cost a real boundary instead: an invoice followed by the cheque
-            # that pays it share the PO number they both quote, so a
-            # cross-reference looked like continuity and a mixed batch stopped
-            # splitting. Forms that print a page count are still protected by
-            # the veto above.
-            starts.append(i)
-            carried = set(refs[i])
+        if _states_its_own_position(page_texts[i], i - starts[-1]):
+            # A bare "Page 4" on the fourth page of the run — the same
+            # statement as "page 4 of 5", without the total.
+            carried |= refs[i]
             continue
-        # CORROBORATION, for a repeated title only. That signal means "a new
-        # document" in a concatenation and "a continuation" in a form and is
-        # the SAME observation in both, so on its own it decides nothing. The
-        # page must carry references and share NONE with the document so far;
-        # sharing one — the same loan, the same invoice — is the page saying
-        # it belongs to what came before.
+        # CORROBORATION, for EVERY candidate — a type change included.
+        #
+        # A type change used to split on its own, and that was wrong on a real
+        # document. The ENGIE utility bill's page 4 is a meter summary and a
+        # glossary; `classify_by_hints` reads it as `tax_form`, and the bill
+        # was cut in two. The second "document" was then asked for the whole
+        # template: the glossary filled the charges table, the meter block
+        # filled the bill header, and the writer stacked both blocks under a
+        # second copy of the template's heading row (round 2, I1: runs 4, 5,
+        # 6, 9, 11). A keyword classifier's verdict on one page is a guess
+        # about that page, not evidence about where a document ends.
+        #
+        # The price is recorded rather than hidden: an invoice followed by the
+        # cheque that pays it can share the PO number both quote, and then
+        # they stay one document. Under-splitting is the visible direction.
+        #
+        # The page must carry references and share NONE with the document so
+        # far; sharing one — the same loan, the same invoice — is the page
+        # saying it belongs to what came before.
         if refs[i] and carried and not (refs[i] & carried):
             starts.append(i)
             carried = set(refs[i])
@@ -320,6 +325,22 @@ def _continues_a_numbered_run(pages_of, i):
     """
     a, b = pages_of[i - 1], pages_of[i]
     return bool(a and b and a[1] == b[1] and b[0] == a[0] + 1)
+
+
+#: A line that is nothing but a page number — "Page 4". Anchored to the whole
+#: line so prose ("see page 2 for details") never counts.
+_BARE_PAGE = re.compile(r"^\s*page\s+(\d{1,3})\s*$", re.I | re.M)
+
+
+def _states_its_own_position(text, offset):
+    """The page prints a bare "Page n", and n is where it sits in its run.
+
+    `offset` is the page's 0-based distance from the start of the run it
+    would continue. Only n >= 2 counts: "Page 1" says nothing about
+    continuation, and a restart is `_restarts_its_own_numbering`'s job.
+    """
+    return any(int(m.group(1)) >= 2 and int(m.group(1)) == offset + 1
+               for m in _BARE_PAGE.finditer(str(text or "")))
 
 
 def _restarts_its_own_numbering(pages_of, i):

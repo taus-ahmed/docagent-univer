@@ -47,8 +47,9 @@ from pathlib import Path
 from extractor import _llm_json, _log, _num
 from micr import field_role, find_micr_line, parse_micr
 from text_layer import (canonical_value, check_placement, column_bands,
-                        find_line, matches_loosely, overprinted_value,
-                        record_span, source_occurrences, unprinted_headers)
+                        find_line, flatten_pages, line_page, matches_loosely,
+                        overprinted_value, page_for_prompt_page, record_span,
+                        source_occurrences, unprinted_headers)
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -383,6 +384,96 @@ def verify_span(value, source, page, page_texts, record=""):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ONE REGION PER BAND
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# A band describes a SHAPE, and nothing ever chose WHICH region of the document
+# carrying that shape it was bound to. The prompt asks for "one object per row
+# present in the document" over every page, and every row that came back was
+# kept. So Berkshire's earnings table (page 1) and its operating-earnings table
+# (page 2) — same columns, same headings — were written into one band as one
+# table (round 2, I1, runs 1-3). The same-page cases that came out right (runs
+# 7, 8) were right because of how the model read those pages, not because of
+# any check: there was none.
+#
+# A region here is a PAGE. That is deliberately narrow. Within one page, nothing
+# available tells a subtotal gap inside one table from the gap between two
+# tables without the row-classification work of I4, and no same-page merge was
+# ever observed; every confirmed merge crossed a page.
+#
+# THE RULE IS STRICT, AND ITS COST IS ACCEPTED. A table that genuinely
+# continues onto the next page loses its continuation, visibly — a short table
+# can be seen; a merged lookalike cannot. A rule letting a continuation through
+# when the next page repeats the column headings was considered and rejected:
+# Berkshire's two tables carry IDENTICAL headings, so it would merge the exact
+# case it exists to separate.
+#
+# WHICH REGION: the page the model's answer BEGINS on. Page order is not
+# evidence of which table the band describes — the report has the merge going
+# "in both directions" under two templates on one document — while the order
+# the model answers in is its own reading of the band's meaning. A choice has
+# to be made, it is named in the warning, and the warning fires every time more
+# than one region matched, whether or not the choice was right.
+
+def _pages_of(occurrences, all_lines):
+    return {p for p in (line_page(all_lines[i]) for i in occurrences)
+            if p is not None}
+
+
+def select_region(located, all_lines, page_lines):
+    """(located rows kept, region report or None).
+
+    `located` is [(cells, source, page, key, occurrences)] in the model's
+    order. A row's pages are the file pages of every line its source could be
+    read from; with no such line, the page the model claimed. A row carrying
+    no page at all (no geometry, or a source matching nothing) is never left
+    out — nothing says it belongs to another region, and it is already
+    ungrounded.
+
+    Kept rows have their occurrences narrowed to the kept page, so a line
+    printed on both pages is claimed where the table actually is.
+    """
+    pages_by_row = []
+    for _cells, _source, page, _key, occurrences in located:
+        pages = _pages_of(occurrences, all_lines) if all_lines else set()
+        if not pages and not occurrences:
+            p = page_for_prompt_page(page_lines, page)
+            pages = {p} if p is not None else set()
+        pages_by_row.append(pages)
+
+    distinct = []
+    for pages in pages_by_row:
+        for p in sorted(pages):
+            if p not in distinct:
+                distinct.append(p)
+    if len(distinct) < 2:
+        return located, None
+
+    # The first row that places itself on exactly one page decides; a row
+    # whose source is printed on several pages cannot.
+    kept_page = next((next(iter(p)) for p in pages_by_row if len(p) == 1),
+                     distinct[0])
+    kept, left_out = [], []
+    for row, pages in zip(located, pages_by_row):
+        if pages and kept_page not in pages:
+            left_out.append(row)
+            continue
+        cells, source, page, key, occurrences = row
+        if pages:
+            occurrences = [i for i in occurrences
+                           if line_page(all_lines[i]) in (kept_page, None)]
+        kept.append((cells, source, page, key, occurrences))
+    if not left_out:
+        return located, None
+    matched = sorted({kept_page} | {p for (row, pages) in zip(located, pages_by_row)
+                                    if pages and kept_page not in pages
+                                    for p in pages})
+    return kept, {"pages": matched, "kept_page": kept_page,
+                  "kept_rows": len(kept), "left_out": len(left_out),
+                  "left_out_rows": [(c, s) for c, s, *_ in left_out]}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # RUN
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -427,7 +518,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     merged_columns = 0
     overprinted = 0
     unwitnessed = 0
-    all_lines = [ln for pg in (page_lines or []) for ln in (pg or [])]
+    all_lines = flatten_pages(page_lines)
+    regions_warned = []
 
     # PLACEMENT FOR FIELD SLOTS (I9). This check used to run on table rows
     # only — one call site, inside the table loop — so a key/value template
@@ -685,7 +777,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # which is what a record spanning several printed lines needs, and
             # cannot reach into a neighbouring record.
             seen_rows, claimed_lines, rows_out = set(), set(), []
-            claims = []
+            located = []
             for r in raw:
                 if not isinstance(r, dict):
                     continue
@@ -694,6 +786,40 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 key = _flat(source)
                 occurrences = (source_occurrences(all_lines, source)
                                if (all_lines and key) else [])
+                located.append((cells, source, page, key, occurrences))
+
+            # ONE REGION PER BAND (round 2, I1). See `select_region`.
+            located, region = select_region(located, all_lines, page_lines)
+            if region:
+                shown_pages = ", ".join(str(p) for p in region["pages"])
+                left = region["left_out"]
+                regions_warned.append({"table": t["name"], **{
+                    k: v for k, v in region.items() if k != "left_out_rows"}})
+                flagged.append(_flag(
+                    f'{t["name"]}[regions]',
+                    f'{len(region["pages"])} regions matched, on pages '
+                    f'{shown_pages}; kept page {region["kept_page"]}',
+                    f'{len(region["pages"])} regions of the document match '
+                    f'this table (pages {shown_pages}). Only the one on page '
+                    f'{region["kept_page"]} — where the answer began — was '
+                    f'written; {left} row(s) from the other page(s) were left '
+                    f'out rather than appended. If the table genuinely '
+                    f'continues across pages, those rows are missing.'))
+                notes.append(
+                    f'{t["name"]}: {len(region["pages"])} regions matched on '
+                    f'pages {shown_pages}; kept page {region["kept_page"]}, '
+                    f'left out {left} row(s)')
+                for cells, source in region["left_out_rows"]:
+                    shown = " | ".join(
+                        f"{h}={cells.get(h)}" for h in headers
+                        if str(cells.get(h, "") or "").strip()) or str(source)[:60]
+                    flagged.append(_flag(
+                        f'{t["name"]}[not bound]', shown,
+                        "row read from a different region of the document "
+                        "than the one this table was bound to"))
+
+            claims = []
+            for cells, source, page, key, occurrences in located:
                 free = None
                 if occurrences:
                     free = next((i for i in occurrences
@@ -822,7 +948,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                      "document; values are unverified, not low quality")
         conf_map = {k: UNVERIFIED for k in conf_map}
     needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
-                    or bool(dropped) or bool(merged_columns))
+                    or bool(dropped) or bool(merged_columns)
+                    or bool(regions_warned))
 
     r = DocumentExtractionResult(filename=file_path.name)
     r.document_type = default_doc_type
@@ -855,6 +982,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
             "dropped_row_count": dropped,
+            # One entry per band that more than one region matched:
+            # {table, pages, kept_page, kept_rows, left_out}.
+            "regions": regions_warned,
+            "unbound_row_count": sum(r["left_out"] for r in regions_warned),
             "merged_column_count": merged_columns,
             "overprinted_count": overprinted,
             "unwitnessed_count": unwitnessed,

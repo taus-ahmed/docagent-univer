@@ -27,6 +27,14 @@ DOC = "PAYSLIP-EMP-0007-APR2024"
 ROW_TEMPLATE = "payslip.json"
 COL_TEMPLATE = "payslip_transposed.json"
 
+# THE PAGE-2 DEDUCTION. This payslip prints eight deductions at the foot of
+# page 1 and the ninth, `Life Insurance ($28.00)`, at the top of page 2. Since
+# I1 (round 2) a band binds ONE region, never across a page, so that ninth row
+# is left out — and reported, which `test_the_page_two_row_is_reported` pins.
+# That is the accepted cost of the strict rule, not a transposition defect; it
+# costs the upright template the same row.
+DEDUCTIONS_ON_PAGE_ONE = 8
+
 
 def _run(template):
     """The real pipeline, from the replay cache, plus the exported sheet."""
@@ -84,7 +92,15 @@ class TestItExtractsAsWellAsTheUprightTemplate:
         _, results, _, _, _ = transposed
         ed = results[0].extracted_data
         assert len(ed.get("earnings_rows") or []) == 3
-        assert len(ed.get("deductions_rows") or []) == 9
+        assert len(ed.get("deductions_rows") or []) == DEDUCTIONS_ON_PAGE_ONE
+
+    def test_the_page_two_row_is_reported(self, transposed):
+        _, results, _, _, _ = transposed
+        v = results[0].extracted_data["validation"]
+        assert [(r["pages"], r["kept_page"], r["left_out"])
+                for r in v["regions"]] == [([1, 2], 1, 1)]
+        assert any("Life Insurance" in f["value"] for f in v["flagged_fields"]
+                   if f["ref"].endswith("[not bound]"))
 
     def test_the_rows_hold_the_documents_real_values(self, transposed):
         _, results, _, _, _ = transposed
@@ -111,14 +127,16 @@ class TestTheFileIsWrittenSideways:
             "Description", "Amount", "Description", "Amount"]
 
     def test_more_records_than_drawn_columns_widen_the_sheet(self, transposed):
-        """The template draws room for six records; this payslip has nine
-        deductions. They must run further right, not wrap onto new rows —
-        wrapping would split one record across two places."""
+        """The template draws room for six records; this payslip has eight
+        deductions on page 1 (the ninth is on page 2 — see the note at the
+        top). They must run further right, not wrap onto new rows — wrapping
+        would split one record across two places."""
         _, _, ws, _, _ = transposed
-        labels = [ws.cell(row=17, column=c).value for c in range(2, 11)]
+        labels = [ws.cell(row=17, column=c).value for c in range(2, 10)]
         assert all(labels), labels
-        assert labels[-1] == "Life Insurance"
-        assert ws.cell(row=18, column=10).value == -28.0
+        assert labels[-1] == "Dental & Vision"
+        assert ws.cell(row=18, column=9).value == -65.0
+        assert ws.cell(row=17, column=10).value in (None, "")
 
     def test_the_totals_beneath_each_table_still_land(self, transposed):
         _, _, ws, _, _ = transposed
@@ -145,5 +163,5 @@ class TestExportMatchesExtraction:
         _, _, ws, shape, _ = transposed
         flat = read_sheet(ws, shape)
         assert len(flat["tables"]["earnings"]) == 3
-        assert len(flat["tables"]["deductions"]) == 9
+        assert len(flat["tables"]["deductions"]) == DEDUCTIONS_ON_PAGE_ONE
         assert flat["tables"]["earnings"][0]["Description"] == "Base Salary"

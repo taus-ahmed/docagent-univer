@@ -105,6 +105,39 @@ damage.
 the documents. A file whose documents *are* numbered — invoices, statements,
 cheques, payslips, purchase orders — splits correctly.
 
+## A table that continues onto the next page is cut at the page
+
+**ABSENT.** A table in your template is filled from **one** region of the
+document, and a region never crosses a page. If the table genuinely runs on
+from the bottom of one page to the top of the next, only the part on the page
+where the answer began comes back.
+
+It is never silent. The document is marked for review, the warning says how
+many regions matched and on which pages, and every row left out is listed with
+its contents. Measured on the test documents: a two-page balance sheet loses
+the last two lines of its equity section, and a two-page payslip loses its
+ninth deduction.
+
+**Why it is taken this way.** The alternative is appending whatever else on
+another page looks like the same table — which is how an earnings release had
+its operating-earnings table (page 2) glued under its earnings table (page 1),
+and a utility bill had its glossary glued under its charges. A short table can
+be seen; a merged lookalike cannot. Letting a continuation through when the
+next page repeats the column headings does not work either: the two Berkshire
+tables have *identical* headings.
+
+**What to do.** Check any document marked "regions matched" — the rows left out
+are listed. Extracting the continuation page on its own recovers them.
+
+## An invoice and the cheque paying it can be read as one document
+
+**ABSENT.** A merged file splits where the reference number changes. A cheque
+that quotes the purchase order its invoice also quotes shares that number, and
+the two stay together — only the invoice's values come back. A page reading as
+a different *kind* of document is no longer enough on its own to start a new
+one: a utility bill's glossary page reads as a tax form, and the bill was cut in
+two.
+
 ## A form field printed across several lines, in a crowded layout
 
 **ABSENT.** Where a value wraps onto a second line, it is joined correctly. What
@@ -232,7 +265,9 @@ anyone who saw the old behaviour should know it changed.
 | Was | Now |
 |---|---|
 | **A multi-page form was cut into pieces.** A six-page Closing Disclosure came back as two blocks — page 1, then a near-empty repeat with only the lender, title company and loan ID. The whole Contact Information page, about thirty values, was never extracted. | A repeated heading is no longer a boundary on its own: the reference number must change too, and a document that prints “Page 3 of 5” is taken at its word. Verified on the real form — one document, and the contact matrix comes back as a full five-by-nine grid. |
-| **Only the first document in a merged file was read.** Three invoices in one PDF produced one result; the other two vanished with no message. | Each document is found and processed separately. 14 of 14 merged test files split at exactly the right pages; no single document is ever split. |
+| **A table was filled from every lookalike in the document.** An earnings release's page-1 earnings table and page-2 operating-earnings table came back as one sixteen-row table; a utility bill's glossary was appended to its charges under a second copy of the heading row. | A table is filled from one region and never across a page. When more than one matched, the document says how many and on which pages, and lists what was left out. |
+| **A utility bill was cut into two documents at its glossary page**, so the bill header and the charges table each came back twice. | A page reading as another kind of document no longer starts one on its own; the reference number must change, and a page printing its own number (“Page 4”) is taken at its word. |
+| **Only the first document in a merged file was read.** Three invoices in one PDF produced one result; the other two vanished with no message. | Each document is found and processed separately. 13 of 14 merged test files split at exactly the right pages (the fourteenth is the invoice-and-cheque case above); no single document is ever split. |
 | **Figures printed inside narrow boxes were cut in half.** On a W-2, `$1,268.75` was read as `5`. Eleven of twelve figures were wrong and all eleven were reported as confident. | All twelve correct. The two halves are rejoined by their position on the page. |
 | **A figure could land in the wrong column** — a payment reported as a receipt — and still be marked confident, because the check only asked whether the number was on the page. | The column a figure sits under is now checked. A misplaced one is flagged and named. |
 | **Rows were deleted for quoting the same line as an earlier row**, so repeated headings and group totals silently cost you rows — worst in exactly the merged files this is built for. | Rows are told apart by where they sit on the page. Anything still dropped is listed with its contents. |

@@ -1,0 +1,21 @@
+{
+ "_reconstruction": "RECONSTRUCTION \u2014 not the template used in round 2. The original was never saved to the repo; this was rebuilt on 2026-09-13 from the description in docs/DocAgent_round2_report.md (run 6: 'E3 \u2014 itemised charges, 2 col', header 'Charge Description | Amount' as quoted in I1(b)). The 10-row band size is a guess; the trailing 'Total Amount Due' label (a field slot) is a guess that also ends the band.",
+ "cells": {
+  "0,0": {
+   "value": "Charge Description",
+   "style": {}
+  },
+  "0,1": {
+   "value": "Amount",
+   "style": {}
+  },
+  "11,0": {
+   "value": "Total Amount Due",
+   "style": {}
+  }
+ },
+ "colWidths": [],
+ "merges": {},
+ "repeatRows": [],
+ "regions": []
+}

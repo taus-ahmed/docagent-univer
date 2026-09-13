@@ -432,14 +432,19 @@ was asked for the first page's slots. Signals are now ranked:
 | | signal | role |
 |---|---|---|
 | suggests | **repeated title** — within a run of same-type pages, that run's first line, or a line on two CONSECUTIVE pages | a candidate, never a verdict |
-| decides | **type change** — a page classifying differently from the last page that classified at all | 0 of 17 multi-page corpus documents change type, so no corroboration is required — and requiring it cost a real boundary, since an invoice and the cheque paying it share the PO they both quote |
-| corroborates | **the reference changes** | recurrence means CONTINUATION. A CD repeats `Loan ID # 123456789` on every page; twenty invoices carry twenty numbers. The old rule had this backwards |
+| suggests | **type change** — a page classifying differently from the last page that classified at all | a candidate since round-2 I1. It used to decide alone and cut the ENGIE bill (`tests/test_pdfs/round2/SampleBill.pdf`) in two at a glossary page reading as `tax_form`. The accepted cost: an invoice and the cheque paying it share the PO both quote and stay one document |
+| corroborates | **the reference changes** — required for EVERY candidate | recurrence means CONTINUATION. A CD repeats `Loan ID # 123456789` on every page; twenty invoices carry twenty numbers. The old rule had this backwards |
 | vetoes | **"page 3 of 5" after "page 2 of 5"** | per RUN, so a stack of forms still splits. Load-bearing on the real CD, whose page 4 reads as a bank statement and page 6 as a tax form |
+| vetoes | **a bare "Page n" on the run's n-th page** | ENGIE page 4 prints `Page 4`; its only reference is the overprinted account number, which shares nothing with pages 1–3 and would otherwise corroborate |
 | overrides | **"page 1 of N" after a later page** | the one boundary allowed on no other evidence — two copies of one form share every reference |
 
-Measured: **0 false positives across all 60 corpus documents** (17 of them
-multi-page), and **14 of 14 merged files split at exactly the right pages** —
-twenty invoices, five two-page payslips, mixed batches with runs inside them.
+Measured (2026-09-13, read with the pipeline's own `read_page`): **0 false
+positives across all 69 PDFs in `tests/test_pdfs/` including `round2/`** — the
+old "0 of 60" claim was false on `round2/SampleBill.pdf`, the only file whose
+decision changed — and **13 of 14 merged sets split at exactly the right
+pages**. The fourteenth, `INV-2024-0031 + CHQ-001847 + …`, keeps invoice and
+cheque together (shared `PO-2024-0018`) and is pinned as the cost in
+`test_doc_boundaries.py`.
 
 Three details each fix a real miss:
 - **Adjacency** is what tells a title from a repeated footer. Two income
@@ -462,6 +467,44 @@ and the case it gives up is recorded: **a concatenation whose documents carry no
 readable reference is treated as one document.** Falling back to the title rule
 there was considered and rejected — it reintroduces guessing exactly where there
 is least information to justify it.
+
+### One region per band (round-2 I1)
+
+A band describes a shape, and **nothing ever chose which region of the document
+it was bound to**. The prompt asks for "one object per row present in the
+document" over every page and every returned row was kept, so Berkshire's
+page-1 earnings table and page-2 operating-earnings table — identical headings
+— came back as one sixteen-row table. The same-page cases that came out right
+did so because of how the model read the page, not because of a check.
+
+`slot_extractor.select_region` runs after the answer, before rows claim their
+lines. **A region is a page.** A row's page is the page of the line its source
+was read from (`text_layer.line_page`), falling back to the page the model
+claimed, mapped from prompt numbering to file numbering. The kept region is the
+page the model's answer **begins** on; every row from another page is left out.
+
+- **Never across a page, including genuine continuations.** A short table is
+  visible; a merged lookalike is not. A header-repeat exception was rejected:
+  the Berkshire tables share their headings. Costs measured on gold:
+  `BS-2024-Q1` equity loses 2 rows, `PAYSLIP-EMP-0007-APR2024` deductions 1.
+- **Never silent.** A `{table}[regions]` flag naming the count and pages, one
+  `{table}[not bound]` flag per row carrying its content, `needs_review`, and
+  `validation.regions` / `validation.unbound_row_count`.
+- **No geometry, no verdict** — a row with no stamped line and no mappable page
+  is never left out.
+
+**Pages are stamped on the word at read time** (`read_page` → `stamp_page`), as
+the FILE page, because page lists get sliced (`selected_pages`, document
+splits) and an index into a slice names the wrong page in a warning. The stamp
+is geometry only; the text, and so every cached answer, is unchanged. Any
+positional check that must not reach across a page — record spans, wrapped
+values, overprints — should use `line_page` rather than re-deriving it.
+
+The evidence is `tests/test_round2_I1.py`, run on the round-2 PDFs: Berkshire
+replays a **recorded live answer** (`tests/fixtures/round2_raw/`, captured by
+`python -m tests.harness.round2 --run … --mode record`). Every live evidence
+run stores its raw response there and in `tests/llm_cache/`. The round-2
+templates in `tests/fixtures/round2_templates/` are **reconstructions**.
 
 ### A record is not a line
 
@@ -671,6 +714,7 @@ one function at the export boundary, not a validation change.
  "<band name>_rows": [ {col_key: value, "_confidence": "high"} ],
  "validation": {flagged_count, flagged_fields, confidence_map,
                 ungrounded_count, misplaced_count, dropped_row_count,
+                regions, unbound_row_count,
                 low_confidence_ratio,
                 document_needs_review, grounded_count},
  "validation_notes": [...], "needs_review": bool,

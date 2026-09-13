@@ -1,0 +1,29 @@
+{
+ "_reconstruction": "RECONSTRUCTION \u2014 not the template used in round 2. The original was never saved to the repo; this was rebuilt on 2026-09-13 from the description in docs/DocAgent_round2_report.md (runs 1 and 3: 'B1 \u2014 earnings table, 5 col', a two-level Fourth Quarter / Full Year header flattened to four columns, a 5-row band). Headings are inferred. With no row below it, the band runs to the grid's used range.",
+ "cells": {
+  "0,0": {
+   "value": "Item",
+   "style": {}
+  },
+  "0,1": {
+   "value": "Q4 2024",
+   "style": {}
+  },
+  "0,2": {
+   "value": "Q4 2023",
+   "style": {}
+  },
+  "0,3": {
+   "value": "Full Year 2024",
+   "style": {}
+  },
+  "0,4": {
+   "value": "Full Year 2023",
+   "style": {}
+  }
+ },
+ "colWidths": [],
+ "merges": {},
+ "repeatRows": [],
+ "regions": []
+}

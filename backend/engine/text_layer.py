@@ -700,12 +700,72 @@ def read_page(page, widgets=()):
         return raw, [], []
     lines, repairs = repair_wrapped(words)
     lines, placed = inject_markers(lines, widgets)
+    stamp_page(lines, getattr(page, "page_number", None))
     # Marked on the FINAL word list and by geometry, so a fused fragment or an
     # injected marker cannot lose the tag.
     mark_overprints(lines, overprinted_spans(page))
     if not repairs and not placed:
         return raw, lines, []
     return text_from_lines(lines), lines, repairs
+
+
+# ── which page a line is on ──────────────────────────────────────────────────
+#
+# Every consumer of positional evidence flattens the pages into one list of
+# lines, and the flattening threw the page away: `top` restarts at zero on each
+# page, so nothing downstream could tell the last line of page 1 from the first
+# line of page 2. Region binding needs the page (round 2, I1: a band bound a
+# table on page 1 AND its lookalike on page 2), and so does every other check
+# that must not reach across a page — a record span, a wrapped value, an
+# overprint.
+#
+# The page is stamped on the WORD, at the moment the word is read, as the
+# page's number IN THE FILE. It is not derived from a list index later, because
+# the lists get sliced — `selected_pages`, and one file split into several
+# documents — and an index into a slice names the wrong page in a warning the
+# user reads. A word read without a pdfplumber page (a hand-built fixture)
+# carries no stamp, and every caller treats that as "no verdict".
+
+def stamp_page(lines, page_number):
+    """Record the 1-based file page on every word of `lines`, in place."""
+    if page_number is None:
+        return
+    for ln in lines:
+        for w in ln:
+            w["page"] = int(page_number)
+
+
+def line_page(line):
+    """The 1-based file page `line` was read from, or None if unstamped."""
+    for w in line or ():
+        p = w.get("page") if isinstance(w, dict) else None
+        if p is not None:
+            return int(p)
+    return None
+
+
+def flatten_pages(page_lines):
+    """Every line of every page, in reading order — one list, pages stamped."""
+    return [ln for pg in (page_lines or []) for ln in (pg or [])]
+
+
+def page_for_prompt_page(page_lines, n):
+    """The file page behind prompt page `n` (1-based position in `page_lines`).
+
+    The model numbers pages by their position in the prompt, which is not the
+    file's numbering once pages have been selected or the file split.
+    """
+    try:
+        i = int(n) - 1
+    except (TypeError, ValueError):
+        return None
+    if not (0 <= i < len(page_lines or [])):
+        return None
+    for ln in page_lines[i] or ():
+        p = line_page(ln)
+        if p is not None:
+            return p
+    return None
 
 
 # ── column bands and placement ───────────────────────────────────────────────
