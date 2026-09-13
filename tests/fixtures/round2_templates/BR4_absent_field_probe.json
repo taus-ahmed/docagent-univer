@@ -1,0 +1,41 @@
+{
+ "_reconstruction": "RECONSTRUCTION \u2014 not the template used in round 2. The original was never saved; rebuilt on 2026-09-13 from docs/DocAgent_round2_report.md (run 9: 'BR4 \u2014 absent-field probe, key-value'). The report names the four fields that returned values (Bill Account Number, Billing Period, Meter Number, Contract End Date) and ONE of the four absent ones, Customer Tax ID (near-match: 'Fed. I.D. 76-0685946'). The other three absent fields are GUESSES, each chosen to have a tempting near-match in the document: Customer Email Address (the supplier's care@engieresources.com), Late Fee Amount (the glossary's 'Late Payment Penalty'), Deposit Amount (nothing close).",
+ "cells": {
+  "0,0": {
+   "value": "Bill Account Number",
+   "style": {}
+  },
+  "1,0": {
+   "value": "Billing Period",
+   "style": {}
+  },
+  "2,0": {
+   "value": "Meter Number",
+   "style": {}
+  },
+  "3,0": {
+   "value": "Contract End Date",
+   "style": {}
+  },
+  "4,0": {
+   "value": "Customer Tax ID",
+   "style": {}
+  },
+  "5,0": {
+   "value": "Customer Email Address",
+   "style": {}
+  },
+  "6,0": {
+   "value": "Late Fee Amount",
+   "style": {}
+  },
+  "7,0": {
+   "value": "Deposit Amount",
+   "style": {}
+  }
+ },
+ "colWidths": [],
+ "merges": {},
+ "repeatRows": [],
+ "regions": []
+}

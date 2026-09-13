@@ -9,6 +9,8 @@ descriptions so the I1 evidence could run the real documents. Each file's
 |---|---|---|
 | `B1_earnings_table.json` | run 1 (B1 — earnings table, 5 col) | `round2/feb2225.pdf` (Berkshire) |
 | `E1_bill_header.json` | run 4 (E1 — bill header, key-value) | `round2/SampleBill.pdf` (ENGIE) |
+| `B2_operating_earnings.json` | run 2 (B2 — operating earnings, 5 col; targets page 2) | `round2/feb2225.pdf` (Berkshire) |
+| `BR4_absent_field_probe.json` | run 9 (BR4 — absent-field probe) — 3 of its 4 absent fields are guesses | `round2/SampleBill.pdf` (ENGIE) |
 | `E3_itemised_charges.json` | run 6 (E3 — itemised charges, 2 col) | `round2/SampleBill.pdf` (ENGIE) |
 
 A result from one of these is evidence about the mechanism, not a reproduction

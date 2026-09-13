@@ -129,14 +129,34 @@ tables have *identical* headings.
 **What to do.** Check any document marked "regions matched" — the rows left out
 are listed. Extracting the continuation page on its own recovers them.
 
-## An invoice and the cheque paying it can be read as one document
+## An invoice and the cheque paying it are read as one document
 
-**ABSENT.** A merged file splits where the reference number changes. A cheque
-that quotes the purchase order its invoice also quotes shares that number, and
-the two stay together — only the invoice's values come back. A page reading as
-a different *kind* of document is no longer enough on its own to start a new
-one: a utility bill's glossary page reads as a tax form, and the bill was cut in
-two.
+**ABSENT — and a realistic production shape, not a test-file oddity.** A merged
+file splits where the reference number changes. A cheque that quotes the
+purchase order its invoice also quotes shares that number, so an invoice
+uploaded together with the cheque that pays it comes back as **one** document:
+only the invoice's values are extracted, and the cheque's — payee, amount,
+cheque number, routing and account — are not. Cheques are central to this
+workflow, so expect this whenever payment paperwork is scanned or merged as a
+pair.
+
+Measured on the test set: `INV-2024-0031` followed by `CHQ-001847` (both quote
+`PO-2024-0018`) no longer splits. It did before round-2 I1, when a page reading
+as a different kind of document started a new one by itself — the rule that cut
+a utility bill in two at its glossary page.
+
+**What to do.** Upload the invoice and the cheque as separate files.
+
+## Deciding what kind of page it is uses keywords, and the keywords are weak
+
+**ABSENT.** Where a file splits depends partly on a quick keyword guess at each
+page's document type, made without reading the page properly. The guess is
+easily wrong: the single word "continued" reads as a **tax form**, and a utility
+bill's meter-and-glossary page read as a tax form too. That weakness is what cut
+the ENGIE bill in two. A type change no longer splits a file on its own, which
+contains the damage, but the guess itself is unchanged and still feeds the
+decision — a page that happens to carry a new reference number and a
+misleading keyword can still start a document.
 
 ## A form field printed across several lines, in a crowded layout
 

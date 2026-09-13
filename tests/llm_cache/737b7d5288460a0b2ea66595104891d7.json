@@ -1,0 +1,63 @@
+{
+ "key": "737b7d5288460a0b2ea66595104891d721d43eca15f035a6c1f7e1bc3c98c5b4",
+ "meta": {
+  "method": "extract",
+  "context": "round2:run9_engie_BR4",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4868,
+  "captured_at": "2026-09-13 03:50:43",
+  "prompt_preview": "Fill in a other spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nSERVICE ADDRESS: BILLING PERIOD\nABC COMPANY Service Aug 12, 2020 to Sep 11, 2020 4 Service\n2\n1234 ANY STREET Period\nAddress\nANY TOWN, ST ZIP\nAMOUNT DUE\nESI ID Number:\n1 12345678912345 3 Utility account number "
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"0000123456\",\n      \"source\": \"BILL ACCOUNT NUMBER: 0000123456\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"Aug 12, 2020 to Sep 11, 2020\",\n      \"source\": \"Service Aug 12, 2020 to Sep 11, 2020\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"0123456789AB\",\n      \"source\": \"0123456789AB\",\n      \"page\": 4\n    },\n    \"F4\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F5\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F6\": {\n      \"value\": \"care@engieresources.com\",\n      \"source\": \"care@engieresources.com\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F8\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "0000123456",
+     "source": "BILL ACCOUNT NUMBER: 0000123456",
+     "page": 1
+    },
+    "F2": {
+     "value": "Aug 12, 2020 to Sep 11, 2020",
+     "source": "Service Aug 12, 2020 to Sep 11, 2020",
+     "page": 1
+    },
+    "F3": {
+     "value": "0123456789AB",
+     "source": "0123456789AB",
+     "page": 4
+    },
+    "F4": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F5": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F6": {
+     "value": "care@engieresources.com",
+     "source": "care@engieresources.com",
+     "page": 1
+    },
+    "F7": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F8": {
+     "value": "",
+     "source": "",
+     "page": 0
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4868,
+  "success": true,
+  "error": ""
+ }
+}

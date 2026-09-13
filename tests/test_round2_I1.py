@@ -370,3 +370,80 @@ class TestPagesAreStampedAtRead:
         with pdfplumber.open(pdf_dir / "round2" / "feb2225.pdf") as pdf:
             for p in pdf.pages:
                 assert read_page(p)[0] == (p.extract_text() or "")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# LIVE RUNS RECORDED AFTER THE FIX — replayed
+# ══════════════════════════════════════════════════════════════════════════
+
+class TestRun9AbsentFieldsStayEmpty:
+    """Round 2's strongest single result (report line 211): every field absent
+    from the ENGIE bill came back empty, including Customer Tax ID against the
+    near-match `Fed. I.D. 76-0685946`. The fix changed its conditions — the
+    bill is no longer split, so the model answers pages 1-4 in ONE prompt —
+    so it was re-run live (tests/fixtures/round2_raw/run9_engie_BR4.json).
+
+    BR4 is a reconstruction: only Customer Tax ID is named by the report as
+    absent. The other three absent probes are guesses, each with a near-match.
+    """
+
+    @pytest.fixture(scope="class")
+    def fields(self):
+        results, _grid, _log = round2.run("run9_engie_BR4", mode="replay")
+        ed = results[0].extracted_data
+        return ({k: v["value"] for k, v in ed["extracted_data"].items()},
+                ed["validation"]["confidence_map"])
+
+    @pytest.mark.parametrize("absent", ["Customer Tax ID", "Late Fee Amount",
+                                        "Deposit Amount"])
+    def test_absent_field_is_empty(self, fields, absent):
+        values, _conf = fields
+        assert absent not in values, values.get(absent)
+
+    def test_the_fed_id_is_nowhere_in_the_answer(self, fields):
+        values, _conf = fields
+        assert not any("76-0685946" in str(v) for v in values.values())
+
+    def test_the_contract_end_date_is_not_a_prose_fragment(self, fields):
+        """Run 9 answered `the last day of October 2020` (I11). This run left
+        it empty — not a fix, just a different answer; recorded, not claimed."""
+        values, _conf = fields
+        assert "Contract End Date" not in values
+
+    @pytest.mark.known_bug
+    @pytest.mark.xfail(strict=True, reason=(
+        "Customer Email Address is answered with ENGIE's own customer-care "
+        "address at HIGH confidence. The field is a reconstruction guess, and "
+        "whether the pre-fix split produced the same answer is not yet known"))
+    def test_the_suppliers_email_is_not_the_customers(self, fields):
+        values, conf = fields
+        assert values.get("Customer Email Address", "") == ""
+
+
+class TestRun2PageTwoTemplateGetsPageTwo:
+    """B2 targets Berkshire's page-2 operating-earnings table. Recorded live
+    (tests/fixtures/round2_raw/run2_berkshire_B2.json).
+
+    ⚠ The model returned ONLY page-2 rows, so `select_region` had nothing to
+    choose between. This pins the right outcome on this input; it does NOT
+    verify "keep the page the answer begins on" for a page-2 template."""
+
+    @pytest.fixture(scope="class")
+    def ed(self):
+        results, _grid, _log = round2.run("run2_berkshire_B2", mode="replay")
+        assert len(results) == 1
+        return results[0].extracted_data
+
+    def test_the_page_two_table_is_written(self, ed):
+        items = [r["Business"] for r in ed["Operating Earnings_rows"]]
+        assert items[:3] == ["Insurance-underwriting",
+                             "Insurance-investment income", "BNSF"]
+        assert len(items) == 8
+
+    def test_no_page_one_row_is_in_it(self, ed):
+        items = " ".join(r["Business"] for r in ed["Operating Earnings_rows"])
+        assert "Net earnings attributable" not in items
+        assert "Class A" not in items
+
+    def test_no_second_region_was_offered(self, ed):
+        assert ed["validation"]["regions"] == []

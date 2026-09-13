@@ -1,0 +1,113 @@
+{
+ "key": "c7bd94390b8e2464921a45ff0270da7c96a3857d32934fc3333cfa7a0e4debc2",
+ "meta": {
+  "method": "extract",
+  "context": "round2:run2_berkshire_B2",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4085,
+  "captured_at": "2026-09-13 03:50:52",
+  "prompt_preview": "Fill in a other spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nBERKSHIRE HATHAWAY INC.\nNEWS RELEASE\nFOR IMMEDIATE RELEASE February 22, 2025\nOmaha, NE (BRK.A; BRK.B) –\nBerkshire’s operating results for the fourth quarter and full year of 2024 and 2023 are summarized in the"
+ },
+ "response": {
+  "raw_text": "{\n  \"tables\": {\n    \"Operating Earnings\": [\n      {\n        \"cells\": {\n          \"Business\": \"Insurance-underwriting\",\n          \"Q4 2024\": \"3,409\",\n          \"Q4 2023\": \"848\",\n          \"Full Year 2024\": \"9,020\",\n          \"Full Year 2023\": \"5,428\"\n        },\n        \"source\": \"Insurance-underwriting ............................................... $ 3,409 $ 848 $ 9,020 $ 5,428\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"Business\": \"Insurance-investment income\",\n          \"Q4 2024\": \"4,088\",\n          \"Q4 2023\": \"2,759\",\n          \"Full Year 2024\": \"13,670\",\n          \"Full Year 2023\": \"9,567\"\n        },\n        \"source\": \"Insurance-investment income ..................................... 4,088 2,759 13,670 9,567\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"Business\": \"BNSF\",\n          \"Q4 2024\": \"1,278\",\n          \"Q4 2023\": \"1,355\",\n          \"Full Year 2024\": \"5,031\",\n          \"Full Year 2023\": \"5,087\"\n        },\n        \"source\": \"BNSF .......................................................................... 1,278 1,355 5,031 5,087\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"Business\": \"Berkshire Hathaway Energy Company\",\n          \"Q4 2024\": \"729\",\n          \"Q4 2023\": \"632\",\n          \"Full Year 2024\": \"3,730\",\n          \"Full Year 2023\": \"2,331\"\n        },\n        \"source\": \"Berkshire Hathaway Energy Company ...................... 729 632 3,730 2,331\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"Business\": \"Other controlled businesses\",\n          \"Q4 2024\": \"3,262\",\n          \"Q4 2023\": \"3,270\",\n          \"Full Year 2024\": \"13,072\",\n          \"Full Year 2023\": \"13,362\"\n        },\n        \"source\": \"Other controlled businesses ........................................ 3,262 3,270 13,072 13,362\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"Business\": \"Non-controlled businesses\",\n          \"Q4 2024\": \"695\",\n          \"Q4 2023\": \"421\",\n          \"Full Year 2024\": \"1,519\",\n          \"Full Year 2023\": \"1,750\"\n        },\n        \"source\": \"Non-controlled businesses .......................................... 695 421 1,519 1,750\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"Business\": \"Other*\",\n          \"Q4 2024\": \"1,066\",\n          \"Q4 2023\": \"(804)\",\n          \"Full Year 2024\": \"1,395\",\n          \"Full Year 2023\": \"(175)\"\n        },\n        \"source\": \"Other* ......................................................................... 1,066 (804) 1,395 (175)\",\n        \"page\": 2\n      },\n      {\n        \"cells\": {\n          \"Business\": \"Operating earnings\",\n          \"Q4 2024\": \"$14,527\",\n          \"Q4 2023\": \"$ 8,481\",\n          \"Full Year 2024\": \"$47,437\",\n          \"Full Year 2023\": \"$37,350\"\n        },\n        \"source\": \"Operating earnings ...................................................... $14,527 $ 8,481 $47,437 $37,350\",\n        \"page\": 2\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "tables": {
+    "Operating Earnings": [
+     {
+      "cells": {
+       "Business": "Insurance-underwriting",
+       "Q4 2024": "3,409",
+       "Q4 2023": "848",
+       "Full Year 2024": "9,020",
+       "Full Year 2023": "5,428"
+      },
+      "source": "Insurance-underwriting ............................................... $ 3,409 $ 848 $ 9,020 $ 5,428",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Business": "Insurance-investment income",
+       "Q4 2024": "4,088",
+       "Q4 2023": "2,759",
+       "Full Year 2024": "13,670",
+       "Full Year 2023": "9,567"
+      },
+      "source": "Insurance-investment income ..................................... 4,088 2,759 13,670 9,567",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Business": "BNSF",
+       "Q4 2024": "1,278",
+       "Q4 2023": "1,355",
+       "Full Year 2024": "5,031",
+       "Full Year 2023": "5,087"
+      },
+      "source": "BNSF .......................................................................... 1,278 1,355 5,031 5,087",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Business": "Berkshire Hathaway Energy Company",
+       "Q4 2024": "729",
+       "Q4 2023": "632",
+       "Full Year 2024": "3,730",
+       "Full Year 2023": "2,331"
+      },
+      "source": "Berkshire Hathaway Energy Company ...................... 729 632 3,730 2,331",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Business": "Other controlled businesses",
+       "Q4 2024": "3,262",
+       "Q4 2023": "3,270",
+       "Full Year 2024": "13,072",
+       "Full Year 2023": "13,362"
+      },
+      "source": "Other controlled businesses ........................................ 3,262 3,270 13,072 13,362",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Business": "Non-controlled businesses",
+       "Q4 2024": "695",
+       "Q4 2023": "421",
+       "Full Year 2024": "1,519",
+       "Full Year 2023": "1,750"
+      },
+      "source": "Non-controlled businesses .......................................... 695 421 1,519 1,750",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Business": "Other*",
+       "Q4 2024": "1,066",
+       "Q4 2023": "(804)",
+       "Full Year 2024": "1,395",
+       "Full Year 2023": "(175)"
+      },
+      "source": "Other* ......................................................................... 1,066 (804) 1,395 (175)",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Business": "Operating earnings",
+       "Q4 2024": "$14,527",
+       "Q4 2023": "$ 8,481",
+       "Full Year 2024": "$47,437",
+       "Full Year 2023": "$37,350"
+      },
+      "source": "Operating earnings ...................................................... $14,527 $ 8,481 $47,437 $37,350",
+      "page": 2
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4085,
+  "success": true,
+  "error": ""
+ }
+}

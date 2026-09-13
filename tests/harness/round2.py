@@ -45,8 +45,10 @@ RAW_DIR = bs.TESTS_DIR / "fixtures" / "round2_raw"
 #: run id -> (pdf, reconstructed template, round-2 run it stands for)
 RUNS = {
     "run1_berkshire_B1": ("feb2225.pdf", "B1_earnings_table.json", 1),
+    "run2_berkshire_B2": ("feb2225.pdf", "B2_operating_earnings.json", 2),
     "run4_engie_E1": ("SampleBill.pdf", "E1_bill_header.json", 4),
     "run6_engie_E3": ("SampleBill.pdf", "E3_itemised_charges.json", 6),
+    "run9_engie_BR4": ("SampleBill.pdf", "BR4_absent_field_probe.json", 9),
 }
 
 
