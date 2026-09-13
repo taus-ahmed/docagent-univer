@@ -1,0 +1,63 @@
+{
+ "key": "c1a59585a94a6769217e2e463fdcbce944520a7edaa2f76dd0d69b218f76c0f8",
+ "meta": {
+  "method": "extract",
+  "context": "round2:run9_engie_BR4_prefix_fe3385d",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1645,
+  "captured_at": "2026-09-13 04:23:03",
+  "prompt_preview": "Fill in a other spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nPage 4\nBILL ACCOUNT NUMBER\n00000000112538645596\nSummary of Usage by Meter\nReading Dates Meter Meter Meter Reading Usage Usage\nPrevious/Current Number Constant Previous Current Type\nAug 12 / Sep 11 0123456789AB"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"00000000112538645596\",\n      \"source\": \"00000000112538645596\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"Aug 12 / Sep 11\",\n      \"source\": \"Aug 12 / Sep 11\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"0123456789AB\",\n      \"source\": \"0123456789AB\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F5\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F6\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F7\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F8\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "00000000112538645596",
+     "source": "00000000112538645596",
+     "page": 1
+    },
+    "F2": {
+     "value": "Aug 12 / Sep 11",
+     "source": "Aug 12 / Sep 11",
+     "page": 1
+    },
+    "F3": {
+     "value": "0123456789AB",
+     "source": "0123456789AB",
+     "page": 1
+    },
+    "F4": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F5": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F6": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F7": {
+     "value": "",
+     "source": "",
+     "page": 0
+    },
+    "F8": {
+     "value": "",
+     "source": "",
+     "page": 0
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 1645,
+  "success": true,
+  "error": ""
+ }
+}

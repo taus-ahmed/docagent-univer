@@ -129,6 +129,22 @@ tables have *identical* headings.
 **What to do.** Check any document marked "regions matched" — the rows left out
 are listed. Extracting the continuation page on its own recovers them.
 
+## A template aimed at the second of two lookalike tables is unverified
+
+**UNVERIFIED.** When two tables in a document share a shape — an earnings release
+with one table on page 1 and another on page 2 — only one is written, and the one
+kept is the page the model's answer *begins* on. For a template aimed at the
+page-1 table this is verified on a live run. For a template aimed at the
+**page-2** table it is not: on the one live run so far, the model returned only
+page-2 rows, so no choice was ever made. If the model returns both tables with
+page 1 first, a page-2 template gets page 1's table.
+
+It would not be silent — the document is marked for review and the warning names
+both pages — but the values written would be the wrong table's.
+
+**What to do.** When a document is marked "regions matched", check that the kept
+page is the table the template describes.
+
 ## An invoice and the cheque paying it are read as one document
 
 **ABSENT — and a realistic production shape, not a test-file oddity.** A merged

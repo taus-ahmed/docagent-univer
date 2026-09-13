@@ -384,6 +384,38 @@ templated extraction that loses a sub-header while `dropped_row_count` is 0.
 
 ---
 
+## 12. I1: the strict region rule stays, and the continuation signal is recorded, not built
+
+A band binds one region, and a region never crosses a page (commit `39c4ec3`).
+That loses genuine continuations — `BS-2024-Q1` equity −2 rows,
+`PAYSLIP-EMP-0007` deductions −1 — and the loss is flagged every time.
+
+**Rejected: let a continuation through when the next page repeats the column
+headings.** Berkshire's page-1 and page-2 tables carry identical headings, so it
+merges the exact case the rule exists to separate.
+
+**Measured, not built (2026-09-13).** Every page seam of every multi-page PDF in
+`tests/test_pdfs/` (corpus + `round2/`) was checked; 17 are real table-region
+pairs, 8 of them genuine continuations. Four positional features plus label
+continuity:
+
+| feature | continuations (8) | not (9) |
+|---|---|---|
+| region 2 at the top of the page body, with no heading of its own | **8** | **0** |
+| row labels continue rather than restart | 7 | 0 |
+| region 1 runs to the bottom of the page's text | 7 | 4 |
+| region 1 ends in a total or closing row | **1** | **7** |
+
+The first separates the sample perfectly. **It is not built**, because the 8
+continuations come from about three generators — five balance sheets from one,
+two payslips from another, one tax form — so "perfect on 17" is closer to
+"perfect on 3". And "ends in a total" runs **backwards**: the intuitive signal
+that a table is finished is present on the non-continuations, because a table
+that closes with its total on page 1 is followed by something else on page 2. A
+rule written from intuition would have picked the wrong sign.
+
+The strict rule stays until the sample includes layouts nobody here generated.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

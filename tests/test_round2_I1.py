@@ -413,11 +413,31 @@ class TestRun9AbsentFieldsStayEmpty:
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason=(
         "Customer Email Address is answered with ENGIE's own customer-care "
-        "address at HIGH confidence. The field is a reconstruction guess, and "
-        "whether the pre-fix split produced the same answer is not yet known"))
+        "address at HIGH confidence: a real, grounded string for a field the "
+        "document does not answer. PREDATES I1 — the pre-fix run reproduces it "
+        "(round2_raw/run9_engie_BR4_prefix_fe3385d.json). Nothing checks that "
+        "a quoted span means what the slot's label asks for."))
     def test_the_suppliers_email_is_not_the_customers(self, fields):
         values, conf = fields
         assert values.get("Customer Email Address", "") == ""
+
+    def test_the_pre_fix_run_returned_the_same_address(self):
+        """Recorded at fe3385d, where the bill was split: the pages 1-3 part
+        answered the care address too, so I1 did not cause it. The same run
+        reproduces round-2 run 9's other outputs (the interleaved account
+        number, `Aug 12 / Sep 11`, the prose Contract End Date), which is some
+        evidence the BR4 reconstruction is close for those fields."""
+        rec = json.loads((round2.RAW_DIR / "run9_engie_BR4_prefix_fe3385d.json")
+                         .read_text(encoding="utf-8"))
+        assert rec["commit"].startswith("fe3385d")
+        answers = [json.loads(r["raw_llm_responses"][0])["fields"]
+                   for r in rec["responses"]]
+        assert len(answers) == 2
+        emails = [a[k]["value"] for a in answers for k in a
+                  if "engieresources" in str(a[k].get("value", ""))]
+        assert emails == ["care@engieresources.com"]
+        assert any(a[k]["value"] == "00000000112538645596"
+                   for a in answers for k in a)
 
 
 class TestRun2PageTwoTemplateGetsPageTwo:

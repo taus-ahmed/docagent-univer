@@ -49,6 +49,9 @@ RUNS = {
     "run4_engie_E1": ("SampleBill.pdf", "E1_bill_header.json", 4),
     "run6_engie_E3": ("SampleBill.pdf", "E3_itemised_charges.json", 6),
     "run9_engie_BR4": ("SampleBill.pdf", "BR4_absent_field_probe.json", 9),
+    # Recorded at fe3385d (pre-I1) from a worktree; replays only on that code.
+    "run9_engie_BR4_prefix_fe3385d": ("SampleBill.pdf",
+                                      "BR4_absent_field_probe.json", 9),
 }
 
 
