@@ -13,14 +13,14 @@ either **WRONG** or **ABSENT**.
 > document says. You cannot tell by looking at the spreadsheet. **These are the
 > ones to check against the source.**
 
-There are **three WRONG entries** in this file. Everything else is ABSENT.
+There are **four WRONG entries** in this file. Everything else is ABSENT.
 
 Last checked 5 September 2026, against 60 test documents and 7 purpose-built
 awkward cases.
 
 ---
 
-# The three that produce a WRONG value
+# The four that produce a WRONG value
 
 ## 1. Ticked boxes that were "flattened" or scanned
 
@@ -99,6 +99,25 @@ caught it if the model had filled them.
 **What to do.** For any field your documents may not carry, such as tax IDs,
 emails, deposits and fees, check a filled value against the source, especially
 when it belongs to the other party.
+
+---
+
+## 4. A client with no schema silently gets the demo schema
+
+**WRONG** ⚠ — a known defect, not yet fixed.
+
+**When it happens.** An upload for a client that has no schema of its own: a new
+client nobody configured, or a client ID with a typo.
+
+**What happens.** The upload path falls back to the demo client's schema
+(`demo_001`) instead of refusing (`extract.py`, `get_schema_path(client_id) or
+get_schema_path("demo_001")`). A misconfigured client silently gets the demo
+schema and plausible output from the wrong schema rather than an error. Nothing
+in the result says a fallback happened. The Google Drive routes do not fall back
+and correctly answer "Schema not found".
+
+**What to do.** Make sure every client has its own schema uploaded before its
+first extraction.
 
 ---
 

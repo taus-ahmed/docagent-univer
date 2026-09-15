@@ -9,3 +9,6 @@ storage/uploads/
 storage/outputs/
 *.tsbuildinfo
 backend/storage/
+# Root-level only. Anchored so it cannot match backend/storage/ or the
+# backend/engine/storage/ package.
+/storage/
