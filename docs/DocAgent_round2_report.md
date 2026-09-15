@@ -113,7 +113,7 @@ Not working:
 
 - **Currency handling varies by document.** Preserved in Berkshire (`$19,694`); stripped in run 10 (`1802`, `405`, `29.8`).
 - **One field, two formats, one file.** Run 10 stores `Aggregate Adjustment` as text twice: `- 0.01` in block 1, `– $0.01` in block 2.
-- **Precision loss.** Run 11 rounds Unit Rate to two decimals. `$0.04116` → `$0.04`. Four rates collapse to `$0.00` (`$0.001374`, `$0.00033`, `$0.000282`, `$0.000127`). Needs checking whether this is cell format or the stored value — if stored, the data is gone.
+- **Precision loss.** Run 11 rounds Unit Rate to two decimals. `$0.04116` → `$0.04`. Four rates collapse to `$0.00` (`$0.001374`, `$0.00033`, `$0.000282`, `$0.000127`). Needs checking whether this is cell format or the stored value — if stored, the data is gone. **Answered 2026-09-15:** it was the cell format. The real export stores all seven rates at full precision under `"$"#,##0.00`, and the format now shows the source's decimal count. Grounding still accepts a rate rounded to two decimals, so stored loss remains possible; see DECISION-LOG §14.
 - **Intermittent space injection.** Run 1 produced `$ 19,6 94`, `2,157,034,1 21`, `$ 9 . 13`, confined to the first value column. Runs 2 and 3, same document, clean.
 - **Dotted leaders.** Retained in run 1 (`BNSF ....................`), stripped in runs 2 and 3.
 

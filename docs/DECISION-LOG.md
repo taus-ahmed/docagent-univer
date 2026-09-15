@@ -479,6 +479,66 @@ treated as authoritative anywhere.
 `demo_001` for a client with no schema, is KNOWN-LIMITATIONS WRONG #4 and is
 also unfixed.
 
+## 14. I6: the format fix shipped; the value record is the real fix, and it is structural
+
+*Recorded 2026-09-15 · scheduled, not built*
+
+**What shipped.** Round 2 run 11 displayed a rate printed `$0.04116` as `$0.04`,
+and four rates as `$0.00`. The committed real export
+(`tests/fixtures/round2_exports/run11_engie_BR3_job215.xlsx`) shows every rate
+**stored** at full precision under a `"$"#,##0.00` format. `cell_format` counted
+the source's decimals and then floored every count of 2 or more at 2. It now
+uses exactly the source's decimal count, never fewer and never more.
+`tests/test_I6_precision.py` rebuilds run 11 from the real export and the real
+PDF; all seven rate cells failed before the change. Harness reports were
+identical before and after in both modes, and no answer in the recorded corpus
+has more than two decimals, so no recorded cell changed.
+
+**What a value carries today.** One **string** per cell: `extracted_fields[ref]`,
+`extracted_data[label].value`, and `<band>_rows[i][column]`. That string is the
+model's answer; for multi-line text, `canonical_value` re-joins it from the page.
+Confidence is stored per field (`confidence_map`) and per row (`_confidence`),
+and flags carry a reason. **Not stored:** the printed token, the line and page it
+was read from (used during the run, then discarded; only the model's claimed
+`source` survives, inside `raw_llm_responses`), the currency, and the parsed
+number. The export re-derives the number (`coerce_cell_value`) and the notation
+(`cell_format`) from the stored string every time.
+
+**Why the format fix is not the whole fix.** The export can only show the digits
+the stored string has, and nothing requires that string to be what the page
+printed. `verify_span` accepts a value whose digits appear inside the span, or
+whose number equals a token in the span **rounded to two decimals**. Measured
+against run 11's real line: `0.04`, `$0.04` and `0.041` all ground as `high`
+against a printed `$0.04116`. If the model returns a rounded rate, the precision
+is gone before storage, the cell is marked verbatim, and no format can restore
+it. A model answer of `0.04116` for `$0.04116` also drops the currency symbol,
+the same way.
+
+**The real fix (scope):**
+
+1. **A value record per cell:** `value` (as today), `printed` (the token located
+   on the source line, verbatim), plus its page and line. The number and its
+   notation are derived from `printed`, never from the model's rendering.
+2. **Grounding compares numbers exactly.** The two-decimal equality and bare
+   digit containment are what let a rounded or truncated number ground. Changing
+   them moves confidence, so it needs the harness in both modes and a
+   calibration read before and after.
+3. **Every writer derives from `printed`:** slot, inferred, the legacy
+   form/mixed/table writers used by the image path, and `export.py`.
+4. **Old jobs keep working.** Exports are rebuilt from `extraction_json` on every
+   download, so readers must accept a bare string for as long as old rows exist.
+
+**Why it is structural, not contained.** Cell values are bare strings, and that
+shape is the contract for the writers above; for `tests/harness/adapter.py`,
+`sheet_reader.py`, `scenarios.py` and `round2.py`; for `ResultsGrid.tsx`, the
+extract and history pages and `lib/api.ts`; and for the cell-edit PATCH, which
+writes strings back. Every stored production job has the old shape. Changing
+the cell type touches all of these at once, and the grounding change moves
+measured confidence.
+
+**Status: scheduled.** This is the next change to the value contract. The
+format fix removes the displayed loss today; this removes the stored one.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
