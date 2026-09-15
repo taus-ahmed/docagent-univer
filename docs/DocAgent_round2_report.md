@@ -208,7 +208,7 @@ Any fix touching region binding or row classification will move through this log
 
 | Behaviour | Evidence |
 |---|---|
-| **No fabrication for genuinely absent fields** | Run 9: four fields absent from the document all returned empty, including `Customer Tax ID` where the document contains `Fed. I.D. 76-0685946` as a tempting near-match. This is the strongest single result of the round |
+| **No fabrication for genuinely absent fields** | Run 9: four fields absent from the document all returned empty, including `Customer Tax ID` where the document contains `Fed. I.D. 76-0685946` as a tempting near-match. This is the strongest single result of the round. **Corrected 2026-09-15:** this was the model declining, not a check. The same run answered `Customer Email Address` with the supplier's `care@engieresources.com` at high confidence, and three injected plausible wrong answers for the absent fields were all written at high, unflagged. See KNOWN-LIMITATIONS WRONG #3 |
 | Single-region pages bind cleanly | Runs 7, 8 — no merge, correct totals, correct empties |
 | Four tables on one page bind to four separate quadrants | Run 8, ~30 values correct across K/L/M/N including repeated values on both sides |
 | Grouped tables with multiple subtotals inside one band | Runs 6, 8 |

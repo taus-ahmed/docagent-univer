@@ -232,6 +232,8 @@ A fix for D1/D2 will touch row classification, which is exactly the logic produc
 
 **Caution on the first entry.** The no-invention result and the semantic-matching result come from the same mechanism pointing in opposite directions. Flexible matching is what lets one template work across form variants; it is also what would let a field be filled from a *differently labelled* value carrying the same number. That case has not yet been tested. Until it is, "no invention" is demonstrated only for fields with no plausible substitute present.
 
+**Update 2026-09-15 — tested, and it is not a protection.** On the ENGIE bill, three plausible wrong answers for absent fields were injected. The pipeline wrote all three at high confidence and flagged none of them, and a live run answered the customer's email with the supplier's. "No invention" was the model declining; no code check would have caught it if it had not. See KNOWN-LIMITATIONS WRONG #3.
+
 ---
 
 ## Conditions not yet exercised

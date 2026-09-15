@@ -13,14 +13,14 @@ either **WRONG** or **ABSENT**.
 > document says. You cannot tell by looking at the spreadsheet. **These are the
 > ones to check against the source.**
 
-There are **two WRONG entries** in this file. Everything else is ABSENT.
+There are **three WRONG entries** in this file. Everything else is ABSENT.
 
 Last checked 5 September 2026, against 60 test documents and 7 purpose-built
 awkward cases.
 
 ---
 
-# The two that produce a WRONG value
+# The three that produce a WRONG value
 
 ## 1. Ticked boxes that were "flattened" or scanned
 
@@ -74,6 +74,34 @@ written with a trailing `CR` / `DR`.
 
 ---
 
+## 3. A field the document does not answer, filled from something nearby
+
+**WRONG** ⚠
+
+**When it happens.** Your template asks for something the document does not
+contain, such as a customer's email or tax ID, but the page prints something
+that looks like it: the supplier's email, the supplier's tax ID.
+
+**What happens.** If the model fills that field from the lookalike, the value is
+written as **confident** and **nothing flags it**. The system checks that the
+text really is on the page, and it is. It does not check that the text is the
+answer to that field. On a utility bill, *Customer Email Address* came back as
+the supplier's own `care@engieresources.com`, marked confident. When we fed the
+same bill three plausible wrong answers on purpose (the supplier's tax ID as the
+customer's, the previous balance as a late fee, the payment received as a
+deposit), all three were written as confident and none was flagged.
+
+**What we used to say, and why it was wrong.** Earlier notes said the system
+does not invent values. In testing, the model has usually left such fields
+blank. That was **the model declining**; no check in the system would have
+caught it if the model had filled them.
+
+**What to do.** For any field your documents may not carry, such as tax IDs,
+emails, deposits and fees, check a filled value against the source, especially
+when it belongs to the other party.
+
+---
+
 # Things that come back ABSENT
 
 Missing or refused. Visible, not dangerous.
@@ -81,8 +109,9 @@ Missing or refused. Visible, not dangerous.
 ## Scanned documents and photographs
 
 **ABSENT.** There is no OCR. A PDF that is a picture of a page — a scan, a photo
-— has no text to read. Nothing is invented: values come back blank or marked as
-unverified, and the document is flagged for review. A PDF produced by accounting
+— has no text to read, so nothing the model returns can be checked against the
+page: values come back blank or marked as unverified, and the document is
+flagged for review. A PDF produced by accounting
 software or exported from a system is fine; a scanned one is not.
 
 ## A merged file whose documents carry no reference number stays one document

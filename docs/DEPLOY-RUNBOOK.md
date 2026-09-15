@@ -307,9 +307,13 @@ export WEB=https://loving-grace-production.up.railway.app
   backend/.venv/Scripts/python.exe -m tests.harness.runner --mode replay
   backend/.venv/Scripts/python.exe -m tests.harness.runner --mode replay --no-template
   ```
-  **Expect:** templated `EXTRACTION: 98.5%` / `CONTENT: 97.5%` /
+  **Expect:** templated `EXTRACTION: 97.2%` / `CONTENT: 96.7%` /
   `structure FIDELITY: 100.0% (17/17)` / `INVENTED: 0.0%`; no-template
-  `CONTENT: 96.7%` / `17/17` / `INVENTED: 0.0%`. The line that matters most is
+  `EXTRACTION: 96.7%` / `CONTENT: 95.9%` / `17/17` / `INVENTED: 0.0%`
+  (down from 98.7/98.2 by the two page-continuation documents the strict region
+  rule gives up — CLAUDE.md "Measured limits"). `INVENTED: 0.0%` counts only
+  values found nowhere in the PDF; it cannot see a real string filling a field
+  the document leaves blank. The line that matters most is
   `"diff": []` in `tests/reports/latest.json` — that is the field-level
   comparison against the committed baseline.
 

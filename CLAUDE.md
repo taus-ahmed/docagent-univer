@@ -377,6 +377,12 @@ Ungrounded ⇒ the value is kept, marked **low**, and flagged — never presente
 fact. Table rows carry a **row-level** span, which grounds every cell in the row
 and additionally catches fabricated and duplicated rows (`seen_sources` dedup).
 
+**Grounding proves a string is on the page, not that it answers the slot.** A
+field the document leaves blank, answered with a real neighbouring value (a
+supplier's email for the customer's, a `Fed. I.D.` for a customer tax ID),
+grounds perfectly and is written at `high`, unflagged. That this rarely happens
+is the model declining to do it, not a check — see "Measured limits".
+
 **The confidence vocabulary is five words, defined once in
 `app/core/confidence.py`** — read that docstring before touching any of them:
 
@@ -799,23 +805,42 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 `/api/export/perfile`, both openpyxl directly — never the engine's
 `excel_writer.py`.
 
-### Measured limits (`tests/reports/latest*.json`, Phase 9)
+### Measured limits (`tests/reports/latest*.json`, replay at `591d3b6`)
 
 | | templated | no-template |
 |---|---|---|
-| **accuracy** (container-aware headline) | **98.7%** | **98.2%** |
-| **content** (container-blind) | 97.9% | 97.1% |
-| **structure fidelity** | **100%** (17/17) | **100%** (17/17) |
-| accuracy RAW (all adapter widenings off) | 48.0% | 71.1% |
-| invented (value nowhere in the PDF) | **0** | **0** |
+| **accuracy** (container-aware headline) | **97.2%** | **96.7%** |
+| **content** (container-blind) | 96.7% | 95.9% |
+| **structure fidelity** | **100%** (17/17; 13 exact row count) | **100%** (17/17; 15 exact) |
+| accuracy RAW (all adapter widenings off) | 47.0% | 70.1% |
+| invented (value nowhere in the PDF) | 0 | 0 |
 | misfiled | 4 | **0** |
 | out-of-schema (*not* a defect) | 0 | 60 |
 | **defect rate** | 1.0% | **0.0%** |
-| fields varying across 3 live repeats | 0 | 1 |
+| fields varying across 3 live repeats (Phase 9) | 0 | 1 |
 
-`BS-2024-Q1`, `CHQ-001847`, `IS-2024-Q4` and `STMT-2024-01` score 100% in both
-modes. The remaining misfilings are one intermittent bug on one document:
+**Down from 98.7% / 98.2%, and the whole loss is the strict region rule
+(round-2 I1).** A band binds one region and a region never crosses a page, so
+the two gold documents whose tables genuinely continue onto page 2 give those
+rows up: `BS-2024-Q1` equity loses 2 rows (100% → 91.3%) and
+`PAYSLIP-EMP-0007` deductions loses 1 (97.3% → 91.9% templated). Six cells,
+both modes, nothing else moved. The trade is recorded in DECISION-LOG §12.
+
+`CHQ-001847`, `IS-2024-Q4` and `STMT-2024-01` score 100% in both modes. The
+remaining misfilings are one intermittent bug on one document:
 `PAYSLIP-EMP-0012`'s "Total" summary line coming back as a data row.
+
+⚠ **"invented 0" is a measurement of ten documents, not a property of the
+system.** The harness counts a value as invented only when it appears nowhere
+in the PDF, and grounding catches exactly that. Neither can see a real string
+from elsewhere on the page answering a field the document leaves blank. Round 2
+run 9 answered `Customer Email Address` with the supplier's own
+`care@engieresources.com` at `high` (strict-xfail in `test_round2_I1.py`). And
+feeding the same bill three plausible wrong answers for its absent fields
+(`Customer Tax ID` ← `Fed. I.D. 76-0685946`, `Late Fee Amount` ← the previous
+balance, `Deposit Amount` ← the payment received) wrote **all three at `high`
+with none of them flagged**. When absent fields came back empty, **the model
+declined to fill them; no code check would have caught it if it had not.**
 
 ### The MICR band is parsed, not prompted (`engine/micr.py`)
 

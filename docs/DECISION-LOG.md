@@ -48,8 +48,8 @@ treating the model's own confidence as signal, and we rejected a stricter varian
 of our own rule that would have required the value to be the whole span or set
 off within it by a delimiter. The requirement exists because "the model was
 confident" and "the text is in the document" are different claims, and only the
-second is checkable; making it mandatory is what lets us say 0 inventions across
-376 templated cells rather than merely believing it. The stricter variant was
+second is checkable; making it mandatory is what lets us say 0 values *absent
+from the PDF* across 376 templated cells rather than merely believing it. The stricter variant was
 tried and rejected on evidence: it was meant to catch a value truncated at a line
 break, but it demoted 250 correct cells to reach 98.4% precision — worse than the
 99.5% without it — because a correct value read off a line is structurally
@@ -57,6 +57,18 @@ identical to a truncated one and nothing in the span distinguishes them. We also
 accepted, rather than hid, the limit this leaves: grounding proves text came from
 the document, not that it belongs in that slot, which is why no-template mode can
 report 415 high-confidence cells of which 90 are misfilings.
+
+**Correction (2026-09-15).** "0 inventions" was repeated elsewhere as though
+no invented value could reach a sheet. That is not a property of the system.
+It covers a string that appears nowhere in the PDF. It does not cover a real
+string from elsewhere on the page written into a field the document leaves
+blank, and nothing checks for that. Round 2 run 9 answered `Customer Email
+Address` with the supplier's `care@engieresources.com` at `high`. Given three
+plausible wrong answers for the same bill's absent fields — `Customer Tax ID`
+← `Fed. I.D. 76-0685946`, `Late Fee Amount` ← the previous balance, `Deposit
+Amount` ← the payment received — the pipeline wrote all three at `high`, none
+of them flagged. When absent fields came back empty, the model declined to fill
+them; no code check would have caught it if it had not.
 
 ## 3. The arithmetic router, not sixteen English keywords
 
