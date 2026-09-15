@@ -4893,7 +4893,6 @@ def coerce_cell_value(value, label=""):
 #: written in accounting parentheses keeps them; money written with a minus
 #: sign keeps that.
 _FMT_PLAIN = "#,##0"
-_FMT_2DP = "#,##0.00"
 
 
 def cell_format(value, label=""):
@@ -4928,7 +4927,13 @@ def cell_format(value, label=""):
         body = body.replace(c, "")
     if "." in body:
         frac = len(body.split(".")[-1])
-    base = _FMT_2DP if frac >= 2 else (f"#,##0.{'0' * frac}" if frac else _FMT_PLAIN)
+    # I6 — exactly as many decimals as the document printed. This used to floor
+    # every count of 2 or more at 2, so a rate printed `$0.04116` displayed
+    # `$0.04` and four others displayed `$0.00`: the cell held the full number,
+    # but CSV, copy-as-values, print and anyone reading the sheet got the
+    # rounded one, and nothing flagged it. Never fewer digits than the source,
+    # and never more.
+    base = f"#,##0.{'0' * frac}" if frac else _FMT_PLAIN
     if sym:
         base = f'"{sym}"{base}'
     if accounting:
