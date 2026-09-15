@@ -428,6 +428,57 @@ rule written from intuition would have picked the wrong sign.
 
 The strict rule stays until the sample includes layouts nobody here generated.
 
+## 13. A client schema has one source of truth: the database (decided, not scheduled)
+
+*Recorded 2026-09-15 · no code changed*
+
+A client's YAML schema is stored in several places: `client_schemas.yaml_content`,
+a copy under the storage root (`schemas/clients/{id}.yaml`, which is what
+`get_schema_path()` hands the engine), and, for `demo_001` only, a file committed
+at `backend/storage/schemas/clients/demo_001.yaml`. Nothing says which copy wins.
+
+**Production is `STORAGE_BACKEND=s3`** (Railway variables, bucket
+`docagent-prod`). The copy the engine reads is the bucket object, and no API
+path reads the committed file. The committed file wins only under
+`STORAGE_BACKEND=local`: it is in the image and in every checkout, and
+`_materialise_schemas` writes a schema from the database only when the file is
+**missing**, so the committed copy is used and the database's is ignored.
+**That is a local-dev problem**, and it is the reason local runs and production
+can use different demo schemas without anyone noticing.
+
+**The production risk is bucket versus database.** `POST /api/schemas`
+calls `storage.save_schema()` first and commits the database row second, with
+no transaction spanning them. A failed commit leaves the bucket holding a schema
+the database never recorded. No boot step reconciles the two, because
+`_materialise_schemas` skips any key that already exists. The engine then
+extracts with the bucket's copy while every API response and the admin page
+show the database's. **Not verified against production**: reading the
+production row and bucket object was not permitted in the session that found
+this, so whether they differ today is unknown.
+
+**Agreed direction:**
+
+- **The database is authoritative.** `yaml_content` is the schema.
+- **Every stored file is a cache written from it**, never read back as a source.
+  A deploy can then only re-apply what the database already says, so it cannot
+  silently revert a schema.
+- **Upload writes the database first**, then the cache. A failure leaves the
+  cache *behind* the database, which the next write or reconciliation corrects,
+  rather than *ahead* of it, which nothing detects.
+- **Untrack `backend/storage/schemas/clients/demo_001.yaml`.** The demo seed
+  already reads `engine/demo_accounting.yaml`. The committed copy differs from
+  that seed only by a garbled em-dash in a comment, and does nothing except
+  make local dev disagree with production.
+
+**Rejected:** untracking the file alone, which fixes local dev and leaves the
+production divergence untouched; and keeping the file with "prefer the
+database" in `_materialise_schemas` while a second stored copy is still
+treated as authoritative anywhere.
+
+**Not scheduled.** The related defect, the upload route falling back to
+`demo_001` for a client with no schema, is KNOWN-LIMITATIONS WRONG #4 and is
+also unfixed.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
