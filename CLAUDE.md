@@ -372,7 +372,12 @@ believes is fabricated does not belong in it.
 **Grounding is mandatory.** Every filled slot returns `{value, source, page}`.
 `verify_span` checks the verbatim `source` against document text read with
 pdfplumber *independently of the model*, then checks the value sits inside its
-own span (string containment, digit containment, or numeric-token equality).
+own span. Text must be contained in the span. **A number must equal a whole
+printed number** (`printed_numbers`), differing only in notation: whitespace,
+currency symbol, thousands separators, parentheses as minus. `0.04` does not
+ground against `$0.04116`. Numbers the text layer splits into several words
+(`19,6` + `94`) are rejoined only when the left piece is visibly incomplete, so a
+complete number never absorbs the next column (DECISION-LOG §15).
 Ungrounded ⇒ the value is kept, marked **low**, and flagged — never presented as
 fact. Table rows carry a **row-level** span, which grounds every cell in the row
 and additionally catches fabricated and duplicated rows (`seen_sources` dedup).

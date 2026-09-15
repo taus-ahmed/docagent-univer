@@ -506,7 +506,7 @@ number. The export re-derives the number (`coerce_cell_value`) and the notation
 
 **Why the format fix is not the whole fix.** The export can only show the digits
 the stored string has, and nothing requires that string to be what the page
-printed. `verify_span` accepts a value whose digits appear inside the span, or
+printed. `verify_span` accepted (until §15) a value whose digits appear inside the span, or
 whose number equals a token in the span **rounded to two decimals**. Measured
 against run 11's real line: `0.04`, `$0.04` and `0.041` all ground as `high`
 against a printed `$0.04116`. If the model returns a rounded rate, the precision
@@ -519,10 +519,8 @@ the same way.
 1. **A value record per cell:** `value` (as today), `printed` (the token located
    on the source line, verbatim), plus its page and line. The number and its
    notation are derived from `printed`, never from the model's rendering.
-2. **Grounding compares numbers exactly.** The two-decimal equality and bare
-   digit containment are what let a rounded or truncated number ground. Changing
-   them moves confidence, so it needs the harness in both modes and a
-   calibration read before and after.
+2. ~~**Grounding compares numbers exactly.**~~ **Done separately, §15.** Numeric
+   grounding is now whole-token equality.
 3. **Every writer derives from `printed`:** slot, inferred, the legacy
    form/mixed/table writers used by the image path, and `export.py`.
 4. **Old jobs keep working.** Exports are rebuilt from `extraction_json` on every
@@ -538,6 +536,69 @@ measured confidence.
 
 **Status: scheduled.** This is the next change to the value contract. The
 format fix removes the displayed loss today; this removes the stored one.
+
+## 15. Numeric grounding is whole-token equality — a protective gate
+
+*Recorded 2026-09-15*
+
+**What changed.** `verify_span` grounded a number if it was a substring of its
+span (rule A), if its digits were a substring of the span's digits (rule B), or
+if it equalled a span number rounded to two decimals (rule C). All three arrived
+with `0feb483`, and its commit message gives no reason for either tolerance.
+Against a printed `$0.04116`, `0.04`, `$0.04`, `0.041`, `$40.4` and `4042` all
+grounded as `high`. A number now grounds only if it is the same number as a
+**whole printed token**, differing only in notation: whitespace, currency
+symbol, thousands separators, parentheses as minus. It must have the same digits
+and the same decimal point. B and C are gone; text values keep rule A.
+
+**Rule B was compensating for word splitting, not grounding.** On the gold
+corpus B never fired: all 835 accepted values were accepted by A. On the
+Berkshire earnings release (`round2/feb2225.pdf`), pdfplumber's `extract_words`
+splits numbers into touching words (`19,6` + `94`, `9` + `.` + `13`,
+`2,157,034,1` + `21`; boxes within 0.1pt), and the flattened text puts a space
+between them. The model returned the repaired `$ 19,694`, and B was the only
+rule that grounded it, for 7 values. **The underlying defect is word splitting
+in the text layer, not grounding.** It is not fixed there, because rebuilding
+page text changes the prompt and invalidates every cached answer. **Token
+rejoining (`printed_numbers`) now carries that load**, inside grounding only.
+
+**How rejoining decides, and what it depends on.** The flattened text puts one
+space between split pieces and between columns alike, so spacing cannot tell
+them apart. The rule rests on the number itself: a piece continues only when it
+is visibly incomplete, so a complete number never absorbs the next one.
+
+| depends on | value | where it came from | generalises? |
+|---|---|---|---|
+| final thousands group is short | < 3 digits, completed to exactly 3 | the thousands-separator convention | **no** for 2-digit grouping (Indian `1,00,000`), which is not rejoined if split; European notation is already WRONG #2 |
+| gap between pieces | exactly one space | pdfplumber's `extract_text` writes one space between any two words on a line | this is **not a distance check**: it separates nothing, it only refuses unusual text |
+| lone decimal point | ` . ` as its own word | **the shape seen on Berkshire** | ⚠ **chosen by looking at Berkshire** |
+| test premise: joined pieces touch | < 1pt | **measured on Berkshire** (joins −0.1 to 0.1pt; next-closest numeric pair 3.0pt; columns 13.7–50pt) | ⚠ **Berkshire-derived**; a test threshold, not a rule in the code |
+
+The requirement that joining never cross "a gap larger than intra-number
+spacing" **is not implementable from the text `verify_span` receives**, because
+the text has no gaps. It is met on Berkshire by the completeness rule, and a
+test checks it against the real word boxes. A document whose split pieces are
+each complete numbers would not be rejoined: the answer is marked `low`, a
+visible fault, never an invented join.
+
+**Generality, measured on all 70 committed test PDFs** (115 pages, 5,540 text
+lines): rejoining fires **8 times, all on `feb2225.pdf` page 1** (one line is
+printed twice), and all 8 are correct: the word boxes touch. **It never fires on
+any other document. The rule is unexercised outside Berkshire; that is not
+evidence it is safe.**
+
+**Measured movement: none.** Harness replay reports are identical before and
+after in both modes (97.2% / 96.7%; confident cells 386/392 and 430/440).
+Grounding calls are unchanged: templated 390 accepted, 174 of them numeric;
+no-template 445 accepted, 176 numeric; the same 7 non-numeric rejections as
+before; all 84 recorded round-2 values (65 numeric, including the 11 Berkshire
+ones) still ground.
+
+**This gate is protective.** It closes a hole with **no observed victim**: no
+recorded answer in either corpus is a rounded or truncated number. The only
+instance is the one constructed for the test. There is **no measured
+movement**. Its value is that the next rounded answer is marked `low` instead
+of stored as verbatim.
 
 ## What these decisions have in common
 
