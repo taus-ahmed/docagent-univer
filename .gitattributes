@@ -1,0 +1,33 @@
+# Binary files are declared, never auto-detected.
+#
+# Git for Windows ships core.autocrlf=true in its system gitconfig. 61 of the
+# 70 committed PDFs are generated, ASCII-only, and contain no NUL byte, so git
+# classified them as TEXT and a fresh checkout rewrote every LF inside them as
+# CRLF. The files still opened, pdfplumber read different text, and the
+# harness replay missed its cache — on a clean clone, silently.
+#
+# `binary` = -text -diff -merge: bytes out are exactly the bytes in.
+
+# documents
+*.pdf   binary
+*.xlsx  binary
+*.xls   binary
+*.docx  binary
+
+# images — the extensions the upload path accepts (_is_image_file), plus site assets
+*.png   binary
+*.ico   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.tif   binary
+*.tiff  binary
+*.bmp   binary
+
+# fonts and archives
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.zip   binary
