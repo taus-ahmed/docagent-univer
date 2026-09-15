@@ -188,10 +188,15 @@ class TestDocumentGate:
 
 
 class TestExportCarriesNoConfidence:
-    """Confidence is surfaced in the app. The exported file is values only —
-    no annotations, no scores, no colour that survives export."""
+    """Confidence is surfaced in the app. The exported file carries no scores,
+    no review state and no colour that survives export.
 
-    def test_the_sheet_holds_values_and_nothing_else(self):
+    It used to be values only, with no comments at all. Since I2 every value
+    carries a comment quoting the words it was read from and a Source cell
+    naming its document and page: that is provenance, not confidence, and it
+    must never become a back door for a confidence word."""
+
+    def test_the_sheet_carries_no_confidence(self):
         import contextlib
         import io as _io
 
@@ -208,16 +213,23 @@ class TestExportCarriesNoConfidence:
         with contextlib.redirect_stdout(_io.StringIO()):
             _write_slot_excel(ws, [doc], GRID, GRID["cells"], openpyxl)
 
+        banned = ("confidence", "high", "low", "needs review", "unverified",
+                  "flag", "review")
+        comments = 0
         for row in ws.iter_rows():
             for c in row:
+                if c.comment is not None:
+                    comments += 1
+                    for word in banned:
+                        assert word not in c.comment.text.casefold(), (
+                            c.coordinate, c.comment.text)
                 if c.value is None:
                     continue
                 text = str(c.value).casefold()
-                for banned in ("confidence", "high", "low", "needs review",
-                               "unverified", "flag"):
-                    assert banned not in text, (c.coordinate, c.value)
+                for word in banned:
+                    assert word not in text, (c.coordinate, c.value)
                 assert c.fill.fgColor.rgb in (None, "00000000")
-                assert not c.comment
+        assert comments == 2, "premise: both values carry their provenance"
 
     def _mixed(self):
         line = "Ms. Linda Zhao | (310) 555-0233"

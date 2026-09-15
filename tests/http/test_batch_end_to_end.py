@@ -653,3 +653,24 @@ class TestFlaggedFieldsHaveOneShape:
         assert "no text layer" in _flag_summary(
             [{"ref": "image_upload", "value": "", "issue": "no text layer"}])
         assert isinstance(_flag_summary([{}, None, 3]), str)
+
+
+class TestTheDownloadSaysWhereEachValueCameFrom:
+    """I2 through the real route: the stored job, rebuilt on download."""
+
+    def test_each_documents_rows_name_their_own_file(self, templated_job, client, auth):
+        ws = _download(client, auth, templated_job["id"]).worksheets[0]
+        named = {str(c.value).split(" · ")[0] for row in ws.iter_rows() for c in row
+                 if isinstance(c.value, str) and " · p." in c.value}
+        assert named == {f"{s}.pdf" for s in STATEMENTS}, named
+        assert sum(1 for row in ws.iter_rows() for c in row if c.comment) > 0
+
+    def test_provenance_can_be_left_out(self, templated_job, client, auth):
+        import openpyxl
+        r = client.get(f"/api/jobs/{templated_job['id']}/export?provenance=false",
+                       headers=auth["acme"])
+        assert r.status_code == 200, r.text[:400]
+        ws = openpyxl.load_workbook(io.BytesIO(r.content)).worksheets[0]
+        assert not any(c.comment for row in ws.iter_rows() for c in row)
+        assert not any(isinstance(c.value, str) and " · p." in c.value
+                       for row in ws.iter_rows() for c in row)

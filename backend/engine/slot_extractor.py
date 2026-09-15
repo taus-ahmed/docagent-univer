@@ -498,6 +498,32 @@ def verify_span(value, source, page, page_texts, record=""):
 # to be made, it is named in the warning, and the warning fires every time more
 # than one region matched, whether or not the choice was right.
 
+def page_of(source, page, all_lines, page_lines, line_no=None):
+    """The FILE page a value was read from, or None when nothing can say (I2).
+
+    Geometry first, because it is the document's own answer: the line the row
+    claimed, else every line the quote could be read from. Only when geometry
+    has nothing does the model's page count, and then only mapped from prompt
+    numbering to file numbering — the model counts the pages it was shown,
+    which is not the file's numbering once a file is split.
+
+    A quote printed on several pages, none of which the model named, gets None
+    rather than a guess: a wrong page in a source column is worse than a blank.
+    """
+    if line_no is not None and all_lines:
+        p = line_page(all_lines[line_no])
+        if p is not None:
+            return p
+    mapped = page_for_prompt_page(page_lines, page) if page_lines else None
+    if all_lines and str(source or "").strip():
+        pages = _pages_of(source_occurrences(all_lines, source), all_lines)
+        if len(pages) == 1:
+            return next(iter(pages))
+        if pages:
+            return mapped if mapped in pages else None
+    return mapped
+
+
 def _pages_of(occurrences, all_lines):
     return {p for p in (line_page(all_lines[i]) for i in occurrences)
             if p is not None}
@@ -594,6 +620,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         return [_fail(file_path.name, "Slot extraction returned no usable JSON")]
 
     by_id = {f["slot_id"]: f for f in slots["fields"]}
+    # I2 — where each field value was read from: {ref: {source, page, grounded}}.
+    # `grounded` is None when the value never reached span verification (it was
+    # set aside for a different reason, which its flag names).
+    field_prov = {}
     extracted_fields, conf_map, flagged, notes = {}, {}, [], []
     ungrounded = 0
     misplaced = 0
@@ -660,6 +690,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 notes.append(f'{slot["row_label"]}: the model returned the '
                              f"slot's own label instead of a value — dropped")
                 continue
+            field_prov[slot["ref"]] = {
+                "source": source,
+                "page": page_of(source, page, all_lines, page_lines),
+                "grounded": None}
 
             # ONE JOIN RULE (D9). A field's value is the document's own words,
             # in reading order, joined by a single space. The join used to be
@@ -741,6 +775,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     continue
 
             ok, why = verify_span(value, source, page, pages)
+            field_prov[slot["ref"]]["grounded"] = ok
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
                                          inferred=inferred)
             extracted_fields[slot["ref"]] = value
@@ -782,6 +817,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if not value:
                 continue
             ok, why = verify_span(value, micr_line, 0, pages)
+            field_prov[slot["ref"]] = {
+                "source": micr_line,
+                "page": page_of(micr_line, 0, all_lines, page_lines),
+                "grounded": ok}
             lvl, reason = confidence_for(value, micr_line, slot["row_label"], ok,
                                          inferred=inferred)
             extracted_fields[slot["ref"]] = value
@@ -943,6 +982,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         f"source line: {str(source)[:60]!r}")
                     continue
                 row, row_conf = {}, confident
+                unverified_cols = []
                 for h in headers:
                     v = cells.get(h, "")
                     if v is None:
@@ -956,6 +996,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     row[h] = v
                     if not ok:
                         ungrounded += 1
+                        unverified_cols.append(h)
                     if lvl not in CONFIDENT_LEVELS:
                         row_conf = LOW
                         flagged.append(_flag(
@@ -974,6 +1015,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                             row.get(bad_key, ""), why))
                 if any(str(v).strip() for v in row.values()):
                     row["_confidence"] = row_conf
+                    # I2 — the quote this row was read from and its file page.
+                    # Underscore keys are metadata to every reader of a row.
+                    row["_source"] = source
+                    row["_page"] = page_of(source, page, all_lines, page_lines,
+                                           line_no)
+                    if unverified_cols:
+                        row["_ungrounded"] = unverified_cols
                     rows_out.append(row)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
@@ -1051,6 +1099,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         "extraction_method": "slot_directed",
         "layout_sections": {},
         "extracted_fields": extracted_fields,
+        # Kept apart from `extracted_data`, which a cell edit overwrites whole.
+        "field_provenance": {ref: field_prov[ref] for ref in extracted_fields
+                             if ref in field_prov},
         "extracted_data": kv,
         "table_rows": [],
         "slot_map": {

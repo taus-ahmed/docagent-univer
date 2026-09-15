@@ -4407,6 +4407,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
 def export_job_excel(
 
     job_id: int,
+    provenance: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -4454,8 +4455,10 @@ def export_job_excel(
     ws.title = "Results"
 
     if sheet_data:
-        _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl)
-    elif _write_inferred_sheets(wb, ws, doc_results, openpyxl):
+        _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl,
+                     provenance=provenance)
+    elif _write_inferred_sheets(wb, ws, doc_results, openpyxl,
+                                provenance=provenance):
         pass          # Phase 3 — written from the template the engine inferred
     else:
         # Nothing to build a sheet from (e.g. an image with no text layer).
@@ -4474,6 +4477,7 @@ def export_job_excel(
 @router.get("/jobs/{job_id}/export/zip")
 def export_job_zip(
     job_id: int,
+    provenance: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -4527,7 +4531,8 @@ def export_job_zip(
             ws.title = "Results"
 
             if sheet_data:
-                _write_excel(ws, [doc], sheet_data, template_regions, openpyxl)
+                _write_excel(ws, [doc], sheet_data, template_regions, openpyxl,
+                             provenance=provenance)
             else:
                 _write_flat_table(ws, [doc], openpyxl)
 
@@ -4612,7 +4617,8 @@ def _fit_columns(ws, col_widths=()):
         ws.column_dimensions[get_column_letter(c)].width = width
 
 
-def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
+def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
+                 provenance=True):
     """Route to the correct writer based on template regions primary_mode.
     Always uses the template structure for routing — never relies on AI output
     flags which can be stale or wrong from a previous extraction run."""
@@ -4647,7 +4653,8 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod):
     if template_type == "slot":
         print("[EXPORT] routing: template_type=slot -> slot writer "
               "(values written to the addresses they were requested for)", flush=True)
-        _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
+                          provenance=provenance)
         _fit_columns(ws, col_widths)
         return
     if template_type == "structural":
@@ -4751,7 +4758,7 @@ def _calculate_layout(sections):
     return plan
 
 
-def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod):
+def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod, provenance=True):
     """Phase 3 — export a job that ran with no template, using the template the
     engine inferred for each document.
 
@@ -4795,7 +4802,7 @@ def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod):
         print(f"[EXPORT]   shape {sig}: {len(g['docs'])} document(s) "
               f"-> sheet '{sheet.title}'", flush=True)
         _write_slot_excel(sheet, g["docs"], g["grid"], g["grid"].get("cells", {}),
-                          openpyxl_mod)
+                          openpyxl_mod, provenance=provenance)
     return True
 
 
@@ -4941,6 +4948,53 @@ def cell_format(value, label=""):
     return base
 
 
+#: Excel's own limit on the text of a cell comment.
+_EXCEL_COMMENT_MAX = 32767
+
+
+def provenance_note(source, page, filename, grounded=True, confidence=""):
+    """The comment on an extracted value: the words it was read from, and where.
+
+    The quote is shown as a quote only when it was verified against the
+    document. Otherwise the comment says so first, because a hover reading like
+    a verbatim quote is exactly the claim this must not make for a span that
+    was never found.
+
+    That is a statement about the QUOTE, not a confidence score. Confidence
+    levels, flag reasons and review state stay in the app (test_confidence.py
+    TestExportCarriesNoConfidence) — the file says where a value came from, not
+    how sure the engine was.
+    """
+    quote = " ".join(str(source or "").split())
+    where = f"{filename}, page {page}" if page else filename
+    lines = []
+    if confidence == UNVERIFIED:
+        lines.append("Not checked: this document has no text layer, so the "
+                     "quoted words could not be verified.")
+    elif grounded is False:
+        lines.append("Not verified: these words were not found in the document.")
+    if quote:
+        lines.append(f"“{quote}”")
+    else:
+        lines.append("No source words were quoted for this value.")
+    lines.append(where)
+    return "\n".join(lines)[:_EXCEL_COMMENT_MAX]
+
+
+def provenance_note_size(text):
+    """(width, height) in points for a comment box that shows `text` whole.
+
+    Excel draws a comment at a fixed box size and clips what does not fit, so
+    the box is sized to the text. Presentation constants only: roughly 6pt per
+    character of the default 9pt comment font, 13pt per line, a 360pt cap on
+    width so a long quote wraps rather than running off the screen.
+    """
+    width = 360
+    per_line = width // 6
+    lines = sum(max(1, -(-len(ln) // per_line)) for ln in text.splitlines())
+    return width, 13 * lines + 12
+
+
 def _apply_template_merges(ws, merges, addr, band_rows, openpyxl_mod):
     """Re-create the template's merges at their shifted addresses.
 
@@ -4971,7 +5025,8 @@ def _apply_template_merges(ws, merges, addr, band_rows, openpyxl_mod):
             continue
 
 
-def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
+def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
+                      provenance=True):
     """
     Writer for slot-directed extraction.
 
@@ -4980,8 +5035,14 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     computed thing is the row shift when a document has more table rows than
     the template reserved blank rows for.
 
-    The sheet carries VALUES ONLY — no confidence colouring or annotations.
-    Confidence belongs in the app, not in the file a client works in.
+    The sheet carries no confidence colouring: confidence belongs in the app.
+    It DOES carry provenance (I2), unless `provenance=False`: a Source column
+    right of the template naming the document and file page of every row that
+    holds extracted values, and a comment on every extracted value quoting the
+    words it was read from. "Values only" meant a merged block, a wrong region
+    or a second document arrived with nothing saying where it came from, and
+    the file is where an accountant checks a figure. A job stored before this
+    carries no provenance and exports exactly as it did.
     """
     from openpyxl.cell import MergedCell
 
@@ -5029,11 +5090,14 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
 
     GAP_BETWEEN_DOCS = 2
     doc_offset = 0
+    # I2 — the Source column sits one past the template's full extent, so it
+    # can never land on a cell the template or a band owns.
+    source_col = max_c + 1
 
     def put(r, c, value, label=""):
         cell = ws.cell(row=r + 1, column=c + 1)
         if isinstance(cell, MergedCell):
-            return
+            return None
         out = coerce_cell_value(value, label)
         if out is not None:
             cell.value = out
@@ -5044,6 +5108,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             fmt = cell_format(value, label)
             if fmt:
                 cell.number_format = fmt
+            return cell
+        return None
 
     for doc in doc_results:
         ed = doc.get_extracted_data()
@@ -5052,6 +5118,23 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
         slot_map = ed.get("slot_map") or {}
         tables = slot_map.get("tables") or []
         fields = ed.get("extracted_fields") or {}
+
+        filename = str(getattr(doc, "filename", "") or "")
+        field_prov = ed.get("field_provenance") or {}
+        conf_map = (ed.get("validation") or {}).get("confidence_map") or {}
+        source_rows = {}          # output row -> set of pages
+
+        def attach(cell, source, page, grounded, confidence, out_r):
+            """The comment on one written value, and its row's Source entry."""
+            if not provenance or cell is None or not filename:
+                return
+            from openpyxl.comments import Comment
+            text = provenance_note(source, page, filename, grounded=grounded,
+                                   confidence=confidence)
+            w, h = provenance_note_size(text)
+            cell.comment = Comment(text, "DocAgent", width=w, height=h)
+            if out_r is not None:
+                source_rows.setdefault(out_r, set()).update({page} if page else set())
 
         # how far each template row moves down, given table overflow. A
         # transposed table never pushes rows down — it grows to the right — so
@@ -5165,24 +5248,55 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
             tr, tc = rc
             if tr > max_r or tc > max_c:
                 continue
-            put(doc_offset + out_row(tr), tc, value, slot_label.get(ref, ""))
+            out_r = doc_offset + out_row(tr)
+            cell = put(out_r, tc, value, slot_label.get(ref, ""))
+            prov = field_prov.get(ref)
+            if prov:
+                attach(cell, prov.get("source"), prov.get("page"),
+                       prov.get("grounded"), conf_map.get(ref), out_r)
 
         # 3. table rows, in their band, by column header address
         for t in tables:
             rows = ed.get(f"{t['name']}_rows") or []
             if t.get("orientation") == "columns":
-                # Transposed: record i is a COLUMN, each field a fixed row.
+                # Transposed: record i is a COLUMN, each field a fixed row. A
+                # record has no row of its own for a Source cell, so its
+                # provenance travels in the comments only.
                 for i, rec in enumerate(rows):
                     c = t["start_col"] + i
                     for f in t.get("fields") or []:
-                        put(doc_offset + out_row(f["row"]), c,
-                            rec.get(f["header"], ""), f.get("header", ""))
+                        cell = put(doc_offset + out_row(f["row"]), c,
+                                   rec.get(f["header"], ""), f.get("header", ""))
+                        if "_source" in rec:
+                            attach(cell, rec.get("_source"), rec.get("_page"),
+                                   f["header"] not in (rec.get("_ungrounded") or []),
+                                   rec.get("_confidence"), None)
                 continue
+            header_row = t.get("header_row", t["start_row"])
+            if provenance and rows and header_row < t["start_row"] and any(
+                    "_source" in r for r in rows):
+                hc = ws.cell(row=doc_offset + out_row(header_row) + 1,
+                             column=source_col + 1)
+                if not isinstance(hc, MergedCell) and hc.value is None:
+                    hc.value = "Source"
             for i, row in enumerate(rows):
                 r = doc_offset + out_row(t["start_row"]) + i
                 for col in t["columns"]:
                     key = col.get("key") or col["header"]
-                    put(r, col["col"], row.get(key, ""), col.get("header", ""))
+                    cell = put(r, col["col"], row.get(key, ""), col.get("header", ""))
+                    if "_source" in row:
+                        attach(cell, row.get("_source"), row.get("_page"),
+                               key not in (row.get("_ungrounded") or []),
+                               row.get("_confidence"), r)
+
+        # 3b. one Source cell per row that received a value with provenance
+        for out_r, pages in source_rows.items():
+            sc = ws.cell(row=out_r + 1, column=source_col + 1)
+            if isinstance(sc, MergedCell) or sc.value is not None:
+                continue
+            shown = sorted(pages)
+            sc.value = (f"{filename} · p.{', '.join(str(p) for p in shown)}"
+                        if shown else filename)
 
         # 4. the template's own merges, last, so nothing is written into a
         #    cell that a merge has since swallowed
