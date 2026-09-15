@@ -1,17 +1,17 @@
-# Accuracy report — 2026-09-07 23:59:35
+# Accuracy report — 2026-09-15 01:33:16
 
-- git: `0592738`  mode: **replay**  repeat: 1
+- git: `381f73e`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
 
 | metric | value |
 |---|---|
-| **accuracy (correct / gold-valued)** | **98.2%** |
-| **accuracy RAW (all adapter widenings off)** | **71.1%** |
-| **accuracy CONTENT (container-blind)** | **97.1%** |
-| **structure FIDELITY (gold tables returned as tables)** | **100.0%** (17/17; 17 with exact row count) |
-| **hallucination rate (hallucinated / extracted)** | **13.2%** |
+| **accuracy (correct / gold-valued)** | **96.7%** |
+| **accuracy RAW (all adapter widenings off)** | **70.1%** |
+| **accuracy CONTENT (container-blind)** | **95.9%** |
+| **structure FIDELITY (gold tables returned as tables)** | **100.0%** (17/17; 15 with exact row count) |
+| **hallucination rate (hallucinated / extracted)** | **13.4%** |
 | **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
 | ├ misfiled — real content in a slot gold says is EMPTY | 0 |
 | └ out-of-schema — real content, name gold has no field for | 60 *(not a defect)* |
@@ -19,18 +19,18 @@
 | hallucinated values | 60 |
 | near misses | 4 |
 | **renamed (right value, different field name)** | **3** (0.8%) |
-| outcome counts | {"correct": 387, "hallucinated": 60, "renamed": 3, "near": 4, "empty_ok": 12} |
+| outcome counts | {"correct": 381, "hallucinated": 60, "missed": 6, "renamed": 3, "near": 4, "empty_ok": 12} |
 
 ## By document type
 
 | document type | accuracy | halluc. rate | invented | correct | near | renamed | wrong | missed | halluc. |
 |---|---|---|---|---|---|---|---|---|---|
-| balance_sheet | 100.0% | 11.5% | 0 | 46 | 0 | 0 | 0 | 0 | 6 |
+| balance_sheet | 91.3% | 12.5% | 0 | 42 | 0 | 0 | 0 | 4 | 6 |
 | bank_statement | 100.0% | 2.8% | 0 | 70 | 0 | 0 | 0 | 0 | 2 |
 | cheque | 100.0% | 31.2% | 0 | 11 | 0 | 0 | 0 | 0 | 5 |
 | expense_report | 98.1% | 11.5% | 0 | 53 | 0 | 1 | 0 | 0 | 7 |
 | income_statement | 100.0% | 12.8% | 0 | 41 | 0 | 0 | 0 | 0 | 6 |
-| payslip | 94.3% | 5.4% | 0 | 66 | 2 | 2 | 0 | 0 | 4 |
+| payslip | 91.4% | 5.6% | 0 | 64 | 2 | 2 | 0 | 2 | 4 |
 | purchase_order | 96.8% | 29.5% | 0 | 30 | 1 | 0 | 0 | 0 | 13 |
 | sales_invoice | 98.6% | 19.3% | 0 | 70 | 1 | 0 | 0 | 0 | 17 |
 
@@ -39,21 +39,21 @@
 | field type | accuracy | halluc. rate | invented | correct | near | renamed | wrong | missed | halluc. |
 |---|---|---|---|---|---|---|---|---|---|
 | date | 100.0% | 0.0% | 0 | 30 | 0 | 0 | 0 | 0 | 0 |
-| money | 100.0% | 0.0% | 0 | 161 | 0 | 0 | 0 | 0 | 0 |
+| money | 98.1% | 0.0% | 0 | 158 | 0 | 0 | 0 | 3 | 0 |
 | number | 100.0% | 0.0% | 0 | 12 | 0 | 0 | 0 | 0 | 0 |
-| string | 96.3% | 23.9% | 0 | 184 | 4 | 3 | 0 | 0 | 60 |
+| string | 94.8% | 24.2% | 0 | 181 | 4 | 3 | 0 | 3 | 60 |
 
 ## Per document
 
 | document | type | accuracy | raw | halluc. | invented | route | notes |
 |---|---|---|---|---|---|---|---|
-| BS-2024-Q1 | balance_sheet | 100.0% | 58.7% | 6 | 0 | BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242 |  |
+| BS-2024-Q1 | balance_sheet | 91.3% | 54.3% | 6 | 0 | BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242 |  |
 | CHQ-001847 | cheque | 100.0% | 90.9% | 5 | 0 | CHQ-001847.pdf: file_type=digital_pdf pages=1 text_len=501 |  |
 | EXP-2024-0081 | expense_report | 98.1% | 98.1% | 7 | 0 | EXP-2024-0081.pdf: file_type=digital_pdf pages=1 text_len=11 |  |
 | INV-2024-0031 | sales_invoice | 97.0% | 30.3% | 7 | 0 | INV-2024-0031.pdf: file_type=digital_pdf pages=1 text_len=97 |  |
 | INV-2024-0047 | sales_invoice | 100.0% | 31.6% | 10 | 0 | INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=10 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 51.2% | 6 | 0 | IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970 |  |
-| PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 94.6% | 2 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
+| PAYSLIP-EMP-0007-APR2024 | payslip | 89.2% | 89.2% | 2 | 0 | PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PAYSLIP-EMP-0012-APR2024 | payslip | 93.9% | 93.9% | 2 | 0 | PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2  |  |
 | PO-2024-0018 | purchase_order | 96.8% | 45.2% | 13 | 0 | PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=104 |  |
 | STMT-2024-01 | bank_statement | 100.0% | 95.7% | 2 | 0 | STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=140 |  |
@@ -68,6 +68,10 @@
 | BS-2024-Q1 | As of Date | hallucinated (misplaced) | None | March 31, 2024 |
 | BS-2024-Q1 | Doc No | hallucinated (misplaced) | None | BS-2024-Q1 |
 | BS-2024-Q1 | Prepared by | hallucinated (misplaced) | None | Meridian & Associates CPA |
+| BS-2024-Q1 | shareholders_equity[row 1].Label | missed | Retained Earnings | None |
+| BS-2024-Q1 | shareholders_equity[row 1].Amount | missed | 550751 | None |
+| BS-2024-Q1 | shareholders_equity[row 2].Label | missed | Net Income YTD Q1 | None |
+| BS-2024-Q1 | shareholders_equity[row 2].Amount | missed | 47353 | None |
 | CHQ-001847 | Bank Address | hallucinated (misplaced) | None | 330 Madison Ave, New York, NY 10017 |
 | CHQ-001847 | Drawer Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
 | CHQ-001847 | Drawer EIN | hallucinated (misplaced) | None | 47-3821654 |
@@ -109,6 +113,8 @@
 | PAYSLIP-EMP-0007-APR2024 | Title / Department | renamed | VP Operations – Executive | VP Operations – Executive |
 | PAYSLIP-EMP-0007-APR2024 | Employer Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
 | PAYSLIP-EMP-0007-APR2024 | Employer EIN | hallucinated (misplaced) | None | 47-3821654 |
+| PAYSLIP-EMP-0007-APR2024 | deductions[row 8].Description | missed | Life Insurance | None |
+| PAYSLIP-EMP-0007-APR2024 | deductions[row 8].Amount | missed | -28.0 | None |
 | PAYSLIP-EMP-0012-APR2024 | Employer Name | near | Nexus Global Trading LLC | NEXUS GLOBAL TRADING |
 | PAYSLIP-EMP-0012-APR2024 | Title / Department | renamed | Purchasing Manager – Procurement | Purchasing Manager – Procurement |
 | PAYSLIP-EMP-0012-APR2024 | Employer Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
@@ -129,3 +135,14 @@
 | PO-2024-0018 | Buyer Signature Phone | hallucinated (misplaced) | None | (212) 555-0148 |
 | STMT-2024-01 | Bank Address | hallucinated (misplaced) | None | 330 Madison Avenue, New York, NY 10017 |
 | STMT-2024-01 | ABA | hallucinated (misplaced) | None | 021000021 |
+
+## Changes vs previous run
+
+- BS-2024-Q1 :: shareholders_equity :: row_count_mismatch: 0 -> -2
+- BS-2024-Q1 :: shareholders_equity[row 1].Amount: correct -> missed **REGRESSION**
+- BS-2024-Q1 :: shareholders_equity[row 1].Label: correct -> missed **REGRESSION**
+- BS-2024-Q1 :: shareholders_equity[row 2].Amount: correct -> missed **REGRESSION**
+- BS-2024-Q1 :: shareholders_equity[row 2].Label: correct -> missed **REGRESSION**
+- PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch: 0 -> -1
+- PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount: correct -> missed **REGRESSION**
+- PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description: correct -> missed **REGRESSION**

@@ -1,6 +1,6 @@
 {
- "run_id": "2026-09-07 23:59:17",
- "git_commit": "0592738",
+ "run_id": "2026-09-15 01:32:57",
+ "git_commit": "381f73e",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -135,16 +135,6 @@
       {
        "Label": "Common Stock (100 shares @ $1,000 par)",
        "Amount": "$100,000",
-       "_confidence": "high"
-      },
-      {
-       "Label": "Retained Earnings",
-       "Amount": "$550,751",
-       "_confidence": "high"
-      },
-      {
-       "Label": "Net Income YTD Q1",
-       "Amount": "$47,353",
        "_confidence": "high"
       }
      ]
@@ -591,13 +581,28 @@
      "shareholders_equity": {
       "table": "shareholders_equity",
       "gold_row_count": 3,
-      "pred_row_count": 3,
-      "row_count_mismatch": 0,
-      "matched_rows": 3,
+      "pred_row_count": 1,
+      "row_count_mismatch": -2,
+      "matched_rows": 1,
       "row_precision": 1.0,
-      "row_recall": 1.0,
+      "row_recall": 0.3333333333333333,
       "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "missed_rows": [
+       {
+        "row": 1,
+        "gold": {
+         "Label": "Retained Earnings",
+         "Amount": 550751
+        }
+       },
+       {
+        "row": 2,
+        "gold": {
+         "Label": "Net Income YTD Q1",
+         "Amount": 47353
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
@@ -622,49 +627,46 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Retained Earnings",
-        "actual": "Retained Earnings",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 550751,
-        "actual": "$550,751",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Net Income YTD Q1",
-        "actual": "Net Income YTD Q1",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 47353,
-        "actual": "$47,353",
-        "in_gold_schema": true
+        "actual": null
        }
       ]
      }
     },
     "counts": {
-     "correct": 46
+     "correct": 42,
+     "missed": 4
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -673,7 +675,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 1.0,
+    "accuracy": 0.9130434782608695,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -1310,13 +1312,28 @@
      "shareholders_equity": {
       "table": "shareholders_equity",
       "gold_row_count": 3,
-      "pred_row_count": 3,
-      "row_count_mismatch": 0,
-      "matched_rows": 3,
+      "pred_row_count": 1,
+      "row_count_mismatch": -2,
+      "matched_rows": 1,
       "row_precision": 1.0,
-      "row_recall": 1.0,
+      "row_recall": 0.3333333333333333,
       "cell_accuracy": 0.5,
-      "missed_rows": [],
+      "missed_rows": [
+       {
+        "row": 1,
+        "gold": {
+         "Label": "Retained Earnings",
+         "Amount": 550751
+        }
+       },
+       {
+        "row": 2,
+        "gold": {
+         "Label": "Net Income YTD Q1",
+         "Amount": 47353
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
@@ -1353,85 +1370,57 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
         "outcome": "missed",
         "expected": "Retained Earnings",
-        "actual": null,
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 550751,
-        "actual": "$550,751",
-        "in_gold_schema": true
-       },
-       {
-        "row": 1,
-        "pred_row": 1,
-        "column": "SHAREHOLDERS' EQUITY",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Retained Earnings",
-        "in_gold_schema": false,
-        "grounded": true,
-        "halluc_kind": "out_of_schema"
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
         "outcome": "missed",
         "expected": "Net Income YTD Q1",
-        "actual": null,
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 47353,
-        "actual": "$47,353",
-        "in_gold_schema": true
-       },
-       {
-        "row": 2,
-        "pred_row": 2,
-        "column": "SHAREHOLDERS' EQUITY",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Net Income YTD Q1",
-        "in_gold_schema": false,
-        "grounded": true,
-        "halluc_kind": "out_of_schema"
+        "actual": null
        }
       ]
      }
     },
     "counts": {
-     "correct": 27,
-     "missed": 19,
-     "hallucinated": 19
+     "correct": 25,
+     "missed": 21,
+     "hallucinated": 17
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 19
+     "out_of_schema": 17
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.5869565217391305,
-    "hallucination_rate": 0.41304347826086957,
+    "accuracy": 0.5434782608695652,
+    "hallucination_rate": 0.40476190476190477,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -1875,13 +1864,28 @@
      "shareholders_equity": {
       "table": "shareholders_equity",
       "gold_row_count": 3,
-      "pred_row_count": 3,
-      "row_count_mismatch": 0,
-      "matched_rows": 3,
+      "pred_row_count": 1,
+      "row_count_mismatch": -2,
+      "matched_rows": 1,
       "row_precision": 1.0,
-      "row_recall": 1.0,
+      "row_recall": 0.3333333333333333,
       "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "missed_rows": [
+       {
+        "row": 1,
+        "gold": {
+         "Label": "Retained Earnings",
+         "Amount": 550751
+        }
+       },
+       {
+        "row": 2,
+        "gold": {
+         "Label": "Net Income YTD Q1",
+         "Amount": 47353
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
@@ -1906,49 +1910,46 @@
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Retained Earnings",
-        "actual": "Retained Earnings",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 550751,
-        "actual": 550751.0,
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Label",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Net Income YTD Q1",
-        "actual": "Net Income YTD Q1",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 47353,
-        "actual": 47353.0,
-        "in_gold_schema": true
+        "actual": null
        }
       ]
      }
     },
     "counts": {
-     "correct": 46
+     "correct": 42,
+     "missed": 4
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -1957,25 +1958,39 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 1.0,
+    "accuracy": 0.9130434782608695,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
-     "correct": 27
+     "correct": 25,
+     "missed": 2
     },
     "gold_valued": 27,
-    "accuracy": 1.0,
+    "accuracy": 0.9259259259259259,
     "unmatched": 0,
-    "mismatches": []
+    "mismatches": [
+     {
+      "key": "retained earnings",
+      "outcome": "missed",
+      "expected": 550751,
+      "actual": null
+     },
+     {
+      "key": "net income ytd q1",
+      "outcome": "missed",
+      "expected": 47353,
+      "actual": null
+     }
+    ]
    },
    "score_structure": {
     "gold_tables": 5,
     "tables_present": 5,
-    "tables_exact_rows": 5,
+    "tables_exact_rows": 4,
     "fidelity": 1.0,
-    "row_count_fidelity": 1.0,
+    "row_count_fidelity": 0.8,
     "tables": {
      "current_assets": {
       "gold_rows": 5,
@@ -2003,9 +2018,9 @@
      },
      "shareholders_equity": {
       "gold_rows": 3,
-      "pred_rows": 3,
+      "pred_rows": 1,
       "present": true,
-      "row_delta": 0
+      "row_delta": -2
      }
     },
     "extra_tables": []
@@ -9655,11 +9670,6 @@
        "Description": "Dental & Vision",
        "Amount": "($65.00)",
        "_confidence": "high"
-      },
-      {
-       "Description": "Life Insurance",
-       "Amount": "($28.00)",
-       "_confidence": "high"
       }
      ]
     }
@@ -9838,13 +9848,21 @@
      "deductions": {
       "table": "deductions",
       "gold_row_count": 9,
-      "pred_row_count": 9,
-      "row_count_mismatch": 0,
-      "matched_rows": 9,
+      "pred_row_count": 8,
+      "row_count_mismatch": -1,
+      "matched_rows": 8,
       "row_precision": 1.0,
-      "row_recall": 1.0,
+      "row_recall": 0.8888888888888888,
       "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "missed_rows": [
+       {
+        "row": 8,
+        "gold": {
+         "Description": "Life Insurance",
+         "Amount": -28.0
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
@@ -10009,30 +10027,29 @@
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Life Insurance",
-        "actual": "Life Insurance",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": -28.0,
-        "actual": "($28.00)",
-        "in_gold_schema": true
+        "actual": null
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 36
+     "correct": 34,
+     "missed": 2
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -10041,7 +10058,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.972972972972973,
+    "accuracy": 0.918918918918919,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -10219,13 +10236,21 @@
      "deductions": {
       "table": "deductions",
       "gold_row_count": 9,
-      "pred_row_count": 9,
-      "row_count_mismatch": 0,
-      "matched_rows": 9,
+      "pred_row_count": 8,
+      "row_count_mismatch": -1,
+      "matched_rows": 8,
       "row_precision": 1.0,
-      "row_recall": 1.0,
+      "row_recall": 0.8888888888888888,
       "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "missed_rows": [
+       {
+        "row": 8,
+        "gold": {
+         "Description": "Life Insurance",
+         "Amount": -28.0
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
@@ -10390,30 +10415,29 @@
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Life Insurance",
-        "actual": "Life Insurance",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": -28.0,
-        "actual": "($28.00)",
-        "in_gold_schema": true
+        "actual": null
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 36
+     "correct": 34,
+     "missed": 2
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -10422,7 +10446,7 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.972972972972973,
+    "accuracy": 0.918918918918919,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
@@ -10600,13 +10624,21 @@
      "deductions": {
       "table": "deductions",
       "gold_row_count": 9,
-      "pred_row_count": 9,
-      "row_count_mismatch": 0,
-      "matched_rows": 9,
+      "pred_row_count": 8,
+      "row_count_mismatch": -1,
+      "matched_rows": 8,
       "row_precision": 1.0,
-      "row_recall": 1.0,
+      "row_recall": 0.8888888888888888,
       "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "missed_rows": [
+       {
+        "row": 8,
+        "gold": {
+         "Description": "Life Insurance",
+         "Amount": -28.0
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
@@ -10771,30 +10803,29 @@
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Life Insurance",
-        "actual": "Life Insurance",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 8,
-        "pred_row": 8,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": -28.0,
-        "actual": -28.0,
-        "in_gold_schema": true
+        "actual": null
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 36
+     "correct": 34,
+     "missed": 2
     },
     "renamed": 0,
     "halluc_kinds": {
@@ -10803,17 +10834,18 @@
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.972972972972973,
+    "accuracy": 0.918918918918919,
     "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "near": 1,
-     "correct": 24
+     "correct": 23,
+     "missed": 1
     },
     "gold_valued": 25,
-    "accuracy": 0.96,
+    "accuracy": 0.92,
     "unmatched": 0,
     "mismatches": [
      {
@@ -10822,15 +10854,21 @@
       "matched_key": "employer name",
       "expected": "Nexus Global Trading LLC",
       "actual": "NEXUS GLOBAL TRADING"
+     },
+     {
+      "key": "life insurance",
+      "outcome": "missed",
+      "expected": -28.0,
+      "actual": null
      }
     ]
    },
    "score_structure": {
     "gold_tables": 2,
     "tables_present": 2,
-    "tables_exact_rows": 2,
+    "tables_exact_rows": 1,
     "fidelity": 1.0,
-    "row_count_fidelity": 1.0,
+    "row_count_fidelity": 0.5,
     "tables": {
      "earnings": {
       "gold_rows": 3,
@@ -10840,9 +10878,9 @@
      },
      "deductions": {
       "gold_rows": 9,
-      "pred_rows": 9,
+      "pred_rows": 8,
       "present": true,
-      "row_delta": 0
+      "row_delta": -1
      }
     },
     "extra_tables": []
@@ -16935,32 +16973,34 @@
  "summary": {
   "overall": {
    "counts": {
-    "correct": 389,
+    "correct": 383,
+    "missed": 6,
     "near": 5,
     "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9873096446700508,
+   "accuracy": 0.9720812182741116,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
    "hallucinated": 4,
-   "hallucination_rate": 0.010050251256281407,
+   "hallucination_rate": 0.01020408163265306,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
    "out_of_schema": 0,
-   "defect_rate": 0.010050251256281407
+   "defect_rate": 0.01020408163265306
   },
   "by_document_type": {
    "balance_sheet": {
     "counts": {
-     "correct": 46
+     "correct": 42,
+     "missed": 4
     },
     "gold_valued": 46,
-    "accuracy": 1.0,
+    "accuracy": 0.9130434782608695,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17049,22 +17089,23 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 68,
+     "correct": 66,
+     "missed": 2,
      "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9714285714285714,
+    "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 4,
-    "hallucination_rate": 0.05405405405405406,
+    "hallucination_rate": 0.05555555555555555,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 4,
     "out_of_schema": 0,
-    "defect_rate": 0.05405405405405406
+    "defect_rate": 0.05555555555555555
    },
    "purchase_order": {
     "counts": {
@@ -17126,23 +17167,24 @@
    },
    "money": {
     "counts": {
-     "correct": 161,
+     "correct": 158,
+     "missed": 3,
      "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 1.0,
+    "accuracy": 0.9813664596273292,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 2,
-    "hallucination_rate": 0.012269938650306749,
+    "hallucination_rate": 0.0125,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.012269938650306749
+    "defect_rate": 0.0125
    },
    "number": {
     "counts": {
@@ -17164,67 +17206,68 @@
    },
    "string": {
     "counts": {
-     "correct": 186,
+     "correct": 183,
+     "missed": 3,
      "near": 5,
      "hallucinated": 2
     },
     "gold_valued": 191,
-    "accuracy": 0.9738219895287958,
+    "accuracy": 0.9581151832460733,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 2,
-    "hallucination_rate": 0.010362694300518135,
+    "hallucination_rate": 0.010526315789473684,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.010362694300518135
+    "defect_rate": 0.010526315789473684
    }
   }
  },
  "summary_raw": {
   "overall": {
    "counts": {
-    "correct": 189,
-    "missed": 200,
-    "hallucinated": 204,
+    "correct": 185,
+    "missed": 204,
+    "hallucinated": 202,
     "near": 5
    },
    "gold_valued": 394,
-   "accuracy": 0.4796954314720812,
+   "accuracy": 0.46954314720812185,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
-   "hallucinated": 204,
-   "hallucination_rate": 0.5125628140703518,
+   "hallucinated": 202,
+   "hallucination_rate": 0.5153061224489796,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
-   "out_of_schema": 200,
-   "defect_rate": 0.010050251256281407
+   "out_of_schema": 198,
+   "defect_rate": 0.01020408163265306
   },
   "by_document_type": {
    "balance_sheet": {
     "counts": {
-     "correct": 27,
-     "missed": 19,
-     "hallucinated": 19
+     "correct": 25,
+     "missed": 21,
+     "hallucinated": 17
     },
     "gold_valued": 46,
-    "accuracy": 0.5869565217391305,
+    "accuracy": 0.5434782608695652,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 19,
-    "hallucination_rate": 0.41304347826086957,
+    "hallucinated": 17,
+    "hallucination_rate": 0.40476190476190477,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 19,
+    "out_of_schema": 17,
     "defect_rate": 0.0
    },
    "bank_statement": {
@@ -17308,22 +17351,23 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 68,
+     "correct": 66,
+     "missed": 2,
      "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9714285714285714,
+    "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 4,
-    "hallucination_rate": 0.05405405405405406,
+    "hallucination_rate": 0.05555555555555555,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 4,
     "out_of_schema": 0,
-    "defect_rate": 0.05405405405405406
+    "defect_rate": 0.05555555555555555
    },
    "purchase_order": {
     "counts": {
@@ -17390,23 +17434,23 @@
    },
    "money": {
     "counts": {
-     "correct": 104,
-     "missed": 57,
+     "correct": 101,
+     "missed": 60,
      "hallucinated": 2
     },
     "gold_valued": 161,
-    "accuracy": 0.6459627329192547,
+    "accuracy": 0.6273291925465838,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 2,
-    "hallucination_rate": 0.018867924528301886,
+    "hallucination_rate": 0.019417475728155338,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.018867924528301886
+    "defect_rate": 0.019417475728155338
    },
    "number": {
     "counts": {
@@ -17428,56 +17472,58 @@
    },
    "string": {
     "counts": {
-     "missed": 110,
-     "hallucinated": 202,
-     "correct": 76,
+     "missed": 111,
+     "hallucinated": 200,
+     "correct": 75,
      "near": 5
     },
     "gold_valued": 191,
-    "accuracy": 0.39790575916230364,
+    "accuracy": 0.39267015706806285,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 202,
-    "hallucination_rate": 0.7137809187279152,
+    "hallucinated": 200,
+    "hallucination_rate": 0.7142857142857143,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
-    "out_of_schema": 200,
-    "defect_rate": 0.007067137809187279
+    "out_of_schema": 198,
+    "defect_rate": 0.007142857142857143
    }
   }
  },
  "summary_export": {
   "overall": {
    "counts": {
-    "correct": 389,
+    "correct": 383,
+    "missed": 6,
     "near": 5,
     "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.9873096446700508,
+   "accuracy": 0.9720812182741116,
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
    "hallucinated": 4,
-   "hallucination_rate": 0.010050251256281407,
+   "hallucination_rate": 0.01020408163265306,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 4,
    "out_of_schema": 0,
-   "defect_rate": 0.010050251256281407
+   "defect_rate": 0.01020408163265306
   },
   "by_document_type": {
    "balance_sheet": {
     "counts": {
-     "correct": 46
+     "correct": 42,
+     "missed": 4
     },
     "gold_valued": 46,
-    "accuracy": 1.0,
+    "accuracy": 0.9130434782608695,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
@@ -17566,22 +17612,23 @@
    "payslip": {
     "counts": {
      "near": 2,
-     "correct": 68,
+     "correct": 66,
+     "missed": 2,
      "hallucinated": 4
     },
     "gold_valued": 70,
-    "accuracy": 0.9714285714285714,
+    "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 4,
-    "hallucination_rate": 0.05405405405405406,
+    "hallucination_rate": 0.05555555555555555,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 4,
     "out_of_schema": 0,
-    "defect_rate": 0.05405405405405406
+    "defect_rate": 0.05555555555555555
    },
    "purchase_order": {
     "counts": {
@@ -17643,23 +17690,24 @@
    },
    "money": {
     "counts": {
-     "correct": 161,
+     "correct": 158,
+     "missed": 3,
      "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 1.0,
+    "accuracy": 0.9813664596273292,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 2,
-    "hallucination_rate": 0.012269938650306749,
+    "hallucination_rate": 0.0125,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.012269938650306749
+    "defect_rate": 0.0125
    },
    "number": {
     "counts": {
@@ -17681,47 +17729,49 @@
    },
    "string": {
     "counts": {
-     "correct": 186,
+     "correct": 183,
+     "missed": 3,
      "near": 5,
      "hallucinated": 2
     },
     "gold_valued": 191,
-    "accuracy": 0.9738219895287958,
+    "accuracy": 0.9581151832460733,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
     "hallucinated": 2,
-    "hallucination_rate": 0.010362694300518135,
+    "hallucination_rate": 0.010526315789473684,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 2,
     "out_of_schema": 0,
-    "defect_rate": 0.010362694300518135
+    "defect_rate": 0.010526315789473684
    }
   }
  },
  "summary_content": {
   "counts": {
-   "correct": 236,
+   "correct": 233,
+   "missed": 3,
    "near": 5,
    "unmatched": 2
   },
   "gold_valued": 241,
   "unmatched": 2,
-  "accuracy": 0.979253112033195
+  "accuracy": 0.966804979253112
  },
  "summary_structure": {
   "gold_tables": 17,
   "tables_present": 17,
-  "tables_exact_rows": 15,
+  "tables_exact_rows": 13,
   "fidelity": 1.0,
-  "row_count_fidelity": 0.8823529411764706
+  "row_count_fidelity": 0.7647058823529411
  },
  "calibration": {
   "high": {
-   "n": 392,
-   "correct": 386,
+   "n": 386,
+   "correct": 380,
    "wrong": 0,
    "missed": 0,
    "near": 2,
@@ -17737,6 +17787,55 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-09-07 23:52:00"
+ "diff": [
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity :: row_count_mismatch",
+   "before": "0",
+   "after": "-2",
+   "regression": false
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Amount",
+   "before": "correct",
+   "after": "missed",
+   "regression": true
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Label",
+   "before": "correct",
+   "after": "missed",
+   "regression": true
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Amount",
+   "before": "correct",
+   "after": "missed",
+   "regression": true
+  },
+  {
+   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Label",
+   "before": "correct",
+   "after": "missed",
+   "regression": true
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch",
+   "before": "0",
+   "after": "-1",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount",
+   "before": "correct",
+   "after": "missed",
+   "regression": true
+  },
+  {
+   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description",
+   "before": "correct",
+   "after": "missed",
+   "regression": true
+  }
+ ],
+ "diff_against": "2026-09-08 17:34:40"
 }
