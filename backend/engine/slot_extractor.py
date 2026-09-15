@@ -44,7 +44,7 @@ import re
 import time
 from pathlib import Path
 
-from extractor import _llm_json, _log, _num
+from extractor import _llm_json, _log
 from micr import field_role, find_micr_line, parse_micr
 from text_layer import (canonical_value, check_placement, column_bands,
                         find_line, flatten_pages, line_page, matches_loosely,
@@ -86,8 +86,86 @@ def _flat(s) -> str:
     return re.sub(r"\s+", " ", t).strip().casefold()
 
 
-def _digits(s) -> str:
-    return re.sub(r"[^0-9]", "", str(s or ""))
+# ── printed numbers ──────────────────────────────────────────────────────────
+#
+# A number grounds only as a WHOLE printed token (see verify_span). That needs
+# the tokens, and the text layer does not always hand them over whole: on the
+# Berkshire earnings release pdfplumber splits `19,694` into the words `19,6`
+# and `94`, and `9.13` into `9`, `.`, `13`. The word boxes touch (gap within
+# 0.1pt), but the flattened text puts a space between them like any other
+# words, so from the text alone a split number and two columns look the same.
+#
+# The rejoin therefore rests on the NUMBER, not on the spacing. A piece joins
+# the next only when it is visibly incomplete:
+#
+#   `19,6` + `94`        a final thousands group of fewer than 3 digits, which
+#                        the next piece completes to exactly 3
+#   `9` + ` . ` + `13`   a decimal point standing alone as its own word
+#
+# and only across exactly one space. A complete number never absorbs anything,
+# so `$ 848 $ 9,020` is two numbers and `18 000` is two numbers: nothing in `18`
+# says it was cut short. The same argument as text_layer._shortfall, which
+# makes the same decision across a line break.
+
+_NUM_PIECE = re.compile(
+    r"(?<![\d.,])"                 # not the tail of a longer number
+    r"(?P<open>\()?"
+    r"(?P<sign>(?<!\w)-)?"         # a minus, unless it joins two words (INV-2024)
+    r"(?:(?P<cur>[$£€])\s?)?"
+    r"(?P<sign2>-)?"
+    r"(?P<body>\d[\d,]*(?:\.\d+)?)"
+    r"(?P<close>\))?"
+    r"(?![\d])")
+
+
+def _piece(m):
+    return {"open": bool(m.group("open")), "sign": bool(m.group("sign") or m.group("sign2")),
+            "cur": m.group("cur") or "", "body": m.group("body").rstrip(","),
+            "close": bool(m.group("close")), "start": m.start(), "end": m.end()}
+
+
+def _joins(left, right, gap):
+    if left["close"] or right["open"] or right["sign"] or right["cur"]:
+        return None
+    lb, rb = left["body"], right["body"]
+    if gap == " " and "," in lb and "." not in lb:
+        last = lb.rsplit(",", 1)[1]
+        lead = re.match(r"\d+", rb).group(0)
+        if len(last) < 3 and len(last) + len(lead) == 3 and "," not in rb[:len(lead)]:
+            return lb + rb
+    if gap == " . " and "." not in lb and re.fullmatch(r"\d+", rb):
+        return lb + "." + rb
+    return None
+
+
+def printed_numbers(text) -> list[str]:
+    """Every number printed in `text`, split words rejoined, whitespace removed.
+
+    `$ 19,6 94 $ 37,574` -> ['$19,694', '$37,574'].
+    """
+    text = str(text or "")
+    pieces = [_piece(m) for m in _NUM_PIECE.finditer(text)]
+    out = []
+    for p in pieces:
+        if out:
+            joined = _joins(out[-1], p, text[out[-1]["end"]:p["start"]])
+            if joined is not None:
+                out[-1].update(body=joined, end=p["end"], close=p["close"])
+                continue
+        out.append(p)
+    return [f"{'(' if p['open'] else ''}{'-' if p['sign'] else ''}{p['cur']}"
+            f"{p['body']}{')' if p['close'] else ''}" for p in out]
+
+
+def _number_key(s):
+    """A printed number reduced to what it SAYS: sign, digits, decimal point.
+    None when `s` is not purely a number in some notation."""
+    t = re.sub(r"\s", "", str(s or ""))
+    m = re.fullmatch(r"(\()?(-)?([$£€])?(-)?(\d[\d,]*(?:\.\d+)?)(\))?", t)
+    if not m or bool(m.group(1)) != bool(m.group(6)):
+        return None
+    neg = bool(m.group(1) or m.group(2) or m.group(4))
+    return ("-" if neg else "") + m.group(5).replace(",", "")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -363,23 +441,28 @@ def verify_span(value, source, page, page_texts, record=""):
         return False, "source span not found in document"
 
     # the value must sit inside the span it claims to come from — or, failing
-    # that, inside the record that span belongs to
+    # that, inside the record that span belongs to.
+    #
+    # A NUMBER must be a whole printed number, differing only in notation
+    # (whitespace, currency symbol, thousands separators, parentheses as
+    # minus). It used to be enough for it to be a substring of the span, for
+    # its digits to be a substring of the span's digits, or for it to equal a
+    # span number rounded to two decimals — so against a printed `$0.04116`,
+    # `0.04`, `0.041`, `$40.4` and `4042` all grounded as high: a rounded or
+    # truncated answer stored as verbatim, which nothing downstream can undo.
+    # The digit rule was also quietly carrying numbers the text layer splits
+    # into several words; printed_numbers rejoins those instead.
+    key = _number_key(value)
     for span in (source, record):
         if not str(span or "").strip():
             continue
-        flat = _flat(span)
+        if key is not None:
+            if any(_number_key(tok) == key for tok in printed_numbers(span)):
+                return True, ""
+            continue
         val = _flat(value)
-        if val and val in flat:
+        if val and val in _flat(span):
             return True, ""
-        dv, ds = _digits(value), _digits(span)
-        if dv and dv in ds:
-            return True, ""
-        n = _num(value)
-        if n is not None:
-            for tok in re.findall(r"\(?-?[\d,]*\.?\d+\)?", str(span)):
-                t = _num(tok)
-                if t is not None and round(abs(t), 2) == round(abs(n), 2):
-                    return True, ""
     return False, "value not found inside its own source span"
 
 
