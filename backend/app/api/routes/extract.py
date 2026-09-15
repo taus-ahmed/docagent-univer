@@ -77,7 +77,7 @@ from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
 from app.schemas.schemas import (
     JobStatus, JobListItem, DocumentResultResponse,
-    DocumentUpdateRequest, ExtractUploadResponse,
+    DocumentUpdateRequest, ExtractUploadResponse, FieldEditRequest,
 )
 
 router = APIRouter(prefix="/api", tags=["extract"])
@@ -4981,6 +4981,21 @@ def provenance_note(source, page, filename, grounded=True, confidence=""):
     return "\n".join(lines)[:_EXCEL_COMMENT_MAX]
 
 
+def provenance_edited_note(original, page, filename):
+    """The comment on a value a person typed in place of the extracted one.
+
+    It opens by saying what the value IS (typed, not read), then names what the
+    document gave before, labelled as the replaced value, never as this cell's
+    source.
+    """
+    where = f"{filename}, page {page}" if page else filename
+    lines = ["Edited in DocAgent: typed by a person, not read from the document."]
+    before = " ".join(str(original or "").split())
+    lines.append(f"Replaced the extracted value “{before}” ({where})."
+                 if before else f"No value had been extracted here ({where}).")
+    return "\n".join(lines)[:_EXCEL_COMMENT_MAX]
+
+
 def provenance_note_size(text):
     """(width, height) in points for a comment box that shows `text` whole.
 
@@ -5124,17 +5139,28 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         conf_map = (ed.get("validation") or {}).get("confidence_map") or {}
         source_rows = {}          # output row -> set of pages
 
-        def attach(cell, source, page, grounded, confidence, out_r):
-            """The comment on one written value, and its row's Source entry."""
+        def attach(cell, source, page, grounded, confidence, out_r,
+                   edited=False, original=""):
+            """The comment on one written value, and its row's Source entry.
+
+            An EDITED value was typed by a person. It gets a comment saying so
+            and naming what it replaced, never the replaced words presented as
+            its source, and its page does not go into the row's Source cell:
+            the value did not come from that page.
+            """
             if not provenance or cell is None or not filename:
                 return
             from openpyxl.comments import Comment
-            text = provenance_note(source, page, filename, grounded=grounded,
-                                   confidence=confidence)
+            if edited:
+                text = provenance_edited_note(original, page, filename)
+            else:
+                text = provenance_note(source, page, filename, grounded=grounded,
+                                       confidence=confidence)
             w, h = provenance_note_size(text)
             cell.comment = Comment(text, "DocAgent", width=w, height=h)
             if out_r is not None:
-                source_rows.setdefault(out_r, set()).update({page} if page else set())
+                source_rows.setdefault(out_r, set()).update(
+                    {page} if page and not edited else set())
 
         # how far each template row moves down, given table overflow. A
         # transposed table never pushes rows down — it grows to the right — so
@@ -5253,7 +5279,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             prov = field_prov.get(ref)
             if prov:
                 attach(cell, prov.get("source"), prov.get("page"),
-                       prov.get("grounded"), conf_map.get(ref), out_r)
+                       prov.get("grounded"), conf_map.get(ref), out_r,
+                       edited=bool(prov.get("edited")) or conf_map.get(ref) == "edited",
+                       original=prov.get("original_value", ""))
 
         # 3. table rows, in their band, by column header address
         for t in tables:
@@ -5270,7 +5298,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                         if "_source" in rec:
                             attach(cell, rec.get("_source"), rec.get("_page"),
                                    f["header"] not in (rec.get("_ungrounded") or []),
-                                   rec.get("_confidence"), None)
+                                   rec.get("_confidence"), None,
+                                   edited=f["header"] in (rec.get("_edited") or []),
+                                   original=(rec.get("_original") or {}).get(f["header"], ""))
                 continue
             header_row = t.get("header_row", t["start_row"])
             if provenance and rows and header_row < t["start_row"] and any(
@@ -5287,7 +5317,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                     if "_source" in row:
                         attach(cell, row.get("_source"), row.get("_page"),
                                key not in (row.get("_ungrounded") or []),
-                               row.get("_confidence"), r)
+                               row.get("_confidence"), r,
+                               edited=key in (row.get("_edited") or []),
+                               original=(row.get("_original") or {}).get(key, ""))
 
         # 3b. one Source cell per row that received a value with provenance
         for out_r, pages in source_rows.items():
@@ -6658,16 +6690,189 @@ def get_inferred_templates(job_id: int, db: Session = Depends(get_db),
     return list(out.values())
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# EDITS — addressed by SLOT, never by label
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# A value lives at a slot (`extracted_fields[ref]`, or a cell of a `*_rows`
+# row). `extracted_data` is a label-keyed PROJECTION of the field slots for
+# display. The grid used to edit the projection, by label, and replace the
+# whole document; the template writer reads the slots, so every edit was
+# silently absent from the download (since 1076e05). Two slots can share a
+# label (a matrix template: `Principal` under 2023 and under 2024), and a label
+# cannot say which one was meant.
+#
+# So an edit names a slot. Every copy of the value moves together — the slot,
+# the projection, the confidence map — and the edit is MARKED, so the writer
+# never presents a typed value under the quote of the words it replaced.
+
+def _field_refs(ed):
+    refs = {str(f.get("ref")) for f in (ed.get("slot_map") or {}).get("fields") or []
+            if f.get("ref")}
+    return refs | {str(r) for r in (ed.get("extracted_fields") or {})}
+
+
+def _ref_for_label(ed, label):
+    """The one slot a label names, or None. Two slots under one label is an
+    error the caller must hear about, not a choice made for them.
+
+    The stored projection is asked first: its key may be a qualified label
+    (`Principal (Years 8-30)`) that no template cell spells."""
+    entry = (ed.get("extracted_data") or {}).get(label)
+    if isinstance(entry, dict) and entry.get("ref"):
+        return str(entry["ref"])
+    refs = [str(f.get("ref")) for f in (ed.get("slot_map") or {}).get("fields") or []
+            if f.get("row_label") == label and f.get("ref")]
+    if len(refs) > 1:
+        raise HTTPException(
+            status_code=422,
+            detail=(f"'{label}' names {len(refs)} cells ({', '.join(refs)}). "
+                    f"Edit by cell reference instead."))
+    return refs[0] if refs else None
+
+
+def _edit_field(ed, stored, ref, value, label_key=None):
+    """Write one field-slot edit into every copy of the value, and mark it."""
+    from app.core.confidence import EDITED
+    before = (stored.get("extracted_fields") or {}).get(ref, "")
+    ed.setdefault("extracted_fields", {})[ref] = value
+    ed.setdefault("validation", {}).setdefault("confidence_map", {})[ref] = EDITED
+    prov = dict((stored.get("field_provenance") or {}).get(ref) or {})
+    if not prov.get("edited"):
+        prov["original_value"] = before
+    prov["edited"] = True
+    ed.setdefault("field_provenance", {})[ref] = prov
+    kv = ed.setdefault("extracted_data", {})
+    key = label_key or next((k for k, e in kv.items()
+                             if isinstance(e, dict) and e.get("ref") == ref), None)
+    if key is None:
+        slot = next((f for f in (ed.get("slot_map") or {}).get("fields") or []
+                     if f.get("ref") == ref), {})
+        key = slot.get("row_label") or ref
+        if key in kv and (kv[key] or {}).get("ref") not in (None, ref):
+            key = f"{key} [{ref}]"
+    kv[key] = {"value": value, "confidence": EDITED, "ref": ref}
+
+
+def _reconcile_edits(stored, incoming):
+    """A whole-document save, made safe.
+
+    Kept for the grid bundles already open in browsers when this deploys, and
+    for API callers. It (1) carries a label-projection edit into its slot, (2)
+    marks a slot value changed directly, (3) never lets a payload built from a
+    stale copy undo an edit already stored, and (4) does the same for table
+    rows, cell by cell.
+    """
+    import copy
+    from app.core.confidence import EDITED
+    ed = copy.deepcopy(incoming)
+    s_ef = stored.get("extracted_fields") or {}
+    s_cm = (stored.get("validation") or {}).get("confidence_map") or {}
+    in_cm = (incoming.get("validation") or {}).get("confidence_map") or {}
+
+    # (3) first, so the diffs below compare against the restored values
+    for ref, lvl in s_cm.items():
+        if lvl == EDITED and in_cm.get(ref) != EDITED:
+            kv_in = incoming.get("extracted_data") or {}
+            re_edited = any(isinstance(e, dict) and e.get("confidence") == EDITED
+                            and (e.get("ref") == ref or (not e.get("ref") and
+                                 _ref_for_label(stored, k) == ref))
+                            for k, e in kv_in.items())
+            if re_edited:
+                continue
+            ed.setdefault("extracted_fields", {})[ref] = s_ef.get(ref, "")
+            ed.setdefault("validation", {}).setdefault("confidence_map", {})[ref] = EDITED
+            ed.setdefault("field_provenance", {})[ref] = (
+                (stored.get("field_provenance") or {}).get(ref) or {"edited": True})
+            kv = ed.setdefault("extracted_data", {})
+            for k in [k for k, e in kv.items() if isinstance(e, dict) and e.get("ref") == ref]:
+                del kv[k]
+            s_key = next((k for k, e in (stored.get("extracted_data") or {}).items()
+                          if isinstance(e, dict) and e.get("ref") == ref), None)
+            if s_key is not None:
+                kv[s_key] = stored["extracted_data"][s_key]
+
+    # (1) an edit made on the label projection
+    for key, e in list((ed.get("extracted_data") or {}).items()):
+        if not (isinstance(e, dict) and e.get("confidence") == EDITED):
+            continue
+        ref = e.get("ref") or _ref_for_label(stored, key)
+        if ref is None:
+            continue                      # a legacy document with no slots
+        if s_cm.get(ref) == EDITED and str(s_ef.get(ref, "")) == str(e.get("value", "")):
+            continue                      # already stored exactly so
+        _edit_field(ed, stored, ref, e.get("value", ""), label_key=key)
+
+    # (2) a slot value changed directly
+    for ref, v in list((ed.get("extracted_fields") or {}).items()):
+        cm = (ed.get("validation") or {}).get("confidence_map") or {}
+        if str(v) != str(s_ef.get(ref, "")) and cm.get(ref) != EDITED:
+            _edit_field(ed, stored, ref, v)
+
+    # (4) table rows: aligned by position, which only holds when the row count
+    # is unchanged; a save that adds or removes rows is kept as sent
+    for key, rows in ed.items():
+        s_rows = stored.get(key)
+        if not (key.endswith("_rows") and isinstance(rows, list)
+                and isinstance(s_rows, list) and len(rows) == len(s_rows)):
+            continue
+        for r_in, r_st in zip(rows, s_rows):
+            if not (isinstance(r_in, dict) and isinstance(r_st, dict)):
+                continue
+            edited = set(r_st.get("_edited") or [])
+            original = dict(r_st.get("_original") or {})
+            for col in edited - set(r_in.get("_edited") or []):
+                if str(r_in.get(col, "")) == str(original.get(col, "")):
+                    r_in[col] = r_st.get(col, "")       # stale copy: keep the edit
+            for col, v in list(r_in.items()):
+                if str(col).startswith("_"):
+                    continue
+                if str(v) != str(r_st.get(col, "")):
+                    edited.add(col)
+                    original.setdefault(col, r_st.get(col, ""))
+            if edited:
+                r_in["_edited"] = sorted(edited)
+                r_in["_original"] = original
+    return ed
+
+
+def _save_edit(doc, ed, current_user, db):
+    doc.set_extracted_data(ed)
+    doc.reviewed = True
+    doc.reviewed_by = current_user.username
+    doc.needs_review = False
+    db.commit()
+
+
 @router.put("/jobs/{job_id}/docs/{doc_id}")
 def update_document(job_id: int, doc_id: int, payload: DocumentUpdateRequest,
                     db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     _get_job_or_404(job_id, current_user, db)
     doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
-    doc.set_extracted_data(payload.extracted_data)
-    doc.reviewed=True; doc.reviewed_by=current_user.username; doc.needs_review=False
-    db.commit()
-    return {"message": "Updated", "doc_id": doc_id}
+    stored = doc.get_extracted_data() or {}
+    ed = _reconcile_edits(stored if isinstance(stored, dict) else {},
+                          payload.extracted_data)
+    _save_edit(doc, ed, current_user, db)
+    return {"message": "Updated", "doc_id": doc_id, "extracted_data": ed}
+
+
+@router.patch("/jobs/{job_id}/docs/{doc_id}/fields/{ref}")
+def edit_field(job_id: int, doc_id: int, ref: str, payload: FieldEditRequest,
+               db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+    """Edit ONE field slot, addressed by its cell reference."""
+    import copy
+    _get_job_or_404(job_id, current_user, db)
+    doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
+    if not doc: raise HTTPException(status_code=404, detail="Document not found")
+    stored = doc.get_extracted_data() or {}
+    if not isinstance(stored, dict) or ref not in _field_refs(stored):
+        raise HTTPException(status_code=404,
+                            detail=f"This document has no field at {ref!r}")
+    ed = copy.deepcopy(stored)
+    _edit_field(ed, stored, ref, payload.value)
+    _save_edit(doc, ed, current_user, db)
+    return {"message": "Updated", "doc_id": doc_id, "ref": ref, "extracted_data": ed}
 
 @router.post("/jobs/{job_id}/docs/{doc_id}/approve")
 def approve_document(job_id: int, doc_id: int,

@@ -1087,11 +1087,25 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     r.success = True
     r.processing_time_ms = int((time.time() - start) * 1000)
 
+    # The label-keyed projection. A label two slots share (a matrix template's
+    # `Principal` under 2023 and under 2024) used to collapse to one entry, so
+    # the second value vanished from everything that reads by label — the
+    # results grid, the combined and per-file exports, the flat table. Such a
+    # label is qualified by its column heading, or by its cell reference when
+    # the heading does not separate it. A label used once is unchanged.
+    label_uses = {}
+    for f in slots["fields"]:
+        label_uses[f["row_label"]] = label_uses.get(f["row_label"], 0) + 1
     kv = {}
     for ref, v in extracted_fields.items():
         slot = next((f for f in slots["fields"] if f["ref"] == ref), None)
-        kv[slot["row_label"] if slot else ref] = {
-            "value": v, "confidence": conf_map.get(ref, confident), "ref": ref}
+        key = slot["row_label"] if slot else ref
+        if slot and label_uses.get(key, 0) > 1:
+            head = str(slot.get("col_header") or "").strip()
+            key = f"{key} ({head})" if head else f"{key} [{ref}]"
+        if key in kv:
+            key = f"{key} [{ref}]"
+        kv[key] = {"value": v, "confidence": conf_map.get(ref, confident), "ref": ref}
 
     ed = {
         "document_type": default_doc_type,

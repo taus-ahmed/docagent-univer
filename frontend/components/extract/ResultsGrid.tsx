@@ -225,16 +225,31 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
     if (!doc) return;
     setSaving(true);
     try {
-      const updated = JSON.parse(JSON.stringify(doc.extracted_data ?? {}));
-      if (!updated.extracted_data) updated.extracted_data = {};
-      // A human typed this. It is not a grounded extraction and must not
-      // inherit a grounding claim — "high" here would assert the engine
-      // verified a value the engine never saw.
-      updated.extracted_data[field] = { value: e.newValue ?? "", confidence: "edited" };
-      await extractApi.updateDocument(jobId, docId, updated);
+      // An edit names a SLOT. The column is a label, and two slots can share a
+      // label, so the cell reference carried on the entry is what is sent —
+      // and the server moves every copy of the value together, so the download
+      // holds what was typed. The server marks it "edited": a human typed it,
+      // and it must not inherit a grounding claim.
+      const value = e.newValue == null ? "" : String(e.newValue);
+      const entry = (doc.extracted_data?.extracted_data ?? {})[field];
+      const ref = entry && typeof entry === "object" ? entry.ref : undefined;
+      let saved: { extracted_data: Record<string, any> };
+      if (ref) {
+        saved = await extractApi.editField(jobId, docId, ref, value);
+      } else {
+        // A document with no slot addresses (extracted before them): the
+        // server resolves the label, and refuses one that names two cells.
+        const updated = JSON.parse(JSON.stringify(doc.extracted_data ?? {}));
+        if (!updated.extracted_data) updated.extracted_data = {};
+        updated.extracted_data[field] = { value, confidence: "edited" };
+        saved = await extractApi.updateDocument(jobId, docId, updated);
+      }
+      // Keep this copy current. Every save used to be built from the copy the
+      // grid was first given, so a second edit silently reverted the first.
+      doc.extracted_data = saved.extracted_data as DocumentResult["extracted_data"];
       toast.success("Saved");
-    } catch {
-      toast.error("Save failed");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail ?? "Save failed");
     } finally {
       setSaving(false);
     }

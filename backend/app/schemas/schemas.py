@@ -104,6 +104,11 @@ class DocumentUpdateRequest(BaseModel):
     extracted_data: dict
 
 
+class FieldEditRequest(BaseModel):
+    """PATCH /api/jobs/{id}/docs/{doc_id}/fields/{ref} — one field slot, by address."""
+    value: str
+
+
 # ─── Templates ────────────────────────────────────────────────────────────────
 
 class TemplateColumn(BaseModel):

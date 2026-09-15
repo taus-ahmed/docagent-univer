@@ -401,7 +401,17 @@ export const extractApi = {
     const res = await api.put(`/api/jobs/${jobId}/docs/${docId}`, {
       extracted_data: extractedData,
     });
-    return res.data;
+    return res.data as { extracted_data: Record<string, any> };
+  },
+
+  /** Edit ONE field slot, addressed by its cell reference (e.g. "B7").
+   *  Returns the updated document, so the caller's copy stays current. */
+  editField: async (jobId: number, docId: number, ref: string, value: string) => {
+    const res = await api.patch(
+      `/api/jobs/${jobId}/docs/${docId}/fields/${encodeURIComponent(ref)}`,
+      { value },
+    );
+    return res.data as { ref: string; extracted_data: Record<string, any> };
   },
 
   approveDocument: async (jobId: number, docId: number) => {
