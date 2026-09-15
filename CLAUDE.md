@@ -720,9 +720,12 @@ one function at the export boundary, not a validation change.
 ```python
 {"document_type", "overall_confidence", "extraction_method": "slot_directed",
  "extracted_fields": {cell_ref: value},          # what the writer places
+ "field_provenance": {cell_ref: {source, page, grounded}},  # I2
  "extracted_data":   {row_label: {value, confidence, ref}},
  "slot_map": {"fields": [...], "tables": [...]}, # geometry for the writer
- "<band name>_rows": [ {col_key: value, "_confidence": "high"} ],
+ "<band name>_rows": [ {col_key: value, "_confidence": "high",
+                        "_source": quote, "_page": file_page,
+                        "_ungrounded": [col_key, ...]} ],        # I2
  "validation": {flagged_count, flagged_fields, confidence_map,
                 ungrounded_count, misplaced_count, dropped_row_count,
                 regions, unbound_row_count,
@@ -733,6 +736,19 @@ one function at the export boundary, not a validation change.
  "inferred_template", "inferred_grid", "shape_signature",  # no-template only
  "layout_sections": {}, "table_rows": []}        # kept empty for legacy readers
 ```
+
+⚠ **A band named `table` writes its rows to `table_rows`**, overwriting the empty
+legacy key. Four of the ten gold templates do this (STMT, INV ×2, PO, EXP), so
+any reader that skips `table_rows` as "legacy" misses their rows. The first I2
+tests did exactly that and under-counted by 165 cells.
+
+**Provenance (I2).** Every field value and every table row carries the quote it
+was read from and its FILE page. `page_of` asks geometry first (the line a row
+claimed, then every line the quote matches); the model's page is used only when
+geometry has nothing, and only mapped to file numbering. A quote on several
+pages that the model did not disambiguate gets `None`, never a guess.
+`field_provenance` is kept apart from `extracted_data` because a cell edit in the
+results grid overwrites an `extracted_data` entry whole.
 
 **`flagged_fields` is a list of `{ref, value, reason}` dicts — one shape, from
 every producer** (`slot_extractor._flag`). It had three: plain strings on the
@@ -792,6 +808,16 @@ measurement that never happened), and always sets `needs_review=True`. PDFs — 
 writers exist for it and for re-exporting legacy jobs.
 
 ### Export writers (all in `extract.py`)
+
+**The slot writer carries provenance, not confidence (I2).** A `Source` column
+one past the template's full extent says `<file> · p.N` on every row holding
+extracted values, and every extracted value carries a cell comment quoting the
+words it was read from, with its file and page. A quote that grounding did not
+find opens with "Not verified". Confidence levels, flag reasons and review state
+never reach the file (`test_confidence.py::TestExportCarriesNoConfidence`). A
+transposed table's records have no row of their own, so their provenance
+travels in comments only. Jobs stored before I2 export exactly as before.
+`GET /api/jobs/{id}/export?provenance=false` (and `/export/zip`) leaves both out.
 
 `_write_excel` routes on the `template_type` persisted in `extraction_json`:
 

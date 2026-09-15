@@ -600,6 +600,64 @@ instance is the one constructed for the test. There is **no measured
 movement**. Its value is that the next rounded answer is marked `low` instead
 of stored as verbatim.
 
+## 16. I2: the export carries provenance — and still no confidence
+
+*Recorded 2026-09-15*
+
+**Reversed: "the sheet carries VALUES ONLY".** The slot writer's docstring and
+`TestExportCarriesNoConfidence` pinned an export with no annotations at all. That
+rule had two halves, and only one of them was right. *No confidence in the
+file* stays: levels, flag reasons and review state belong in the app, and the
+test still forbids them, now in comments as well as cells. *No provenance in the
+file* is reversed. It was why a merged block, a wrongly bound region or a second
+stacked document arrived with nothing saying where it came from (round 2, I2).
+The file is where an accountant checks a figure.
+
+**What the sheet carries now.** A `Source` column one past the template's full
+extent, `<file> · p.N`, on every row holding extracted values. A comment on every
+extracted value quoting the words it was read from, with file and page. A quote
+grounding did not find opens with "Not verified: these words were not found in
+the document"; that is a fact about the quote, not a score. Opt out with
+`?provenance=false`. Jobs stored before this carry no provenance and export
+exactly as before: absent, not reconstructed.
+
+**Where the page comes from (`page_of`), and what would break it:**
+
+| source of the page | when | breaks if |
+|---|---|---|
+| the line a table row claimed | row identity found a line | the line stamp is wrong. It is set at read time as the FILE page (I1) |
+| the page every line the quote matches is on | the quote matches lines on exactly one page | the quote matches a line on the wrong page only. Not observed |
+| the model's page, mapped to file numbering | the quote matches no line | the model names the wrong page. Unverifiable, and used for 2 values of 349 |
+| **none** | no geometry (text-only input), or the quote is on several pages and the model's page is not one of them | the Source cell shows the file name alone. Never a guess |
+
+No thresholds. The one constant is Excel's own comment limit (32,767
+characters). The comment box size (360pt wide, 13pt per line) is presentation
+only.
+
+**Exercised beyond the documents it was built on.** On the templated gold corpus,
+all 386 confident values (109 fields, 277 row cells) are printed on the page
+recorded for them. With no template, and across all seven scenarios and the three
+recorded round-2 replays (Berkshire p.1 and p.2, ENGIE), no value checked has a
+wrong page. The three text-only scenarios have no geometry and correctly get no
+page (18 values). Page resolution across that run: 195 by a quote matching one
+page, 132 by the row's claimed line, 2 by the model's page among several, 2 by
+the mapped model page, 18 none. **Weak spot:** every gold table row is on page 1,
+because the page-2 continuations are what I1 leaves out. The multi-page row
+evidence is the round-2 Berkshire page-2 run and the three-invoice file.
+
+**Measured movement: none.** Harness reports are identical before and after in
+both modes, *including export accuracy*: the harness reads the written file back,
+and neither the Source column nor comments disturb it. The transposed-template
+run is unchanged (48.6%). Comments cost 1.1s and 96KB per 10,000 values.
+
+**Found while scoping, not fixed: a cell edit never reaches the export.**
+`ResultsGrid.tsx` saves an edit by replacing `extracted_data[label]` with
+`{value, confidence: "edited"}`. The slot writer places values from
+`extracted_fields`, which the edit does not touch, so the file keeps the
+extracted value. The comment on that cell therefore quotes the words behind the
+value actually in the file, which is consistent, but a user's correction is lost
+on download.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
