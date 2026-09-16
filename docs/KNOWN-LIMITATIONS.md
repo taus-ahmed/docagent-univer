@@ -417,6 +417,65 @@ part still open.
 **What to do.** Nothing, unless the appended name matters to you downstream —
 in which case give the two cells different labels in the template.
 
+## A sentence in a date or amount cell is flagged, not corrected
+
+**ABSENT (the warning is there; the right answer is not).**
+
+**When it happens.** Your template asks for something that is plainly one value
+— a date, an amount, a quantity, a reference number — and the document does not
+print it as one. A utility bill says the agreement "will expire on the regularly
+scheduled utility meter read date that follows the last day of October 2020",
+and the model answers *Contract End Date* with `the last day of October 2020`:
+a phrase, not a date, and not even the right day — the contract ends on the
+meter reading **after** it.
+
+**What happens now.** Where the answer is a sentence with a date or a figure
+inside it, the cell is marked **low confidence**, listed for review with its own
+text, and the document is sent for review. **The value is still written.** It is
+not replaced with a correct date, because there is no correct date on the page
+to replace it with, and it is not blanked — see below.
+
+**Why it is not simply emptied.** Requiring a clean single value would empty
+cells that are right. A period field holds two dates because the document prints
+two: `Aug 12, 2020 to Sep 11, 2020`, `April 1–30, 2024`. Measured across every
+recorded answer, insisting on one value per cell would have blanked 24 values,
+19 of them legitimate date ranges, to catch one bad phrase. A visible odd cell
+is better than a silently empty one.
+
+**Three things it does not catch.**
+
+- **A document in another language.** The check is built out of English words —
+  month names, and words like *the*, *of*, *following*. A French or German date
+  phrase is not recognised as a phrase, so nothing is flagged. This is a gap,
+  not a safeguard.
+- **An answer with no date or figure in it at all.** `on or about the end of the
+  month` in a date cell passes. Flagging that would also flag the left-hand
+  column of every account table, whose heading is *Current Assets* and whose
+  cells are account names.
+- **A date that is a perfectly good date and simply wrong.** Nothing here
+  checks meaning. See *"A field the document does not answer, filled from
+  something nearby"* above.
+
+**What to do.** Review any cell the system marks low confidence in a date or
+amount column. If your documents are not in English, this particular warning
+will never appear, so do not read its silence as a pass.
+
+## There is a date-format check in the code that never runs
+
+**ABSENT — and worth knowing because it reads like coverage.**
+
+`backend/engine/core/validator.py::_validate_type` checks that a field the
+client schema calls a date is written `YYYY-MM-DD`, and warns if it is not.
+**Nothing in the web application ever calls it.** Its only caller is
+`orchestrator._process_single_document`, which belongs to the command-line batch
+tool; no route, job runner or engine module under `backend/app/` reaches it, and
+the extraction pipeline the product actually runs has no type check of any kind.
+
+Read literally, the repository appears to validate date formats. It does not.
+Recorded here rather than deleted, because deleting it would also remove the
+command-line tool's only validation, and because the next person to grep for
+"is there a date check" deserves the true answer.
+
 ## Editing a template's rows and columns
 
 **ABSENT.** The template editor can change cells in place but cannot insert or

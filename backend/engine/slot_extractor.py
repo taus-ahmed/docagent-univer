@@ -354,6 +354,177 @@ def _single_datum(value, label):
     return True
 
 
+# ── a scalar label holding a scalar wrapped in prose (I11) ───────────────────
+#
+# Round 2 run 9 answered "Contract End Date" with "the last day of October
+# 2020" — a sentence fragment, and wrong besides: the bill says the agreement
+# expires on the meter read date FOLLOWING that day. Every check passed. The
+# words really are printed on page 3, so `verify_span` grounds them; there is
+# no pipe, no email and no phone, so `_single_datum` passes; the cell came back
+# HIGH and unflagged and the fragment was written into the sheet.
+#
+# WHAT THIS IS NOT. It is not "return a parsed value or return nothing". That
+# strict reading was measured across every recorded answer in the repo and
+# BLANKS 24 of the 849 scalar values written today — 19 of them legitimate date
+# ranges, because a period field holds two dates when the document prints two:
+#
+#     Pay Period      April 1–30, 2024
+#     Period          March 15–22, 2024
+#     Billing Period  Aug 12, 2020 to Sep 11, 2020
+#
+# Twenty-three correct values destroyed to catch one wrong one is the trade
+# already refused for the strict span rule (see the NOTE below and
+# DECISION-LOG §2, where it demoted 250 correct cells to reach a WORSE number).
+# So the value is KEPT, demoted and flagged — the same trade as a misplaced
+# value and an overprinted one. A visible wrong cell beats an invisible missing
+# one, and which half of a sentence was wanted is not knowable here either.
+#
+# THREE CONDITIONS, ALL REQUIRED, and each one is what keeps a real template out
+# of the net:
+#
+#   1. the LABEL implies a scalar — and a label naming prose beats every other
+#      word in it, because "Charge Description" is a description and "Payment
+#      Terms" are terms;
+#   2. the value CONTAINS a token of that kind. "No date at all" deliberately
+#      does not fire: that is where a band's label column lives — a column
+#      headed "CURRENT ASSETS" holds account names, not amounts;
+#   3. what is left over is PROSE — a lowercase closed-class English word that
+#      is not one of the kind's own connectors. "shares" and "par" in "Common
+#      Stock (100 shares @ $1,000 par)" are ordinary words, not function words,
+#      so a balance sheet's equity line survives; "the" and "of" in "the last
+#      day of October 2020" are not.
+#
+# ⚠ THE WORD LISTS ARE ENGLISH, so THE RULE IS SILENT ON A NON-ENGLISH
+# DOCUMENT. A French date field holding "le dernier jour d'octobre 2020" is not
+# caught: "octobre" is not in `_MONTHS`, so condition 2 fails and nothing fires.
+# That is a gap, not a safeguard, and it is stated rather than papered over —
+# the same class of limit `_VALUE_KW` was deleted for. Being silent is the right
+# failure for an English-only rule (it demotes nothing it cannot read), but it
+# must not be mistaken for coverage.
+
+#: A label naming PROSE wins over every other word in it.
+_PROSE_LABEL = re.compile(
+    r"\b(description|desc|particulars|narration|notes?|comments?|remarks?|memo"
+    r"|terms|method|status|name|address|title|type|category|purpose"
+    r"|instructions?|message|label|holder|words|signature|line)\b", re.I)
+_DATE_LABEL = re.compile(
+    r"\b(date|dated|period|expiry|expires|expiration|maturity|dob|birth)\b",
+    re.I)
+_AMOUNT_LABEL = re.compile(
+    r"\b(amount|amt|total|subtotal|balance|price|cost|fee|fees|charge|charges"
+    r"|tax|vat|gst|discount|salary|wage|wages|gross|deduction|deductions"
+    r"|deposit|payable|receivable|earnings|income|revenue|expenses?|profit"
+    r"|loss|equity|assets?|liabilit(?:y|ies)|debit|credit|pay)\b|\$", re.I)
+_COUNT_LABEL = re.compile(
+    r"\b(qty|quantity|count|hours|hrs|days|percent|pct|number of|no of)\b|%",
+    re.I)
+#: `labels_an_identifier` (extract.py) asks the same question for a different
+#: job — is this digit run a quantity or something you quote — and matches the
+#: word ANYWHERE. Here it must be the label's HEAD, because "Account Number" is
+#: an identifier and "Account Holder" is a person.
+_ID_LABEL_HEAD = re.compile(
+    r"(id|ids|no|nos|num|number|#|code|ref|reference|nmls|ein|ssn|tin|itin"
+    r"|routing|aba|acct|licen[cs]e|policy|serial|iban|swift|zip|postcode"
+    r"|postal)\b[\s:.)*]*$", re.I)
+
+_MONTHS = r"jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec"
+_DATE_TOKEN = re.compile(
+    r"\d{1,4}[/.-]\d{1,2}(?:[/.-]\d{1,4})?"
+    r"|(?:" + _MONTHS + r")[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{0,4}"
+    r"|\d{1,2}(?:st|nd|rd|th)?\s+(?:" + _MONTHS + r")[a-z]*\.?,?\s*\d{0,4}"
+    r"|(?:" + _MONTHS + r")[a-z]*\.?\s+\d{4}"
+    r"|\d{1,2}\s*[-–]\s*\d{1,2},?\s*\d{4}", re.I)
+_NUMBER_TOKEN = re.compile(
+    r"\(?\s*[-+]?\s*[$£€₹¥]?\s*\d[\d,  ]*(?:\.\d+)?\s*\)?\s*"
+    r"(?:%|usd|eur|gbp|cad|aud|kwh|kw|hrs?|hours?|days?)?", re.I)
+_ANY_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9./#*-]*")
+
+#: What a kind's own notation may legitimately leave behind. A RANGE is the
+#: reason this exists: a period field holds two dates joined by a word.
+_CONNECTORS = {
+    "date": {"to", "through", "thru", "and", "until", "till"},
+    "amount": {"cr", "dr", "usd", "eur", "gbp", "each", "per"},
+    "number": {"each", "per", "hr", "hrs", "hours", "days", "kwh", "kw",
+               "units", "unit", "pcs"},
+    "id": set(),
+}
+
+#: CLOSED-CLASS English words — determiners, prepositions, conjunctions,
+#: pronouns, auxiliaries. An open-class word ("shares", "par", "Inventory") is
+#: what an ordinary short value is made of; a function word is what a SENTENCE
+#: is made of, and a sentence is what does not belong in a date cell.
+_FUNCTION_WORDS = {
+    "the", "a", "an", "this", "that", "these", "those", "my", "your", "his",
+    "her", "its", "our", "their",
+    "of", "on", "in", "at", "for", "to", "from", "by", "with", "into", "onto",
+    "upon", "over", "under", "after", "before", "during", "until", "till",
+    "within", "without", "between", "among", "about", "through", "across",
+    "per", "via", "than", "since", "against", "toward", "towards",
+    "and", "or", "but", "nor", "if", "unless", "whether", "because", "so",
+    "as", "while", "when", "where", "which", "who", "whom", "whose", "what",
+    "is", "are", "was", "were", "be", "been", "being", "am", "will", "shall",
+    "would", "should", "may", "might", "can", "could", "must", "do", "does",
+    "did", "has", "have", "had",
+    "not", "no", "any", "all", "each", "every", "such", "same", "other",
+    "both", "either", "neither",
+    "it", "they", "them", "he", "she", "we", "you",
+}
+_WORDS = re.compile(r"[A-Za-z]{2,}")
+
+
+def scalar_kind(label):
+    """'date' | 'amount' | 'number' | 'id' | None — what the LABEL promises.
+
+    Precedence is the same shape as `labels_an_identifier`'s: the more specific
+    class wins, and a label naming prose beats them all.
+    """
+    lab = str(label or "")
+    if not lab.strip() or _PROSE_LABEL.search(lab):
+        return None
+    if _DATE_LABEL.search(lab):
+        return "date"
+    if _AMOUNT_LABEL.search(lab):
+        return "amount"
+    if _COUNT_LABEL.search(lab):
+        return "number"
+    if _ID_LABEL_HEAD.search(lab):
+        return "id"
+    return None
+
+
+def prose_in_a_scalar(value, label):
+    """(True, why) when a scalar-implying label holds a scalar WRAPPED IN PROSE.
+
+    Read the block above before changing any of this, in particular why "no
+    scalar at all" deliberately does not fire and why the value is kept.
+    """
+    kind = scalar_kind(label)
+    v = str(value or "").strip()
+    if not kind or not v:
+        return False, ""
+    if kind == "date":
+        tokens = [m.group(0) for m in _DATE_TOKEN.finditer(v)]
+    elif kind in ("amount", "number"):
+        tokens = [m.group(0) for m in _NUMBER_TOKEN.finditer(v)]
+    else:
+        tokens = [m.group(0) for m in _ANY_TOKEN.finditer(v)]
+    if not tokens:
+        return False, ""                      # condition 2 — see the block above
+    residue = v
+    if kind != "id":
+        for t in sorted(tokens, key=len, reverse=True):
+            residue = residue.replace(t, " ", 1)
+    prose = [w for w in _WORDS.findall(residue)
+             if w.islower() and w in _FUNCTION_WORDS
+             and w not in _CONNECTORS[kind]]
+    if not prose:
+        return False, ""
+    return True, (f"this cell asks for a {kind} and the answer is a sentence "
+                  f"with one in it ({' '.join(sorted(set(prose)))}) — the "
+                  f"value written is the model's phrasing, not the "
+                  f"document's {kind}")
+
+
 # NOTE: a rule requiring the value to be the whole span, or set off in it by a
 # separator, was tried and rejected. It was meant to catch a value truncated at
 # a line break ("NEXUS GLOBAL TRADING" where the letterhead continues "LLC").
@@ -410,6 +581,12 @@ def confidence_for(value, source, label, grounded, inferred=False):
         return LOW, "value could not be grounded in the document"
     if not _single_datum(value, label):
         return LOW, "cell carries more than one piece of information"
+    # I11 — a scalar label holding a scalar wrapped in prose. Demoted and
+    # flagged here rather than blanked at the writer, so the reason travels
+    # with the cell through `_flag` like every other demotion.
+    prose, why = prose_in_a_scalar(value, label)
+    if prose:
+        return LOW, why
     return (GROUNDED if inferred else HIGH), ""
 
 

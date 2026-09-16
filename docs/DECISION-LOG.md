@@ -1074,15 +1074,24 @@ file — `Bill Account Number` `0000123456` vs `00000000112538645596`,
 the over-split cost I1 removed, and is why the I11 example came from a run whose
 document extent was already wrong.
 
-**Fed back to today's engine verbatim, the answer still passes everything.**
-`verify_span` → grounded (the words are printed on page 3), `_single_datum` →
-True (no pipe, no email, no phone — the only three things it looks at),
-`confidence_for` → **`high`**, unflagged, and `coerce_cell_value` writes the
-fragment into the cell unchanged. `canonical_value` returns `None` and D9 passes
-an unmatched value through. `core/validator.py::_validate_type` does carry a date
-check, and it is unreachable: its only caller is
+**Fed back to today's engine verbatim, the answer passes every check that looks
+at what it MEANS.** `verify_span` → grounded (the words are printed on page 3),
+`_single_datum` → True (no pipe, no email, no phone — the only three things it
+looks at), `confidence_for` → **`high`**, unflagged, and `coerce_cell_value`
+writes the fragment into the cell unchanged. `core/validator.py::_validate_type`
+does carry a date check, and it is unreachable: its only caller is
 `orchestrator._process_single_document`, which nothing under `backend/app/`
 calls. **Nothing in the slot path types a value against its label.**
+
+⚠ **CORRECTION, 2026-09-16, same day.** The paragraph above was first written as
+"the answer still passes everything", and that was wrong end to end. Run through
+the real pipeline on the real `SampleBill.pdf`, this value is **already demoted
+and flagged** — by D9's word-run gate, `matches_loosely`, because the value
+straddles a line break and no run of words on the page spells it. `confidence_for`
+is never reached for it. The functions above were measured **in isolation**, and
+that was mistaken for the end-to-end result. The error was caught by writing the
+test: the first version asserted a before/after delta that did not exist. See §20b
+for what was built and what it is actually worth.
 
 ### What the corpus says
 
@@ -1131,17 +1140,78 @@ demoted to reach a worse number), arrived at from the other direction.
 
 What survives the measurement is the lenient form — a scalar-implying label
 whose value carries a token of the right kind *wrapped in prose* is demoted and
-flagged, not blanked, with range connectors allowed. That fires once on this
-corpus with no false positives. It is **not built here**; this entry records the
-measurement so the next person does not re-derive it, and so the recommendation
-is not implemented in its strict form by someone reading only the report.
+flagged, not blanked, with range connectors allowed.
 
-**What would break the lenient rule:** a document whose date field legitimately
-prints words (`on or about 30 June`, `end of month`, a fiscal quarter written
-out); a label whose scalar class is read wrongly — `Company Tax ID` already
-classifies as an amount here because `tax` is a money word, and only its lack of
-prose keeps it clean; and any language other than English, where every word list
-above is silent and the rule would simply never fire.
+## 20b. I11: the lenient rule is built, and it is worth less than it looks
+
+*Built 2026-09-16 · `slot_extractor.prose_in_a_scalar`, called from
+`confidence_for`*
+
+One function beside `_single_datum`, called from the one place all three slot
+paths already go through, so the reason travels out on `_flag` like every other
+demotion and no call site needed touching. Three conditions, all required, each
+one holding a measured class of template out of the net:
+
+| condition | what it keeps out | on gold |
+|---|---|---|
+| the LABEL implies a scalar, and a label naming prose beats every other word in it | `Charge Description` is a description, `Payment Terms` are terms, `Amount in Words` IS prose, `Account Holder` is a person | — |
+| the value CONTAINS a token of that kind — **"no scalar at all" deliberately does not fire** | a band's LABEL COLUMN: a two-column band is named after it, so the column headed `CURRENT ASSETS` holds account names and `COST OF GOODS SOLD` holds `Opening Inventory` | **103 cells** |
+| the residue is a **closed-class** English word that is not one of the kind's own range connectors | `Common Stock (100 shares @ $1,000 par)` — `shares` and `par` are ordinary words, not function words; and every date RANGE, via the connector list | 3 + 19 cells |
+
+### What it is worth, stated honestly
+
+**It fires ZERO times across every recorded answer** — replayed through the real
+pipeline, 61 runs, 23 documents, 458 table rows, and **1,138 cells whose label
+the engine's own `scalar_kind` reads as scalar-implying**. That count is the §20
+table's 994 counted differently, not a second corpus: it includes the band label
+columns condition 2 spares and excludes the pre-I1 raw file, which replay cannot
+reach. Zero fires, therefore zero false positives. Both harness modes are **byte-
+identical** before and after: templated 97.2% / content 96.7% / structure 100% /
+defect 1.0%, no-template 96.7% / 95.9% / 100% / 0.0%, `"diff": []` in both
+reports, only the timestamp and commit SHA moved. Expected, and it held: the one
+affected value is not in gold.
+
+**And on the one instance the corpus does hold, the rule adds nothing** — D9's
+`matches_loosely` catches it first, as the correction above records.
+
+So the justification is **structural, not measured**, and that is the whole
+argument for keeping it: D9's gate keys on word **adjacency**, which is a
+property of the page's layout and not of the answer, and its reason —
+"assembled from words that are not adjacent" — describes a flattening artifact,
+not a sentence in a date cell. A prose fragment printed on ONE line matches
+loosely, grounds, and reaches `high`. Page 3 of this same bill prints such a
+line: `Charges for Billing Period for Aug 12, 2020 to Sep 11, 2020`. Answered
+with a fragment of it, `Contract End Date` came back `high` and unflagged
+before, `low` and flagged after — same pipeline, same document, every
+pre-existing gate passing. That is the delta, and it is a **constructed** answer
+rather than a recorded one, because no recorded answer in the repo contains a
+contiguous prose fragment in a scalar slot. `tests/test_i11_scalar_prose.py`.
+
+### What would break it
+
+- **A non-English document.** Every word list is English, so condition 2 fails
+  on `le dernier jour d'octobre 2020` and nothing fires. **Silent is the right
+  failure for an English-only rule** — it demotes nothing it cannot read — but it
+  is a GAP, not coverage, and a test pins it so it cannot be met as a surprise.
+- **An answer with no scalar in it at all.** `on or about the end of the month`
+  in a date cell passes, by the same condition that spares 103 label-column
+  cells. Tightening that is not affordable until the label column is known here,
+  and it is not: `confidence_for` sees a column KEY, not a role.
+- **A label whose class is read wrongly.** `Company Tax ID` classifies as an
+  *amount*, because `tax` is a money word and `ID` is not at the head. Only its
+  lack of prose keeps it clean today.
+- **A perfectly ordinary date that is simply the wrong date.** Nothing here
+  reads meaning; that is §20's sibling defect, still open and still xfailed.
+
+### Also recorded: dead validation that reads as coverage
+
+`core/validator.py::_validate_type` checks `YYYY-MM-DD` on any schema field
+typed `date`. Its only caller is `orchestrator._process_single_document`, and
+nothing under `backend/app/` calls that. Grepping this repository for a date
+check finds one; the pipeline the product runs has none. Added to
+`docs/KNOWN-LIMITATIONS.md` rather than deleted — deleting it would take the
+command-line tool's only validation with it, and the point is that the next
+person gets the true answer, not that the line disappears.
 
 ## What these decisions have in common
 

@@ -410,7 +410,32 @@ claim out ("Verbatim from the document"); `ResultsGrid.tsx` mirrors the map.
 
 `confidence_for` returns **high** only when grounded **and** `_single_datum`
 passes — one piece of information per cell; an email or phone number in a cell
-that did not ask for one, or a `|`, demotes to low.
+that did not ask for one, or a `|`, demotes to low — **and** `prose_in_a_scalar`
+does not fire.
+
+**A scalar label holding a scalar wrapped in prose (I11).** `Contract End Date`
+= `the last day of October 2020` is a sentence, and wrong besides: the bill says
+the agreement expires on the meter read date *following* that day. Demoted and
+flagged, **never blanked** — the strict reading ("a parsed value or nothing")
+blanks 24 of the 849 scalar values the corpus writes, **19 of them legitimate
+date ranges** (`Pay Period` = `April 1–30, 2024`), which is DECISION-LOG §2's
+trade arrived at from the other direction. Three conditions, all required:
+the label implies a scalar (a label naming prose beats every other word in it,
+so `Charge Description` is a description); the value **contains** a token of
+that kind (so "no date at all" never fires — that is where a band's label column
+lives, 103 cells on gold); and the residue is a **closed-class** English word
+that is not one of the kind's own range connectors (so `Common Stock (100 shares
+@ $1,000 par)` survives and `Aug 12, 2020 to Sep 11, 2020` survives).
+
+⚠ **It fires ZERO times across every recorded answer** — 1,138 scalar-implying
+cells, both harness modes unmoved. The one instance the corpus holds is already
+caught one gate earlier by D9's `matches_loosely` (the value straddles a line
+break, so `confidence_for` is never reached for it). The rule's justification is
+structural, not measured: D9's gate keys on word **adjacency**, a property of
+the page's layout, and a prose fragment printed on ONE line grounds and reaches
+`high`. `tests/test_i11_scalar_prose.py` demonstrates that on a real line of the
+real bill. ⚠ **The word lists are English, so the rule is SILENT on a
+non-English document** — a gap, not a safeguard, and pinned by a test.
 
 > A stricter span rule (the value must be the whole span, or set off in it by a
 > delimiter) was tried and **rejected on evidence**: it demoted 250 correct
