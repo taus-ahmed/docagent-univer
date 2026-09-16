@@ -1351,6 +1351,7 @@ PostgreSQL (`postgres:14-alpine`) + backend with hot reload via
 
 ## Common Gotchas
 
+- **Say UTF-8 out loud in every measurement or comparison script.** `locale.getpreferredencoding()` here is cp1252, so anything that reads bytes without an explicit codec — `subprocess.run(..., text=True)`, a bare `open()`, `Path.read_text()` — mangles an en dash or an em dash into U+FFFD. It has done this twice in this project, and **both times it produced a false before/after difference**: a report diff that named documents whose scores had not moved. Pass `capture_output=True` and `.stdout.decode("utf-8")`, or `encoding="utf-8"`. A measuring instrument that invents a difference is worse than none.
 - **Poppler not installed**: `pdf2image` fails silently; text-based PDFs still work, image-based don't. `winget install poppler` on Windows.
 - **"No module named 'extractor'"**: uvicorn must be started from `backend/`, not the project root.
 - **A grid from the editor is SPARSE.** Only cells that were typed, styled, merged or pasted are in `grid["cells"]`. Never treat presence as meaning — use `_used_range`.
