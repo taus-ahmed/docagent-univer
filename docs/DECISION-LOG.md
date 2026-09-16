@@ -1042,6 +1042,107 @@ Asking the model to quote a span there produces a quote nothing can check. The
 other consumer is re-export of jobs stored before the slot pipeline. **Recorded
 as not-worth-doing rather than left unmentioned.**
 
+## 20. I11: the prose-in-a-scalar-field symptom moved; nothing was built to stop it
+
+*Recorded 2026-09-16 · no code changed*
+
+Round 2 run 9 answered `Contract End Date` with `the last day of October 2020` —
+a sentence fragment, and wrong besides: the bill says the agreement expires on
+the meter read date *following* the last day of October. The live BR4 run made
+after the I1 fix returns empty for that field, so the question was whether a
+check now stops it.
+
+**It does not. The document extent changed and the model declined.**
+
+| recording | commit | date | documents | `Contract End Date` |
+|---|---|---|---|---|
+| `run9_engie_BR4_prefix_fe3385d` | `fe3385d` | 2026-09-08 | **2** (`SampleBill.pdf [1 of 2]`, `[2 of 2]`) | `the last day of October 2020` |
+| `run9_engie_BR4` | `39c4ec3` | 2026-09-13 03:50 | **1** | `""` |
+
+`39c4ec3` **is** the I1 commit, recorded at 03:48; the clean run was captured two
+minutes later. Pre-I1, a type change alone split the ENGIE bill at its glossary
+page, and the slot set was asked against a document that stopped part way. Post-
+I1 the file is one 4-page document — read today with the pipeline's own
+`read_page` and `doc_boundaries.split`, `find_starts` returns `([0], '')`, one
+document, 4 pages. **The contract sentence is still on page 3 and still in the
+prompt.** The model saw *more* text and answered nothing; nothing removed the
+temptation.
+
+The two halves of the pre-I1 split also disagree with each other on the same
+file — `Bill Account Number` `0000123456` vs `00000000112538645596`,
+`Billing Period` `Aug 12, 2020 to Sep 11, 2020` vs `Aug 12 / Sep 11` — which is
+the over-split cost I1 removed, and is why the I11 example came from a run whose
+document extent was already wrong.
+
+**Fed back to today's engine verbatim, the answer still passes everything.**
+`verify_span` → grounded (the words are printed on page 3), `_single_datum` →
+True (no pipe, no email, no phone — the only three things it looks at),
+`confidence_for` → **`high`**, unflagged, and `coerce_cell_value` writes the
+fragment into the cell unchanged. `canonical_value` returns `None` and D9 passes
+an unmatched value through. `core/validator.py::_validate_type` does carry a date
+check, and it is unreachable: its only caller is
+`orchestrator._process_single_document`, which nothing under `backend/app/`
+calls. **Nothing in the slot path types a value against its label.**
+
+### What the corpus says
+
+Every recorded answer in the repo was replayed through the real pipeline and
+every (label, value) pair harvested: 2,400 pairs over 61 runs and 23 documents
+(gold ×2 modes, round-2, scenarios, the 23 i4 perturbations, plus the two raw
+round-2 files replay cannot reach). A label is scalar-implying by generic word
+class — prose nouns beat everything, then date, amount, count, then the engine's
+own identifier list applied only at the head of the label.
+
+| kind | empty | parsed | scalar in prose | no scalar |
+|---|---|---|---|---|
+| date | 2 | 66 | **1** | 0 |
+| amount | 45 | 646 | 0 | 0 |
+| number | 0 | 36 | 0 | 0 |
+| id | 98 | 100 | 0 | 0 |
+| **all** | 145 | 848 | **1** | 0 |
+
+The one is `Contract End Date`. It is also the classifier's positive control:
+a scan that found nothing would be indistinguishable from a broken scan, so the
+pre-I1 answer was kept in the corpus precisely so the instrument could be seen
+to fire.
+
+**⚠ One instance across 994 is a measurement of these documents, not a property
+of the system** — the same caveat as "invented 0". 23 documents, 12 distinct
+date labels, and every template was drawn by us.
+
+### Why the strict form of the recommendation is not built
+
+"Return a parsed value or return nothing" costs, at the strict reading — one
+token, and it is the whole value — **24 of the 849 values written today**:
+
+| kind | kept | blanked |
+|---|---|---|
+| date | 47 | **20** |
+| amount | 642 | 4 |
+| number | 36 | 0 |
+| id | 100 | 0 |
+
+Nineteen of the twenty date blanks are legitimate ranges: `Pay Period` =
+`April 1–30, 2024`, `Period` = `March 15–22, 2024`, `Billing Period` =
+`Aug 12, 2020 to Sep 11, 2020`. A period field holds two dates because the
+document prints two. **Twenty-three correct values destroyed to catch one wrong
+one** is the same trade already refused for the strict span rule (§2, 250 cells
+demoted to reach a worse number), arrived at from the other direction.
+
+What survives the measurement is the lenient form — a scalar-implying label
+whose value carries a token of the right kind *wrapped in prose* is demoted and
+flagged, not blanked, with range connectors allowed. That fires once on this
+corpus with no false positives. It is **not built here**; this entry records the
+measurement so the next person does not re-derive it, and so the recommendation
+is not implemented in its strict form by someone reading only the report.
+
+**What would break the lenient rule:** a document whose date field legitimately
+prints words (`on or about 30 June`, `end of month`, a fiscal quarter written
+out); a label whose scalar class is read wrongly — `Company Tax ID` already
+classifies as an amount here because `tax` is a money word, and only its lack of
+prose keeps it clean; and any language other than English, where every word list
+above is silent and the rule would simply never fire.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
