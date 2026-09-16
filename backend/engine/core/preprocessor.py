@@ -18,7 +18,7 @@ from PIL import Image
 import pdfplumber
 from pypdf import PdfReader
 
-from text_layer import acroform_widgets, read_page
+from text_layer import SHARD_SHRED, acroform_widgets, read_page
 
 
 @dataclass
@@ -38,6 +38,11 @@ class ProcessedDocument:
     # engine/text_layer.py.
     page_lines: list[list] = field(default_factory=list)
     text_repairs: list[tuple] = field(default_factory=list)
+    #: 1-based page numbers whose text layer was SHREDDED — several texts set
+    #: at different font sizes over one band of y, their characters interleaved
+    #: in x. Separated and rebuilt by `read_page`; listed here so the warning
+    #: survives past the log line. NOT a scanned-page signal (I10).
+    shredded_pages: list[int] = field(default_factory=list)
     processing_notes: str = ""
 
     @property
@@ -155,8 +160,36 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                 # that needed nothing comes back exactly as extract_text()
                 # produced it, so the prompt for an untouched document does
                 # not change.
-                text, lines, repairs = read_page(page, widgets.get(page_num) or [])
+                stats = {}
+                text, lines, repairs = read_page(page, widgets.get(page_num) or [],
+                                                 stats=stats)
                 doc.page_lines.append(lines)
+                # I10 — SHREDDED TEXT LAYER, said BEFORE the model is asked.
+                # Several texts set at different sizes over one band of y have
+                # their characters interleaved in x, and a size-blind reading
+                # shatters all of them. `read_page` now separates them; this
+                # says that it had to, because a page that needed separating is
+                # a page worth checking by hand.
+                #
+                # ⚠ THIS DOES NOT DETECT A SCANNED DOCUMENT. A thin OCR text
+                # layer scores 1.00 here — `round2/bank-statement-sample.pdf` is
+                # 108 words over 66 images and looks perfectly clean by this
+                # measure. Two different failures, two different signals, and
+                # treating this one as the OCR canary would give false
+                # assurance.
+                if stats.get("shard_ratio", 1.0) >= SHARD_SHRED:
+                    doc.shredded_pages.append(page_num + 1)
+                    print(
+                        f"[TEXTLAYER] page {page_num+1}: SHREDDED TEXT LAYER — "
+                        f"{stats['shard_ratio']:.2f}x more words read without "
+                        f"font size than with it. Several texts are set at "
+                        f"different sizes over the same lines and their "
+                        f"characters interleave; they have been separated and "
+                        f"this page's text rebuilt. CHECK THIS PAGE BY HAND. "
+                        f"(This check does NOT detect scanned pages or thin "
+                        f"OCR text layers.)",
+                        flush=True
+                    )
                 if repairs:
                     doc.text_repairs.extend(repairs)
                     print(

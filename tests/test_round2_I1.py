@@ -41,6 +41,38 @@ ARTIFACT = "00000000112538645596"
 GLOSSARY = ("Meter Constant - A fixed value which is used when converting "
             "meter readings to actual energy use.")
 
+#: I10 (DECISION-LOG §21) changed what SampleBill.pdf's text layer says, so the
+#: round-2 answers recorded against the OLD text no longer answer the question
+#: the pipeline now asks. The replay cache refuses to serve them, which is
+#: exactly what it is for — an answer to a different prompt is not evidence.
+#:
+#: THREE RECORDINGS ARE STALE AND NEED RE-RECORDING, each one live call:
+#:
+#:     python -m tests.harness.round2 --run run4_engie_E1  --mode record
+#:     python -m tests.harness.round2 --run run6_engie_E3  --mode record
+#:     python -m tests.harness.round2 --run run9_engie_BR4 --mode record
+#:
+#: Only `run9_engie_BR4` is replayed by this suite; the other two are stale in
+#: `tests/fixtures/round2_raw/` and unexercised. The pre-I1 recording
+#: `run9_engie_BR4_prefix_fe3385d` is read as raw JSON, never replayed, and is
+#: unaffected — the historical I11 evidence survives.
+#:
+#: The skip is CONDITIONAL on the cache actually missing, so it lifts itself the
+#: moment the recordings are refreshed. A marker that cannot go stale, the same
+#: rule `known_bug` follows.
+#:
+#: ⚠ While this is skipped, so is
+#: `test_the_suppliers_email_is_not_the_customers`, a strict xfail — the one
+#: thing that would report the absent-field defect being fixed. It is dormant,
+#: not gone.
+STALE_SAMPLEBILL = (
+    "SampleBill.pdf's recorded round-2 answers are STALE: I10 (DECISION-LOG "
+    "§21) separated two account numbers the old text layer welded together, so "
+    "pages 2 and 4 are re-read and the prompt changed. Re-record run4_engie_E1, "
+    "run6_engie_E3 and run9_engie_BR4 with "
+    "`python -m tests.harness.round2 --run <id> --mode record` (live, costs "
+    "money). This skip lifts itself once they are.")
+
 
 def _cells(ws):
     return [str(v) for row in ws.iter_rows(values_only=True)
@@ -391,6 +423,8 @@ class TestRun9AbsentFieldsStayEmpty:
     def fields(self):
         results, _grid, _log = round2.run("run9_engie_BR4", mode="replay")
         ed = results[0].extracted_data
+        if ed is None:
+            pytest.skip(STALE_SAMPLEBILL)
         return ({k: v["value"] for k, v in ed["extracted_data"].items()},
                 ed["validation"]["confidence_map"])
 

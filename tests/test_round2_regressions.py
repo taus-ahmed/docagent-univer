@@ -42,42 +42,59 @@ def engie_page4(pdf_dir):
 # I7 — two texts printed over one another
 # ══════════════════════════════════════════════════════════════════════════
 
-class TestOverprintIsSeenAtTheOnlyLevelItIsVisible:
-    def test_the_artifact_is_in_the_flattened_text(self, engie_page4):
-        """The premise. Nothing downstream could have caught this, because by
-        the time anything looked, the string genuinely was on the page."""
+class TestTheTwoOverprintedTextsAreSEPARATED:
+    """SUPERSEDED, and the supersession is the point (I10, DECISION-LOG §21).
+
+    This class used to assert that SampleBill page 4's two account numbers are
+    NOT recoverable — "characters are the only level at which the two texts are
+    separable", "nothing is repaired", "which one was wanted is not recoverable".
+    That was true of a SIZE-BLIND reading and is false now. The two numbers are
+    set at 11.0pt and 10.2pt, and `read_page` no longer lets a word span a font
+    size, so both come back whole:
+
+        was   00000000112538645596      one word, nothing on the page prints it
+        now   0000123456 0000158659     both numbers, in the words AND the text
+
+    I7's headline defect is therefore no longer DETECTED. It is GONE. The tests
+    below assert that, because a passing test for a detector that fires on
+    nothing is worse than no test at all.
+
+    ⚠ The detector is not gone, and `TestSameSizeOverprintIsStillCaught` keeps
+    it honest: two texts overlapping at the SAME size are still unrecoverable
+    and still flagged.
+    """
+
+    ARTIFACT = "00000000112538645596"
+
+    def test_the_artifact_is_no_longer_in_the_text(self, engie_page4):
+        """The prompt too, not only the geometry. Recovering a value and then
+        still showing the model the interleaving would be the worst of the
+        three states — see `_recovered_words_missing`."""
         text, _lines, _s = engie_page4
-        assert "00000000112538645596" in text
+        assert self.ARTIFACT not in text
 
-    def test_and_in_the_word_boxes_too(self, engie_page4):
-        """The report assumed two vertically stacked numbers, which word boxes
-        would separate. They do not: pdfplumber returns the interleaving as ONE
-        word, so positional evidence at the WORD level is contaminated as well.
-        Characters are the only level at which the two texts are separable."""
-        _t, lines, _s = engie_page4
+    def test_both_real_numbers_are_recovered(self, engie_page4):
+        text, lines, _s = engie_page4
         words = [w["text"] for ln in lines for w in ln]
-        assert "00000000112538645596" in words
-        assert "0000123456" not in words and "0000158659" not in words
+        assert self.ARTIFACT not in words
+        assert "0000123456" in words and "0000158659" in words
+        assert "0000123456" in text and "0000158659" in text
 
-    def test_the_character_geometry_says_so(self, engie_page4):
+    def test_the_page_no_longer_reports_an_overprint(self, engie_page4):
+        """Cross-size overlap is two separable texts, not an interleaving.
+        Counting it as one made the detector condemn the values this fix had
+        just rescued — 13 words on this document, 910 on HTR-043235."""
         _t, _l, spans = engie_page4
-        assert spans, "the overprinted region must be found"
+        assert spans == []
 
-    def test_the_value_is_flagged(self, engie_page4):
+    def test_nothing_on_the_page_is_flagged_as_overprinted(self, engie_page4):
         _t, lines, _s = engie_page4
-        assert overprinted_value("00000000112538645596", lines) is True
+        assert [w["text"] for ln in lines for w in ln
+                if w.get("overprinted")] == []
 
-    def test_a_clean_value_on_the_same_page_is_not(self, engie_page4):
-        """The check must not condemn the page it found a defect on."""
+    def test_a_clean_value_on_the_same_page_is_still_clean(self, engie_page4):
         _t, lines, _s = engie_page4
         assert overprinted_value("0123456789AB", lines) is False
-
-    def test_nothing_is_repaired(self, engie_page4):
-        """Both texts are printed, in full, in the same place. Which one was
-        wanted is not recoverable, so the value is reported, never guessed."""
-        _t, lines, _s = engie_page4
-        words = [w["text"] for ln in lines for w in ln if w.get("overprinted")]
-        assert words == ["00000000112538645596"]
 
     def test_kerning_is_not_overprinting(self, pdf_dir):
         """H25B sets one apostrophe-s pair tight enough for the two characters
@@ -88,19 +105,51 @@ class TestOverprintIsSeenAtTheOnlyLevelItIsVisible:
             spans = [s for p in pdf.pages for s in overprinted_spans(p)]
         assert spans == []
 
-    @pytest.mark.parametrize("name", [
-        "AUD-2024-001-CLEAN-OPINION", "MGMT-LTR-2024-001",
-        "REV-2024-003-INTERIM-REVIEW",
+    @pytest.mark.parametrize("name,recovered", [
+        ("AUD-2024-001-CLEAN-OPINION", "AUD-2024-001"),
+        ("MGMT-LTR-2024-001", "MGMT-LTR-2024-001"),
+        ("REV-2024-003-INTERIM-REVIEW", "REV-2024-003"),
     ])
-    def test_the_gold_corpus_has_carried_this_all_along(self, pdf_dir, name):
-        """Not a new defect, and not one round 2 introduced. These letterheads
-        have been interleaving their address with their reference number since
-        the day they were committed — unnoticed only because no slot ever asked
-        for that line."""
+    def test_the_gold_corpus_letterheads_now_read_correctly(
+            self, pdf_dir, name, recovered):
+        """These five letterheads interleaved their address (8.0pt) with their
+        reference number (7.5pt) from the day they were committed. The words
+        were verbatim garbage — `NSou:i`, `tAe`, `U2D20-200,`, `2N4e-w00` — and
+        every one of them graded HIGH. They are now the words the page prints.
+        """
         import pdfplumber
         with pdfplumber.open(pdf_dir / f"{name}.pdf") as pdf:
+            words, spans = [], []
+            for p in pdf.pages:
+                words += [w["text"] for ln in read_page(p)[1] for w in ln]
+                spans += overprinted_spans(p)
+        assert recovered in words
+        assert {"NSou:i", "tAe", "U2D20-200,", "2N4e-w00"} & set(words) == set()
+        assert spans == [], "cross-size overlap is not an overprint"
+
+
+class TestSameSizeOverprintIsStillCaught:
+    """What the detector is FOR, now that font size explains the rest.
+
+    Two texts overlapping at the same size are not separable by size or by
+    anything else, so they are still reported. `round2/HTR-043235.pdf` is the
+    corpus's only genuine case: page 3 sets several texts over one another at
+    one size, and 1,037 of its overlapping same-size character pairs sit within
+    half a point of the same baseline.
+    """
+
+    def test_it_still_fires_where_it_must(self, pdf_dir):
+        import pdfplumber
+        with pdfplumber.open(pdf_dir / ROUND2 / "HTR-043235.pdf") as pdf:
             spans = [s for p in pdf.pages for s in overprinted_spans(p)]
-        assert spans, f"{name} prints two texts over one another"
+        assert len(spans) > 50, (
+            "the one document with genuine same-size overprinting reports "
+            "none — the detector has been turned into dead code")
+
+    def test_a_clean_document_reports_none(self, pdf_dir):
+        import pdfplumber
+        with pdfplumber.open(pdf_dir / "STMT-2024-01.pdf") as pdf:
+            assert [s for p in pdf.pages for s in overprinted_spans(p)] == []
 
 
 # ══════════════════════════════════════════════════════════════════════════

@@ -106,13 +106,37 @@ class TestTheEngieAccountNumberIsRejected:
     def test_the_document_is_sent_for_review(self, extracted):
         assert extracted["needs_review"] is True
 
+    def test_the_artifact_can_no_longer_be_READ_off_the_page(self, pdf_dir):
+        """SUPERSEDED BY I10 (DECISION-LOG §21). The two account numbers are
+        set at 11.0pt and 10.2pt, and a word may no longer span a font size, so
+        page 4 now reads `0000123456 0000158659` — both numbers, in the words
+        and in the text. The string this whole class is about is not produced
+        by the pipeline any more.
+
+        The injected answer above therefore no longer describes anything on the
+        page, which is why the demotion below now comes from GROUNDING rather
+        than from the overprint detector."""
+        import pdfplumber
+        from text_layer import read_page
+        with pdfplumber.open(pdf_dir / "round2" / "SampleBill.pdf") as pdf:
+            text, lines, _r = read_page(pdf.pages[3])
+        words = [w["text"] for ln in lines for w in ln]
+        assert ARTIFACT not in text and ARTIFACT not in words
+        assert "0000123456" in words and "0000158659" in words
+
     def test_the_reason_names_the_mechanism(self, extracted):
+        """Still reported, and the reason is now MORE accurate than the one it
+        replaces. It used to read "two texts are printed over one another here";
+        page 4 no longer produces this string at all, so a model that returns it
+        anyway is quoting something the page does not spell — which is exactly
+        what D9's word-run gate says.
+
+        The demotion has therefore moved from the overprint detector to
+        grounding, and the artifact is caught by a rule that does not depend on
+        a detector firing."""
         reasons = " ".join(f["reason"]
                            for f in extracted["validation"]["flagged_fields"])
-        assert "printed over one another" in reasons
-
-    def test_it_is_counted(self, extracted):
-        assert extracted["validation"].get("overprinted_count", 0) >= 1
+        assert "no run of words on the page spells this value" in reasons
 
     def test_the_value_is_kept_not_dropped(self, extracted):
         """Both texts are printed in full in the same place; which was wanted
@@ -121,25 +145,25 @@ class TestTheEngieAccountNumberIsRejected:
         assert extracted["extracted_fields"].get("B1") == ARTIFACT
 
 
-class TestAnOverprintedValueThatDoesNotGetLucky:
-    """The ENGIE account number was ALREADY `low` at 0592738 — by accident.
+class TestTheInterleavedLetterheadsAreNowReadCorrectly:
+    """SUPERSEDED BY I10, and this is the bigger half of it.
 
-    A 20-digit run trips `_single_datum` ("cell carries more than one piece of
-    information"), so it was demoted by a heuristic about cell content, not by
-    anything that had noticed the overprint. That accident does not generalise.
+    This class used to be I7's real evidence: the five audit letters in the
+    gold corpus interleave their letterhead address (8.0pt) with their
+    reference number (7.5pt), and every one of the thirteen resulting words —
+    `NSou:i`, `AvenNueo,:`, `SMuGitMe`, `U2D20-200,` — graded HIGH. Verbatim
+    garbage, presented as fact, in the committed corpus, for as long as those
+    fixtures have existed.
 
-    The five audit letters in the gold corpus interleave their letterhead
-    address with their reference number, and every one of the thirteen
-    resulting words grades HIGH at 0592738 — `NSou:i`, `AvenNueo,:`,
-    `SMuGitMe`, `U2D20-200,`. Verbatim garbage, presented as fact, in the
-    committed corpus, for as long as those fixtures have existed.
-
-    This is I7's actual evidence. The ENGIE case is the reported symptom; this
-    is the class.
+    The words were garbage because `extract_words()` grouped characters on
+    horizontal adjacency alone and the two texts interleave in x. They no
+    longer are. Detecting the garbage was the right thing to do while it
+    existed; not producing it is better.
     """
-    #: read off tests/test_pdfs/AUD-2024-001-CLEAN-OPINION.pdf, which prints
+    #: what tests/test_pdfs/AUD-2024-001-CLEAN-OPINION.pdf actually prints:
     #: "500 Park Avenue, Suite 2200, New York, NY 10022" over "No: AUD-2024-001"
-    INTERLEAVED = "NSou:i tAe U2D20-200, 2N4e-w00 Y1ork,"
+    WAS_GARBAGE = ("NSou:i", "tAe", "U2D20-200,", "2N4e-w00", "Y1ork,")
+    NOW_PRINTED = ("No:", "AUD-2024-001", "Suite", "2200,", "New", "York,")
 
     @pytest.fixture(scope="class")
     def lines(self, pdf_dir):
@@ -151,19 +175,22 @@ class TestAnOverprintedValueThatDoesNotGetLucky:
                 out += read_page(page)[1]
         return out
 
-    def test_the_corpus_really_prints_it(self, lines):
-        """The premise: this is a real string in a committed fixture."""
+    def test_the_garbage_is_gone(self, lines):
         words = {w["text"] for ln in lines for w in ln}
-        assert {"NSou:i", "tAe", "U2D20-200,"} <= words
+        assert set(self.WAS_GARBAGE) & words == set()
 
-    def test_it_is_recognised_as_overprinted(self, lines):
-        """THE EVIDENCE. At 0592738 there is no such function, and every one
-        of these words grades `high`."""
+    def test_the_page_own_words_are_there_instead(self, lines):
+        words = {w["text"] for ln in lines for w in ln}
+        assert set(self.NOW_PRINTED) <= words, set(self.NOW_PRINTED) - words
+
+    def test_nothing_on_the_page_is_called_overprinted(self, lines):
+        """Cross-size overlap is two separable texts. Calling it an overprint
+        condemned these very words once they had been recovered."""
         from text_layer import overprinted_value
-        for word in ("NSou:i", "U2D20-200,", "2N4e-w00"):
-            assert overprinted_value(word, lines) is True, word
+        for word in self.NOW_PRINTED:
+            assert overprinted_value(word, lines) is False, word
 
-    def test_an_ordinary_word_on_the_same_page_is_not(self, lines):
+    def test_an_ordinary_word_on_the_same_page_is_not_either(self, lines):
         from text_layer import overprinted_value
         assert overprinted_value("Meridian", lines) is False
         assert overprinted_value("Associates", lines) is False

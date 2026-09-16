@@ -1213,6 +1213,161 @@ check finds one; the pipeline the product runs has none. Added to
 command-line tool's only validation with it, and the point is that the next
 person gets the true answer, not that the line disappears.
 
+## 21. I10: the text layer was never degraded — it was read without font size
+
+*Built 2026-09-16 · `text_layer.read_page`, `overprinted_spans`,
+`core/preprocessor`, `extractor`*
+
+Round 2 run 12: a BoA statement of roughly 130 date-stamped transaction lines
+came back as **two rows**, and `-35.00 + -30.00 = -65.00` reconciles, so a
+reviewer checking the arithmetic passes it while 128 rows are missing.
+
+**The model never had them to return.** `extract_words()` groups characters on
+horizontal adjacency alone. Where a page prints several texts at different
+SCALES over one band of y, their characters interleave in x and the size-blind
+grouping shatters every one of them. One 12pt-tall band of page 3 holds 718
+characters at five sizes:
+
+    extract_words()                    265 words: 'A' 'AM' 'n' 'T' 'on' 'M' 'nu'
+    extract_words(extra_attrs=[size])  116 words: 'For' 'consumer' 'accounts'
+
+Across the file: **5 date-shaped words against 133**, and the PROMPT —
+`extract_text()`, which groups the same way — carried **3** transaction lines.
+
+`read_page` now asks for words that may not span a font size. The fix is one
+argument; everything below is what it took to be sure of it.
+
+### It had to reach the prompt, not just the geometry
+
+`read_page` returns `extract_text()` VERBATIM when nothing was repaired, so the
+one-argument change fixed `lines` and left the model reading the shards — page 3
+still offered 5 dates while its geometry held 133. A shredded page is now
+rebuilt from its words, and **only** a shredded one, because rewriting an
+undamaged page changes what the model is asked and throws its cached answer away
+for nothing.
+
+Two tests decide "shredded", and the second exists because the first is not
+enough:
+
+| | fires on | why |
+|---|---|---|
+| **shard ratio ≥ 1.05** | HTR p3 (2.51), p2 (1.14) | per page over all 98 corpus pages with ≥40 words, the **highest clean page is 1.013** |
+| **a recovered word the raw text lacks** | SampleBill p2, p4; the 5 audit letters | four words in four hundred do not move a ratio — SampleBill p4 sits at **1.00** and still prints its account number twice, at 11.0pt over 10.2pt |
+
+Comparing the two TEXTS instead was tried and rejected: flattened for
+whitespace it still fired on **36 of 114** pages, rewriting whole pages over one
+token.
+
+### ⚠ I7 was this defect all along, and its detector had to change with it
+
+`SampleBill.pdf` page 4 — round 2's reported "overprinted account number", and
+the artifact pinned in three test files — is **two account numbers at two font
+sizes**, not an unrecoverable overprint:
+
+    was   00000000112538645596     one word, nothing on the page prints it
+    now   0000123456 0000158659    both numbers, in the words AND the text
+
+I7's own docstring said "which of the two texts was wanted is not recoverable
+from the page". That was true of the size-blind reading and is false now. The
+same goes for the five gold-corpus audit letters, whose letterheads have
+interleaved their address (8.0pt) with their reference number (7.5pt) since the
+day they were committed: `NSou:i`, `tAe`, `U2D20-200,` are now `No:`, `Suite`,
+`AUD-2024-001`.
+
+**Left alone, the detector then condemned the values the fix had just rescued** —
+13 words on SampleBill and **910 on HTR**, including both correct account
+numbers, every one demoted to `low` and flagged. `overprinted_spans` now
+compares characters **within one font size** (a cross-size overlap is two
+separable texts) **and within 1.0pt of one baseline** (the audit letters' 8.0pt
+address and the 8.0pt line below it are two lines, not two texts; `group_lines`
+clusters at 3.0pt and had put them together).
+
+What survives is the case still genuinely unrecoverable: two texts overlapping
+at the SAME size. HTR is the corpus's only one — 1,037 same-size pairs within
+half a point of one baseline — and `TestSameSizeOverprintIsStillCaught` keeps
+the detector from becoming dead code.
+
+**The I7 evidence tests were rewritten, not relaxed.** They asserted a premise
+the fix removes; they now assert the stronger contract, and the artifact is
+still caught if a model returns it anyway — by D9's word-run gate, which does
+not depend on a detector firing.
+
+### Measured end to end
+
+- **10 gold documents × 2 modes: NO DIFFERENCE** in values, provenance source,
+  provenance page, grounded flag, confidence, table rows and their `_source` /
+  `_page`, every validation counter, flagged fields, notes or review state.
+- **Both harness modes byte-identical**: templated 97.2 / 96.7 / 100% / 1.0%,
+  no-template 96.7 / 95.9 / 100% / 0.0%, `"diff": []`, `unstable: 0`.
+- **Wrapped-token repairs identical on all 68 PDFs**, 25 → 25. Berkshire
+  (`feb2225.pdf`) is untouched; its one word change is `'1/1,500th'` (6.5pt +
+  10.0pt) becoming `'1/1,500'` + `'th'` — a superscript ordinal correctly
+  detached from its number.
+- **12 PDFs' word lists moved, and every change is a REPAIR, not a difference**:
+  `FEBRU`+`ARY`→`FEBRUARY`; `joan@zt.bizICUSBANK.`→`joan@zt.biz`+`ICUSBANK.`
+  (an email address welded across 9.0pt/8.0pt); five audit letters' reference
+  numbers; SampleBill's two account numbers; Berkshire's ordinal. None of the
+  10 gold documents is among them.
+- HTR after: **133 date words, 164 money words, 64 transaction-shaped lines,
+  133 dates in the prompt**, and `column_bands` — which found NOTHING before —
+  now locates three of the gold bank-statement headings.
+
+### The warning, and what it deliberately does not cover
+
+`[TEXTLAYER] page N: SHREDDED TEXT LAYER — 2.51x more words read without font
+size than with it`, before the model is asked, plus a `validation_notes` entry,
+`needs_review`, and `validation.shredded_pages`. It fires on HTR pages 2 and 3
+and on nothing else in the corpus.
+
+⚠ **IT DOES NOT DETECT A SCANNED DOCUMENT**, and the warning text says so.
+`round2/bank-statement-sample.pdf` is 108 words over 66 images — a scan with a
+thin text layer — and scores **1.00**. Two different failures, two different
+signals. Treating this one as the OCR canary would give false assurance, which
+is why the disclaimer is in the log line, in the note, and in
+`docs/KNOWN-LIMITATIONS.md` rather than only here.
+
+### The coverage indicator: NOT BUILT, and why
+
+The report's other recommendation — rows emitted vs candidate rows detected,
+surfaced to the user. A prototype using `column_bands` (a candidate row is a
+line below the heading touching ≥2 of its column spans) over both harness modes,
+on a corpus scoring 97.2% with 100% structure fidelity:
+
+| | |
+|---|---|
+| bands measured | 35 |
+| **no verdict** — the document prints no heading line | **17** |
+| ratio on the rest | min **0.15**, p10 0.23, **median 0.38**, max 0.75 |
+
+HTR, after the text-layer fix, scores 2 of 25 = **0.08**. The floor among
+CORRECT extractions is **0.15** (`PAYSLIP-EMP-0012` Earnings, 2 of 13, right).
+A factor of two, with half the bands abstaining. **A ratio reading 0.38 on a
+perfect invoice trains people to ignore it**, which is the same class of bug as
+the silent failure it would replace.
+
+**The reason it does not separate is that the candidate counter OVER-COUNTS**: it
+takes every printed line in the region touching two column spans, so wrapped
+continuation lines, section totals and the block below the table all count as
+candidate rows. The next attempt starts there — a candidate detector that models
+a ROW rather than a LINE — not at picking a threshold.
+
+And on today's code the signal was worse than useless: before this fix
+`column_bands` found **zero** headings on HTR and the prototype returned *no
+verdict* — the indicator was silent on the document it was designed for, because
+the same defect that hid the rows hid the heading.
+
+### What would break the text-layer fix
+
+- **A page that legitimately sets one word in two sizes** — a drop cap, a
+  superscript inside a token — is now two words. `feb2225.pdf` is exactly this
+  (`1/1,500` + `th`) and it is the right answer there; a currency symbol set
+  smaller than its amount would be the wrong one, and nothing in the corpus
+  does that.
+- **A reader without `extra_attrs`** falls back to the old call; the `TypeError`
+  branch is not decoration.
+- **The 1.05 and 1.0pt thresholds are corpus-measured**, on 98 pages and 69
+  PDFs, all but two of them drawn in-house.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

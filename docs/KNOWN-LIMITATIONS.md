@@ -123,6 +123,60 @@ first extraction.
 
 # Things that come back ABSENT
 
+## The "shredded text layer" warning does not detect scanned documents
+
+**ABSENT — and this one is prominent because mistaking it would be dangerous.**
+
+Some PDFs print several pieces of text at different sizes across the same lines
+— a statement with a small-print legal layer and annotation callouts over it.
+Read without paying attention to font size, every one of those texts is chopped
+into fragments, and a page of 130 transactions can arrive carrying three. The
+system now separates them by size, rebuilds that page, and **warns you**:
+
+> `page 3: SHREDDED TEXT LAYER — 2.51x more words read without font size than
+> with it … CHECK THIS PAGE BY HAND.`
+
+**This warning says nothing about scanned documents.** A scan, or a photograph,
+or a PDF whose text came from OCR, has a thin text layer with few words in it —
+and it scores a perfectly clean **1.00** on this check. Our own test file
+`round2/bank-statement-sample.pdf` is one page holding **108 words and 66
+images**, and this warning stays silent on it.
+
+These are two different failures:
+
+| | what the page is | what this warning does |
+|---|---|---|
+| **shredded** | a good text layer read badly | **fires** |
+| **scanned / OCR** | little or no text layer at all | **silent** |
+
+**What to do.** Do not read the absence of this warning as "the text was read
+properly". For a scanned or photographed document, the signals to look at are
+the ones that already exist: values come back marked *Unverified — no text
+layer*, and the document is always sent for review. If a page looks like a
+picture of a document, treat it as one.
+
+## Some things a document prints are two things printed over each other
+
+**ABSENT (mostly fixed; a remnant is flagged).**
+
+Where a page prints two pieces of text in the same place, what a reader gets
+depends on whether the two are set at different sizes.
+
+- **Different sizes** — the common case, and now **fixed**. A utility bill
+  printing its account number twice, at 11pt over 10.2pt, used to come back as
+  `00000000112538645596`, a twenty-digit number printed nowhere on the page. It
+  now comes back as the two numbers it really is, `0000123456` and
+  `0000158659`. Five audit letters in our own test set had been doing the same
+  thing to their reference numbers since the day they were added.
+- **The same size** — still **not recoverable**. Nothing separates them. Values
+  read from such a region are marked low confidence and flagged, and the value
+  is kept rather than blanked, because which of the two texts was wanted cannot
+  be known.
+
+**What to do.** Nothing for the first case. For the second, the flag tells you
+which cells to check.
+
+
 Missing or refused. Visible, not dangerous.
 
 ## Scanned documents and photographs

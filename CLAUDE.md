@@ -621,6 +621,46 @@ so it can be read and argued with.
 prompt, grounding, the confidence vocabulary — saw a document with no geometry
 in it. Two defect classes follow directly, and neither is visible in the output.
 
+**A word may not span a font size (I10).** `extract_words()` groups characters
+on horizontal adjacency alone. A page printing several texts at different
+SCALES over one band of y — a statement with a 2.4pt legal layer and callouts
+over it — has their characters interleaved in x, and the size-blind grouping
+**shatters every one of them**: 718 characters at five sizes in one 12pt band of
+`round2/HTR-043235.pdf` gave 265 shards (`'A' 'AM' 'n' 'T' 'on'`) where the
+size-aware reading gives 116 words (`'For' 'consumer' 'accounts'`). Across that
+file, **5 date-shaped words against 133**, and the prompt carried **3** of ~130
+transaction lines. Round 2 run 12 returned two rows that summed correctly and
+hid 128; the model never had the others.
+
+⚠ **I7 IS THE SAME ROOT, from the other axis** — the text layer handing the
+pipeline characters in an order the page does not print them in. I7 stacks two
+texts vertically and clusters them into one line; I10 lays them side by side and
+groups them into one word. Neither is a model defect, and neither is visible in
+the model's answer. SampleBill's `00000000112538645596` was never an
+unrecoverable overprint: it is `0000123456` over `0000158659` at 11.0pt and
+10.2pt, and both now come back whole. `overprinted_spans` therefore compares
+characters **within one font size and within 1.0pt of one baseline**; a
+cross-size overlap is two separable texts, and leaving it counted condemned 910
+words on HTR and 13 on SampleBill — the values the fix had just rescued.
+
+**The prompt is rebuilt only when the page is shredded.** `extract_text()`
+groups the same size-blind way, so fixing the words alone left the model reading
+shards. A page is rebuilt when the **shard ratio ≥ 1.05** (per page: HTR 2.51
+and 1.14; the highest clean page in the corpus is 1.013) **or** when a recovered
+word is absent from the raw text (SampleBill p4 sits at 1.00 and still hides its
+account number). 10 of 114 corpus pages rebuild. `[TEXTLAYER] … SHREDDED TEXT
+LAYER` says so before the model is asked, with `validation.shredded_pages`,
+a note and `needs_review`. ⚠ **It does NOT detect a scanned page or a thin OCR
+text layer** — `round2/bank-statement-sample.pdf` is 108 words over 66 images
+and scores 1.00. Two failures, two signals; DECISION-LOG §21.
+
+> A **coverage indicator** (rows emitted vs candidate rows detected) was
+> prototyped and **rejected on evidence**: on a corpus scoring 97.2% with 100%
+> structure fidelity it reads 0.15–0.75, median 0.38, with 17 of 35 bands
+> abstaining, against 0.08 for HTR. A ratio reading 0.38 on a perfect invoice
+> trains people to ignore it. The candidate counter over-counts lines, not rows;
+> that is where a next attempt starts. §21.
+
 **Wrapped values.** A PDF that renders a figure inside a narrow box wraps it
 like any other text, so the page really does print `$1,268.7` on one line and
 `5` on the next. `extract_words()` agrees: **the split is in the file, not in

@@ -536,6 +536,13 @@ OVERPRINT_FRAC = 0.5
 # them is two texts printed over one another, because the second text's
 # characters interleave with the first's all the way along.
 OVERPRINT_MIN_RUN = 3
+# Two characters printed over one another sit on the SAME BASELINE, give or
+# take the two texts' own offset — SampleBill's two account numbers are 0.267pt
+# apart. Two characters a whole printed line apart are not over one another
+# however the char clustering grouped them; the audit letters' spurious span was
+# tops 81.556 and 83.656. 1.0pt is comfortably above the first and below the
+# second, and below the tightest line spacing in the corpus (2.4pt).
+OVERPRINT_TOP_TOL = 1.0
 
 
 def overprinted_spans(page):
@@ -578,21 +585,55 @@ def overprinted_spans(page):
         return []
     out = []
     for ln in group_lines(chars):
-        hits = []
-        for a, b in zip(ln, ln[1:]):
+        # ⚠ WITHIN ONE FONT SIZE (I10). Two characters that overlap but are set
+        # at DIFFERENT SIZES are two separable texts, not an interleaving: the
+        # size-aware grouping in `read_page` now pulls them apart and recovers
+        # both. On this page's own example it recovers `0000123456` AND
+        # `0000158659`, so the docstring above — "which of the two was wanted is
+        # not recoverable" — is true of the size-BLIND reading and false now.
+        #
+        # Comparing across sizes made the detector fire on the repaired values:
+        # 910 words on `round2/HTR-043235.pdf` and 13 on `SampleBill.pdf`,
+        # including both correct account numbers, every one of them demoted to
+        # `low` and flagged. A detector that condemns the value the fix just
+        # rescued is worse than no detector.
+        #
+        # What survives is the case that is still genuinely unrecoverable: two
+        # texts overlapping AT THE SAME SIZE, which nothing separates.
+        by_size = {}
+        for c in ln:
             try:
-                narrow = min(float(a["x1"]) - float(a["x0"]),
-                             float(b["x1"]) - float(b["x0"]))
-                if narrow <= 0:
-                    continue
-                if float(a["x1"]) - float(b["x0"]) > OVERPRINT_FRAC * narrow:
-                    hits.append((a, b))
-            except (KeyError, TypeError, ValueError):
+                by_size.setdefault(round(float(c.get("size", 0)), 1),
+                                   []).append(c)
+            except (TypeError, ValueError):
                 continue
-        if len(hits) >= OVERPRINT_MIN_RUN:
-            out.append((min(float(a["x0"]) for a, _ in hits),
-                        max(float(b["x1"]) for _, b in hits),
-                        float(ln[0]["top"])))
+        for run in by_size.values():
+            hits = []
+            for a, b in zip(run, run[1:]):
+                try:
+                    narrow = min(float(a["x1"]) - float(a["x0"]),
+                                 float(b["x1"]) - float(b["x0"]))
+                    if narrow <= 0:
+                        continue
+                    # ...AND IN THE SAME PLACE. `group_lines` clusters on
+                    # LINE_TOL=3.0, so on a densely set page two characters from
+                    # DIFFERENT printed lines land in one cluster, and once the
+                    # cluster is sorted by x they sit next to each other and
+                    # their boxes trivially overlap. That is two lines, not two
+                    # texts over one another. The five audit letters are the
+                    # case: tops 81.556 and 83.656, both at 8.0pt, which
+                    # condemned the very words the size-aware reading had just
+                    # recovered — `AUD-2024-001`, `Suite`, `New`, `York,`.
+                    if abs(float(a["top"]) - float(b["top"])) > OVERPRINT_TOP_TOL:
+                        continue
+                    if float(a["x1"]) - float(b["x0"]) > OVERPRINT_FRAC * narrow:
+                        hits.append((a, b))
+                except (KeyError, TypeError, ValueError):
+                    continue
+            if len(hits) >= OVERPRINT_MIN_RUN:
+                out.append((min(float(a["x0"]) for a, _ in hits),
+                            max(float(b["x1"]) for _, b in hits),
+                            float(run[0]["top"])))
     return out
 
 
@@ -798,27 +839,129 @@ def inject_markers(lines, widgets):
     return out, placed
 
 
-def read_page(page, widgets=()):
+#: Attributes a word may not span. A word is a run of characters printed in one
+#: go; two characters at DIFFERENT FONT SIZES were printed by different runs,
+#: whatever their boxes do.
+#:
+#: I10 — SIZE-AWARE WORD GROUPING. `extract_words()` groups characters on
+#: horizontal adjacency alone. Where a page prints several texts at different
+#: scales over the same band of y — a statement at 5.5pt with a 2.4pt legal
+#: layer and callouts over it — their characters interleave in x, and the
+#: size-blind grouping SHATTERS every one of them into shards. One 12pt-tall
+#: band of `round2/HTR-043235.pdf` page 3 holds 718 characters at five sizes:
+#:
+#:     extract_words()                 265 words: 'A' 'AM' 'n' 'T' 'on' 'M' 'nu'
+#:     extract_words(extra_attrs=size) 116 words: 'For' 'consumer' 'accounts'
+#:
+#: Across that file it is 5 date-shaped words against 133, and the PROMPT —
+#: `extract_text()`, which groups the same way — carried 3 transaction lines out
+#: of about 130. Round 2 run 12 returned two rows that summed correctly and hid
+#: 128; the model never had the others to return. The text layer was never
+#: degraded. It was read by something that could not see a font change.
+#:
+#: ⚠ THIS IS THE SAME ROOT AS I7, from the other axis. Both are the text layer
+#: handing the pipeline characters in an order the page does not print them in —
+#: I7 stacks two texts vertically and clusters them into one line, I10 lays them
+#: side by side and groups them into one word. Neither is a model defect, and
+#: neither is visible in the model's answer.
+_WORD_ATTRS = ["size"]
+
+#: How far the size-blind reading must run above the size-aware one before this
+#: page's TEXT is rebuilt rather than returned verbatim. Measured per page over
+#: all 98 pages of `tests/test_pdfs/` carrying ≥40 words:
+#:
+#:     HTR-043235 p3   2.513      the shredded page
+#:     HTR-043235 p2   1.140      the same damage, milder
+#:     ---------------------      every other page in the corpus is below here
+#:     CFPB H25B  p1   1.013      the highest clean page
+#:
+#: 1.05 sits in that gap. It is not tuned to a document: it says "the two
+#: readings disagree about more than one word in twenty", and one in twenty is
+#: already far outside anything a well-formed page produces.
+SHARD_SHRED = 1.05
+
+
+def read_page(page, widgets=(), stats=None):
     """(text, lines, repairs) for one pdfplumber page.
 
     `text` is `extract_text()` VERBATIM when the page needed no repair — see
     the module docstring for why that matters — and rebuilt from the repaired
     words when it did.
+
+    `stats`, when a dict is passed in, is filled with what was measured about
+    this page — `shard_ratio` today. An out-parameter rather than a fourth
+    return value because a dozen callers unpack the triple.
     """
     raw = page.extract_text() or ""
     try:
-        words = page.extract_words()
+        words = page.extract_words(extra_attrs=_WORD_ATTRS)
+        plain = page.extract_words()
+    except TypeError:                     # a reader without extra_attrs
+        words = plain = page.extract_words()
     except Exception:
         return raw, [], []
+    shard = len(plain) / max(len(words), 1)
+    if stats is not None:
+        stats["shard_ratio"] = shard
     lines, repairs = repair_wrapped(words)
     lines, placed = inject_markers(lines, widgets)
     stamp_page(lines, getattr(page, "page_number", None))
     # Marked on the FINAL word list and by geometry, so a fused fragment or an
     # injected marker cannot lose the tag.
     mark_overprints(lines, overprinted_spans(page))
-    if not repairs and not placed:
+    # THE PROMPT HAS TO BE FIXED TOO, or nothing is. `extract_text()` groups
+    # characters exactly as the size-blind `extract_words()` did, so the change
+    # above repairs the GEOMETRY and leaves the MODEL reading the shards: on
+    # HTR-043235 page 3 the returned text still carried 5 dates and 3
+    # transaction lines while `lines` already held 133 and 70.
+    #
+    # A shredded page is therefore rebuilt from its words — and ONLY a shredded
+    # one. Rebuilding is not byte-identical (30 of the corpus's 77 pages differ
+    # from `extract_text()` in whitespace alone) and the text is part of the
+    # prompt, so rewriting an undamaged page changes what the model is asked and
+    # throws away its cached answer for nothing. That is the rule `repairs` and
+    # `placed` already follow; this is the third case of it.
+    #
+    # The test is the RATIO, not a comparison of the two texts. Comparing them
+    # was tried: flattened for whitespace it still fired on 36 of 114 pages,
+    # including SampleBill and feb2225, which differ from the size-aware reading
+    # by four and one token respectively — rewriting a whole page, and every
+    # cached answer for it, over one word.
+    if not repairs and not placed and shard < SHARD_SHRED \
+            and not _recovered_words_missing(raw, lines):
         return raw, lines, []
     return text_from_lines(lines), lines, repairs
+
+
+def _recovered_words_missing(raw, lines) -> bool:
+    """Did the size-aware reading recover a word the PROMPT does not contain?
+
+    The shard ratio catches a page that is shredded wholesale. It does not catch
+    a page with ONE overprinted region, because four words out of four hundred
+    do not move a ratio: `SampleBill.pdf` page 4 sits at 1.00 and prints its
+    account number twice, at 11.0pt and 10.2pt, in the same place.
+
+    Leaving it there made the prompt and the geometry disagree — the word boxes
+    held `0000123456` and `0000158659` while `extract_text()`, which is still
+    size-blind, still held `00000000112538645596`. The model would still be
+    offered the interleaving, `verify_span` would still ground it against the
+    same text, and the overprint flag that used to catch it is correctly gone,
+    because at the word level there is no longer anything wrong. Recovering a
+    value and then not telling the model is the worst of the three states.
+
+    So: a word of four characters or more that the page's own flattened text
+    does not contain is a word this reading recovered and that reading lost.
+    Four, because shorter tokens collide by chance.
+    """
+    flat = _flat(raw).replace(" ", "")
+    if not flat:
+        return False
+    for ln in lines:
+        for w in ln:
+            t = _flat(w.get("text", "")).replace(" ", "")
+            if len(t) >= 4 and t not in flat:
+                return True
+    return False
 
 
 # ── which page a line is on ──────────────────────────────────────────────────

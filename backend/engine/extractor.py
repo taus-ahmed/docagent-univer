@@ -338,6 +338,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
             doc_page_lines = [doc_page_lines[i] for i in keep if i < len(doc_page_lines)]
 
+    # I10 — a page whose text layer had to be un-shredded. FILE page numbers,
+    # so a split document still names the page the reader can turn to.
+    shredded = list(getattr(doc, "shredded_pages", []) or [])
+
     ftype = (doc.file_type if getattr(doc, "file_type", "") == "image"
              else ("digital_pdf" if getattr(doc, "has_meaningful_text", False) else "scanned_pdf"))
     _log("ROUTE", f"{file_path.name}: file_type={ftype} pages={len(page_images)} "
@@ -353,6 +357,37 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                doc_text_pages=doc_text_pages, file_type=ftype,
                default_doc_type=default_doc_type, start=start,
                page_lines=doc_page_lines)
+
+    def _note_shredded(results):
+        """Say it on the RESULT, not only in the log (I10).
+
+        A shredded page is the shape that produced round 2's run 12: a BoA
+        statement of ~130 transactions came back as two rows that summed
+        correctly, because only 3 of those lines survived into the prompt. The
+        rows are recovered now, but a page that needed this much repair is one
+        a person should look at, and a log line nobody reads is not a warning.
+
+        ⚠ Deliberately NOT a scanned-page warning. See the note in
+        `core/preprocessor.py`: a thin OCR text layer scores 1.00 and says
+        nothing here.
+        """
+        if not shredded:
+            return results
+        pages = ", ".join(str(n) for n in shredded)
+        for r in results or []:
+            ed = getattr(r, "extracted_data", None)
+            if not isinstance(ed, dict):
+                continue
+            ed.setdefault("validation_notes", []).append(
+                f"page {pages}: the text layer was SHREDDED — several texts "
+                f"are set at different font sizes over the same lines and "
+                f"their characters interleave. They have been separated and "
+                f"the page re-read, but check this page against the original. "
+                f"(This check does not detect scanned pages or thin OCR "
+                f"text layers.)")
+            ed["needs_review"] = True
+            ed.setdefault("validation", {})["shredded_pages"] = list(shredded)
+        return results
 
     # ── DOCUMENT BOUNDARIES ──
     # One file was one document, unconditionally: three invoices merged into
@@ -391,11 +426,12 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                         f"document {n} of {len(slices)} in "
                         f"{file_path.name} ({span})")
             results += part
-        return results
+        return _note_shredded(results)
 
-    return _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
-                        doc_text_pages, page_images, default_doc_type,
-                        batch_schemas)
+    return _note_shredded(
+        _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
+                     doc_text_pages, page_images, default_doc_type,
+                     batch_schemas))
 
 
 def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
