@@ -210,3 +210,84 @@ class TestTheRouteTheFrontendCalls:
                            json={"job_id": job.id}).status_code == 404
         assert client.post("/api/export/perfile", headers=auth["acme"],
                            json={"job_id": job.id}).status_code == 200
+
+
+@pytest.fixture(scope="module")
+def job_with_rows(db, users):
+    """One document holding BOTH scalar fields and a band of table rows —
+    the ordinary shape of an extracted invoice."""
+    import json
+
+    from app.models.models import DocumentResult, ExtractionJob
+    j = ExtractionJob(user_id=users["acme"].id, client_id="acme_001",
+                      status="completed", total_docs=1, successful=1,
+                      input_source="upload")
+    db.add(j)
+    db.commit()
+    db.refresh(j)
+    db.add(DocumentResult(
+        job_id=j.id, filename="inv-lines.pdf", document_type="sales_invoice",
+        overall_confidence="high", needs_review=False,
+        extraction_json=json.dumps({
+            "template_type": "slot",
+            "extracted_data": {"Invoice Number": {"value": "INV-9",
+                                                  "confidence": "high"}},
+            "table_rows": [
+                {"Description": "Widget", "Qty": "2", "Amount": "10.00"},
+                {"Description": "Gadget", "Qty": "1", "Amount": "25.00"},
+            ],
+            "line_items_rows": [
+                {"Description": "Freight", "Qty": "1", "Amount": "5.00"},
+            ]})))
+    db.commit()
+    return j
+
+
+def _all_text(wb_or_ws):
+    sheets = [wb_or_ws] if hasattr(wb_or_ws, "iter_rows") else list(wb_or_ws)
+    return " ".join(str(c.value) for ws in sheets
+                    for row in ws.iter_rows() for c in row)
+
+
+class TestTheFlatExportsCarryTheScalarFields:
+    """The control for the class below: this half works, which is exactly why
+    the missing rows are quiet — the sheet looks finished."""
+
+    def test_combined_writes_the_field(self, client, auth, job_with_rows):
+        assert "INV-9" in _all_text(_sheet(client, auth,
+                                           job_id=job_with_rows.id))
+
+
+@pytest.mark.known_bug
+@pytest.mark.xfail(strict=True,
+                   reason="DECISION-LOG 17b: _build_excel reads only "
+                          "extracted_data['extracted_data'], which holds "
+                          "scalar fields, so neither export writes a single "
+                          "table row. Unfixed — the shape of a combined sheet "
+                          "is one row per document and line items are many.")
+class TestTheFlatExportsDropEveryTableRow:
+    """EXPECTED TO FAIL — an open defect, pinned so it cannot go quiet.
+
+    `POST /api/export/combined` and `/api/export/perfile` have never written a
+    line item. It is ABSENT rather than WRONG: the values on the sheet are
+    right, the rows are simply not on it, and nothing says so. The
+    template-shaped export (`GET /api/jobs/{id}/export`) writes them correctly
+    and is the supported path.
+
+    `include_line_items` was removed from `ExportRequest` rather than
+    implemented (TestIncludeLineItemsIsGone, above) — that records the flag as
+    undeliverable and stops short of recording the loss, which is what this
+    pins. The day either writer learns to emit rows, strict xfail reports the
+    unexpected pass as a FAILURE and forces this marker off.
+    """
+
+    def test_combined_writes_the_line_items(self, client, auth, job_with_rows):
+        text = _all_text(_sheet(client, auth, job_id=job_with_rows.id))
+        assert "Widget" in text and "Freight" in text
+
+    def test_per_file_writes_the_line_items(self, client, auth, job_with_rows):
+        r = client.post("/api/export/perfile", headers=auth["acme"],
+                        json={"job_id": job_with_rows.id})
+        assert r.status_code == 200, r.text
+        text = _all_text(load_workbook(io.BytesIO(r.content)))
+        assert "Widget" in text and "Freight" in text

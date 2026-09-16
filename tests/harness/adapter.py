@@ -14,7 +14,10 @@ Input: the list of DocumentExtractionResult the pipeline returns for one file
 
 Engine output shapes handled (see CLAUDE.md / audit §2):
   - extracted_data["extracted_data"]: {label: {value, confidence, ref}} or
-    {label: value} — the per-label form fields.
+    {label: value} — the per-label form fields. Where the entry carries a
+    `ref`, the NAME is taken from the grid cell that ref addresses, not from
+    the key: the engine qualifies a label two slots share and that spelling is
+    its business, not the labels'.
   - extracted_data["extracted_fields"]: {cell_ref: value} — resolved to label
     names via the template grid (label cell to the left of / above the ref).
   - extracted_data["layout_sections"]: {slug: {rows: [{label, value, ...}]}}
@@ -32,7 +35,7 @@ from __future__ import annotations
 import re
 from typing import Any, Optional
 
-from tests.harness.scoring import is_empty
+from tests.harness.scoring import is_empty, normalize_string
 
 _SKIP_KEYS = {"extracted_data", "extracted_fields", "layout_sections",
               "validation", "template_regions", "template_type",
@@ -262,10 +265,12 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
     # name goes to the best claim rather than the first one. See _match_score.
     pending_fields = []
 
-    def put_field(name, value):
+    def put_field(name, value, ref=None, alt=None):
+        """One claim. `ref` is the slot it came from, `alt` the engine's own
+        name for it when that differs from the one resolved through the grid."""
         if is_empty(value):
             return
-        pending_fields.append((str(name), value))
+        pending_fields.append((str(name), value, ref, alt))
 
     def resolve_fields():
         """Assign gold names to predicted names best-match-first, one-to-one.
@@ -276,17 +281,46 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
         """
         # The engine reports the same value twice — once label-keyed in
         # `extracted_data`, once cell-ref-keyed in `extracted_fields` — and
-        # both arrive here. Collapse them by name first: before best-match
-        # resolution the duplicate simply lost the `key not in fields` race,
-        # but afterwards the first copy claimed the gold name and the SECOND
-        # kept its own, so one engine value was scored as two fields and the
-        # spare counted as out-of-schema.
-        seen_names, deduped = set(), []
-        for name, value in pending_fields:
-            k = _norm(name)
-            if k in seen_names:
+        # both arrive here. Collapse them first: before best-match resolution
+        # the duplicate simply lost the `key not in fields` race, but
+        # afterwards the first copy claimed the gold name and the SECOND kept
+        # its own, so one engine value was scored as two fields and the spare
+        # counted as out-of-schema.
+        #
+        # Identity is the SLOT, not the name. The label projection used to
+        # collapse two slots sharing a label, so a name was as good as a ref;
+        # since 558d6c6 it qualifies the second one (`Closing Balance [B29]`),
+        # which normalizes differently and arrived as a third claim on top of
+        # the two refs. Deduping on the ref says exactly what is meant — the
+        # same cell reported by two channels is one datum — and does not
+        # depend on the projection's naming.
+        seen_refs, seen_names, seen_name_value, deduped = set(), set(), set(), []
+        for name, value, ref, alt in pending_fields:
+            if ref is not None:
+                if ref in seen_refs:
+                    continue
+                seen_refs.add(ref)
+            nv = (_norm(name), normalize_string(value))
+            if nv in seen_name_value:
                 continue
-            seen_names.add(k)
+            # Two DIFFERENT slots carrying the same label. A gold label file is
+            # a flat {name: value} map and cannot hold two, so where they agree
+            # they are one fact written in two cells and the second is dropped
+            # — not an engine defect, a container the labels cannot express
+            # (STMT-2024-01's inferred template prints Closing Balance twice,
+            # in the summary box and under the transactions).
+            #
+            # Where they DISAGREE the second is real information gold has no
+            # room for, so it keeps the engine's own qualified name and stays
+            # countable as out-of-schema. Silently dropping it would hide a
+            # matrix template's second value, which is the defect 558d6c6 fixed.
+            if _norm(name) in seen_names:
+                if alt and _norm(alt) != _norm(name):
+                    name = alt
+                else:
+                    continue
+            seen_names.add(nv[0])
+            seen_name_value.add(nv)
             deduped.append((name, value))
 
         scored = []
@@ -315,13 +349,22 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
         if not isinstance(ed, dict):
             continue
 
-        # 1. per-label form fields
+        # 1. per-label form fields. The KEY is the engine's label projection,
+        #    which qualifies a label two slots share; the entry carries the
+        #    slot's `ref`, so the name is resolved through the GRID and the
+        #    projection's spelling never reaches the matcher. That keeps the
+        #    adapter reading one thing — the cell a value sits in — rather
+        #    than two names for it, and is what an engine-side change to the
+        #    projection is supposed to cost: nothing here.
         inner = ed.get("extracted_data")
         if isinstance(inner, dict):
             for name, v in inner.items():
                 if str(name).startswith("_"):
                     continue
-                put_field(name, _cell_value(v))
+                ref = v.get("ref") if isinstance(v, dict) else None
+                lbl = _label_for_ref(ref, grid_cells) if ref else None
+                put_field(lbl or name, _cell_value(v), ref=ref,
+                          alt=str(name) if lbl else None)
 
         # 2. cell-ref keyed fields -> labels via the template grid
         ef = ed.get("extracted_fields")
@@ -332,7 +375,7 @@ def adapt(results: list, label: dict, template_grid: dict) -> dict:
                     continue
                 lbl = _label_for_ref(ref, grid_cells)
                 if lbl:
-                    put_field(lbl, val)
+                    put_field(lbl, val, ref=ref)
                 else:
                     notes.append(f"extracted_fields[{ref}]={val!r} has no "
                                  f"resolvable label in the template grid")

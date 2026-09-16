@@ -315,6 +315,50 @@ exists; it is not all on screen yet.
 already under way runs to completion in the background. Nothing is corrupted —
 you simply do not get the time or cost back.
 
+## The "combined" and "per file" downloads contain no line items
+
+**ABSENT.** ⚠ *Open defect — not a trade-off, just not built.*
+
+The two downloads offered from the export panel — **Combined** (one row per
+document) and **Per file** (one sheet per document, Field / Value /
+Confidence) — write **scalar fields only**. Line items, table rows, and
+anything else that repeats per document have never appeared in either of them,
+with a template or without. An invoice downloaded this way arrives with its
+invoice number, dates and totals, and none of its lines.
+
+Nothing on the sheet says the rows were left out, which is what makes this
+worse than the usual ABSENT entry: a sheet of header fields looks finished.
+
+**What to do.** Use the template download — **Download Excel** on the job, or
+`GET /api/jobs/{id}/export` — which writes the rows into the template you drew.
+That path is correct and is the supported one. The zip download (one workbook
+per file) is the same writer and is also correct.
+
+**Why it is still here.** A combined sheet is one row per document and line
+items are many rows per document, so there is no obvious place to put them
+without a second sheet or a different shape for the whole export. It needs a
+decision, not a patch. The related `include_line_items` flag was removed from
+the API rather than implemented, for the same reason.
+
+## A label you used twice comes back with the column or cell appended
+
+**ABSENT (from the name, not from the data).** If a template puts one label
+against two value cells — `Principal` under `Years 1-7` and again under `Years
+8-30` — the results grid and the field-list downloads show two entries, named
+`Principal (Years 1-7)` and `Principal (Years 8-30)`. Where the column headings
+do not tell them apart, the cell reference is used instead: `Closing Balance
+[B29]`. The template download is unaffected: each value is written in the cell
+you drew for it, under your own heading.
+
+This is the visible edge of a fix, not of a defect — **until 15 September 2026
+one of the two values was dropped with no message**, so the grid and both
+field-list downloads showed a complete-looking sheet with a value missing. Both
+are now there; naming the second one in a way a person would have chosen is the
+part still open.
+
+**What to do.** Nothing, unless the appended name matters to you downstream —
+in which case give the two cells different labels in the template.
+
 ## Editing a template's rows and columns
 
 **ABSENT.** The template editor can change cells in place but cannot insert or
@@ -361,3 +405,4 @@ anyone who saw the old behaviour should know it changed.
 | **Column widths were applied inconsistently**, so labels you typed came back truncated. | Every written column is sized; a width you set yourself is kept as you set it. |
 | **Merging, centring, shading and borders were lost on export.** | The formatting you drew comes back with the values. |
 | **Tick-boxes in proper fillable forms were guessed at.** | Read from the file itself. |
+| **A label used twice lost one of its values.** A template with one label against two value columns showed a single value in the results grid and in the field-list downloads; the second was overwritten with no message, so the sheet looked complete. | Both values are there, the second named by its column heading or its cell. The template download always held both. |

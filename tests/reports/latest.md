@@ -1,6 +1,6 @@
-# Accuracy report — 2026-09-15 01:32:57
+# Accuracy report — 2026-09-15 23:47:06
 
-- git: `381f73e`  mode: **replay**  repeat: 1
+- git: `558d6c6`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -77,14 +77,3 @@
 | PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8].Description | hallucinated (misplaced) | None | Total |
 | PAYSLIP-EMP-0012-APR2024 | deductions[pred_row 8].Amount | hallucinated (misplaced) | None | ($3,117.35) |
 | PO-2024-0018 | Vendor Contact | near | Ms. Linda Zhao | Ms. Linda Zhao \| (310) 555-0233 |
-
-## Changes vs previous run
-
-- BS-2024-Q1 :: shareholders_equity :: row_count_mismatch: 0 -> -2
-- BS-2024-Q1 :: shareholders_equity[row 1].Amount: correct -> missed **REGRESSION**
-- BS-2024-Q1 :: shareholders_equity[row 1].Label: correct -> missed **REGRESSION**
-- BS-2024-Q1 :: shareholders_equity[row 2].Amount: correct -> missed **REGRESSION**
-- BS-2024-Q1 :: shareholders_equity[row 2].Label: correct -> missed **REGRESSION**
-- PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch: 0 -> -1
-- PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount: correct -> missed **REGRESSION**
-- PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description: correct -> missed **REGRESSION**

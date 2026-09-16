@@ -149,3 +149,67 @@ class TestBestMatchWinsAGoldName:
                                    {"value": "1129003", "confidence": "high"}}})
         out = adapt([r], self.LABEL, {"cells": {}})
         assert out["fields"].get("Total Current Assets") == "1129003"
+
+
+class TestARepeatedLabelIsResolvedThroughItsSlot:
+    """Since 558d6c6 the engine's label projection qualifies a label two slots
+    share (`Closing Balance [B29]`), so the adapter can no longer take the
+    projection's key as the name. It resolves each entry through its `ref`,
+    and dedupes on the ref rather than on the spelling.
+
+    STMT-2024-01 with no template is the live instance: its inferred grid
+    prints Closing Balance twice, both slots hold $125,357.26, and the gold
+    labels — a flat {name: value} map — have one field for it.
+    """
+
+    LABEL = {"document_id": "T", "document_type": "bank_statement",
+             "fields": {"Closing Balance": "$125,357.26"},
+             "field_types": {"Closing Balance": "money"},
+             "tables": {}, "table_types": {}}
+
+    GRID = {"cells": {"12,0": {"value": "Closing Balance"},
+                      "28,0": {"value": "Closing Balance"}}}
+
+    def _res_both_channels(self, v13, v29):
+        """What the engine really emits: the same two cells twice over, once
+        ref-keyed and once through the qualified label projection."""
+        return _res({
+            "extracted_fields": {"B13": v13, "B29": v29},
+            "extracted_data": {
+                "Closing Balance [B13]": {"value": v13, "ref": "B13"},
+                "Closing Balance [B29]": {"value": v29, "ref": "B29"},
+            }})
+
+    def test_two_slots_agreeing_are_one_field(self):
+        out = adapt([self._res_both_channels("$125,357.26", "$125,357.26")],
+                    self.LABEL, self.GRID)
+        assert out["fields"]["Closing Balance"] == "$125,357.26"
+        assert len(out["fields"]) == 1, out["fields"]
+
+    def test_the_qualified_spelling_never_reaches_the_matcher(self):
+        out = adapt([self._res_both_channels("$125,357.26", "$125,357.26")],
+                    self.LABEL, self.GRID)
+        assert not [k for k in out["fields"] if "[" in k]
+
+    def test_two_slots_disagreeing_both_stay_visible(self):
+        """A matrix template's second value is information gold has no room
+        for, not a duplicate report. Dropping it silently is the defect."""
+        out = adapt([self._res_both_channels("$125,357.26", "$99,000.00")],
+                    self.LABEL, self.GRID)
+        assert out["fields"]["Closing Balance"] == "$125,357.26"
+        assert "$99,000.00" in out["fields"].values()
+
+    def test_one_slot_reported_twice_is_still_one_field(self):
+        """The pre-existing case: both channels carry B13 and nothing else."""
+        out = adapt([_res({
+            "extracted_fields": {"B13": "$125,357.26"},
+            "extracted_data": {"Closing Balance": {"value": "$125,357.26",
+                                                   "ref": "B13"}}})],
+            self.LABEL, self.GRID)
+        assert len(out["fields"]) == 1
+
+    def test_an_entry_with_no_ref_still_works(self):
+        """The image path and legacy jobs emit {label: value} with no ref."""
+        out = adapt([_res({"extracted_data": {"Closing Balance": "$125,357.26"}})],
+                    self.LABEL, self.GRID)
+        assert out["fields"]["Closing Balance"] == "$125,357.26"

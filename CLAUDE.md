@@ -87,8 +87,12 @@ defects in place.
 `pytest.ini` deselects `-m live` by default. `-m known_bug` marks a reproduction of an
 unfixed bug; those are additionally `xfail(strict=True)`, so the default suite
 stays green AND the marker cannot go stale — the day the fix lands, the
-unexpected pass is reported as a FAILURE and forces the marker off. Two are
-open: `multi_document` and `selection_no_marker_in_text`. The old
+unexpected pass is reported as a FAILURE and forces the marker off. Three are
+open: the `selection_no_marker_in_text` scenario, round 2's absent-field
+answer (`test_round2_I1.py::TestRun9AbsentFieldsStayEmpty`), and the combined /
+per-file exports writing no table rows
+(`tests/http/test_export_params.py::TestTheFlatExportsDropEveryTableRow`,
+DECISION-LOG §17b). The old
 `tests/test_extraction.py` (live server, zero asserts) was **deleted**; do not
 resurrect it. See `tests/README.md`.
 

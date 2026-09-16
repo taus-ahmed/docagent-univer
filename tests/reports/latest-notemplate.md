@@ -1,6 +1,6 @@
-# Accuracy report — 2026-09-15 01:33:16
+# Accuracy report — 2026-09-15 23:45:58
 
-- git: `381f73e`  mode: **replay**  repeat: 1
+- git: `558d6c6`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -138,11 +138,5 @@
 
 ## Changes vs previous run
 
-- BS-2024-Q1 :: shareholders_equity :: row_count_mismatch: 0 -> -2
-- BS-2024-Q1 :: shareholders_equity[row 1].Amount: correct -> missed **REGRESSION**
-- BS-2024-Q1 :: shareholders_equity[row 1].Label: correct -> missed **REGRESSION**
-- BS-2024-Q1 :: shareholders_equity[row 2].Amount: correct -> missed **REGRESSION**
-- BS-2024-Q1 :: shareholders_equity[row 2].Label: correct -> missed **REGRESSION**
-- PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch: 0 -> -1
-- PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount: correct -> missed **REGRESSION**
-- PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description: correct -> missed **REGRESSION**
+- STMT-2024-01 :: Closing Balance [B13]: hallucinated -> None
+- STMT-2024-01 :: Closing Balance [B29]: hallucinated -> None

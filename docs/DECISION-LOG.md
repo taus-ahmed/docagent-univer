@@ -658,6 +658,133 @@ extracted value. The comment on that cell therefore quotes the words behind the
 value actually in the file, which is consistent, but a user's correction is lost
 on download.
 
+## 17. A cell edit is addressed by SLOT — and two things it uncovered
+
+*Recorded 2026-09-15*
+
+Scoping §16 found that a correction typed into the results grid never reached
+the downloaded file. Fixing it turned up two more defects that had nothing to
+do with editing, and only one of the three is fixed. All three are recorded
+here because the first was found by reading, the second by asking what *does*
+read a label, and the third by asking what a label even identifies.
+
+### 17a. An edit names a cell, not a label (fixed)
+
+**What was wrong.** `ResultsGrid.tsx` saved an edit by replacing
+`extracted_data[label]` and PUTting the whole document back. The slot writer
+and the zip export place values from `extracted_fields[ref]`, which the edit
+never touched, so the file kept the extracted value after the grid said
+"Saved". True since 1076e05; 0feb483 removed the last label fallback. Only the
+combined and per-file exports (`export.py`) read the edited copy, which is why
+it went unnoticed — one of the two export families did the right thing.
+
+**Why the label could not be the address, even in principle.** `extracted_data`
+is a PROJECTION of the slots, keyed by `row_label`. A label is not an
+identifier:
+
+- Two slots can share one. A matrix template draws `Principal` under `Years
+  1-7` and under `Years 8-30`; the label names both cells and neither.
+- The projection is lossy in the other direction too. Only a slot's label
+  survives into it, so a payload built from the projection cannot say which
+  column it meant even when the user knew.
+- It is rebuilt every run. A grid whose columns the model names differently on
+  the next extraction re-keys every edit ever made against it.
+
+A slot ref (`B13`) has none of those properties: it is the address the value
+was requested at, the address it was written at, and the address the writer
+places it at. Making it the edit's address means the edit and the export agree
+by construction rather than by a matching rule — the same reason slot-directed
+extraction exists at all (§1).
+
+**What it cost.** `PATCH /api/jobs/{job}/docs/{doc}/fields/{ref}` edits one
+slot and moves the slot value, the label projection, the confidence map
+(`edited`) and `field_provenance` (`edited`, `original_value`) together; an
+unknown ref is 404. The whole-document PUT *reconciles* rather than
+overwriting, so a payload built from a stale copy cannot undo a stored edit,
+and it **refuses (422) a label that names two cells** instead of guessing which
+one. The writer comments an edited value as typed by a person, names the value
+it replaced, and never quotes it as a source — an edit is not grounded and must
+not look it.
+
+**Evidence.** At b83ba1c, 11 of 24 new tests fail (template and zip field
+edits, 3 provenance cases, the second-edit revert, 5 repeated-label tests) and
+13 controls pass; with the fix all pass, plus 8 PATCH route tests. Harness
+identical in both modes.
+
+### 17b. The combined and per-file exports emit no table rows at all (NOT fixed)
+
+Asking what else reads by label found `export.py::_build_excel`, which reads
+`extracted_data["extracted_data"]` and nothing else. That key holds **scalar
+fields only**. Neither `POST /api/export/combined` nor `/api/export/perfile`
+has ever written a line item, a band row, or anything under `table_rows` or a
+`*_rows` key — edited or not, with a template or without. An invoice exported
+this way arrives with its header fields and no lines.
+
+This is not a regression from the edit work; it is older than it, and it was
+half-recorded already. The Phase-8 audit found `include_line_items` declared on
+`ExportRequest` and read by nothing, and **removed the flag** with the
+reasoning that "this export is a flat table of scalar fields and emits no line
+items in any configuration, so the flag could only ever describe something the
+writer cannot produce". That reasoning is correct about the flag and stops
+short of the defect: it records that the writer cannot do it, not that a user
+who exports this way loses the rows.
+
+**Why it is not fixed here.** It is a writer change, not an edit change, and it
+has a real design question in front of it — a combined sheet is one row per
+document, and line items are many rows per document, so there is no obvious
+place to put them without either a second sheet or a shape that is no longer
+"one row per document". The template-shaped export
+(`GET /api/jobs/{id}/export`) writes rows correctly and is the supported path.
+Recorded in KNOWN-LIMITATIONS as an open defect so that it is a known cost
+rather than a surprise.
+
+### 17c. One value per repeated label was being dropped, silently (fixed)
+
+The projection was built by assigning `kv[slot["row_label"]]`, so where two
+slots shared a label the **second write overwrote the first**. The lost value
+was still in `extracted_fields` and still written by the template export, but
+it was absent from the results grid, from both label-keyed exports, and from
+anything else reading `extracted_data` — with nothing saying a value had gone.
+A user looking at the grid saw a complete-looking sheet.
+
+A shared label is now qualified by its column heading, or by its cell ref where
+the heading does not separate it (`Closing Balance [B29]`). A label used once
+is unchanged, so nothing that reads an ordinary label sees any difference.
+
+**How common it is, measured rather than assumed.** 1 of the 21 committed
+template grids puts one label on more than one field slot — and it is the
+purpose-built matrix fixture, so that number is close to meaningless as
+evidence about real templates. The honest data point is the other path: 1 of
+the 10 inferred grids does it on a real document. `STMT-2024-01`'s inference
+prints `Closing Balance` twice, in the summary box and again under the
+transactions, and before this fix one of them was dropped. Inference produces
+repeated labels on documents nobody designed to produce them, which is the case
+the hand-drawn corpus cannot show.
+
+**What would break it.** The qualifier is derived from `col_header`, which is
+the template's own text; two slots sharing a label *and* a column heading fall
+through to the cell ref, which is always unique. The qualified string is a
+display and addressing name, not a stored key — nothing persists it, and the
+PATCH route addresses the ref directly, so a qualifier that changes between
+runs cannot orphan an edit. What it does change is any consumer that reads the
+projection by an exact label string; inside this repo the results grid and both
+`export.py` writers were audited, and the harness adapter had to change with it
+(below).
+
+**The harness had to change with it, and that is where such a change belongs.**
+Scoring resolved a field claim by NAME, which worked only while a label was
+unique. With the projection qualifying the second slot, `STMT-2024-01` arrived
+as three claims for two cells — `Closing Balance`, `Closing Balance [B13]`,
+`Closing Balance [B29]` — and the two that lost the gold name counted as
+out-of-schema, moving that figure 60 → 62 with no change in what was extracted.
+The adapter now resolves each entry through its `ref` and dedupes on the slot,
+not the spelling, which puts it back at 60 and makes it comparable with every
+figure recorded before. Two slots that *disagree* still both appear, under the
+engine's own qualified name: a flat `{name: value}` gold file has no room for
+the second, and dropping it silently would hide exactly the defect 17c fixes.
+The gold labels were not touched — an engine-shape change is the adapter's
+problem by standing rule (§7).
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

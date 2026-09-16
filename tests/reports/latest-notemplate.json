@@ -1,6 +1,6 @@
 {
- "run_id": "2026-09-15 01:33:16",
- "git_commit": "381f73e",
+ "run_id": "2026-09-15 23:45:58",
+ "git_commit": "558d6c6",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -18324,53 +18324,17 @@
  "unstable_total": 0,
  "diff": [
   {
-   "key": "BS-2024-Q1 :: shareholders_equity :: row_count_mismatch",
-   "before": "0",
-   "after": "-2",
+   "key": "STMT-2024-01 :: Closing Balance [B13]",
+   "before": "hallucinated",
+   "after": null,
    "regression": false
   },
   {
-   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Amount",
-   "before": "correct",
-   "after": "missed",
-   "regression": true
-  },
-  {
-   "key": "BS-2024-Q1 :: shareholders_equity[row 1].Label",
-   "before": "correct",
-   "after": "missed",
-   "regression": true
-  },
-  {
-   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Amount",
-   "before": "correct",
-   "after": "missed",
-   "regression": true
-  },
-  {
-   "key": "BS-2024-Q1 :: shareholders_equity[row 2].Label",
-   "before": "correct",
-   "after": "missed",
-   "regression": true
-  },
-  {
-   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions :: row_count_mismatch",
-   "before": "0",
-   "after": "-1",
+   "key": "STMT-2024-01 :: Closing Balance [B29]",
+   "before": "hallucinated",
+   "after": null,
    "regression": false
-  },
-  {
-   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Amount",
-   "before": "correct",
-   "after": "missed",
-   "regression": true
-  },
-  {
-   "key": "PAYSLIP-EMP-0007-APR2024 :: deductions[row 8].Description",
-   "before": "correct",
-   "after": "missed",
-   "regression": true
   }
  ],
- "diff_against": "2026-09-08 14:44:36"
+ "diff_against": "2026-09-15 23:42:39"
 }
