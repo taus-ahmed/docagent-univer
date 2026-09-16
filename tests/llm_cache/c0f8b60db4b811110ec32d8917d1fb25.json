@@ -1,0 +1,176 @@
+{
+ "key": "c0f8b60db4b811110ec32d8917d1fb25a949fc3b33903d8a97bbbdca5f28bbbf",
+ "meta": {
+  "method": "extract",
+  "context": "round2:run6_engie_E3",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 5826,
+  "captured_at": "2026-09-16 16:44:21",
+  "prompt_preview": "Fill in a other spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nSERVICE ADDRESS: BILLING PERIOD\nABC COMPANY Service Aug 12, 2020 to Sep 11, 2020 4 Service\n2\n1234 ANY STREET Period\nAddress\nANY TOWN, ST ZIP\nAMOUNT DUE\nESI ID Number:\n1 12345678912345 3 Utility account number "
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"$83.40\",\n      \"source\": \"Pay This $83.40\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"Charge Description\": [\n      {\n        \"cells\": {\n          \"Charge Description\": \"Fixed Price Energy Charge\",\n          \"Amount\": \"$40.42\"\n        },\n        \"source\": \"Fixed Price Energy Charge 982kWh @ $0.04116 $40.42\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Total Energy Charge\",\n          \"Amount\": \"$40.42\"\n        },\n        \"source\": \"Subtotal Supplier Charges 21 Total Energy Charge $40.42\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Oncor Customer Charge\",\n          \"Amount\": \"$2.05\"\n        },\n        \"source\": \"Oncor Customer Charge $2.05\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Distribution Cost Recovery Factor\",\n          \"Amount\": \"$1.35\"\n        },\n        \"source\": \"Distribution Cost Recovery Factor 982 kWh @ $0.001374 $1.35\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Distribution System Charge\",\n          \"Amount\": \"$21.10\"\n        },\n        \"source\": \"Distribution System Charge 982 kWh @ $0.021482 $21.10\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Electricity Relief Program\",\n          \"Amount\": \"$0.32\"\n        },\n        \"source\": \"Electricity Relief Program 982 kWh @ $0.00033 $0.32\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Energy Efficiency Cost Recovery\",\n          \"Amount\": \"$0.28\"\n        },\n        \"source\": \"Energy Efficiency Cost Recovery 982 kWh @ $0.000282 $0.28\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Metering Charge\",\n          \"Amount\": \"$6.07\"\n        },\n        \"source\": \"Metering Charge $6.07\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Nuclear Decommissioning Charge\",\n          \"Amount\": \"$0.12\"\n        },\n        \"source\": \"20 Nuclear Decommissioning Charge 982 kWh @ $0.000127 $0.12\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Transmission Cost Recovery Factor\",\n          \"Amount\": \"$9.92\"\n        },\n        \"source\": \"Transmission Cost Recovery Factor 982 kWh @ $0.010101 $9.92\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Total T&D Charges\",\n          \"Amount\": \"$41.21\"\n        },\n        \"source\": \"Subtotal TDSP Charges Total T&D Charges $41.21\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Gross Receipts Tax - Delivery\",\n          \"Amount\": \"$0.82\"\n        },\n        \"source\": \"Gross Receipts Tax - Delivery $0.82\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Gross Receipts Tax - Supply\",\n          \"Amount\": \"$0.81\"\n        },\n        \"source\": \"Gross Receipts Tax - Supply $0.81\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Puca Reimbursement - Delivery\",\n          \"Amount\": \"$0.07\"\n        },\n        \"source\": \"Puca Reimbursement - Delivery $0.07\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Puca Reimbursement - Supply\",\n          \"Amount\": \"$0.07\"\n        },\n        \"source\": \"Puca Reimbursement - Supply $0.07\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Total Tax Charges\",\n          \"Amount\": \"$1.77\"\n        },\n        \"source\": \"Subtotal Taxes and Fees Total Tax Charges $1.77\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Current Energy Charges\",\n          \"Amount\": \"$83.40\"\n        },\n        \"source\": \"Current Energy Charges $83.40\",\n        \"page\": 3\n      },\n      {\n        \"cells\": {\n          \"Charge Description\": \"Total Amount to Pay\",\n          \"Amount\": \"$83.40\"\n        },\n        \"source\": \"Total Charges for this Billing Period Total Amount to Pay $83.40\",\n        \"page\": 3\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "$83.40",
+     "source": "Pay This $83.40",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Charge Description": [
+     {
+      "cells": {
+       "Charge Description": "Fixed Price Energy Charge",
+       "Amount": "$40.42"
+      },
+      "source": "Fixed Price Energy Charge 982kWh @ $0.04116 $40.42",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Total Energy Charge",
+       "Amount": "$40.42"
+      },
+      "source": "Subtotal Supplier Charges 21 Total Energy Charge $40.42",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Oncor Customer Charge",
+       "Amount": "$2.05"
+      },
+      "source": "Oncor Customer Charge $2.05",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Distribution Cost Recovery Factor",
+       "Amount": "$1.35"
+      },
+      "source": "Distribution Cost Recovery Factor 982 kWh @ $0.001374 $1.35",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Distribution System Charge",
+       "Amount": "$21.10"
+      },
+      "source": "Distribution System Charge 982 kWh @ $0.021482 $21.10",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Electricity Relief Program",
+       "Amount": "$0.32"
+      },
+      "source": "Electricity Relief Program 982 kWh @ $0.00033 $0.32",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Energy Efficiency Cost Recovery",
+       "Amount": "$0.28"
+      },
+      "source": "Energy Efficiency Cost Recovery 982 kWh @ $0.000282 $0.28",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Metering Charge",
+       "Amount": "$6.07"
+      },
+      "source": "Metering Charge $6.07",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Nuclear Decommissioning Charge",
+       "Amount": "$0.12"
+      },
+      "source": "20 Nuclear Decommissioning Charge 982 kWh @ $0.000127 $0.12",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Transmission Cost Recovery Factor",
+       "Amount": "$9.92"
+      },
+      "source": "Transmission Cost Recovery Factor 982 kWh @ $0.010101 $9.92",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Total T&D Charges",
+       "Amount": "$41.21"
+      },
+      "source": "Subtotal TDSP Charges Total T&D Charges $41.21",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Gross Receipts Tax - Delivery",
+       "Amount": "$0.82"
+      },
+      "source": "Gross Receipts Tax - Delivery $0.82",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Gross Receipts Tax - Supply",
+       "Amount": "$0.81"
+      },
+      "source": "Gross Receipts Tax - Supply $0.81",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Puca Reimbursement - Delivery",
+       "Amount": "$0.07"
+      },
+      "source": "Puca Reimbursement - Delivery $0.07",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Puca Reimbursement - Supply",
+       "Amount": "$0.07"
+      },
+      "source": "Puca Reimbursement - Supply $0.07",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Total Tax Charges",
+       "Amount": "$1.77"
+      },
+      "source": "Subtotal Taxes and Fees Total Tax Charges $1.77",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Current Energy Charges",
+       "Amount": "$83.40"
+      },
+      "source": "Current Energy Charges $83.40",
+      "page": 3
+     },
+     {
+      "cells": {
+       "Charge Description": "Total Amount to Pay",
+       "Amount": "$83.40"
+      },
+      "source": "Total Charges for this Billing Period Total Amount to Pay $83.40",
+      "page": 3
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 5826,
+  "success": true,
+  "error": ""
+ }
+}

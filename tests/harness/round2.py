@@ -46,12 +46,12 @@ RAW_DIR = bs.TESTS_DIR / "fixtures" / "round2_raw"
 RUNS = {
     "run1_berkshire_B1": ("feb2225.pdf", "B1_earnings_table.json", 1),
     "run2_berkshire_B2": ("feb2225.pdf", "B2_operating_earnings.json", 2),
-    # ⚠ STALE since I10 (DECISION-LOG §21). Separating the two account numbers
-    # the old text layer welded together re-reads SampleBill pages 2 and 4, so
-    # the prompt changed and the replay cache correctly refuses to serve these
-    # three. Re-record each with `--mode record` (live, costs money); until then
-    # `test_round2_I1.py::TestRun9AbsentFieldsStayEmpty` skips itself with the
-    # reason in `STALE_SAMPLEBILL`.
+    # Re-recorded at f3d4d4a (2026-09-16) after I10 (DECISION-LOG §21): separating
+    # the two account numbers the old text layer welded together re-reads
+    # SampleBill pages 2 and 4, so the prompt changed and the replay cache
+    # correctly refused the answers recorded against the old text. Every value
+    # the model returned is unchanged; only five of run 6's row `source` quotes
+    # differ, each now carrying the subtotal heading printed on the line.
     "run4_engie_E1": ("SampleBill.pdf", "E1_bill_header.json", 4),
     "run6_engie_E3": ("SampleBill.pdf", "E3_itemised_charges.json", 6),
     "run9_engie_BR4": ("SampleBill.pdf", "BR4_absent_field_probe.json", 9),

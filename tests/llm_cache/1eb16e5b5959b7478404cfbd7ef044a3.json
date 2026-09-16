@@ -1,0 +1,63 @@
+{
+ "key": "1eb16e5b5959b7478404cfbd7ef044a346114fffb5dd488580929bd8bc03cdfb",
+ "meta": {
+  "method": "extract",
+  "context": "round2:run4_engie_E1",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4950,
+  "captured_at": "2026-09-16 16:44:06",
+  "prompt_preview": "Fill in a other spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nSERVICE ADDRESS: BILLING PERIOD\nABC COMPANY Service Aug 12, 2020 to Sep 11, 2020 4 Service\n2\n1234 ANY STREET Period\nAddress\nANY TOWN, ST ZIP\nAMOUNT DUE\nESI ID Number:\n1 12345678912345 3 Utility account number "
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"ABC COMPANY\",\n      \"source\": \"ABC COMPANY\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"1234 ANY STREET\\nANY TOWN, ST ZIP\",\n      \"source\": \"1234 ANY STREET\\nANY TOWN, ST ZIP\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"0000123456\",\n      \"source\": \"BILL ACCOUNT NUMBER: 0000123456\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"0000000\",\n      \"source\": \"STATEMENT ID: 0000000\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"12345678912345\",\n      \"source\": \"ESI ID Number: 1 12345678912345\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"Aug 12, 2020 to Sep 11, 2020\",\n      \"source\": \"Service Aug 12, 2020 to Sep 11, 2020\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"Oct 7, 2020\",\n      \"source\": \"DUE DATE\\nOct 7, 2020\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$83.40\",\n      \"source\": \"Pay This $83.40\",\n      \"page\": 1\n    }\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "ABC COMPANY",
+     "source": "ABC COMPANY",
+     "page": 1
+    },
+    "F2": {
+     "value": "1234 ANY STREET\nANY TOWN, ST ZIP",
+     "source": "1234 ANY STREET\nANY TOWN, ST ZIP",
+     "page": 1
+    },
+    "F3": {
+     "value": "0000123456",
+     "source": "BILL ACCOUNT NUMBER: 0000123456",
+     "page": 1
+    },
+    "F4": {
+     "value": "0000000",
+     "source": "STATEMENT ID: 0000000",
+     "page": 1
+    },
+    "F5": {
+     "value": "12345678912345",
+     "source": "ESI ID Number: 1 12345678912345",
+     "page": 1
+    },
+    "F6": {
+     "value": "Aug 12, 2020 to Sep 11, 2020",
+     "source": "Service Aug 12, 2020 to Sep 11, 2020",
+     "page": 1
+    },
+    "F7": {
+     "value": "Oct 7, 2020",
+     "source": "DUE DATE\nOct 7, 2020",
+     "page": 1
+    },
+    "F8": {
+     "value": "$83.40",
+     "source": "Pay This $83.40",
+     "page": 1
+    }
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 4950,
+  "success": true,
+  "error": ""
+ }
+}

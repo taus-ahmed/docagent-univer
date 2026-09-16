@@ -3,13 +3,13 @@
  "pdf": "SampleBill.pdf",
  "template": "E1_bill_header.json",
  "round2_run": 4,
- "captured_at": "2026-09-16 02:11:36",
- "commit": "95cf75d6d909a97f1ed6d902f80550af8085c26d",
+ "captured_at": "2026-09-16 16:44:06",
+ "commit": "f3d4d4a4b44da2f32552c2d8c9edd6f1add4e9e1",
  "mode": "record",
  "calls": [
   {
    "method": "extract",
-   "key": "37214e1472f1f5f083ad8a51aa03aa46ac7e8c546dd40e4d93ba4fddcb481c70",
+   "key": "1eb16e5b5959b7478404cfbd7ef044a346114fffb5dd488580929bd8bc03cdfb",
    "source": "recorded"
   }
  ],
@@ -17,7 +17,7 @@
   {
    "filename": "SampleBill.pdf",
    "raw_llm_responses": [
-    "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"ABC COMPANY\",\n      \"source\": \"ABC COMPANY Service Aug 12, 2020 to Sep 11, 2020 4 Service\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"1234 ANY STREET\\nANY TOWN, ST ZIP\",\n      \"source\": \"1234 ANY STREET\\nAddress\\nANY TOWN, ST ZIP\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"0000123456\",\n      \"source\": \"BILL ACCOUNT NUMBER: 0000123456\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"0000000\",\n      \"source\": \"STATEMENT ID: 0000000\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"12345678912345\",\n      \"source\": \"ESI ID Number: 1 12345678912345\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"Aug 12, 2020 to Sep 11, 2020\",\n      \"source\": \"Service Aug 12, 2020 to Sep 11, 2020\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"Oct 7, 2020\",\n      \"source\": \"DUE DATE\\nOct 7, 2020\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$83.40\",\n      \"source\": \"Pay This $83.40\",\n      \"page\": 1\n    }\n  }\n}"
+    "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"ABC COMPANY\",\n      \"source\": \"ABC COMPANY\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"1234 ANY STREET\\nANY TOWN, ST ZIP\",\n      \"source\": \"1234 ANY STREET\\nANY TOWN, ST ZIP\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"0000123456\",\n      \"source\": \"BILL ACCOUNT NUMBER: 0000123456\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"0000000\",\n      \"source\": \"STATEMENT ID: 0000000\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"12345678912345\",\n      \"source\": \"ESI ID Number: 1 12345678912345\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"Aug 12, 2020 to Sep 11, 2020\",\n      \"source\": \"Service Aug 12, 2020 to Sep 11, 2020\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"Oct 7, 2020\",\n      \"source\": \"DUE DATE\\nOct 7, 2020\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$83.40\",\n      \"source\": \"Pay This $83.40\",\n      \"page\": 1\n    }\n  }\n}"
    ],
    "model_used": "gemini-2.5-flash-lite"
   }

@@ -3,13 +3,13 @@
  "pdf": "SampleBill.pdf",
  "template": "BR4_absent_field_probe.json",
  "round2_run": 9,
- "captured_at": "2026-09-13 03:50:43",
- "commit": "39c4ec33af070deb6d6bfa8dac7a4ec9d7b30a24",
+ "captured_at": "2026-09-16 16:44:34",
+ "commit": "f3d4d4a4b44da2f32552c2d8c9edd6f1add4e9e1",
  "mode": "record",
  "calls": [
   {
    "method": "extract",
-   "key": "737b7d5288460a0b2ea66595104891d721d43eca15f035a6c1f7e1bc3c98c5b4",
+   "key": "4d4eeb364fc8a260d00f626e5761831d36fad9ee14e50e6dad3c005bed73125f",
    "source": "recorded"
   }
  ],
