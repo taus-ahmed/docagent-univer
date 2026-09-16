@@ -1,6 +1,6 @@
-# Accuracy report — 2026-09-15 23:45:58
+# Accuracy report — 2026-09-16 00:37:05
 
-- git: `558d6c6`  mode: **replay**  repeat: 1
+- git: `c592f25`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -135,8 +135,3 @@
 | PO-2024-0018 | Buyer Signature Phone | hallucinated (misplaced) | None | (212) 555-0148 |
 | STMT-2024-01 | Bank Address | hallucinated (misplaced) | None | 330 Madison Avenue, New York, NY 10017 |
 | STMT-2024-01 | ABA | hallucinated (misplaced) | None | 021000021 |
-
-## Changes vs previous run
-
-- STMT-2024-01 :: Closing Balance [B13]: hallucinated -> None
-- STMT-2024-01 :: Closing Balance [B29]: hallucinated -> None

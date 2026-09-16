@@ -628,6 +628,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     ungrounded = 0
     misplaced = 0
     dropped = 0
+    empty_rows = 0
+    off_schema_keys = 0
     merged_columns = 0
     overprinted = 0
     unwitnessed = 0
@@ -981,6 +983,33 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         f'{t["name"]}: dropped a row claiming an already-used '
                         f"source line: {str(source)[:60]!r}")
                     continue
+                # OFF-SCHEMA KEYS (I4). The `cells.get(h, "")` below is an
+                # EXACT lookup over this band's column keys, so a key the model
+                # returned that this template has no column for is discarded
+                # here — and was discarded with nothing recorded. That is the
+                # same loss as a dropped row one level down, and it is why the
+                # drop depends on template shape at all: change the template's
+                # columns and you change which of the model's cells survive.
+                #
+                # Reported once per ROW rather than once per key. The live run
+                # (tests/harness/i4.py: 23 runs, 39 bands, 227 rows) produced
+                # zero off-schema keys, including on 17 legitimately reworded
+                # bands, so a per-key flag would have been affordable too — but
+                # a row is the unit a reader can act on, and one flag naming
+                # three lost keys is worth more than three naming one each.
+                lost = [k for k in cells
+                        if k not in headers and not str(k).startswith("_")
+                        and k not in ("source", "page", "cells")
+                        and str(cells.get(k) or "").strip()]
+                if lost:
+                    off_schema_keys += len(lost)
+                    flagged.append(_flag(
+                        f'{t["name"]}[unused keys]',
+                        " | ".join(f"{k}={cells.get(k)}" for k in lost),
+                        f"the model answered this row with column name(s) the "
+                        f"table does not have ({', '.join(lost)}), so those "
+                        f"values were not written. This table's columns are: "
+                        f"{', '.join(headers)}"))
                 row, row_conf = {}, confident
                 unverified_cols = []
                 for h in headers:
@@ -1013,16 +1042,39 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         flagged.append(_flag(
                             f'{t["name"]}[{len(rows_out)}].{bad_key}',
                             row.get(bad_key, ""), why))
-                if any(str(v).strip() for v in row.values()):
-                    row["_confidence"] = row_conf
-                    # I2 — the quote this row was read from and its file page.
-                    # Underscore keys are metadata to every reader of a row.
-                    row["_source"] = source
-                    row["_page"] = page_of(source, page, all_lines, page_lines,
-                                           line_no)
-                    if unverified_cols:
-                        row["_ungrounded"] = unverified_cols
-                    rows_out.append(row)
+                if not any(str(v).strip() for v in row.values()):
+                    # I4 — VISIBLY. The gate STAYS: a row with nothing in any
+                    # column this template has is not a row of this table, and
+                    # emitting it would put a blank line into every sheet whose
+                    # model returns a trailing empty object. What changes is
+                    # that it used to go in silence — no flag, no note, no
+                    # counter, no review state — which is the same fault the
+                    # duplicate drop was fixed for. Nothing told the reader to
+                    # go and look, and a template that silently loses a section
+                    # total looks exactly like one that had none.
+                    empty_rows += 1
+                    shown = " | ".join(
+                        f"{k}={v}" for k, v in cells.items()
+                        if k not in ("source", "page", "cells")
+                        and not str(k).startswith("_")
+                        and str(v or "").strip()) or str(source)[:60]
+                    flagged.append(_flag(
+                        f'{t["name"]}[empty]', shown,
+                        "row dropped: none of its values landed in a column "
+                        "this table has, so every cell of it would be blank"))
+                    notes.append(
+                        f'{t["name"]}: dropped a row whose values fill none of '
+                        f"this table's columns: {shown[:80]!r}")
+                    continue
+                row["_confidence"] = row_conf
+                # I2 — the quote this row was read from and its file page.
+                # Underscore keys are metadata to every reader of a row.
+                row["_source"] = source
+                row["_page"] = page_of(source, page, all_lines, page_lines,
+                                       line_no)
+                if unverified_cols:
+                    row["_ungrounded"] = unverified_cols
+                rows_out.append(row)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
 
@@ -1035,6 +1087,14 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     if dropped:
         notes.append(f"{dropped} table row(s) were dropped as duplicates — see "
                      f"the flagged rows")
+    if empty_rows:
+        notes.append(f"{empty_rows} table row(s) were dropped because none of "
+                     f"their values landed in a column the template has — see "
+                     f"the flagged rows")
+    if off_schema_keys:
+        notes.append(f"{off_schema_keys} value(s) came back under a column "
+                     f"name no table in this template has, and were not "
+                     f"written — see the flagged rows")
     if misplaced:
         notes.append(f"{misplaced} value(s) sit under a different column "
                      f"in the document than the slot they were written to")
@@ -1049,6 +1109,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     _log("SLOT", f"filled {len(extracted_fields)}/{len(slots['fields'])} field slots, "
                  f"table rows {row_counts}, {ungrounded} ungrounded value(s), "
                  f"{misplaced} misplaced, {dropped} dropped, "
+                 f"{empty_rows} empty, {off_schema_keys} off-schema key(s), "
                  f"{overprinted} overprinted, {unwitnessed} unwitnessed")
 
     # DOCUMENT-LEVEL GATE — a document where more than 30% of cells are low
@@ -1080,7 +1141,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         conf_map = {k: UNVERIFIED for k in conf_map}
     needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
                     or bool(dropped) or bool(merged_columns)
-                    or bool(regions_warned))
+                    or bool(regions_warned)
+                    or bool(empty_rows) or bool(off_schema_keys))
 
     r = DocumentExtractionResult(filename=file_path.name)
     r.document_type = default_doc_type
@@ -1130,6 +1192,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
             "dropped_row_count": dropped,
+            # I4 — a row dropped because none of its values reached a column
+            # this template has, and the values discarded for being keyed with
+            # a column name it does not have.
+            "empty_row_count": empty_rows,
+            "off_schema_key_count": off_schema_keys,
             # One entry per band that more than one region matched:
             # {table, pages, kept_page, kept_rows, left_out}.
             "regions": regions_warned,

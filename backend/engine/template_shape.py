@@ -473,6 +473,48 @@ def _gate_findings(grid, m, bands):
                 f'only call "{unnamed[0]["header"]}", and the model has nothing '
                 f"to go on. Type a heading there.")
 
+    # A, CONTINUED — the half of it that could never fire (I4).
+    #
+    # The loop above iterates `b["columns"]`, and a DETECTED band is built from
+    # a run of ADJACENT non-empty headings: a column whose heading is blank is
+    # not in `columns` at all, so there was nothing there for A to find. A
+    # declared region keeps the column and calls it "Column A", and warns; the
+    # identical hand-drawn table dropped the column before the gate ran and said
+    # nothing. Same template, same mistake, a warning in one case and silence in
+    # the other — and silence is the case a user is more likely to reach, since
+    # it needs one blank cell rather than a model answering off-schema.
+    #
+    # The signal is the column immediately LEFT of the band, blank on the
+    # heading row and INSIDE the used range — `m` is dense within that box, so
+    # membership is the test. Left only: a blank column to the right of a table
+    # is ordinary empty sheet, while the one to its left is the top-left corner
+    # somebody forgot to fill in. Measured against every template committed to
+    # this repo: 0 false positives.
+    declared_edges = {
+        min(int(r["c1"]), int(r["c2"]))
+        for r in ((grid or {}).get("regions") or [])
+        if isinstance(r, dict) and r.get("type") == "table"
+        and all(k in r for k in ("c1", "c2"))
+    }
+    for b in bands:
+        if b.get("orientation") == "columns":
+            continue
+        cols = b.get("columns") or []
+        if not cols:
+            continue
+        c0 = min(c["col"] for c in cols)
+        if c0 <= 0 or c0 in declared_edges:
+            continue
+        left = (b["header_row"], c0 - 1)
+        if left not in m or str(m.get(left) or "").strip():
+            continue
+        warnings.append(
+            f'the table at row {b["header_row"] + 1} starts at column '
+            f'{_col_letter(c0)}, and column {_col_letter(c0 - 1)} beside it has '
+            f"no heading — a column with no heading is not part of the table, so "
+            f"nothing will ever be written into it. Type a heading there, or "
+            f"leave the column outside the table.")
+
     regions = [r for r in ((grid or {}).get("regions") or [])
                if isinstance(r, dict) and r.get("type") == "table"]
     for i, a in enumerate(regions):

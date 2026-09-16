@@ -315,6 +315,64 @@ exists; it is not all on screen yet.
 already under way runs to completion in the background. Nothing is corrupted —
 you simply do not get the time or cost back.
 
+## A table whose top-left heading is blank quietly loses that column
+
+**ABSENT.** ⚠ *Open defect — and more likely to bite you than the row-dropping
+one below it.*
+
+Draw a table, head the value columns, and leave the top-left cell blank — the
+corner above the column that holds each row's name. The engine builds the table
+from the run of headed columns only. **The unheaded column is not part of the
+table at all**: nothing is ever asked for it and nothing is ever written into
+it, and the sheet comes back with that column empty on every row.
+
+Until 16 September 2026 no warning fired. The same shape *declared* as a table
+(select the range, mark it a table) has always warned — "the engine will ask for
+a column it can only call Column A" — so the identical mistake was caught in one
+case and silent in the other. It is the more likely of the two to happen,
+because it needs one blank cell rather than the model answering with a column
+name your template does not have.
+
+**What happens now.** The editor warns when a table starts at column B or later
+and the column beside it has no heading: *"a column with no heading is not part
+of the table, so nothing will ever be written into it."* It warns rather than
+blocks, like every other heading rule — a table that genuinely starts at column
+B, with something unrelated to its left, is a legitimate thing to draw. Measured
+against every template committed to this repo: it fires on none of them.
+
+**What to do.** Type a heading in the corner — `Item`, `Description`, whatever
+the column holds. If the column really is not part of the table, move the table
+so it starts where its first headed column starts.
+
+## A row can be dropped when the template's columns do not fit the document
+
+**ABSENT.** The document is read into the columns your template names. If the
+model answers a row using a column name your table does not have, that value is
+not written; and if *none* of a row's values land in a column your table has,
+the row itself is not written.
+
+This is why the same document under two different templates can come back with
+different rows: a section total answered as a name and an amount keeps its
+amount under a four-column template and loses its name, and a heading-only line
+inside a table ("Net earnings includes:") disappears altogether.
+
+**It is no longer silent.** The dropped row is flagged with its own contents,
+values discarded for an unrecognised column name are flagged per row and
+counted, and the document is marked for review — the same treatment already
+given to a row dropped as a duplicate and a row from the wrong page.
+
+**How often it happens: not once that we can measure.** Across 23 live runs
+built to provoke it — the ten gold documents against templates deliberately
+narrowed, widened and reworded, 39 tables and 227 rows — the model answered with
+exactly the columns it was asked for every time, including on 17 tables whose
+headings had been reworded away from the document's own words. Across all 1,807
+table rows in the recorded corpus, likewise none. The reporting exists because
+nothing would have told us if that changed.
+
+**What to do.** Check any document marked for review; a dropped row is listed
+with its contents. Heading a table's columns the way the document heads them
+makes it less likely still.
+
 ## The "combined" and "per file" downloads contain no line items
 
 **ABSENT.** ⚠ *Open defect — not a trade-off, just not built.*

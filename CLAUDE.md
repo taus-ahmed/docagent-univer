@@ -521,6 +521,44 @@ replays a **recorded live answer** (`tests/fixtures/round2_raw/`, captured by
 run stores its raw response there and in `tests/llm_cache/`. The round-2
 templates in `tests/fixtures/round2_templates/` are **reconstructions**.
 
+### Every gate that drops a row says so (I4)
+
+Four gates drop a table row: a malformed object, a row bound to another region,
+a row claiming a source line already spoken for, and **a row none of whose
+values landed in a column this template has**. The fourth was silent — no flag,
+no note, no counter, no review state — so a template that loses a section total
+looked exactly like one that had none.
+
+The cells are emptied one level down: `cells.get(h, "")` is an **exact** lookup
+over the band's column keys, so a key the model returned that the template has
+no column for is discarded. That is what makes the drop depend on template
+shape — change the columns and you change which of the model's cells survive,
+so the same document under two templates comes back with different rows.
+
+**The gate stays; the silence goes.** A row with nothing in any column this
+template has is not a row of this table, and emitting it would put a blank line
+into every sheet whose model returns a trailing empty object. It now raises a
+`{table}[empty]` flag carrying the row's own content, a note, and
+`validation.empty_row_count`. Discarded keys raise one `{table}[unused keys]`
+flag **per row** naming them, and `validation.off_schema_key_count`. Both set
+`needs_review`.
+
+**Per row, not per key, and the run says why.** `tests/harness/i4.py` perturbs
+each gold template — narrowed, widened, reworded — and runs it live: 23 runs,
+39 bands, 227 rows, **zero off-schema keys and zero silent drops in every
+variant**, including 17 legitimately reworded bands. Per-key flagging was
+therefore affordable; a row is still the unit a reader acts on. This is a latent
+defect made reportable, not an observed one fixed, and the tests stub their
+answers because the condition occurs in no recorded answer.
+
+⚠ **Gate rule A could only ever fire on a DECLARED region**, and that is more
+likely to bite than I4 itself. Detection builds a band from a run of adjacent
+non-empty headings, so an unheaded column is not in `b["columns"]` — which is
+what rule A iterates. The column is dropped from the band, never asked for and
+never written. A second half of the rule now looks at the column immediately
+left of a detected band: blank on the heading row and inside the used range.
+Left only, warn not block, 0 false positives on the 19 committed templates.
+
 ### A record is not a line
 
 A row's cells were verified against the ONE line the model quoted, which is
@@ -732,6 +770,7 @@ one function at the export boundary, not a validation change.
                         "_ungrounded": [col_key, ...]} ],        # I2
  "validation": {flagged_count, flagged_fields, confidence_map,
                 ungrounded_count, misplaced_count, dropped_row_count,
+                empty_row_count, off_schema_key_count,
                 regions, unbound_row_count,
                 low_confidence_ratio,
                 document_needs_review, grounded_count},

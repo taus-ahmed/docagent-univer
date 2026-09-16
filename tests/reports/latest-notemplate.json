@@ -1,6 +1,6 @@
 {
- "run_id": "2026-09-15 23:45:58",
- "git_commit": "558d6c6",
+ "run_id": "2026-09-16 00:37:05",
+ "git_commit": "c592f25",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -18322,19 +18322,6 @@
   }
  },
  "unstable_total": 0,
- "diff": [
-  {
-   "key": "STMT-2024-01 :: Closing Balance [B13]",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  },
-  {
-   "key": "STMT-2024-01 :: Closing Balance [B29]",
-   "before": "hallucinated",
-   "after": null,
-   "regression": false
-  }
- ],
- "diff_against": "2026-09-15 23:42:39"
+ "diff": [],
+ "diff_against": "2026-09-15 23:45:58"
 }

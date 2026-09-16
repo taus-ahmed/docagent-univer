@@ -785,6 +785,106 @@ the second, and dropping it silently would hide exactly the defect 17c fixes.
 The gold labels were not touched — an engine-shape change is the adapter's
 problem by standing rule (§7).
 
+## 18. I4: the third row gate is made loud, not removed — and measured first
+
+*Recorded 2026-09-16*
+
+**There was never a row classifier.** The round-2 report describes rows "not
+matching the dominant pattern in a band" being dropped three different ways.
+Nothing in the engine computes a dominant pattern or tests a row against one.
+Four gates drop a row, and the shape of the defect is that two of them were
+built visible and one never was:
+
+| gate | where | visible before |
+|---|---|---|
+| not a JSON object | `slot_extractor.py:904` | n/a |
+| region — the row is on another page | `:914` | flag, counter, `needs_review` |
+| duplicate — its source line is spoken for | `:949` | flag, counter, `needs_review` |
+| **every schema cell empty** | **`:1016`** | **nothing at all** |
+
+The cells are emptied one level down, at `:987`, where `cells.get(h, "")` is an
+**exact** lookup over the band's column keys. A key the model returned that the
+template has no column for was discarded on the floor, uncounted. That is the
+whole mechanism, and it is what makes the drop depend on template shape: change
+a template's columns and you change which of the model's cells survive, so the
+same document under two templates comes back with different rows. Reproduced
+with the model's answer held fixed — a five-column band loses a `{Label: "Net
+earnings includes:"}` row entirely and keeps a `{Label, Amount}` subtotal with
+its label gone, while a two-column band keeps both — at `dropped_row_count = 0`,
+`needs_review = False`, zero flags.
+
+**The gate stays.** A row with nothing in any column this template has is not a
+row of this table, and emitting it would put a blank line into every sheet whose
+model returns a trailing empty object. What was wrong was the silence, which is
+the same fault the duplicate drop was fixed for: nothing told the reader to go
+and look, so a template that loses a section total looks exactly like one that
+had none.
+
+**Measured before designing, because the corpus could not see it.** Across all
+374 cached responses — 166 with tables, 1,807 rows — the model had never
+returned a row keyed differently from its table's other rows. That is not
+evidence the defect is rare; every template in the corpus was drawn to fit the
+document it points at, and a user's is not. So `tests/harness/i4.py` perturbs
+the TEMPLATE and leaves everything else alone: each gold band **narrowed** (two
+adjacent columns where the document has five), **widened** (two columns the
+document does not have), and **reworded** (the same columns under different
+words — the control).
+
+23 live runs, 39 bands, 227 returned rows:
+
+| variant | bands | rows | written | region-flagged | **silent** | off-schema keys |
+|---|---|---|---|---|---|---|
+| narrowed | 5 | 33 | 33 | 0 | **0** | **0** |
+| widened | 17 | 102 | 97 | 5 | **0** | **0** |
+| reworded | 17 | 92 | 89 | 3 | **0** | **0** |
+
+The model returns exactly the keys it is asked for. Widened, it returns `Ref`
+and `Notes` **empty** on all twelve bank-statement rows rather than inventing
+content for columns the document lacks. Reworded, it answers under the
+template's words — `Posted`, `Kind`, `Particulars`, `Withdrawals`, `Deposits`,
+`Running Balance` — and maps the document's columns onto them correctly.
+
+**That number decided the granularity.** A per-key flag would have fired zero
+times on 17 legitimately reworded bands, so per-key was affordable on the
+evidence. The flag is nonetheless per **ROW**, because a row is the unit a
+reader can act on and one flag naming three lost keys is worth more than three
+naming one each; the keys themselves are counted
+(`validation.off_schema_key_count`). Zero observations cannot justify a noisier
+choice than the useful one.
+
+**What this is, honestly: a latent defect made reportable, not an observed one
+fixed.** Nothing in the corpus would have told us if it started happening, and
+that is the argument for the reporting rather than for guessing at the cause.
+The tests stub their answers for the same reason — the condition occurs in no
+recorded answer, so it has to be constructed to be pinned.
+
+### 18a. Rule A could only ever fire on a declared region
+
+Found while tracing the above, and **more likely to occur than I4 itself**: it
+needs one blank cell rather than a model answering off-schema.
+
+`_gate_findings` rule A warns about "a band column with no heading" by iterating
+`b["columns"]`. A **detected** band is built from a run of ADJACENT non-empty
+headings, so a column whose heading is blank is not in `columns` at all — there
+was nothing there for A to find. A declared region keeps the column, calls it
+`Column A` and warns; the identical hand-drawn table dropped the column before
+the gate ran and said nothing, and the column is then never asked for and never
+written.
+
+The added half looks at the column immediately **left** of a detected band,
+blank on the heading row and inside the used range — `m` is dense within that
+box, so membership is the test. Left only: a blank column right of a table is
+ordinary empty sheet, while the one to its left is a top-left corner somebody
+forgot to fill in. It warns rather than blocks, like A, and it fires on **0 of
+the 19 templates committed to this repo** — the same false-positive standard
+every other gate rule was chosen on.
+
+**Measured movement: none.** Both harness reports are identical before and
+after, per document and in every summary, in both modes: templated 97.2% /
+4 misfiled, no-template 96.7% / 60 out-of-schema. Suite 953 passed, 4 xfailed.
+The new counters are additive keys on `validation`; nothing that reads the
+result contract sees a changed value.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
