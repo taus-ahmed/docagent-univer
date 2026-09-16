@@ -1,0 +1,56 @@
+{
+ "key": "46fd20fc9bf0a6ea2b9d6d0b754fcfe2a7494d6a0913688f752dfe2421ebd166",
+ "meta": {
+  "method": "extract",
+  "context": "EXP-2024-0081",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2985,
+  "captured_at": "2026-09-16 02:04:25",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC   |   EXPENSE REPORT\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nEmployee:   |   Marcus A. Thompson   |   Report No:\nAPPROVED\nEXP-2024-008"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"expense_report\",\n  \"title\": \"Expense Report\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company Phone\",\n    \"Company Tax ID\",\n    \"Employee Name\",\n    \"Report No\",\n    \"Status\",\n    \"Employee ID\",\n    \"Department\",\n    \"Manager\",\n    \"Period\",\n    \"Purpose\",\n    \"Employee\",\n    \"Manager Approval\",\n    \"Finance Approval\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Expense Details\",\n      \"columns\": [\n        \"Date\",\n        \"Type\",\n        \"Description\",\n        \"Category\",\n        \"Amount\"\n      ],\n      \"row_count\": 9\n    }\n  ],\n  \"totals\": [\n    \"TOTAL CLAIMED\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "expense_report",
+   "title": "Expense Report",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company Phone",
+    "Company Tax ID",
+    "Employee Name",
+    "Report No",
+    "Status",
+    "Employee ID",
+    "Department",
+    "Manager",
+    "Period",
+    "Purpose",
+    "Employee",
+    "Manager Approval",
+    "Finance Approval"
+   ],
+   "tables": [
+    {
+     "name": "Expense Details",
+     "columns": [
+      "Date",
+      "Type",
+      "Description",
+      "Category",
+      "Amount"
+     ],
+     "row_count": 9
+    }
+   ],
+   "totals": [
+    "TOTAL CLAIMED"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2985,
+  "success": true,
+  "error": ""
+ }
+}

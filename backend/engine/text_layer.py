@@ -237,6 +237,118 @@ def text_from_lines(lines) -> str:
     return "\n".join(" ".join(str(w["text"]) for w in ln) for ln in lines if ln)
 
 
+
+
+# ── text that keeps its columns (I5, mode 1) ───────────────────────
+#
+# `text_from_lines` joins every word of a line with one space, so two blocks
+# printed SIDE BY SIDE arrive as one sentence. On INV-2024-0047 that turns
+#
+#     Payment Instructions            Notes
+#     Wire: First National Bank ...   Balance due March 4, 2024. Late ...
+#
+# into two flat lines, and shape inference — which is asked to prefix a block's
+# heading onto each field under it — then has to guess which of the two
+# headings owns "Balance due". It produced `Notes Balance Due` (right, here)
+# and the round-2 report records the same mechanism producing `Oncor Customer
+# Charge` from a sidebar callout (wrong, there). The model is not choosing
+# badly; it is choosing without the evidence, because the columns were thrown
+# away before it saw the page.
+#
+# This is deliberately NOT a change to the document text. `doc_text_pages` is
+# what `verify_span` grounds against and what slot extraction is prompted with,
+# and rewriting it would change every span check and every cached answer in the
+# project. This builds a SECOND rendering, for inference only.
+#
+# The gutter is the page's own (`gutter_for_page`), never a constant: a fixed
+# 24pt threshold reading a five-party contact matrix as one line is already
+# recorded as a failure in this file. A line with no gutter comes back
+# byte-identical to `text_from_lines`, so a document with no side-by-side
+# blocks is asked exactly what it was asked before.
+
+#: What a column break looks like in the inference prompt. Visible, because an
+#: invisible one (a run of spaces) is what the model already fails to notice.
+COLUMN_MARK = "   |   "
+
+
+def split_at_gutters(line, gutter):
+    """[[word, ...], ...] — one segment per column this line spans."""
+    xs = sorted(line or (), key=lambda w: float(w["x0"]))
+    if not xs:
+        return []
+    segs, cur = [], [xs[0]]
+    for a, b in zip(xs, xs[1:]):
+        if float(b["x0"]) - float(a["x1"]) >= gutter:
+            segs.append(cur)
+            cur = [b]
+        else:
+            cur.append(b)
+    segs.append(cur)
+    return segs
+
+
+#: A segment that is only digits and punctuation is a VALUE, not a block.
+_NOT_PROSE = re.compile(r"^[\s\d.,:;$£€¥%()+\-/*#]*$")
+
+
+def _is_prose(seg) -> bool:
+    t = " ".join(str(w["text"]) for w in seg)
+    return bool(re.search(r"[A-Za-z]{2}", t)) and not _NOT_PROSE.match(t)
+
+
+def column_text(lines, prose_only=True) -> str:
+    """One page's text with its BLOCK breaks kept, for inference only.
+
+    Not every gutter is a block boundary, and marking all of them was measured
+    and rejected: it marked 63% of the corpus's lines, including the gap
+    between a label and its own amount, and the no-template harness fell
+    96.7% -> 95.2% with 10 misfilings where there had been none. STMT-2024-01
+    is the clearest instance — marking `Opening Balance | $184,320.55` as two
+    columns made inference model the summary box as a TABLE, and three fields
+    gold expects went missing.
+
+    A break is a block boundary when the text on BOTH sides of it is prose. A
+    label beside its amount is one thing in two columns; two runs of words side
+    by side are two blocks. That drops the marked share to 34% and leaves the
+    label/value case exactly as it was.
+    """
+    if not lines:
+        return ""
+    gutter = gutter_for_page(lines)
+    out = []
+    for ln in lines:
+        if not ln:
+            continue
+        segs = split_at_gutters(ln, gutter)
+        if prose_only and sum(1 for sg in segs if _is_prose(sg)) < 2:
+            segs = [[w for sg in segs for w in sg]]
+        out.append(COLUMN_MARK.join(
+            " ".join(str(w["text"]) for w in seg) for seg in segs))
+    return "\n".join(out)
+
+
+def column_text_pages(page_lines, fallback_pages=()):
+    """(texts, pages_carrying_a_column_break).
+
+    A page with no geometry — an image, a hand-built fixture — falls back to
+    the flat text it already had, so a caller never loses a page by asking for
+    columns.
+    """
+    fallback = list(fallback_pages or [])
+    texts, marked = [], 0
+    for i, lines in enumerate(page_lines or []):
+        if not lines:
+            texts.append(str(fallback[i]) if i < len(fallback) else "")
+            continue
+        t = column_text(lines)
+        if COLUMN_MARK in t:
+            marked += 1
+        texts.append(t)
+    if not texts:
+        return [str(t or "") for t in fallback], 0
+    return texts, marked
+
+
 # ── multi-line values ───────────────────────────────────────────────────────
 
 #: A column gutter is derived PER LINE, not fixed. A single threshold cannot

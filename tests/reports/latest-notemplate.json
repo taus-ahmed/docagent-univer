@@ -1,6 +1,6 @@
 {
- "run_id": "2026-09-16 00:37:05",
- "git_commit": "c592f25",
+ "run_id": "2026-09-16 02:21:20",
+ "git_commit": "95cf75d",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -2270,6 +2270,7 @@
     "fields": [
      "Bank Name",
      "Bank Address",
+     "Member FDIC",
      "Cheque Number",
      "Drawer Name",
      "Drawer Address",
@@ -2309,7 +2310,7 @@
      "Amount in Words": "Eight Thousand Four Hundred Ten and 00/100 *** U.S. DOLLARS ***",
      "Memo": "Payment for PO-2024-0018 — Steel materials",
      "Authorized By": "Janet Wu",
-     "Amount in Figures": "$ 8,410.00",
+     "Amount in Figures": "8,410.00",
      "Routing Number": "021000021",
      "Account Number": "7743882201",
      "Date": "January 31, 2024",
@@ -2363,7 +2364,7 @@
      "Amount in Figures": {
       "outcome": "correct",
       "expected": 8410.0,
-      "actual": "$ 8,410.00",
+      "actual": "8,410.00",
       "type": "money",
       "in_gold_schema": true
      },
@@ -2507,7 +2508,7 @@
      "Amount in Figures": {
       "outcome": "correct",
       "expected": 8410.0,
-      "actual": "$ 8,410.00",
+      "actual": "8,410.00",
       "type": "money",
       "in_gold_schema": true
      },
@@ -2782,22 +2783,22 @@
      "Company Name",
      "Company Address",
      "Company Phone",
-     "Company EIN",
-     "Employee",
-     "Report No",
-     "Status",
+     "Company Tax ID",
+     "Employee Name",
      "Employee ID",
      "Department",
      "Manager",
-     "Period",
+     "Report Period",
      "Purpose",
+     "Report Number",
+     "Status",
      "Employee Signature",
      "Manager Approval Signature",
      "Finance Approval Signature"
     ],
     "tables": [
      {
-      "name": "Expenses",
+      "name": "Expense Details",
       "columns": [
        "Date",
        "Type",
@@ -2823,23 +2824,25 @@
     "fatal": false,
     "replay_cache_miss": false
    },
-   "adapter_notes": [],
+   "adapter_notes": [
+    "table 'Expense Details' -> gold table 'expenses' by row content (table counts differ)"
+   ],
    "adapted": {
     "fields": {
-     "Report No": "EXP-2024-0081",
-     "Status": "APPROVED",
+     "Employee Name": "Marcus A. Thompson",
      "Employee ID": "EMP-0012",
      "Department": "Procurement",
      "Manager": "Janet Wu",
-     "Period": "March 15–22, 2024",
      "Purpose": "Supplier site visit — Pacific Steel, Los Angeles",
+     "Status": "APPROVED",
      "Total Claimed": "$1,727.25",
+     "Period": "March 15–22, 2024",
      "Manager Approval Signature": "Janet Wu",
      "Company Name": "NEXUS GLOBAL TRADING LLC",
      "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Company Phone": "(212) 555-0148",
-     "Company EIN": "47-3821654",
-     "Employee": "Marcus A. Thompson",
+     "Company Tax ID": "47-3821654",
+     "Report Number": "EXP-2024-0081",
      "Employee Signature": "Marcus A. Thompson",
      "Finance Approval Signature": "Finance Dept."
     },
@@ -2925,12 +2928,11 @@
     "document_type": "expense_report",
     "fields": {
      "Employee Name": {
-      "outcome": "renamed",
+      "outcome": "correct",
       "expected": "Marcus A. Thompson",
       "actual": "Marcus A. Thompson",
       "type": "string",
-      "in_gold_schema": true,
-      "renamed_to": "Employee"
+      "in_gold_schema": true
      },
      "Employee ID": {
       "outcome": "correct",
@@ -2940,11 +2942,12 @@
       "in_gold_schema": true
      },
      "Report No": {
-      "outcome": "correct",
+      "outcome": "renamed",
       "expected": "EXP-2024-0081",
       "actual": "EXP-2024-0081",
       "type": "string",
-      "in_gold_schema": true
+      "in_gold_schema": true,
+      "renamed_to": "Report Number"
      },
      "Department": {
       "outcome": "correct",
@@ -3024,7 +3027,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Company EIN": {
+     "Company Tax ID": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "47-3821654",
@@ -3519,8 +3522,8 @@
      }
     },
     "counts": {
-     "renamed": 1,
      "correct": 53,
+     "renamed": 1,
      "hallucinated": 7
     },
     "renamed": 1,
@@ -3539,12 +3542,11 @@
     "document_type": "expense_report",
     "fields": {
      "Employee Name": {
-      "outcome": "renamed",
+      "outcome": "correct",
       "expected": "Marcus A. Thompson",
       "actual": "Marcus A. Thompson",
       "type": "string",
-      "in_gold_schema": true,
-      "renamed_to": "Employee"
+      "in_gold_schema": true
      },
      "Employee ID": {
       "outcome": "correct",
@@ -3554,11 +3556,12 @@
       "in_gold_schema": true
      },
      "Report No": {
-      "outcome": "correct",
+      "outcome": "renamed",
       "expected": "EXP-2024-0081",
       "actual": "EXP-2024-0081",
       "type": "string",
-      "in_gold_schema": true
+      "in_gold_schema": true,
+      "renamed_to": "Report Number"
      },
      "Department": {
       "outcome": "correct",
@@ -3575,11 +3578,12 @@
       "in_gold_schema": true
      },
      "Period": {
-      "outcome": "correct",
+      "outcome": "renamed",
       "expected": "March 15–22, 2024",
       "actual": "March 15–22, 2024",
       "type": "string",
-      "in_gold_schema": true
+      "in_gold_schema": true,
+      "renamed_to": "Report Period"
      },
      "Purpose": {
       "outcome": "correct",
@@ -3629,7 +3633,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Company EIN": {
+     "Company Tax ID": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "47-3821654",
@@ -3670,482 +3674,1183 @@
      "expenses": {
       "table": "expenses",
       "gold_row_count": 9,
-      "pred_row_count": 9,
-      "row_count_mismatch": 0,
-      "matched_rows": 9,
-      "row_precision": 1.0,
-      "row_recall": 1.0,
-      "cell_accuracy": 1.0,
-      "missed_rows": [],
+      "pred_row_count": 0,
+      "row_count_mismatch": -9,
+      "matched_rows": 0,
+      "row_precision": null,
+      "row_recall": 0.0,
+      "cell_accuracy": null,
+      "missed_rows": [
+       {
+        "row": 0,
+        "gold": {
+         "Date": "03/15",
+         "Type": "Airfare",
+         "Description": "Delta Airlines JFK–LAX round trip",
+         "Category": "Travel",
+         "Amount": 842.0
+        }
+       },
+       {
+        "row": 1,
+        "gold": {
+         "Date": "03/15",
+         "Type": "Taxi",
+         "Description": "Airport to hotel LAX",
+         "Category": "Travel",
+         "Amount": 38.5
+        }
+       },
+       {
+        "row": 2,
+        "gold": {
+         "Date": "03/15",
+         "Type": "Hotel",
+         "Description": "Hilton LAX – 2 nights",
+         "Category": "Lodging",
+         "Amount": 389.0
+        }
+       },
+       {
+        "row": 3,
+        "gold": {
+         "Date": "03/16",
+         "Type": "Meals",
+         "Description": "Hotel breakfast",
+         "Category": "Meals",
+         "Amount": 24.75
+        }
+       },
+       {
+        "row": 4,
+        "gold": {
+         "Date": "03/16",
+         "Type": "M&E",
+         "Description": "Client lunch w/ Pacific Steel (4 pax)",
+         "Category": "Meals & Entmt",
+         "Amount": 187.4
+        }
+       },
+       {
+        "row": 5,
+        "gold": {
+         "Date": "03/16",
+         "Type": "Taxi",
+         "Description": "Hotel to Pacific Steel facility",
+         "Category": "Travel",
+         "Amount": 22.0
+        }
+       },
+       {
+        "row": 6,
+        "gold": {
+         "Date": "03/17",
+         "Type": "Meals",
+         "Description": "Team dinner (2 pax)",
+         "Category": "Meals",
+         "Amount": 95.6
+        }
+       },
+       {
+        "row": 7,
+        "gold": {
+         "Date": "03/18",
+         "Type": "Taxi",
+         "Description": "Hotel to LAX",
+         "Category": "Travel",
+         "Amount": 41.0
+        }
+       },
+       {
+        "row": 8,
+        "gold": {
+         "Date": "03/18",
+         "Type": "Parking",
+         "Description": "JFK long-term parking 3 days",
+         "Category": "Travel",
+         "Amount": 87.0
+        }
+       }
+      ],
       "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "03/15",
-        "actual": "03/15",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Airfare",
-        "actual": "Airfare",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Delta Airlines JFK–LAX round trip",
-        "actual": "Delta Airlines JFK–LAX round trip",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Travel",
-        "actual": "Travel",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 0,
-        "pred_row": 0,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 842.0,
-        "actual": "$842.00",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "03/15",
-        "actual": "03/15",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Taxi",
-        "actual": "Taxi",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Airport to hotel LAX",
-        "actual": "Airport to hotel LAX",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Travel",
-        "actual": "Travel",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 1,
-        "pred_row": 1,
+        "pred_row": null,
         "column": "Amount",
         "type": "money",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": 38.5,
-        "actual": "$38.50",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Date",
         "type": "date",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "03/15",
-        "actual": "03/15",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Hotel",
-        "actual": "Hotel",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Hilton LAX – 2 nights",
-        "actual": "Hilton LAX — 2 nights",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
-        "pred_row": 2,
+        "pred_row": null,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
+        "outcome": "missed",
         "expected": "Lodging",
-        "actual": "Lodging",
-        "in_gold_schema": true
+        "actual": null
        },
        {
         "row": 2,
+        "pred_row": null,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "missed",
+        "expected": 389.0,
+        "actual": null
+       },
+       {
+        "row": 3,
+        "pred_row": null,
+        "column": "Date",
+        "type": "date",
+        "outcome": "missed",
+        "expected": "03/16",
+        "actual": null
+       },
+       {
+        "row": 3,
+        "pred_row": null,
+        "column": "Type",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Meals",
+        "actual": null
+       },
+       {
+        "row": 3,
+        "pred_row": null,
+        "column": "Description",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Hotel breakfast",
+        "actual": null
+       },
+       {
+        "row": 3,
+        "pred_row": null,
+        "column": "Category",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Meals",
+        "actual": null
+       },
+       {
+        "row": 3,
+        "pred_row": null,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "missed",
+        "expected": 24.75,
+        "actual": null
+       },
+       {
+        "row": 4,
+        "pred_row": null,
+        "column": "Date",
+        "type": "date",
+        "outcome": "missed",
+        "expected": "03/16",
+        "actual": null
+       },
+       {
+        "row": 4,
+        "pred_row": null,
+        "column": "Type",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "M&E",
+        "actual": null
+       },
+       {
+        "row": 4,
+        "pred_row": null,
+        "column": "Description",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Client lunch w/ Pacific Steel (4 pax)",
+        "actual": null
+       },
+       {
+        "row": 4,
+        "pred_row": null,
+        "column": "Category",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Meals & Entmt",
+        "actual": null
+       },
+       {
+        "row": 4,
+        "pred_row": null,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "missed",
+        "expected": 187.4,
+        "actual": null
+       },
+       {
+        "row": 5,
+        "pred_row": null,
+        "column": "Date",
+        "type": "date",
+        "outcome": "missed",
+        "expected": "03/16",
+        "actual": null
+       },
+       {
+        "row": 5,
+        "pred_row": null,
+        "column": "Type",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Taxi",
+        "actual": null
+       },
+       {
+        "row": 5,
+        "pred_row": null,
+        "column": "Description",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Hotel to Pacific Steel facility",
+        "actual": null
+       },
+       {
+        "row": 5,
+        "pred_row": null,
+        "column": "Category",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Travel",
+        "actual": null
+       },
+       {
+        "row": 5,
+        "pred_row": null,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "missed",
+        "expected": 22.0,
+        "actual": null
+       },
+       {
+        "row": 6,
+        "pred_row": null,
+        "column": "Date",
+        "type": "date",
+        "outcome": "missed",
+        "expected": "03/17",
+        "actual": null
+       },
+       {
+        "row": 6,
+        "pred_row": null,
+        "column": "Type",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Meals",
+        "actual": null
+       },
+       {
+        "row": 6,
+        "pred_row": null,
+        "column": "Description",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Team dinner (2 pax)",
+        "actual": null
+       },
+       {
+        "row": 6,
+        "pred_row": null,
+        "column": "Category",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Meals",
+        "actual": null
+       },
+       {
+        "row": 6,
+        "pred_row": null,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "missed",
+        "expected": 95.6,
+        "actual": null
+       },
+       {
+        "row": 7,
+        "pred_row": null,
+        "column": "Date",
+        "type": "date",
+        "outcome": "missed",
+        "expected": "03/18",
+        "actual": null
+       },
+       {
+        "row": 7,
+        "pred_row": null,
+        "column": "Type",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Taxi",
+        "actual": null
+       },
+       {
+        "row": 7,
+        "pred_row": null,
+        "column": "Description",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Hotel to LAX",
+        "actual": null
+       },
+       {
+        "row": 7,
+        "pred_row": null,
+        "column": "Category",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Travel",
+        "actual": null
+       },
+       {
+        "row": 7,
+        "pred_row": null,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "missed",
+        "expected": 41.0,
+        "actual": null
+       },
+       {
+        "row": 8,
+        "pred_row": null,
+        "column": "Date",
+        "type": "date",
+        "outcome": "missed",
+        "expected": "03/18",
+        "actual": null
+       },
+       {
+        "row": 8,
+        "pred_row": null,
+        "column": "Type",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Parking",
+        "actual": null
+       },
+       {
+        "row": 8,
+        "pred_row": null,
+        "column": "Description",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "JFK long-term parking 3 days",
+        "actual": null
+       },
+       {
+        "row": 8,
+        "pred_row": null,
+        "column": "Category",
+        "type": "string",
+        "outcome": "missed",
+        "expected": "Travel",
+        "actual": null
+       },
+       {
+        "row": 8,
+        "pred_row": null,
+        "column": "Amount",
+        "type": "money",
+        "outcome": "missed",
+        "expected": 87.0,
+        "actual": null
+       }
+      ]
+     },
+     "Expense Details": {
+      "table": "Expense Details",
+      "gold_row_count": 0,
+      "pred_row_count": 9,
+      "row_count_mismatch": 9,
+      "matched_rows": 0,
+      "row_precision": 0.0,
+      "row_recall": null,
+      "cell_accuracy": null,
+      "missed_rows": [],
+      "hallucinated_rows": [
+       {
+        "pred_row": 0,
+        "pred": {
+         "Date": "03/15",
+         "Type": "Airfare",
+         "Description": "Delta Airlines JFK–LAX round trip",
+         "Category": "Travel",
+         "Amount": "$842.00",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 1,
+        "pred": {
+         "Date": "03/15",
+         "Type": "Taxi",
+         "Description": "Airport to hotel LAX",
+         "Category": "Travel",
+         "Amount": "$38.50",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 2,
+        "pred": {
+         "Date": "03/15",
+         "Type": "Hotel",
+         "Description": "Hilton LAX — 2 nights",
+         "Category": "Lodging",
+         "Amount": "$389.00",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 3,
+        "pred": {
+         "Date": "03/16",
+         "Type": "Meals",
+         "Description": "Hotel breakfast",
+         "Category": "Meals",
+         "Amount": "$24.75",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 4,
+        "pred": {
+         "Date": "03/16",
+         "Type": "M&E;",
+         "Description": "Client lunch w/ Pacific Steel (4 pax)",
+         "Category": "Meals & Entmt",
+         "Amount": "$187.40",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 5,
+        "pred": {
+         "Date": "03/16",
+         "Type": "Taxi",
+         "Description": "Hotel to Pacific Steel facility",
+         "Category": "Travel",
+         "Amount": "$22.00",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 6,
+        "pred": {
+         "Date": "03/17",
+         "Type": "Meals",
+         "Description": "Team dinner (2 pax)",
+         "Category": "Meals",
+         "Amount": "$95.60",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 7,
+        "pred": {
+         "Date": "03/18",
+         "Type": "Taxi",
+         "Description": "Hotel to LAX",
+         "Category": "Travel",
+         "Amount": "$41.00",
+         "_confidence": "grounded"
+        }
+       },
+       {
+        "pred_row": 8,
+        "pred": {
+         "Date": "03/18",
+         "Type": "Parking",
+         "Description": "JFK long-term parking 3 days",
+         "Category": "Travel",
+         "Amount": "$87.00",
+         "_confidence": "grounded"
+        }
+       }
+      ],
+      "cells": [
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Date",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "03/15",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Airfare",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Delta Airlines JFK–LAX round trip",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Travel",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 0,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$842.00",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Date",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "03/15",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Taxi",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Airport to hotel LAX",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Travel",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 1,
+        "column": "Amount",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "$38.50",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Date",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "03/15",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Type",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Hotel",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Description",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Hilton LAX — 2 nights",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
+        "pred_row": 2,
+        "column": "Category",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
+        "actual": "Lodging",
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
+       },
+       {
+        "row": null,
         "pred_row": 2,
         "column": "Amount",
-        "type": "money",
-        "outcome": "correct",
-        "expected": 389.0,
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "$389.00",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 3,
+        "row": null,
         "pred_row": 3,
         "column": "Date",
-        "type": "date",
-        "outcome": "correct",
-        "expected": "03/16",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "03/16",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 3,
+        "row": null,
         "pred_row": 3,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Meals",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Meals",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 3,
+        "row": null,
         "pred_row": 3,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Hotel breakfast",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Hotel breakfast",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 3,
+        "row": null,
         "pred_row": 3,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Meals",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Meals",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 3,
+        "row": null,
         "pred_row": 3,
         "column": "Amount",
-        "type": "money",
-        "outcome": "correct",
-        "expected": 24.75,
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "$24.75",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 4,
+        "row": null,
         "pred_row": 4,
         "column": "Date",
-        "type": "date",
-        "outcome": "correct",
-        "expected": "03/16",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "03/16",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 4,
+        "row": null,
         "pred_row": 4,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
-        "expected": "M&E",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "M&E;",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 4,
+        "row": null,
         "pred_row": 4,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Client lunch w/ Pacific Steel (4 pax)",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Client lunch w/ Pacific Steel (4 pax)",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 4,
+        "row": null,
         "pred_row": 4,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Meals & Entmt",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Meals & Entmt",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 4,
+        "row": null,
         "pred_row": 4,
         "column": "Amount",
-        "type": "money",
-        "outcome": "correct",
-        "expected": 187.4,
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "$187.40",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 5,
+        "row": null,
         "pred_row": 5,
         "column": "Date",
-        "type": "date",
-        "outcome": "correct",
-        "expected": "03/16",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "03/16",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 5,
+        "row": null,
         "pred_row": 5,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Taxi",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Taxi",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 5,
+        "row": null,
         "pred_row": 5,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Hotel to Pacific Steel facility",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Hotel to Pacific Steel facility",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 5,
+        "row": null,
         "pred_row": 5,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Travel",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Travel",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 5,
+        "row": null,
         "pred_row": 5,
         "column": "Amount",
-        "type": "money",
-        "outcome": "correct",
-        "expected": 22.0,
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "$22.00",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 6,
+        "row": null,
         "pred_row": 6,
         "column": "Date",
-        "type": "date",
-        "outcome": "correct",
-        "expected": "03/17",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "03/17",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 6,
+        "row": null,
         "pred_row": 6,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Meals",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Meals",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 6,
+        "row": null,
         "pred_row": 6,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Team dinner (2 pax)",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Team dinner (2 pax)",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 6,
+        "row": null,
         "pred_row": 6,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Meals",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Meals",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 6,
+        "row": null,
         "pred_row": 6,
         "column": "Amount",
-        "type": "money",
-        "outcome": "correct",
-        "expected": 95.6,
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "$95.60",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 7,
+        "row": null,
         "pred_row": 7,
         "column": "Date",
-        "type": "date",
-        "outcome": "correct",
-        "expected": "03/18",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "03/18",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 7,
+        "row": null,
         "pred_row": 7,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Taxi",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Taxi",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 7,
+        "row": null,
         "pred_row": 7,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Hotel to LAX",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Hotel to LAX",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 7,
+        "row": null,
         "pred_row": 7,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Travel",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Travel",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 7,
+        "row": null,
         "pred_row": 7,
         "column": "Amount",
-        "type": "money",
-        "outcome": "correct",
-        "expected": 41.0,
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "$41.00",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 8,
+        "row": null,
         "pred_row": 8,
         "column": "Date",
-        "type": "date",
-        "outcome": "correct",
-        "expected": "03/18",
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "03/18",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 8,
+        "row": null,
         "pred_row": 8,
         "column": "Type",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Parking",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Parking",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 8,
+        "row": null,
         "pred_row": 8,
         "column": "Description",
         "type": "string",
-        "outcome": "correct",
-        "expected": "JFK long-term parking 3 days",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "JFK long-term parking 3 days",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 8,
+        "row": null,
         "pred_row": 8,
         "column": "Category",
         "type": "string",
-        "outcome": "correct",
-        "expected": "Travel",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "Travel",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        },
        {
-        "row": 8,
+        "row": null,
         "pred_row": 8,
         "column": "Amount",
-        "type": "money",
-        "outcome": "correct",
-        "expected": 87.0,
+        "type": "string",
+        "outcome": "hallucinated",
+        "expected": null,
         "actual": "$87.00",
-        "in_gold_schema": true
+        "in_gold_schema": false,
+        "grounded": true,
+        "halluc_kind": "out_of_schema"
        }
       ]
      }
     },
     "counts": {
-     "renamed": 1,
-     "correct": 53,
-     "hallucinated": 7
+     "correct": 7,
+     "renamed": 2,
+     "hallucinated": 52,
+     "missed": 45
     },
-    "renamed": 1,
+    "renamed": 2,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 7
+     "out_of_schema": 52
     },
     "hallucinated_ungrounded": 0,
-    "accuracy": 0.9814814814814815,
-    "hallucination_rate": 0.11475409836065574,
+    "accuracy": 0.12962962962962962,
+    "hallucination_rate": 0.8524590163934426,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -4153,12 +4858,11 @@
     "document_type": "expense_report",
     "fields": {
      "Employee Name": {
-      "outcome": "renamed",
+      "outcome": "correct",
       "expected": "Marcus A. Thompson",
       "actual": "Marcus A. Thompson",
       "type": "string",
-      "in_gold_schema": true,
-      "renamed_to": "Employee"
+      "in_gold_schema": true
      },
      "Employee ID": {
       "outcome": "correct",
@@ -4168,11 +4872,12 @@
       "in_gold_schema": true
      },
      "Report No": {
-      "outcome": "correct",
+      "outcome": "renamed",
       "expected": "EXP-2024-0081",
       "actual": "EXP-2024-0081",
       "type": "string",
-      "in_gold_schema": true
+      "in_gold_schema": true,
+      "renamed_to": "Report Number"
      },
      "Department": {
       "outcome": "correct",
@@ -4252,7 +4957,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Company EIN": {
+     "Company Tax ID": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "47-3821654",
@@ -4747,8 +5452,8 @@
      }
     },
     "counts": {
-     "renamed": 1,
      "correct": 53,
+     "renamed": 1,
      "hallucinated": 7
     },
     "renamed": 1,
@@ -4764,8 +5469,8 @@
    },
    "score_content": {
     "counts": {
-     "missed": 1,
      "correct": 17,
+     "missed": 1,
      "unmatched": 8
     },
     "gold_valued": 18,
@@ -4773,9 +5478,9 @@
     "unmatched": 8,
     "mismatches": [
      {
-      "key": "employee name",
+      "key": "report no",
       "outcome": "missed",
-      "expected": "Marcus A. Thompson",
+      "expected": "EXP-2024-0081",
       "actual": null
      }
     ]
@@ -4817,9 +5522,12 @@
      "PO Ref",
      "Payment Terms",
      "Status",
-     "Payment Instructions Notes",
-     "Payment Received Date",
-     "Payment Reference"
+     "Payment Instructions - Wire Bank",
+     "Payment Instructions - Wire ABA",
+     "Payment Instructions - Wire Account",
+     "Payment Instructions - Cheque Payable To",
+     "Notes - Payment Received",
+     "Notes - Reference"
     ],
     "tables": [
      {
@@ -4874,9 +5582,12 @@
      "Vendor Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Vendor Phone": "(212) 555-0148",
      "Vendor Tax ID": "47-3821654",
-     "Payment Instructions Notes": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
-     "Payment Received Date": "Feb 10, 2024",
-     "Payment Reference": "WT-20240210-4421"
+     "Payment Instructions - Wire Bank": "First National Bank of New York",
+     "Payment Instructions - Wire ABA": "021000021",
+     "Payment Instructions - Wire Account": "7743882201",
+     "Payment Instructions - Cheque Payable To": "NEXUS GLOBAL TRADING LLC",
+     "Notes - Payment Received": "Payment received via wire transfer Feb 10, 2024.",
+     "Notes - Reference": "WT-20240210-4421."
     },
     "tables": {
      "line_items": [
@@ -5046,28 +5757,55 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Instructions Notes": {
+     "Payment Instructions - Wire Bank": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
+      "actual": "First National Bank of New York",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Received Date": {
+     "Payment Instructions - Wire ABA": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Feb 10, 2024",
+      "actual": "021000021",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Reference": {
+     "Payment Instructions - Wire Account": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "WT-20240210-4421",
+      "actual": "7743882201",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Payment Instructions - Cheque Payable To": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "NEXUS GLOBAL TRADING LLC",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Notes - Payment Received": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Payment received via wire transfer Feb 10, 2024.",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Notes - Reference": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "WT-20240210-4421.",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -5293,17 +6031,17 @@
     "counts": {
      "correct": 32,
      "near": 1,
-     "hallucinated": 7
+     "hallucinated": 10
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 7
+     "out_of_schema": 10
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.175,
+    "hallucination_rate": 0.23255813953488372,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -5439,28 +6177,55 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Instructions Notes": {
+     "Payment Instructions - Wire Bank": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
+      "actual": "First National Bank of New York",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Received Date": {
+     "Payment Instructions - Wire ABA": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Feb 10, 2024",
+      "actual": "021000021",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Reference": {
+     "Payment Instructions - Wire Account": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "WT-20240210-4421",
+      "actual": "7743882201",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Payment Instructions - Cheque Payable To": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "NEXUS GLOBAL TRADING LLC",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Notes - Payment Received": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Payment received via wire transfer Feb 10, 2024.",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Notes - Reference": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "WT-20240210-4421.",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -6007,18 +6772,18 @@
      "correct": 10,
      "near": 1,
      "renamed": 2,
-     "hallucinated": 27,
+     "hallucinated": 30,
      "missed": 20
     },
     "renamed": 2,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 27
+     "out_of_schema": 30
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.30303030303030304,
-    "hallucination_rate": 0.675,
+    "hallucination_rate": 0.6976744186046512,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -6152,28 +6917,55 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Instructions Notes": {
+     "Payment Instructions - Wire Bank": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Wire: First National Bank of New York ABA: 021000021 Account: 7743882201 Cheque payable to: Nexus Global Trading LLC",
+      "actual": "First National Bank of New York",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Received Date": {
+     "Payment Instructions - Wire ABA": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Feb 10, 2024",
+      "actual": "021000021",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Payment Reference": {
+     "Payment Instructions - Wire Account": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "WT-20240210-4421",
+      "actual": "7743882201",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Payment Instructions - Cheque Payable To": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "NEXUS GLOBAL TRADING LLC",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Notes - Payment Received": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "Payment received via wire transfer Feb 10, 2024.",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Notes - Reference": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "WT-20240210-4421.",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -6399,28 +7191,28 @@
     "counts": {
      "correct": 32,
      "near": 1,
-     "hallucinated": 7
+     "hallucinated": 10
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 7
+     "out_of_schema": 10
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.175,
+    "hallucination_rate": 0.23255813953488372,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "correct": 24,
      "near": 1,
-     "unmatched": 7
+     "unmatched": 10
     },
     "gold_valued": 25,
     "accuracy": 0.96,
-    "unmatched": 7,
+    "unmatched": 10,
     "mismatches": [
      {
       "key": "bill to contact",
@@ -6462,18 +7254,17 @@
      "Bill To Company",
      "Bill To Address",
      "Bill To Contact",
-     "Bill To Email",
      "Invoice Number",
      "Invoice Date",
      "Due Date",
      "PO Reference",
      "Payment Terms",
      "Status",
-     "Wire Bank Name",
-     "Wire ABA",
-     "Wire Account Number",
-     "Cheque Payable To",
-     "Notes"
+     "Payment Instructions Wire Bank",
+     "Payment Instructions Wire ABA",
+     "Payment Instructions Wire Account",
+     "Payment Instructions Cheque Payable To",
+     "Notes Late Payment Interest"
     ],
     "tables": [
      {
@@ -6528,12 +7319,11 @@
      "Vendor Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Vendor Phone": "(212) 555-0148",
      "Vendor Tax ID": "47-3821654",
-     "Bill To Email": "sjohnson@pinnacleelec.com",
-     "Wire Bank Name": "First National Bank of New York",
-     "Wire ABA": "021000021",
-     "Wire Account Number": "7743882201",
-     "Cheque Payable To": "NEXUS GLOBAL TRADING LLC",
-     "Notes": "Balance due March 4, 2024. Late payments subject to 1.5% monthly interest."
+     "Payment Instructions Wire Bank": "First National Bank of New York",
+     "Payment Instructions Wire ABA": "021000021",
+     "Payment Instructions Wire Account": "7743882201",
+     "Payment Instructions Cheque Payable To": "NEXUS GLOBAL TRADING LLC",
+     "Notes Late Payment Interest": "1.5%"
     },
     "tables": {
      "line_items": [
@@ -6711,16 +7501,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Bill To Email": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "sjohnson@pinnacleelec.com",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
-     },
-     "Wire Bank Name": {
+     "Payment Instructions Wire Bank": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "First National Bank of New York",
@@ -6729,7 +7510,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Wire ABA": {
+     "Payment Instructions Wire ABA": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "021000021",
@@ -6738,7 +7519,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Wire Account Number": {
+     "Payment Instructions Wire Account": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "7743882201",
@@ -6747,7 +7528,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Cheque Payable To": {
+     "Payment Instructions Cheque Payable To": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "NEXUS GLOBAL TRADING LLC",
@@ -6756,10 +7537,10 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Notes": {
+     "Notes Late Payment Interest": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Balance due March 4, 2024. Late payments subject to 1.5% monthly interest.",
+      "actual": "1.5%",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -7034,17 +7815,17 @@
     },
     "counts": {
      "correct": 38,
-     "hallucinated": 10
+     "hallucinated": 9
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 9
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.20833333333333334,
+    "hallucination_rate": 0.19148936170212766,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -7179,16 +7960,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Bill To Email": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "sjohnson@pinnacleelec.com",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
-     },
-     "Wire Bank Name": {
+     "Payment Instructions Wire Bank": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "First National Bank of New York",
@@ -7197,7 +7969,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Wire ABA": {
+     "Payment Instructions Wire ABA": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "021000021",
@@ -7206,7 +7978,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Wire Account Number": {
+     "Payment Instructions Wire Account": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "7743882201",
@@ -7215,7 +7987,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Cheque Payable To": {
+     "Payment Instructions Cheque Payable To": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "NEXUS GLOBAL TRADING LLC",
@@ -7224,10 +7996,10 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Notes": {
+     "Notes Late Payment Interest": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Balance due March 4, 2024. Late payments subject to 1.5% monthly interest.",
+      "actual": "1.5%",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -7899,18 +8671,18 @@
     "counts": {
      "correct": 12,
      "renamed": 1,
-     "hallucinated": 35,
+     "hallucinated": 34,
      "missed": 25
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 35
+     "out_of_schema": 34
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.3157894736842105,
-    "hallucination_rate": 0.7291666666666666,
+    "hallucination_rate": 0.723404255319149,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -8044,16 +8816,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Bill To Email": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "sjohnson@pinnacleelec.com",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
-     },
-     "Wire Bank Name": {
+     "Payment Instructions Wire Bank": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "First National Bank of New York",
@@ -8062,7 +8825,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Wire ABA": {
+     "Payment Instructions Wire ABA": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "021000021",
@@ -8071,7 +8834,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Wire Account Number": {
+     "Payment Instructions Wire Account": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "7743882201",
@@ -8080,7 +8843,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Cheque Payable To": {
+     "Payment Instructions Cheque Payable To": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "NEXUS GLOBAL TRADING LLC",
@@ -8089,10 +8852,10 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Notes": {
+     "Notes Late Payment Interest": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "Balance due March 4, 2024. Late payments subject to 1.5% monthly interest.",
+      "actual": "1.5%",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -8367,27 +9130,27 @@
     },
     "counts": {
      "correct": 38,
-     "hallucinated": 10
+     "hallucinated": 9
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 9
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.20833333333333334,
+    "hallucination_rate": 0.19148936170212766,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "correct": 28,
-     "unmatched": 10
+     "unmatched": 9
     },
     "gold_valued": 28,
     "accuracy": 1.0,
-    "unmatched": 10,
+    "unmatched": 9,
     "mismatches": []
    },
    "score_structure": {
@@ -10382,7 +11145,7 @@
    "document_type": "payslip",
    "inferred_template": {
     "document_type": "payslip",
-    "title": "Nexus Global Trading Pay Stub",
+    "title": "Pay Stub",
     "fields": [
      "Employer Name",
      "Employer Address",
@@ -11812,7 +12575,9 @@
      "Pay Period",
      "Pay Date",
      "Annual Salary",
-     "NET PAY"
+     "NET PAY",
+     "YTD Gross Earnings",
+     "YTD Taxes Withheld"
     ],
     "tables": [
      {
@@ -11834,9 +12599,7 @@
     ],
     "totals": [
      "Total Earnings",
-     "Total Deductions",
-     "YTD Gross Earnings",
-     "YTD Taxes Withheld"
+     "Total Deductions"
     ],
     "novel_fields": []
    },
@@ -11861,10 +12624,10 @@
      "Pay Date": "April 30, 2024",
      "Annual Salary": "$90,000.00",
      "Net Pay": "$5,182.65",
-     "Total Earnings": "$8,300.00",
-     "Total Deductions": "($3,117.35)",
      "YTD Gross Earnings": "$33,500.00",
      "YTD Taxes Withheld": "$7,508.70",
+     "Total Earnings": "$8,300.00",
+     "Total Deductions": "($3,117.35)",
      "Employer Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Employer EIN": "47-3821654",
      "Title / Dept": "Purchasing Manager – Procurement"
@@ -13089,10 +13852,11 @@
      "Special Instructions",
      "Authorised By Name",
      "Authorised By Title",
-     "Buyer Signature Name",
-     "Buyer Signature Title",
-     "Buyer Signature Email",
-     "Buyer Signature Phone"
+     "Buyer Name Footer",
+     "Buyer Title Footer",
+     "Agreement Statement",
+     "Buyer Email Footer",
+     "Buyer Phone Footer"
     ],
     "tables": [
      {
@@ -13146,8 +13910,8 @@
      "Order Total": "$12,570.00",
      "Authorised By": "Janet Wu",
      "Authorised By Title": "VP Operations",
-     "Buyer Signature Name": "Marcus A. Thompson",
-     "Buyer Signature Title": "Purchasing Manager",
+     "Buyer Name Footer": "Marcus A. Thompson",
+     "Buyer Title Footer": "Purchasing Manager",
      "Tax": "$0.00",
      "Company Name": "NEXUS GLOBAL TRADING LLC",
      "Company Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
@@ -13157,8 +13921,9 @@
      "Buyer Phone": "(212) 555-0148",
      "Buyer Email": "purchasing@nexusglobaltrading.com",
      "Special Instructions": "Deliver with packing list and COA. Partial shipments not accepted.",
-     "Buyer Signature Email": "purchasing@nexusglobaltrading.com",
-     "Buyer Signature Phone": "(212) 555-0148"
+     "Agreement Statement": "PO constitutes a binding agreement.",
+     "Buyer Email Footer": "purchasing@nexusglobaltrading.com",
+     "Buyer Phone Footer": "(212) 555-0148"
     },
     "tables": {
      "line_items": [
@@ -13314,7 +14079,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Name": {
+     "Buyer Name Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "Marcus A. Thompson",
@@ -13323,7 +14088,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Title": {
+     "Buyer Title Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "Purchasing Manager",
@@ -13404,7 +14169,16 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Email": {
+     "Agreement Statement": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "PO constitutes a binding agreement.",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Buyer Email Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "purchasing@nexusglobaltrading.com",
@@ -13413,7 +14187,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Phone": {
+     "Buyer Phone Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "(212) 555-0148",
@@ -13592,17 +14366,17 @@
     "counts": {
      "correct": 30,
      "near": 1,
-     "hallucinated": 13
+     "hallucinated": 14
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 13
+     "out_of_schema": 14
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.967741935483871,
-    "hallucination_rate": 0.29545454545454547,
+    "hallucination_rate": 0.3111111111111111,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -13812,7 +14586,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Name": {
+     "Buyer Name Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "Marcus A. Thompson",
@@ -13821,7 +14595,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Title": {
+     "Buyer Title Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "Purchasing Manager",
@@ -13830,7 +14604,16 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Email": {
+     "Agreement Statement": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "PO constitutes a binding agreement.",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Buyer Email Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "purchasing@nexusglobaltrading.com",
@@ -13839,7 +14622,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Phone": {
+     "Buyer Phone Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "(212) 555-0148",
@@ -14263,17 +15046,17 @@
      "correct": 14,
      "missed": 16,
      "renamed": 1,
-     "hallucinated": 29
+     "hallucinated": 30
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 29
+     "out_of_schema": 30
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.45161290322580644,
-    "hallucination_rate": 0.6590909090909091,
+    "hallucination_rate": 0.6666666666666666,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -14401,7 +15184,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Name": {
+     "Buyer Name Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "Marcus A. Thompson",
@@ -14410,7 +15193,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Title": {
+     "Buyer Title Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "Purchasing Manager",
@@ -14491,7 +15274,16 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Email": {
+     "Agreement Statement": {
+      "outcome": "hallucinated",
+      "expected": null,
+      "actual": "PO constitutes a binding agreement.",
+      "type": "string",
+      "in_gold_schema": false,
+      "grounded": true,
+      "halluc_kind": "out_of_schema"
+     },
+     "Buyer Email Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "purchasing@nexusglobaltrading.com",
@@ -14500,7 +15292,7 @@
       "grounded": true,
       "halluc_kind": "out_of_schema"
      },
-     "Buyer Signature Phone": {
+     "Buyer Phone Footer": {
       "outcome": "hallucinated",
       "expected": null,
       "actual": "(212) 555-0148",
@@ -14679,28 +15471,28 @@
     "counts": {
      "correct": 30,
      "near": 1,
-     "hallucinated": 13
+     "hallucinated": 14
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 13
+     "out_of_schema": 14
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.967741935483871,
-    "hallucination_rate": 0.29545454545454547,
+    "hallucination_rate": 0.3111111111111111,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "correct": 24,
      "near": 1,
-     "unmatched": 13
+     "unmatched": 14
     },
     "gold_valued": 25,
     "accuracy": 0.96,
-    "unmatched": 13,
+    "unmatched": 14,
     "mismatches": [
      {
       "key": "authorised by",
@@ -14736,9 +15528,6 @@
     "title": "Account Statement",
     "fields": [
      "Bank Name",
-     "Bank Address",
-     "ABA",
-     "Member FDIC",
      "Account Holder",
      "Statement No",
      "Period",
@@ -14790,9 +15579,7 @@
      "Closing Balance": "$125,357.26",
      "Account Type": "Business Checking",
      "Total Credits": "$46,841.68",
-     "Total Debits": "$105,804.97",
-     "Bank Address": "330 Madison Avenue, New York, NY 10017",
-     "ABA": "021000021"
+     "Total Debits": "$105,804.97"
     },
     "tables": {
      "transactions": [
@@ -14980,24 +15767,6 @@
       "actual": "$125,357.26",
       "type": "money",
       "in_gold_schema": true
-     },
-     "Bank Address": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "330 Madison Avenue, New York, NY 10017",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
-     },
-     "ABA": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "021000021",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      }
     },
     "tables": {
@@ -15738,18 +16507,17 @@
     },
     "counts": {
      "correct": 70,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 2
+     "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.027777777777777776,
+    "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -15828,24 +16596,6 @@
       "actual": "$125,357.26",
       "type": "money",
       "in_gold_schema": true
-     },
-     "Bank Address": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "330 Madison Avenue, New York, NY 10017",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
-     },
-     "ABA": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "021000021",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      }
     },
     "tables": {
@@ -16587,18 +17337,17 @@
     "counts": {
      "correct": 67,
      "renamed": 3,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "renamed": 3,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 2
+     "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9571428571428572,
-    "hallucination_rate": 0.027777777777777776,
+    "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -16674,24 +17423,6 @@
       "actual": 125357.26,
       "type": "money",
       "in_gold_schema": true
-     },
-     "Bank Address": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "330 Madison Avenue, New York, NY 10017",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
-     },
-     "ABA": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "021000021",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      }
     },
     "tables": {
@@ -17432,28 +18163,26 @@
     },
     "counts": {
      "correct": 70,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 2
+     "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.027777777777777776,
+    "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
-     "correct": 34,
-     "unmatched": 2
+     "correct": 34
     },
     "gold_valued": 34,
     "accuracy": 1.0,
-    "unmatched": 2,
+    "unmatched": 0,
     "mismatches": []
    },
    "score_structure": {
@@ -17479,7 +18208,7 @@
   "overall": {
    "counts": {
     "correct": 381,
-    "hallucinated": 60,
+    "hallucinated": 61,
     "missed": 6,
     "renamed": 3,
     "near": 4,
@@ -17490,13 +18219,13 @@
    "near_rate": 0.01015228426395939,
    "renamed": 3,
    "rename_rate": 0.007614213197969543,
-   "hallucinated": 60,
-   "hallucination_rate": 0.13392857142857142,
+   "hallucinated": 61,
+   "hallucination_rate": 0.1358574610244989,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 0,
-   "out_of_schema": 60,
+   "out_of_schema": 61,
    "defect_rate": 0.0
   },
   "by_document_type": {
@@ -17523,7 +18252,6 @@
    "bank_statement": {
     "counts": {
      "correct": 70,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 70,
@@ -17531,13 +18259,13 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 2,
-    "hallucination_rate": 0.027777777777777776,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 2,
+    "out_of_schema": 0,
     "defect_rate": 0.0
    },
    "cheque": {
@@ -17561,8 +18289,8 @@
    },
    "expense_report": {
     "counts": {
-     "renamed": 1,
      "correct": 53,
+     "renamed": 1,
      "hallucinated": 7
     },
     "gold_valued": 54,
@@ -17624,40 +18352,40 @@
     "counts": {
      "correct": 30,
      "near": 1,
-     "hallucinated": 13
+     "hallucinated": 14
     },
     "gold_valued": 31,
     "accuracy": 0.967741935483871,
     "near_rate": 0.03225806451612903,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 13,
-    "hallucination_rate": 0.29545454545454547,
+    "hallucinated": 14,
+    "hallucination_rate": 0.3111111111111111,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 13,
+    "out_of_schema": 14,
     "defect_rate": 0.0
    },
    "sales_invoice": {
     "counts": {
      "correct": 70,
      "near": 1,
-     "hallucinated": 17
+     "hallucinated": 19
     },
     "gold_valued": 71,
     "accuracy": 0.9859154929577465,
     "near_rate": 0.014084507042253521,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 17,
-    "hallucination_rate": 0.19318181818181818,
+    "hallucinated": 19,
+    "hallucination_rate": 0.2111111111111111,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 17,
+    "out_of_schema": 19,
     "defect_rate": 0.0
    }
   },
@@ -17720,7 +18448,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 60,
+     "hallucinated": 61,
      "correct": 181,
      "missed": 3,
      "renamed": 3,
@@ -17731,13 +18459,13 @@
     "near_rate": 0.020942408376963352,
     "renamed": 3,
     "rename_rate": 0.015706806282722512,
-    "hallucinated": 60,
-    "hallucination_rate": 0.24193548387096775,
+    "hallucinated": 61,
+    "hallucination_rate": 0.24497991967871485,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 60,
+    "out_of_schema": 61,
     "defect_rate": 0.0
    }
   }
@@ -17745,25 +18473,25 @@
  "summary_raw": {
   "overall": {
    "counts": {
-    "correct": 276,
-    "hallucinated": 156,
-    "missed": 101,
-    "renamed": 14,
+    "correct": 230,
+    "hallucinated": 202,
+    "missed": 146,
+    "renamed": 15,
     "near": 3,
     "empty_ok": 12
    },
    "gold_valued": 394,
-   "accuracy": 0.700507614213198,
+   "accuracy": 0.583756345177665,
    "near_rate": 0.007614213197969543,
-   "renamed": 14,
-   "rename_rate": 0.03553299492385787,
-   "hallucinated": 156,
-   "hallucination_rate": 0.34743875278396436,
+   "renamed": 15,
+   "rename_rate": 0.03807106598984772,
+   "hallucinated": 202,
+   "hallucination_rate": 0.4488888888888889,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 0,
-   "out_of_schema": 156,
+   "out_of_schema": 202,
    "defect_rate": 0.0
   },
   "by_document_type": {
@@ -17791,7 +18519,6 @@
     "counts": {
      "correct": 67,
      "renamed": 3,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 70,
@@ -17799,13 +18526,13 @@
     "near_rate": 0.0,
     "renamed": 3,
     "rename_rate": 0.04285714285714286,
-    "hallucinated": 2,
-    "hallucination_rate": 0.027777777777777776,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 2,
+    "out_of_schema": 0,
     "defect_rate": 0.0
    },
    "cheque": {
@@ -17830,22 +18557,23 @@
    },
    "expense_report": {
     "counts": {
-     "renamed": 1,
-     "correct": 53,
-     "hallucinated": 7
+     "correct": 7,
+     "renamed": 2,
+     "hallucinated": 52,
+     "missed": 45
     },
     "gold_valued": 54,
-    "accuracy": 0.9814814814814815,
+    "accuracy": 0.12962962962962962,
     "near_rate": 0.0,
-    "renamed": 1,
-    "rename_rate": 0.018518518518518517,
-    "hallucinated": 7,
-    "hallucination_rate": 0.11475409836065574,
+    "renamed": 2,
+    "rename_rate": 0.037037037037037035,
+    "hallucinated": 52,
+    "hallucination_rate": 0.8524590163934426,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 7,
+    "out_of_schema": 52,
     "defect_rate": 0.0
    },
    "income_statement": {
@@ -17896,20 +18624,20 @@
      "correct": 14,
      "missed": 16,
      "renamed": 1,
-     "hallucinated": 29
+     "hallucinated": 30
     },
     "gold_valued": 31,
     "accuracy": 0.45161290322580644,
     "near_rate": 0.0,
     "renamed": 1,
     "rename_rate": 0.03225806451612903,
-    "hallucinated": 29,
-    "hallucination_rate": 0.6590909090909091,
+    "hallucinated": 30,
+    "hallucination_rate": 0.6666666666666666,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 29,
+    "out_of_schema": 30,
     "defect_rate": 0.0
    },
    "sales_invoice": {
@@ -17917,7 +18645,7 @@
      "correct": 22,
      "near": 1,
      "renamed": 3,
-     "hallucinated": 62,
+     "hallucinated": 64,
      "missed": 45
     },
     "gold_valued": 71,
@@ -17925,13 +18653,13 @@
     "near_rate": 0.014084507042253521,
     "renamed": 3,
     "rename_rate": 0.04225352112676056,
-    "hallucinated": 62,
-    "hallucination_rate": 0.7045454545454546,
+    "hallucinated": 64,
+    "hallucination_rate": 0.7111111111111111,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 62,
+    "out_of_schema": 64,
     "defect_rate": 0.0
    }
   },
@@ -17939,10 +18667,11 @@
    "date": {
     "counts": {
      "renamed": 1,
-     "correct": 29
+     "missed": 9,
+     "correct": 20
     },
     "gold_valued": 30,
-    "accuracy": 0.9666666666666667,
+    "accuracy": 0.6666666666666666,
     "near_rate": 0.0,
     "renamed": 1,
     "rename_rate": 0.03333333333333333,
@@ -17957,13 +18686,13 @@
    },
    "money": {
     "counts": {
-     "correct": 125,
-     "missed": 28,
+     "correct": 116,
+     "missed": 37,
      "renamed": 8,
      "empty_ok": 12
     },
     "gold_valued": 161,
-    "accuracy": 0.7763975155279503,
+    "accuracy": 0.7204968944099379,
     "near_rate": 0.0,
     "renamed": 8,
     "rename_rate": 0.049689440993788817,
@@ -17996,24 +18725,24 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 156,
-     "missed": 61,
-     "correct": 122,
-     "renamed": 5,
+     "hallucinated": 202,
+     "missed": 88,
+     "correct": 94,
+     "renamed": 6,
      "near": 3
     },
     "gold_valued": 191,
-    "accuracy": 0.6387434554973822,
+    "accuracy": 0.49214659685863876,
     "near_rate": 0.015706806282722512,
-    "renamed": 5,
-    "rename_rate": 0.02617801047120419,
-    "hallucinated": 156,
-    "hallucination_rate": 0.5454545454545454,
+    "renamed": 6,
+    "rename_rate": 0.031413612565445025,
+    "hallucinated": 202,
+    "hallucination_rate": 0.6622950819672131,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 156,
+    "out_of_schema": 202,
     "defect_rate": 0.0
    }
   }
@@ -18022,7 +18751,7 @@
   "overall": {
    "counts": {
     "correct": 381,
-    "hallucinated": 60,
+    "hallucinated": 61,
     "missed": 6,
     "renamed": 3,
     "near": 4,
@@ -18033,13 +18762,13 @@
    "near_rate": 0.01015228426395939,
    "renamed": 3,
    "rename_rate": 0.007614213197969543,
-   "hallucinated": 60,
-   "hallucination_rate": 0.13392857142857142,
+   "hallucinated": 61,
+   "hallucination_rate": 0.1358574610244989,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 0,
-   "out_of_schema": 60,
+   "out_of_schema": 61,
    "defect_rate": 0.0
   },
   "by_document_type": {
@@ -18066,7 +18795,6 @@
    "bank_statement": {
     "counts": {
      "correct": 70,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 70,
@@ -18074,13 +18802,13 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 2,
-    "hallucination_rate": 0.027777777777777776,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 2,
+    "out_of_schema": 0,
     "defect_rate": 0.0
    },
    "cheque": {
@@ -18104,8 +18832,8 @@
    },
    "expense_report": {
     "counts": {
-     "renamed": 1,
      "correct": 53,
+     "renamed": 1,
      "hallucinated": 7
     },
     "gold_valued": 54,
@@ -18167,40 +18895,40 @@
     "counts": {
      "correct": 30,
      "near": 1,
-     "hallucinated": 13
+     "hallucinated": 14
     },
     "gold_valued": 31,
     "accuracy": 0.967741935483871,
     "near_rate": 0.03225806451612903,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 13,
-    "hallucination_rate": 0.29545454545454547,
+    "hallucinated": 14,
+    "hallucination_rate": 0.3111111111111111,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 13,
+    "out_of_schema": 14,
     "defect_rate": 0.0
    },
    "sales_invoice": {
     "counts": {
      "correct": 70,
      "near": 1,
-     "hallucinated": 17
+     "hallucinated": 19
     },
     "gold_valued": 71,
     "accuracy": 0.9859154929577465,
     "near_rate": 0.014084507042253521,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 17,
-    "hallucination_rate": 0.19318181818181818,
+    "hallucinated": 19,
+    "hallucination_rate": 0.2111111111111111,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 17,
+    "out_of_schema": 19,
     "defect_rate": 0.0
    }
   },
@@ -18263,7 +18991,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 60,
+     "hallucinated": 61,
      "correct": 181,
      "missed": 3,
      "renamed": 3,
@@ -18274,13 +19002,13 @@
     "near_rate": 0.020942408376963352,
     "renamed": 3,
     "rename_rate": 0.015706806282722512,
-    "hallucinated": 60,
-    "hallucination_rate": 0.24193548387096775,
+    "hallucinated": 61,
+    "hallucination_rate": 0.24497991967871485,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 60,
+    "out_of_schema": 61,
     "defect_rate": 0.0
    }
   }
@@ -18289,11 +19017,11 @@
   "counts": {
    "correct": 231,
    "missed": 6,
-   "unmatched": 63,
+   "unmatched": 64,
    "near": 4
   },
   "gold_valued": 241,
-  "unmatched": 63,
+  "unmatched": 64,
   "accuracy": 0.9585062240663901
  },
  "summary_structure": {
@@ -18305,12 +19033,12 @@
  },
  "calibration": {
   "grounded": {
-   "n": 430,
+   "n": 431,
    "correct": 377,
    "wrong": 0,
    "missed": 0,
    "near": 3,
-   "hallucinated": 50
+   "hallucinated": 51
   },
   "low": {
    "n": 10,
@@ -18323,5 +19051,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-09-15 23:45:58"
+ "diff_against": "2026-09-16 02:09:05"
 }

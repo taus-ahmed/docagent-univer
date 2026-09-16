@@ -182,20 +182,47 @@ def _sections_block(sections):
 
 
 def infer_template(orchestrator, doc_text_pages, page_images, filename="",
-                   doc_type_hint=""):
+                   doc_type_hint="", column_pages=None):
     """One LLM call. Returns the inferred template dict, or None on failure.
 
     `doc_type_hint` selects the CANONICAL VOCABULARY offered to the model
     (engine/vocabulary.py). It comes from keyword pre-screening, costs no
     LLM call, and is only a hint: the model still decides `document_type`
     itself, and a wrong hint costs nothing but an unused name list.
+
+    `column_pages` is the SAME pages rendered with their column breaks kept
+    (`text_layer.column_text_pages`). Rule 3 below asks the model to prefix a
+    block's heading onto each field under it, and with the columns flattened
+    away it has to guess which of two side-by-side headings owns a line — the
+    I5 mode-1 defect. Only the DOCUMENT block uses it: `detect_amount_sections`
+    keeps the FLAT text, because its splitter cuts a line at the whitespace
+    before its trailing number and a column mark inside the label would be
+    carried into the section name.
+
+    A page with no column break renders byte-identically either way, and the
+    explanatory line is added ONLY when a mark is actually present — so a
+    document with no side-by-side blocks is asked exactly what it was asked
+    before, and its recorded answer stays valid.
     """
+    shown = list(column_pages) if column_pages else list(doc_text_pages or [])
     text = "\n".join(f"--- page {i} ---\n{t or ''}"
-                     for i, t in enumerate(doc_text_pages or [], 1))[:_MAX_TEXT]
+                     for i, t in enumerate(shown, 1))[:_MAX_TEXT]
+    column_note = ""
+    try:
+        from text_layer import COLUMN_MARK
+        if COLUMN_MARK in text:
+            column_note = (
+                "\nThe document text marks a COLUMN BREAK as "
+                f"'{COLUMN_MARK.strip()}'. Text on opposite sides of one is "
+                "printed in SEPARATE columns of the page and belongs to "
+                "separate blocks, however close it looks on the line.\n")
+    except Exception:
+        column_note = ""
 
     prompt = (
         "Design the spreadsheet template for extracting this document.\n\n"
-        "=== DOCUMENT ===\n" + text + "\n=== END DOCUMENT ===\n\n"
+        "=== DOCUMENT ===\n" + text + "\n=== END DOCUMENT ===\n"
+        + column_note + "\n"
         "Describe its STRUCTURE, not its values:\n\n"
         "1. document_type — one of: sales_invoice, purchase_order, cheque, "
         "receipt, pay_order, bank_statement, payslip, expense_report, "

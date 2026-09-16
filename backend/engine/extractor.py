@@ -92,7 +92,82 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
     return None, resp
 
 
-def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images):
+
+
+def _with_label_provenance(template_data, page_lines):
+    """`template_data` + this DOCUMENT's label provenance, on a copy.
+
+    Provenance is a property of (label, document), never of the schema. A
+    batch-reused schema is shared by every document of its kind, so storing the
+    quotes on it handed the second statement the FIRST one's lines — including
+    its statement number, which `test_batch_isolation` caught as contamination.
+    The copy is shallow and the schema itself is never mutated, because the
+    next document of this kind gets the same object.
+    """
+    if not template_data or not template_data.get("inferred"):
+        return template_data
+    out = dict(template_data)
+    out["inferred_label_provenance"] = _label_provenance(
+        out.get("layout"), page_lines)
+    return out
+
+
+def _label_provenance(grid, page_lines):
+    """{cell_ref: {source, page}} for every inferred label PRINTED on the page.
+
+    I5 mode 2. An inferred label is the model's own word for a value, and by
+    standing policy it does not have to be the document's (CLAUDE.md, "Naming":
+    a letterhead company name has no printed label at all, and an ambiguous one
+    is deliberately replaced by the precise term). So this REQUIRES nothing,
+    rejects nothing and renames nothing — it records the line a label was read
+    from when there is one.
+
+    Measured before it existed: of 2,858 inference labels in the recorded
+    corpus, 1,599 are printed verbatim and 1,259 are not, and nothing could
+    tell which of those 1,259 were policy and which were contamination, because
+    a label carried no location. This is what makes that answerable.
+
+    Kept OUT of the grid on purpose. A grid cell is `{value, style}` — text a
+    user could have typed — and that is the invariant the whole one-rule shape
+    system rests on. This travels beside it, exactly as `field_provenance` is
+    kept apart from `extracted_data`.
+    """
+    if not page_lines:
+        return {}
+    from text_layer import find_line, line_page, text_from_lines
+    lines = [ln for pg in page_lines for ln in (pg or [])]
+    if not lines:
+        return {}
+    out = {}
+    for key, cell in (grid or {}).get("cells", {}).items():
+        value = str((cell or {}).get("value") or "").strip()
+        if not value:
+            continue
+        ln = find_line(lines, value)
+        if not ln:
+            continue
+        try:
+            r, c = (int(x) for x in key.split(","))
+        except (ValueError, AttributeError):
+            continue
+        out[_cell_ref(r, c)] = {"source": text_from_lines([ln]),
+                                "page": line_page(ln)}
+    return out
+
+
+def _cell_ref(row, col):
+    letters = ""
+    c = int(col)
+    while True:
+        letters = chr(ord("A") + c % 26) + letters
+        c = c // 26 - 1
+        if c < 0:
+            break
+    return f"{letters}{int(row) + 1}"
+
+
+def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images,
+                         page_lines=None):
     """Phase 3 — read the document, design a template for it, and return the
     same `template_data` a saved template would produce. Returns None if the
     document's structure could not be worked out.
@@ -106,10 +181,22 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images):
 
     # The canonical vocabulary is chosen by keyword pre-screening — no LLM
     # call, and only a hint: the model still decides the document type itself.
+    # I5 mode 1 — the SAME pages with their column breaks kept, so a block
+    # heading printed beside another one is not read as owning its neighbour's
+    # lines. `doc_text_pages` is untouched: it is what `verify_span` grounds
+    # against and what slot extraction is prompted with.
+    column_pages, marked = [], 0
+    if page_lines:
+        from text_layer import column_text_pages
+        column_pages, marked = column_text_pages(page_lines, doc_text_pages)
+        if marked:
+            _log("INFER", f"{file_path.name}: {marked} page(s) carry a column "
+                          f"break; inference reads them with columns kept")
     inferred = infer_template(orchestrator, doc_text_pages, page_images,
                               file_path.name,
                               doc_type_hint=_hint_type("\n".join(
-                                  str(t or "") for t in (doc_text_pages or []))))
+                                  str(t or "") for t in (doc_text_pages or []))),
+                              column_pages=column_pages or None)
     if not inferred:
         return None
     grid = build_grid(inferred)
@@ -343,7 +430,8 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
                           f"(shape {reused.get('shape_signature')}) "
                           f"— no inference call")
             trial = dict(ctx)
-            trial["template_data"] = reused
+            trial["template_data"] = _with_label_provenance(
+                reused, ctx.get("page_lines"))
             trial["default_doc_type"] = reused.get("doc_type", default_doc_type)
             from slot_extractor import run_slot_extraction
             results = run_slot_extraction(**trial)
@@ -362,12 +450,15 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
                           f"document instead")
 
         template_data = _infer_template_data(orchestrator, file_path,
-                                             doc_text_pages, page_images)
+                                             doc_text_pages, page_images,
+                                             ctx.get("page_lines"))
         if template_data is None:
             from app.api.routes.extract import _fail
             return [_fail(file_path.name,
                           "Could not work out this document's structure. "
                           "Select a template and try again.")]
+        template_data = _with_label_provenance(template_data,
+                                               ctx.get("page_lines"))
         ctx["template_data"] = template_data
         default_doc_type = template_data.get("doc_type", default_doc_type)
         ctx["default_doc_type"] = default_doc_type

@@ -777,6 +777,7 @@ one function at the export boundary, not a validation change.
  "validation_notes": [...], "needs_review": bool,
  "template_type": "slot",                        # authoritative export routing
  "inferred_template", "inferred_grid", "shape_signature",  # no-template only
+ "inferred_label_provenance": {cell_ref: {source, page}},  # I5, no-template only
  "layout_sections": {}, "table_rows": []}        # kept empty for legacy readers
 ```
 
@@ -803,6 +804,39 @@ flagged field failed to save**, counted as a failure with the cause only on
 stdout. The review panel, reading `.reason` off a string, drew a row of blanks.
 `_flag_summary` in `extract.py` still tolerates the old shapes, because a
 summary line must never be the reason a document is lost.
+
+### Inference reads the page with its columns (I5)
+
+`text_layer.column_text` builds a SECOND rendering of each page with its column
+breaks kept, marked `   |   `, and **only inference reads it**.
+`doc_text_pages` is untouched: it is what `verify_span` grounds against and what
+slot extraction is prompted with, and rewriting it would change every span check
+in the project. A page with no break renders byte-identically, and the prompt's
+explanatory line is added only when a mark is present, so a document with no
+side-by-side blocks is asked exactly what it was asked before.
+
+**A break is a block boundary only when the text on BOTH sides is prose.**
+Marking every gutter was tried and **rejected on evidence**: it marked 63% of
+the corpus's lines, including the gap between a label and its own amount, and
+the live no-template harness fell 96.7% → 95.2% with 10 misfilings where there
+had been none. `STMT-2024-01` is the clearest case — marking `Opening Balance |
+$184,320.55` as two columns made inference model the summary box as a *table*,
+and three fields gold expects went missing. The prose rule marks 34%, and the
+harness returns to 96.7% with every per-document accuracy unchanged.
+
+It is worth it because inference is asked to prefix a block's heading onto each
+field under it, and a flattened page makes that a guess: `INV-2024-0031` yielded
+a field literally named `Payment Instructions Notes`, manufactured from two
+headings on one line. ⚠ **It does nothing for I7** — measured: the ENGIE
+interleaved account number is identical in both renderings, because that is two
+strings stacked VERTICALLY, with no horizontal gap to split.
+
+`inferred_label_provenance` records the line each inferred label was read from
+**where there is one** — it requires nothing and renames nothing, because a
+label does not have to be the document's word (see "Naming" above). ⚠ It is a
+property of (label, DOCUMENT), never of the schema: stored on the schema, batch
+reuse handed the second statement the first one's quoted lines. See
+DECISION-LOG §19.
 
 ### No template: inference, not a second engine (`shape_inference.py`)
 

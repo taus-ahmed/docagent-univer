@@ -1221,6 +1221,12 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         "inferred_grid": ((template_data or {}).get("layout")
                           if (template_data or {}).get("inferred") else None),
         "shape_signature": (template_data or {}).get("shape_signature"),
+        # I5 — {cell_ref: {source, page}} for every inferred label the page
+        # actually prints. Recorded, never required; a label the document does
+        # not print simply has no entry. See extractor._label_provenance.
+        "inferred_label_provenance": (
+            (template_data or {}).get("inferred_label_provenance")
+            if (template_data or {}).get("inferred") else None),
         "raw_llm_responses": [getattr(resp, "raw_text", "")] if resp else [],
     }
     for name, rows in tables_out.items():

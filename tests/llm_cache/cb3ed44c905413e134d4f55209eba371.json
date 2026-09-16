@@ -1,0 +1,70 @@
+{
+ "key": "cb3ed44c905413e134d4f55209eba37158f5c6bbe897d2935147718e93babec9",
+ "meta": {
+  "method": "extract",
+  "context": "PO-2024-0018",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3008,
+  "captured_at": "2026-09-16 02:08:50",
+  "prompt_preview": "Design the spreadsheet template for extracting this document.\n\n=== DOCUMENT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC   |   PURCHASE ORDER\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nPO Number: PO-2024-0018\nDate: January 10, 2024\nRequired By: January 28, 2"
+ },
+ "response": {
+  "raw_text": "{\n  \"document_type\": \"purchase_order\",\n  \"title\": \"Purchase Order\",\n  \"fields\": [\n    \"Company Name\",\n    \"Company Address\",\n    \"Company Phone\",\n    \"Company Tax ID\",\n    \"PO Number\",\n    \"Date\",\n    \"Required By\",\n    \"Terms\",\n    \"Ship Via\",\n    \"Vendor Name\",\n    \"Vendor Address\",\n    \"Vendor Contact\",\n    \"Vendor Phone\",\n    \"Vendor ID\",\n    \"Buyer Name\",\n    \"Buyer Title\",\n    \"Buyer Phone\",\n    \"Buyer Email\",\n    \"Special Instructions\",\n    \"Authorised By Name\",\n    \"Authorised By Title\",\n    \"Buyer Name Footer\",\n    \"Buyer Title Footer\",\n    \"Agreement Statement\",\n    \"Buyer Email Footer\",\n    \"Buyer Phone Footer\"\n  ],\n  \"tables\": [\n    {\n      \"name\": \"Item / Description Qty Unit Unit Cost Total\",\n      \"columns\": [\n        \"Item / Description\",\n        \"Qty\",\n        \"Unit\",\n        \"Unit Cost\",\n        \"Total\"\n      ],\n      \"row_count\": 3\n    }\n  ],\n  \"totals\": [\n    \"Subtotal\",\n    \"Freight\",\n    \"Tax (exempt)\",\n    \"ORDER TOTAL\"\n  ]\n}",
+  "parsed_json": {
+   "document_type": "purchase_order",
+   "title": "Purchase Order",
+   "fields": [
+    "Company Name",
+    "Company Address",
+    "Company Phone",
+    "Company Tax ID",
+    "PO Number",
+    "Date",
+    "Required By",
+    "Terms",
+    "Ship Via",
+    "Vendor Name",
+    "Vendor Address",
+    "Vendor Contact",
+    "Vendor Phone",
+    "Vendor ID",
+    "Buyer Name",
+    "Buyer Title",
+    "Buyer Phone",
+    "Buyer Email",
+    "Special Instructions",
+    "Authorised By Name",
+    "Authorised By Title",
+    "Buyer Name Footer",
+    "Buyer Title Footer",
+    "Agreement Statement",
+    "Buyer Email Footer",
+    "Buyer Phone Footer"
+   ],
+   "tables": [
+    {
+     "name": "Item / Description Qty Unit Unit Cost Total",
+     "columns": [
+      "Item / Description",
+      "Qty",
+      "Unit",
+      "Unit Cost",
+      "Total"
+     ],
+     "row_count": 3
+    }
+   ],
+   "totals": [
+    "Subtotal",
+    "Freight",
+    "Tax (exempt)",
+    "ORDER TOTAL"
+   ]
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 3008,
+  "success": true,
+  "error": ""
+ }
+}

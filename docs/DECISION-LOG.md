@@ -885,6 +885,163 @@ after, per document and in every summary, in both modes: templated 97.2% /
 The new counters are additive keys on `validation`; nothing that reads the
 result contract sees a changed value.
 
+## 19. I5: the report's recommendation is right about one kind of label and wrong about the other
+
+*Recorded 2026-09-16*
+
+The round-2 report says labels are "assembled rather than quoted" and recommends
+treating them exactly as values — a verbatim span with its own quote and
+location. That is **already implemented for the labels that come from the
+document, and would re-run a measured failure for the labels that do not.**
+There are four label paths and they are not the same kind of thing:
+
+| label | comes from | has a span? |
+|---|---|---|
+| templated field slot (`template_shape.py:911`) | the USER's own grid cell | no, and the question does not apply |
+| templated band column (`:709`, `:348`) | the user's grid heading | no, same |
+| **band ROW label** | the document — it is a CELL of the answer row | **yes. Grounded, placement-checked, provenance-carrying** |
+| inferred field / column / total (`shape_inference.py:333`) | the model | no |
+| `layout_sections` row label (`extract.py:1537`) | the model, prompt says "item name from document" and never asks it to quote | no |
+
+**Measured across every recorded answer in the repo — 5,225 labels, 332
+answers, 25 documents:**
+
+| class | labels | printed verbatim |
+|---|---|---|
+| band row label | 1,957 | **100.0%** |
+| `layout_sections.label` | 410 | 98.8% |
+| inference (field, column, table, total, title) | 2,858 | 55.9% |
+
+**Right for band row labels — and already done.** A band's label column is
+answered as a cell like any other, so it carries the row's source span, is
+checked by `verify_span` and `check_placement`, and is written with provenance.
+1,957 of 1,957 are the document's own words. There is nothing to change.
+
+**Wrong for inference labels, and the project has measured why.** A verbatim
+rule would reject **1,259 of 2,858** inference labels. That is not a defect
+count; it is mostly the naming policy stated in CLAUDE.md, which exists on
+purpose: *no printed label (a letterhead, a signature, the digits inside a MICR
+line) → take the name from the canonical list*, and *printed label ambiguous
+about WHICH value it is → prefer the list's precise term*. At least 100 and 78
+of the observed non-verbatim labels are exactly those two rules. The cost of
+over-restricting naming is already on the record: the first vocabulary told the
+model to prefer listed names, it read that as "do not report what is not
+listed", dropped the employer from a payslip and the status from an expense
+report, and cost one invoice 34 points. **We are not doing that again.**
+
+There is also nowhere to put a span. An inferred label's destination is a
+`SheetSaveData` grid cell — `{value, style}`, text a user could have typed —
+and that is the invariant the whole one-rule shape system rests on. Shape is
+recomputed from the grid every run and never stored, so a span would have to
+survive inference → `build_grid` → `compute_shape` → writer, across the one
+boundary the architecture makes lossy on purpose.
+
+### 19a. Mode 1 is a text-layer column problem, not a naming problem
+
+`INV-2024-0047` prints two blocks side by side, and the flattener joins them:
+
+```
+Payment Instructions            Notes
+Wire: First National Bank ...   Balance due March 4, 2024. Late ...
+```
+
+Inference is asked to prefix a block's heading onto each field under it, and
+with the columns gone it has to guess which of two headings owns a line. It was
+not choosing badly — it was choosing without the evidence. `column_text` builds
+a SECOND rendering with the column breaks kept, **for inference only**:
+`doc_text_pages` is what `verify_span` grounds against and what slot extraction
+is prompted with, and rewriting it would change every span check in the project.
+
+**Not every gutter is a block boundary, and marking all of them was tried and
+rejected on evidence.** The blunt rule marked 63% of the corpus's lines,
+including the gap between a label and its own amount, and the live no-template
+harness fell **96.7% → 95.2% with 10 misfilings where there had been none**
+(defect rate 0.0% → 2.2%, 7 regressions). `STMT-2024-01` is the clearest case:
+marking `Opening Balance | $184,320.55` as two columns made inference model the
+summary box as a *table*, and three fields gold expects went missing.
+
+A break is a block boundary when the text on **both sides is prose**. A label
+beside its amount is one thing in two columns; two runs of words side by side
+are two blocks. That drops the marked share to 34%, and the live harness returns
+to **96.7%, misfiled 0, defect rate 0.0%, every per-document accuracy identical
+to baseline** — one extra out-of-schema label (`Member FDIC`, printed on the
+cheque, which gold has no field for).
+
+What it bought, on the two documents the defect lives on:
+
+- `INV-2024-0031`: the field `Payment Instructions Notes` — a name manufactured
+  from the two headings flattened onto one line — is **gone**. In its place, four
+  fields correctly attributed to the left block (`Payment Instructions - Wire
+  Bank / Wire ABA / Wire Account / Cheque Payable To`) and two to the right
+  (`Notes - Payment Received`, `Notes - Reference`). Before, the wire details had
+  no block prefix at all.
+- `INV-2024-0047`: `Wire ABA`, `Wire Account Number`, `Wire Bank Name`, `Cheque
+  Payable To` all become `Payment Instructions <X>`; the contentless field
+  `Notes` becomes `Notes Late Payment Interest`.
+
+⚠ **All 23 recorded `Notes X` labels were already CORRECT.** Every one names
+something genuinely printed in the Notes column. The defect was never a wrong
+answer on these documents — it was a correct guess made with no evidence, and
+one manufactured field name. That distinction is why the fix had to be judged on
+the harness rather than on the labels.
+
+⚠ **The report's own example does not hold.** `run6_engie_E3`, now recorded
+live against the real bill, reproduces `Oncor Customer Charge` exactly — and the
+bill **prints `Oncor Customer Charge $2.05` verbatim**. `Oncor` is not a prefix
+from a sidebar callout; it is the line. The mechanism I5 describes is real, but
+this instance of it is a misreading.
+
+⚠ **It does nothing for I7. Measured, not assumed.** The ENGIE interleaved
+account number `00000000112538645596` is present, identically, in both the flat
+and the column rendering. I7 is two strings stacked VERTICALLY and clustered into
+one line; there is no horizontal gap to split, so a gutter rule cannot reach it.
+
+### 19b. Mode 3 is a proven zero, and the reason is structural
+
+No label in any recorded answer has its characters contiguous on the page but
+its word boundary elsewhere. The one place a label is genuinely assembled from
+the page in code — `shape_inference._AMOUNT_LINE`, which splits a printed line
+at the whitespace before its trailing number — was audited directly across all
+69 corpus PDFs: **678 labels assembled on 43 documents, 0 landing mid-token, 0
+that are not a verbatim prefix of their own printed line.** The regex requires
+`\s+` before the number, so the cut is at a word boundary *by construction*. It
+cannot produce `01` + `0.25 %` → `01.25 %`; that join happened somewhere else.
+
+**Mode 4's cause is measurable even though mode 4 is not.** The same splitter
+retains **123 leading section letters and line numbers**, all on the Closing
+Disclosure (`A. Origination Charges`, `01 0.25 % of Loan Amount (Points)`), and
+hands them to the model without distinguishing "line number" from "label". No
+recorded answer carries the same label both with and without a prefix, so the
+inconsistency itself is unobserved here — the Closing Disclosure has no recorded
+answer at all.
+
+### 19c. The provenance sidecar, and the bug it nearly shipped with
+
+`inferred_label_provenance: {cell_ref: {source, page}}` travels beside
+`inferred_grid`, recording the line a label was read from **where there is one**.
+It requires nothing, rejects nothing and renames nothing — which is the only way
+to add it without re-running the failure above. 130 of 247 inferred labels on the
+gold corpus (52.6%) carry one; the rest correctly carry none. Mode 2 — "is this
+label policy or contamination?" — is answerable per label for the first time.
+
+⚠ **Provenance is a property of (label, DOCUMENT), never of the schema.** Stored
+on the inferred schema, it was handed to every document of that kind by batch
+reuse: the second bank statement carried the FIRST one's quoted lines, statement
+number included. `test_batch_isolation` caught it as cross-document
+contamination. `_with_label_provenance` now binds it per document, on a shallow
+copy, and never mutates the shared schema.
+
+### 19d. `layout_sections` labels: skipped, and why
+
+The report's recommendation applies cleanly here — one prompt line and a
+`verify_span` — and it was not done, because the check would have no reference.
+`_build_vision_prompt` has exactly one live caller (`extract.py:3701`, the image
+path) and it passes `doc_text=""`. An image has no text layer; that is the
+defining property of the path, and every value on it is already `unverified`.
+Asking the model to quote a span there produces a quote nothing can check. The
+other consumer is re-export of jobs stored before the slot pipeline. **Recorded
+as not-worth-doing rather than left unmentioned.**
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
