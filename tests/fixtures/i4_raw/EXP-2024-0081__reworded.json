@@ -1,0 +1,341 @@
+{
+ "run": "EXP-2024-0081__reworded",
+ "document": "EXP-2024-0081",
+ "pdf": "EXP-2024-0081.pdf",
+ "variant": "reworded",
+ "note": "reworded: table",
+ "captured_at": "2026-09-16 00:25:59",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "Employee Name",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "1,0": {
+    "value": "Employee ID",
+    "extractTarget": false
+   },
+   "1,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "2,0": {
+    "value": "Report No",
+    "extractTarget": false
+   },
+   "2,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "3,0": {
+    "value": "Department",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "4,0": {
+    "value": "Manager",
+    "extractTarget": false
+   },
+   "4,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "Period",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "6,0": {
+    "value": "Purpose",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "7,0": {
+    "value": "Status",
+    "extractTarget": false
+   },
+   "7,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "10,0": {
+    "value": "Posted",
+    "style": {}
+   },
+   "10,1": {
+    "value": "Kind",
+    "style": {}
+   },
+   "10,2": {
+    "value": "Particulars",
+    "style": {}
+   },
+   "10,3": {
+    "value": "Class",
+    "style": {}
+   },
+   "10,4": {
+    "value": "Value",
+    "style": {}
+   },
+   "21,0": {
+    "value": "Total Claimed",
+    "extractTarget": false
+   },
+   "21,1": {
+    "value": "",
+    "extractTarget": true
+   }
+  },
+  "colWidths": [
+   70,
+   80,
+   260,
+   110,
+   100,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "d4e85cf4befa4c0c32426ea176ba0c043d66a172da66c7c49e1b4cd98e9d5a15",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "25e593c7ea8b6895983e781c32cf78b6b03f0eb850fc13a470272ee8e10ce898",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "bec3aa631ce6c78954b272de5746cad839459a3f11b96c86483a65c578f7b8c5",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "9d71edc34faacc96ffab6fe009b05d16bac9a90338e1314e0d7eb7fbf534c786",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "Marcus A. Thompson",
+     "source": "Employee: Marcus A. Thompson",
+     "page": 1
+    },
+    "F2": {
+     "value": "EMP-0012",
+     "source": "Employee ID: EMP-0012",
+     "page": 1
+    },
+    "F3": {
+     "value": "EXP-2024-0081",
+     "source": "EXP-2024-0081",
+     "page": 1
+    },
+    "F4": {
+     "value": "Procurement",
+     "source": "Department: Procurement",
+     "page": 1
+    },
+    "F5": {
+     "value": "Janet Wu",
+     "source": "Manager: Janet Wu",
+     "page": 1
+    },
+    "F6": {
+     "value": "March 15–22, 2024",
+     "source": "Period: March 15–22, 2024",
+     "page": 1
+    },
+    "F7": {
+     "value": "Supplier site visit — Pacific Steel, Los Angeles",
+     "source": "Purpose: Supplier site visit — Pacific Steel, Los Angeles",
+     "page": 1
+    },
+    "F8": {
+     "value": "APPROVED",
+     "source": "APPROVED",
+     "page": 1
+    },
+    "F9": {
+     "value": "$1,727.25",
+     "source": "TOTAL CLAIMED: $1,727.25",
+     "page": 1
+    }
+   },
+   "tables": {
+    "table": [
+     {
+      "cells": {
+       "Posted": "03/15",
+       "Kind": "Airfare",
+       "Particulars": "Delta Airlines JFK–LAX round trip",
+       "Class": "Travel",
+       "Value": "$842.00"
+      },
+      "source": "03/15 Airfare Delta Airlines JFK–LAX round trip Travel $842.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/15",
+       "Kind": "Taxi",
+       "Particulars": "Airport to hotel LAX",
+       "Class": "Travel",
+       "Value": "$38.50"
+      },
+      "source": "03/15 Taxi Airport to hotel LAX Travel $38.50",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/15",
+       "Kind": "Hotel",
+       "Particulars": "Hilton LAX — 2 nights",
+       "Class": "Lodging",
+       "Value": "$389.00"
+      },
+      "source": "03/15 Hotel Hilton LAX — 2 nights Lodging $389.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/16",
+       "Kind": "Meals",
+       "Particulars": "Hotel breakfast",
+       "Class": "Meals",
+       "Value": "$24.75"
+      },
+      "source": "03/16 Meals Hotel breakfast Meals $24.75",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/16",
+       "Kind": "M&E;",
+       "Particulars": "Client lunch w/ Pacific Steel (4 pax)",
+       "Class": "Meals & Entmt",
+       "Value": "$187.40"
+      },
+      "source": "03/16 M&E; Client lunch w/ Pacific Steel (4 pax) Meals & Entmt $187.40",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/16",
+       "Kind": "Taxi",
+       "Particulars": "Hotel to Pacific Steel facility",
+       "Class": "Travel",
+       "Value": "$22.00"
+      },
+      "source": "03/16 Taxi Hotel to Pacific Steel facility Travel $22.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/17",
+       "Kind": "Meals",
+       "Particulars": "Team dinner (2 pax)",
+       "Class": "Meals",
+       "Value": "$95.60"
+      },
+      "source": "03/17 Meals Team dinner (2 pax) Meals $95.60",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/18",
+       "Kind": "Taxi",
+       "Particulars": "Hotel to LAX",
+       "Class": "Travel",
+       "Value": "$41.00"
+      },
+      "source": "03/18 Taxi Hotel to LAX Travel $41.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "03/18",
+       "Kind": "Parking",
+       "Particulars": "JFK long-term parking 3 days",
+       "Class": "Travel",
+       "Value": "$87.00"
+      },
+      "source": "03/18 Parking JFK long-term parking 3 days Travel $87.00",
+      "page": 1
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "EXP-2024-0081",
+   "variant": "reworded",
+   "band": "table",
+   "band_keys": [
+    "Posted",
+    "Kind",
+    "Particulars",
+    "Class",
+    "Value"
+   ],
+   "note": "reworded: table",
+   "returned": 9,
+   "kept": 9,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  }
+ ]
+}

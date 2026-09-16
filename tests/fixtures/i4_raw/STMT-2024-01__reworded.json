@@ -1,0 +1,404 @@
+{
+ "run": "STMT-2024-01__reworded",
+ "document": "STMT-2024-01",
+ "pdf": "STMT-2024-01.pdf",
+ "variant": "reworded",
+ "note": "reworded: table",
+ "captured_at": "2026-09-16 00:27:47",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "Bank Name",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "1,0": {
+    "value": "Account Holder",
+    "extractTarget": false
+   },
+   "1,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "2,0": {
+    "value": "Statement No",
+    "extractTarget": false
+   },
+   "2,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "3,0": {
+    "value": "Period",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "4,0": {
+    "value": "Account No",
+    "extractTarget": false
+   },
+   "4,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "Account Type",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "6,0": {
+    "value": "Opening Balance",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "9,0": {
+    "value": "Posted",
+    "style": {}
+   },
+   "9,1": {
+    "value": "Kind",
+    "style": {}
+   },
+   "9,2": {
+    "value": "Particulars",
+    "style": {}
+   },
+   "9,3": {
+    "value": "Withdrawals",
+    "style": {}
+   },
+   "9,4": {
+    "value": "Deposits",
+    "style": {}
+   },
+   "9,5": {
+    "value": "Running Balance",
+    "style": {}
+   },
+   "22,0": {
+    "value": "Total Credits",
+    "extractTarget": false
+   },
+   "22,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "23,0": {
+    "value": "Total Debits",
+    "extractTarget": false
+   },
+   "23,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "24,0": {
+    "value": "Closing Balance",
+    "extractTarget": false
+   },
+   "24,1": {
+    "value": "",
+    "extractTarget": true
+   }
+  },
+  "colWidths": [
+   70,
+   60,
+   260,
+   100,
+   100,
+   110,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "91a001924f2283257f0c1421bcfef048e02fa0a6b35279eb90c1a12f669a1e79",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "6b23f2b85e7995b08a2efd55021471180a24ca8d7276c201f9fcc5ff04961b7f",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "7242cc75a0f741dd004c97dcb4df0211033aa577ca794602bfdf68ab37cfc235",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "967054a97352f3c9cb1770c85a6b12aa03c369d28646c53214a683f4c869a08e",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "FIRST NATIONAL BANK OF NEW YORK",
+     "source": "FIRST NATIONAL BANK OF NEW YORK",
+     "page": 1
+    },
+    "F2": {
+     "value": "Nexus Global Trading LLC",
+     "source": "Account Holder: Nexus Global Trading LLC",
+     "page": 1
+    },
+    "F3": {
+     "value": "STMT-2024-01",
+     "source": "Statement No: STMT-2024-01",
+     "page": 1
+    },
+    "F4": {
+     "value": "January 2024",
+     "source": "Period: January 2024",
+     "page": 1
+    },
+    "F5": {
+     "value": "****7743",
+     "source": "Account No: ****7743",
+     "page": 1
+    },
+    "F6": {
+     "value": "Business Checking",
+     "source": "Type: Business Checking",
+     "page": 1
+    },
+    "F7": {
+     "value": "$184,320.55",
+     "source": "$184,320.55 $46,841.68 $105,804.97 $125,357.26",
+     "page": 1
+    },
+    "F8": {
+     "value": "$46,841.68",
+     "source": "$184,320.55 $46,841.68 $105,804.97 $125,357.26",
+     "page": 1
+    },
+    "F9": {
+     "value": "$105,804.97",
+     "source": "$184,320.55 $46,841.68 $105,804.97 $125,357.26",
+     "page": 1
+    },
+    "F10": {
+     "value": "$125,357.26",
+     "source": "$184,320.55 $46,841.68 $105,804.97 $125,357.26",
+     "page": 1
+    }
+   },
+   "tables": {
+    "table": [
+     {
+      "cells": {
+       "Posted": "01/03",
+       "Kind": "DEP",
+       "Particulars": "Wire deposit — Summit Retail Group",
+       "Withdrawals": "",
+       "Deposits": "$15,000.00",
+       "Running Balance": "$199,320.55"
+      },
+      "source": "01/03 DEP Wire deposit — Summit Retail Group $15,000.00 $199,320.55",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/05",
+       "Kind": "ACH",
+       "Particulars": "Payroll disbursement — January wk1",
+       "Withdrawals": "$18,450.00",
+       "Deposits": "",
+       "Running Balance": "$180,870.55"
+      },
+      "source": "01/05 ACH Payroll disbursement — January wk1 $18,450.00 $180,870.55",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/10",
+       "Kind": "CHQ",
+       "Particulars": "Cheque #001831 — National Office Supplies",
+       "Withdrawals": "$5,682.75",
+       "Deposits": "",
+       "Running Balance": "$175,187.80"
+      },
+      "source": "01/10 CHQ Cheque #001831 — National Office Supplies $5,682.75 $175,187.80",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/12",
+       "Kind": "DEP",
+       "Particulars": "Wire deposit — Pinnacle Electronics Corp.",
+       "Withdrawals": "",
+       "Deposits": "$22,934.50",
+       "Running Balance": "$198,122.30"
+      },
+      "source": "01/12 DEP Wire deposit — Pinnacle Electronics Corp. $22,934.50 $198,122.30",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/15",
+       "Kind": "FEE",
+       "Particulars": "Monthly account maintenance fee",
+       "Withdrawals": "$25.00",
+       "Deposits": "",
+       "Running Balance": "$198,097.30"
+      },
+      "source": "01/15 FEE Monthly account maintenance fee $25.00 $198,097.30",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/15",
+       "Kind": "ACH",
+       "Particulars": "Payroll disbursement — January wk3",
+       "Withdrawals": "$18,450.00",
+       "Deposits": "",
+       "Running Balance": "$179,647.30"
+      },
+      "source": "01/15 ACH Payroll disbursement — January wk3 $18,450.00 $179,647.30",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/18",
+       "Kind": "CHQ",
+       "Particulars": "Cheque #001832 — Con Edison utilities",
+       "Withdrawals": "$3,847.22",
+       "Deposits": "",
+       "Running Balance": "$175,800.08"
+      },
+      "source": "01/18 CHQ Cheque #001832 — Con Edison utilities $3,847.22 $175,800.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/22",
+       "Kind": "DEP",
+       "Particulars": "Wire deposit — BlueLine Wholesale Group",
+       "Withdrawals": "",
+       "Deposits": "$8,765.00",
+       "Running Balance": "$184,565.08"
+      },
+      "source": "01/22 DEP Wire deposit — BlueLine Wholesale Group $8,765.00 $184,565.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/25",
+       "Kind": "ACH",
+       "Particulars": "Federal tax deposit — Q4 payroll",
+       "Withdrawals": "$12,400.00",
+       "Deposits": "",
+       "Running Balance": "$172,165.08"
+      },
+      "source": "01/25 ACH Federal tax deposit — Q4 payroll $12,400.00 $172,165.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/28",
+       "Kind": "CHQ",
+       "Particulars": "Cheque #001833 — Manhattan Commercial Prop.",
+       "Withdrawals": "$28,500.00",
+       "Deposits": "",
+       "Running Balance": "$143,665.08"
+      },
+      "source": "01/28 CHQ Cheque #001833 — Manhattan Commercial Prop. $28,500.00 $143,665.08",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/30",
+       "Kind": "INT",
+       "Particulars": "Interest earned — savings component",
+       "Withdrawals": "",
+       "Deposits": "$142.18",
+       "Running Balance": "$143,807.26"
+      },
+      "source": "01/30 INT Interest earned — savings component $142.18 $143,807.26",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Posted": "01/31",
+       "Kind": "ACH",
+       "Particulars": "Payroll disbursement — January wk4",
+       "Withdrawals": "$18,450.00",
+       "Deposits": "",
+       "Running Balance": "$125,357.26"
+      },
+      "source": "01/31 ACH Payroll disbursement — January wk4 $18,450.00 $125,357.26",
+      "page": 1
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "STMT-2024-01",
+   "variant": "reworded",
+   "band": "table",
+   "band_keys": [
+    "Posted",
+    "Kind",
+    "Particulars",
+    "Withdrawals",
+    "Deposits",
+    "Running Balance"
+   ],
+   "note": "reworded: table",
+   "returned": 12,
+   "kept": 12,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  }
+ ]
+}

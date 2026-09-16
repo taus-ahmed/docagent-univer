@@ -1,0 +1,342 @@
+{
+ "run": "PO-2024-0018__narrowed",
+ "document": "PO-2024-0018",
+ "pdf": "PO-2024-0018.pdf",
+ "variant": "narrowed",
+ "note": "narrowed: table",
+ "captured_at": "2026-09-16 00:27:14",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "PO Number",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "1,0": {
+    "value": "Date",
+    "extractTarget": false
+   },
+   "1,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "2,0": {
+    "value": "Required By",
+    "extractTarget": false
+   },
+   "2,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "3,0": {
+    "value": "Terms",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "4,0": {
+    "value": "Ship Via",
+    "extractTarget": false
+   },
+   "4,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "Vendor Name",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "6,0": {
+    "value": "Vendor Address",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "7,0": {
+    "value": "Vendor Contact",
+    "extractTarget": false
+   },
+   "7,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "8,0": {
+    "value": "Vendor ID",
+    "extractTarget": false
+   },
+   "8,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "9,0": {
+    "value": "Buyer Name",
+    "extractTarget": false
+   },
+   "9,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "10,0": {
+    "value": "Buyer Title",
+    "extractTarget": false
+   },
+   "10,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "11,0": {
+    "value": "Authorised By",
+    "extractTarget": false
+   },
+   "11,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "19,0": {
+    "value": "Subtotal",
+    "extractTarget": false
+   },
+   "19,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "20,0": {
+    "value": "Freight",
+    "extractTarget": false
+   },
+   "20,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "21,0": {
+    "value": "Tax",
+    "extractTarget": false
+   },
+   "21,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "22,0": {
+    "value": "Order Total",
+    "extractTarget": false
+   },
+   "22,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "13,0": {
+    "value": "Item / Description",
+    "style": {}
+   },
+   "13,1": {
+    "value": "Total",
+    "style": {}
+   }
+  },
+  "colWidths": [
+   260,
+   70,
+   80,
+   100,
+   110,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "32e1202b1048a156edf5f93142391ec2c12d434d815b60c21b9a05df0ce75803",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "b18f76c06133c9514925f8bdfb07a2745a94fe27ec9b0e38c033db8f361ef1a5",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "3cfff85042555c12726aca729165683045b160596a1fa2ff6925e1de3fb81d6f",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "b3df343e0c6a141bdc1908cbadd7ced12c1cb2877f426d4b36e61285b8a16205",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "PO-2024-0018",
+     "source": "PO Number: PO-2024-0018",
+     "page": 1
+    },
+    "F2": {
+     "value": "January 10, 2024",
+     "source": "Date: January 10, 2024",
+     "page": 1
+    },
+    "F3": {
+     "value": "January 28, 2024",
+     "source": "Required By: January 28, 2024",
+     "page": 1
+    },
+    "F4": {
+     "value": "Net 30",
+     "source": "Terms: Net 30",
+     "page": 1
+    },
+    "F5": {
+     "value": "Vendor's carrier",
+     "source": "Ship Via: Vendor's carrier",
+     "page": 1
+    },
+    "F6": {
+     "value": "Pacific Steel & Metals Co.",
+     "source": "Pacific Steel & Metals Co.",
+     "page": 1
+    },
+    "F7": {
+     "value": "2200 Harbor Drive, Los Angeles, CA 90021",
+     "source": "2200 Harbor Drive, Los Angeles, CA 90021",
+     "page": 1
+    },
+    "F8": {
+     "value": "Ms. Linda Zhao | (310) 555-0233",
+     "source": "Ms. Linda Zhao | (310) 555-0233",
+     "page": 1
+    },
+    "F9": {
+     "value": "VND-0041",
+     "source": "Vendor ID: VND-0041",
+     "page": 1
+    },
+    "F10": {
+     "value": "Marcus A. Thompson",
+     "source": "Marcus A. Thompson",
+     "page": 1
+    },
+    "F11": {
+     "value": "Purchasing Manager",
+     "source": "Purchasing Manager",
+     "page": 1
+    },
+    "F12": {
+     "value": "Janet Wu — VP Operations",
+     "source": "Janet Wu — VP Operations",
+     "page": 1
+    },
+    "F13": {
+     "value": "$12,090.00",
+     "source": "Subtotal: $12,090.00",
+     "page": 1
+    },
+    "F14": {
+     "value": "$480.00",
+     "source": "Freight: $480.00",
+     "page": 1
+    },
+    "F15": {
+     "value": "$0.00",
+     "source": "Tax (exempt): $0.00",
+     "page": 1
+    },
+    "F16": {
+     "value": "$12,570.00",
+     "source": "ORDER TOTAL: $12,570.00",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Item / Description": [
+     {
+      "cells": {
+       "Item / Description": "Steel Wire Coils Grade A 500m (SW-500A)",
+       "Total": "$7,750.00"
+      },
+      "source": "Steel Wire Coils Grade A 500m (SW-500A) 50 pcs $155.00 $7,750.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Item / Description": "Steel Sheet 2mm 1200x2400 (SS-2MM)",
+       "Total": "$2,640.00"
+      },
+      "source": "Steel Sheet 2mm 1200x2400 (SS-2MM) 30 sheets $88.00 $2,640.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Item / Description": "Mild Steel Round Bar 20mm x 3m (RB-20)",
+       "Total": "$1,700.00"
+      },
+      "source": "Mild Steel Round Bar 20mm x 3m (RB-20) 40 lengths $42.50 $1,700.00",
+      "page": 1
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "PO-2024-0018",
+   "variant": "narrowed",
+   "band": "Item / Description",
+   "band_keys": [
+    "Item / Description",
+    "Total"
+   ],
+   "note": "narrowed: table",
+   "returned": 3,
+   "kept": 3,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  }
+ ]
+}

@@ -1,0 +1,419 @@
+{
+ "run": "IS-2024-Q4__reworded",
+ "document": "IS-2024-Q4",
+ "pdf": "IS-2024-Q4.pdf",
+ "variant": "reworded",
+ "note": "reworded: REVENUE, COST OF GOODS SOLD, OPERATING EXPENSES",
+ "captured_at": "2026-09-16 00:26:47",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "REVENUE",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "3,0": {
+    "value": "Net Revenue",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "COST OF GOODS SOLD",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "10,0": {
+    "value": "Total COGS",
+    "extractTarget": false
+   },
+   "10,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "12,0": {
+    "value": "OPERATING EXPENSES",
+    "extractTarget": false
+   },
+   "12,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "23,0": {
+    "value": "Total Operating Expenses",
+    "extractTarget": false
+   },
+   "23,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "25,0": {
+    "value": "Gross Profit",
+    "extractTarget": false
+   },
+   "25,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "26,0": {
+    "value": "Operating Income (EBIT)",
+    "extractTarget": false
+   },
+   "26,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "27,0": {
+    "value": "Interest Income",
+    "extractTarget": false
+   },
+   "27,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "28,0": {
+    "value": "Net Income Before Tax",
+    "extractTarget": false
+   },
+   "28,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "29,0": {
+    "value": "Income Tax Provision",
+    "extractTarget": false
+   },
+   "29,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "30,0": {
+    "value": "Net Income After Tax",
+    "extractTarget": false
+   },
+   "30,1": {
+    "value": "",
+    "extractTarget": true
+   }
+  },
+  "colWidths": [
+   240,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "e0daaf64a999bc7261fd95bf348dd92cde851a0834d1a48d35c50d180783d904",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "fc582eaaac801cd08fc7a4d21c2a9deb29286105a2cf51f0aa04cc244aa2efcf",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "4d8cecad885102f48bd4315c73a9958793a04ac1e1b13471839d0c94bfef7bde",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "d0f394d872ff7f149a8a49d60c88a7a15919b5cfef323eba0a36a49bcc9011f7",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "$1,951,400",
+     "source": "Net Revenue $1,951,400",
+     "page": 1
+    },
+    "F2": {
+     "value": "$1,256,000",
+     "source": "Total COGS $1,256,000",
+     "page": 1
+    },
+    "F3": {
+     "value": "$359,250",
+     "source": "Total Operating Expenses $359,250",
+     "page": 1
+    },
+    "F4": {
+     "value": "$695,400",
+     "source": "GROSS PROFIT $695,400",
+     "page": 1
+    },
+    "F5": {
+     "value": "$336,150",
+     "source": "OPERATING INCOME (EBIT) $336,150",
+     "page": 1
+    },
+    "F6": {
+     "value": "$1,240",
+     "source": "Interest Income $1,240",
+     "page": 1
+    },
+    "F7": {
+     "value": "$337,390",
+     "source": "NET INCOME (LOSS) BEFORE TAX $337,390",
+     "page": 1
+    },
+    "F8": {
+     "value": "$70,852",
+     "source": "Est. Income Tax Provision (21%) $70,852",
+     "page": 1
+    },
+    "F9": {
+     "value": "$266,538",
+     "source": "NET INCOME (LOSS) AFTER TAX $266,538",
+     "page": 1
+    }
+   },
+   "tables": {
+    "REVENUE": [
+     {
+      "cells": {
+       "REVENUE": "Gross Sales",
+       "Value": "$1,980,000"
+      },
+      "source": "Gross Sales $1,980,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "REVENUE": "Less: Returns",
+       "Value": "$28,600"
+      },
+      "source": "Less: Returns $28,600",
+      "page": 1
+     }
+    ],
+    "COST OF GOODS SOLD": [
+     {
+      "cells": {
+       "COST OF GOODS SOLD": "Opening Inventory",
+       "Value": "$648,000"
+      },
+      "source": "Opening Inventory $648,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "COST OF GOODS SOLD": "Purchases",
+       "Value": "$1,280,000"
+      },
+      "source": "Purchases $1,280,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "COST OF GOODS SOLD": "Freight In",
+       "Value": "$52,000"
+      },
+      "source": "Freight In $52,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "COST OF GOODS SOLD": "Less: Closing Inventory",
+       "Value": "$724,000"
+      },
+      "source": "Less: Closing Inventory $724,000",
+      "page": 1
+     }
+    ],
+    "OPERATING EXPENSES": [
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Salaries & Wages",
+       "Value": "$190,000"
+      },
+      "source": "Salaries & Wages $190,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Rent",
+       "Value": "$85,500"
+      },
+      "source": "Rent $85,500",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Marketing",
+       "Value": "$22,400"
+      },
+      "source": "Marketing $22,400",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Utilities",
+       "Value": "$12,100"
+      },
+      "source": "Utilities $12,100",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Depreciation",
+       "Value": "$10,300"
+      },
+      "source": "Depreciation $10,300",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Insurance",
+       "Value": "$7,150"
+      },
+      "source": "Insurance $7,150",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Office & Misc",
+       "Value": "$5,800"
+      },
+      "source": "Office & Misc $5,800",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Professional Fees",
+       "Value": "$18,000"
+      },
+      "source": "Professional Fees $18,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Bank Charges & Interest",
+       "Value": "$3,800"
+      },
+      "source": "Bank Charges & Interest $3,800",
+      "page": 1
+     },
+     {
+      "cells": {
+       "OPERATING EXPENSES": "Bad Debt",
+       "Value": "$4,200"
+      },
+      "source": "Bad Debt $4,200",
+      "page": 1
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "IS-2024-Q4",
+   "variant": "reworded",
+   "band": "REVENUE",
+   "band_keys": [
+    "REVENUE",
+    "Value"
+   ],
+   "note": "reworded: REVENUE, COST OF GOODS SOLD, OPERATING EXPENSES",
+   "returned": 2,
+   "kept": 2,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "IS-2024-Q4",
+   "variant": "reworded",
+   "band": "COST OF GOODS SOLD",
+   "band_keys": [
+    "COST OF GOODS SOLD",
+    "Value"
+   ],
+   "note": "reworded: REVENUE, COST OF GOODS SOLD, OPERATING EXPENSES",
+   "returned": 4,
+   "kept": 4,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "IS-2024-Q4",
+   "variant": "reworded",
+   "band": "OPERATING EXPENSES",
+   "band_keys": [
+    "OPERATING EXPENSES",
+    "Value"
+   ],
+   "note": "reworded: REVENUE, COST OF GOODS SOLD, OPERATING EXPENSES",
+   "returned": 10,
+   "kept": 10,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  }
+ ]
+}

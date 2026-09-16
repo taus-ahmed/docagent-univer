@@ -1,0 +1,144 @@
+{
+ "key": "25e593c7ea8b6895983e781c32cf78b6b03f0eb850fc13a470272ee8e10ce898",
+ "meta": {
+  "method": "extract",
+  "context": "i4:EXP-2024-0081__narrowed",
+  "model_requested": "",
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2529,
+  "captured_at": "2026-09-16 00:25:48",
+  "prompt_preview": "Fill in a expense_report spreadsheet from the document below.\n\n=== DOCUMENT TEXT ===\n--- page 1 ---\nNEXUS GLOBAL TRADING LLC EXPENSE REPORT\n142 West 57th Street, Suite 1800, New York, NY 10019\n(212) 555-0148 | EIN: 47-3821654\nEmployee: Marcus A. Thompson Report No:\nAPPROVED\nEXP-2024-0081\nEmployee ID"
+ },
+ "response": {
+  "raw_text": "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"Marcus A. Thompson\",\n      \"source\": \"Employee: Marcus A. Thompson\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"EMP-0012\",\n      \"source\": \"Employee ID: EMP-0012\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"EXP-2024-0081\",\n      \"source\": \"EXP-2024-0081\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Procurement\",\n      \"source\": \"Department: Procurement\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"Janet Wu\",\n      \"source\": \"Manager: Janet Wu\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"March 15–22, 2024\",\n      \"source\": \"Period: March 15–22, 2024\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"Supplier site visit — Pacific Steel, Los Angeles\",\n      \"source\": \"Purpose: Supplier site visit — Pacific Steel, Los\\nAngeles\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"APPROVED\",\n      \"source\": \"APPROVED\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"$1,727.25\",\n      \"source\": \"TOTAL CLAIMED: $1,727.25\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"Date\": [\n      {\n        \"cells\": {\n          \"Date\": \"03/15\",\n          \"Amount\": \"$842.00\"\n        },\n        \"source\": \"03/15 Airfare Delta Airlines JFK–LAX round trip Travel $842.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/15\",\n          \"Amount\": \"$38.50\"\n        },\n        \"source\": \"03/15 Taxi Airport to hotel LAX Travel $38.50\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/15\",\n          \"Amount\": \"$389.00\"\n        },\n        \"source\": \"03/15 Hotel Hilton LAX — 2 nights Lodging $389.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/16\",\n          \"Amount\": \"$24.75\"\n        },\n        \"source\": \"03/16 Meals Hotel breakfast Meals $24.75\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/16\",\n          \"Amount\": \"$187.40\"\n        },\n        \"source\": \"03/16 M&E; Client lunch w/ Pacific Steel (4 pax) Meals & Entmt $187.40\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/16\",\n          \"Amount\": \"$22.00\"\n        },\n        \"source\": \"03/16 Taxi Hotel to Pacific Steel facility Travel $22.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/17\",\n          \"Amount\": \"$95.60\"\n        },\n        \"source\": \"03/17 Meals Team dinner (2 pax) Meals $95.60\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/18\",\n          \"Amount\": \"$41.00\"\n        },\n        \"source\": \"03/18 Taxi Hotel to LAX Travel $41.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Date\": \"03/18\",\n          \"Amount\": \"$87.00\"\n        },\n        \"source\": \"03/18 Parking JFK long-term parking 3 days Travel $87.00\",\n        \"page\": 1\n      }\n    ]\n  }\n}",
+  "parsed_json": {
+   "fields": {
+    "F1": {
+     "value": "Marcus A. Thompson",
+     "source": "Employee: Marcus A. Thompson",
+     "page": 1
+    },
+    "F2": {
+     "value": "EMP-0012",
+     "source": "Employee ID: EMP-0012",
+     "page": 1
+    },
+    "F3": {
+     "value": "EXP-2024-0081",
+     "source": "EXP-2024-0081",
+     "page": 1
+    },
+    "F4": {
+     "value": "Procurement",
+     "source": "Department: Procurement",
+     "page": 1
+    },
+    "F5": {
+     "value": "Janet Wu",
+     "source": "Manager: Janet Wu",
+     "page": 1
+    },
+    "F6": {
+     "value": "March 15–22, 2024",
+     "source": "Period: March 15–22, 2024",
+     "page": 1
+    },
+    "F7": {
+     "value": "Supplier site visit — Pacific Steel, Los Angeles",
+     "source": "Purpose: Supplier site visit — Pacific Steel, Los\nAngeles",
+     "page": 1
+    },
+    "F8": {
+     "value": "APPROVED",
+     "source": "APPROVED",
+     "page": 1
+    },
+    "F9": {
+     "value": "$1,727.25",
+     "source": "TOTAL CLAIMED: $1,727.25",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Date": [
+     {
+      "cells": {
+       "Date": "03/15",
+       "Amount": "$842.00"
+      },
+      "source": "03/15 Airfare Delta Airlines JFK–LAX round trip Travel $842.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/15",
+       "Amount": "$38.50"
+      },
+      "source": "03/15 Taxi Airport to hotel LAX Travel $38.50",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/15",
+       "Amount": "$389.00"
+      },
+      "source": "03/15 Hotel Hilton LAX — 2 nights Lodging $389.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/16",
+       "Amount": "$24.75"
+      },
+      "source": "03/16 Meals Hotel breakfast Meals $24.75",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/16",
+       "Amount": "$187.40"
+      },
+      "source": "03/16 M&E; Client lunch w/ Pacific Steel (4 pax) Meals & Entmt $187.40",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/16",
+       "Amount": "$22.00"
+      },
+      "source": "03/16 Taxi Hotel to Pacific Steel facility Travel $22.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/17",
+       "Amount": "$95.60"
+      },
+      "source": "03/17 Meals Team dinner (2 pax) Meals $95.60",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/18",
+       "Amount": "$41.00"
+      },
+      "source": "03/18 Taxi Hotel to LAX Travel $41.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Date": "03/18",
+       "Amount": "$87.00"
+      },
+      "source": "03/18 Parking JFK long-term parking 3 days Travel $87.00",
+      "page": 1
+     }
+    ]
+   }
+  },
+  "model_used": "gemini-2.5-flash-lite",
+  "tokens_used": 2529,
+  "success": true,
+  "error": ""
+ }
+}

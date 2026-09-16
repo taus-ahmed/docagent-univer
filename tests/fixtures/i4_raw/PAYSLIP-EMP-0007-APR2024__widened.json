@@ -1,0 +1,469 @@
+{
+ "run": "PAYSLIP-EMP-0007-APR2024__widened",
+ "document": "PAYSLIP-EMP-0007-APR2024",
+ "pdf": "PAYSLIP-EMP-0007-APR2024.pdf",
+ "variant": "widened",
+ "note": "widened: Earnings, Deductions",
+ "captured_at": "2026-09-16 00:26:53",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "Employer Name",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "1,0": {
+    "value": "Employee Name",
+    "extractTarget": false
+   },
+   "1,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "2,0": {
+    "value": "Employee ID",
+    "extractTarget": false
+   },
+   "2,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "3,0": {
+    "value": "Title / Department",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "4,0": {
+    "value": "SSN",
+    "extractTarget": false
+   },
+   "4,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "Pay Period",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "6,0": {
+    "value": "Pay Date",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "7,0": {
+    "value": "Annual Salary",
+    "extractTarget": false
+   },
+   "7,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "9,0": {
+    "value": "Earnings",
+    "extractTarget": false
+   },
+   "10,0": {
+    "value": "Description",
+    "extractTarget": false
+   },
+   "10,1": {
+    "value": "Amount",
+    "extractTarget": false
+   },
+   "14,0": {
+    "value": "Total Earnings",
+    "extractTarget": false
+   },
+   "14,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "16,0": {
+    "value": "Deductions",
+    "extractTarget": false
+   },
+   "17,0": {
+    "value": "Description",
+    "extractTarget": false
+   },
+   "17,1": {
+    "value": "Amount",
+    "extractTarget": false
+   },
+   "27,0": {
+    "value": "Total Deductions",
+    "extractTarget": false
+   },
+   "27,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "29,0": {
+    "value": "Net Pay",
+    "extractTarget": false
+   },
+   "29,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "30,0": {
+    "value": "YTD Gross Earnings",
+    "extractTarget": false
+   },
+   "30,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "31,0": {
+    "value": "YTD Taxes Withheld",
+    "extractTarget": false
+   },
+   "31,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "10,2": {
+    "value": "Ref",
+    "style": {}
+   },
+   "10,3": {
+    "value": "Notes",
+    "style": {}
+   },
+   "17,2": {
+    "value": "Ref",
+    "style": {}
+   },
+   "17,3": {
+    "value": "Notes",
+    "style": {}
+   }
+  },
+  "colWidths": [
+   240,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "fc582eaaac801cd08fc7a4d21c2a9deb29286105a2cf51f0aa04cc244aa2efcf",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "4d8cecad885102f48bd4315c73a9958793a04ac1e1b13471839d0c94bfef7bde",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "d0f394d872ff7f149a8a49d60c88a7a15919b5cfef323eba0a36a49bcc9011f7",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "0d937086c26850b147ea432a96144d498836bd1148c7546084e83cdd82ecf47e",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "NEXUS GLOBAL TRADING",
+     "source": "NEXUS GLOBAL TRADING PAY STUB",
+     "page": 1
+    },
+    "F2": {
+     "value": "Janet L. Wu",
+     "source": "Employee: Janet L. Wu",
+     "page": 1
+    },
+    "F3": {
+     "value": "EMP-0007",
+     "source": "Employee ID: EMP-0007",
+     "page": 1
+    },
+    "F4": {
+     "value": "VP Operations – Executive",
+     "source": "Title / Dept: VP Operations – Executive",
+     "page": 1
+    },
+    "F5": {
+     "value": "***-**-3317",
+     "source": "SSN: ***-**-3317",
+     "page": 1
+    },
+    "F6": {
+     "value": "April 1–30, 2024",
+     "source": "Pay Period: April 1–30, 2024",
+     "page": 1
+    },
+    "F7": {
+     "value": "April 30, 2024",
+     "source": "Pay Date: April 30, 2024",
+     "page": 1
+    },
+    "F8": {
+     "value": "$145,000.00",
+     "source": "Annual Salary: $145,000.00",
+     "page": 1
+    },
+    "F9": {
+     "value": "$7,513.03",
+     "source": "$7,513.03",
+     "page": 2
+    },
+    "F10": {
+     "value": "$58,333.33",
+     "source": "YTD Gross Earnings: $58,333.33",
+     "page": 2
+    },
+    "F11": {
+     "value": "$22,716.00",
+     "source": "YTD Taxes Withheld: $22,716.00",
+     "page": 2
+    }
+   },
+   "tables": {
+    "Earnings": [
+     {
+      "cells": {
+       "Description": "Base Salary",
+       "Amount": "$12,083.33",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Base Salary $12,083.33",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Car Allowance",
+       "Amount": "$500.00",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Car Allowance $500.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Executive Bonus",
+       "Amount": "$2,000.00",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Executive Bonus $2,000.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Total",
+       "Amount": "$14,583.33",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Total $14,583.33",
+      "page": 1
+     }
+    ],
+    "Deductions": [
+     {
+      "cells": {
+       "Description": "Federal Income Tax",
+       "Amount": "($3,240.00)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Federal Income Tax ($3,240.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Social Security (6.2%)",
+       "Amount": "($904.17)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Social Security (6.2%) ($904.17)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Medicare (1.45%)",
+       "Amount": "($211.46)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Medicare (1.45%) ($211.46)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "NY State Income Tax",
+       "Amount": "($880.00)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "NY State Income Tax ($880.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "NY City Tax",
+       "Amount": "($395.00)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "NY City Tax ($395.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Health Insurance (Family)",
+       "Amount": "($380.00)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Health Insurance (Family) ($380.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "401(k) Contribution (8%)",
+       "Amount": "($966.67)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "401(k) Contribution (8%) ($966.67)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Dental & Vision",
+       "Amount": "($65.00)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Dental & Vision ($65.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Life Insurance",
+       "Amount": "($28.00)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Life Insurance ($28.00)",
+      "page": 2
+     },
+     {
+      "cells": {
+       "Description": "Total",
+       "Amount": "($7,070.30)",
+       "Ref": "",
+       "Notes": ""
+      },
+      "source": "Total ($7,070.30)",
+      "page": 2
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "PAYSLIP-EMP-0007-APR2024",
+   "variant": "widened",
+   "band": "Earnings",
+   "band_keys": [
+    "Description",
+    "Amount",
+    "Ref",
+    "Notes"
+   ],
+   "note": "widened: Earnings, Deductions",
+   "returned": 4,
+   "kept": 4,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "PAYSLIP-EMP-0007-APR2024",
+   "variant": "widened",
+   "band": "Deductions",
+   "band_keys": [
+    "Description",
+    "Amount",
+    "Ref",
+    "Notes"
+   ],
+   "note": "widened: Earnings, Deductions",
+   "returned": 10,
+   "kept": 8,
+   "accounted": 2,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  }
+ ]
+}

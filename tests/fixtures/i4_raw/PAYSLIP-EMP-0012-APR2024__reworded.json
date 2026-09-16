@@ -1,0 +1,415 @@
+{
+ "run": "PAYSLIP-EMP-0012-APR2024__reworded",
+ "document": "PAYSLIP-EMP-0012-APR2024",
+ "pdf": "PAYSLIP-EMP-0012-APR2024.pdf",
+ "variant": "reworded",
+ "note": "reworded: Earnings, Deductions",
+ "captured_at": "2026-09-16 00:27:09",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "Employer Name",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "1,0": {
+    "value": "Employee Name",
+    "extractTarget": false
+   },
+   "1,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "2,0": {
+    "value": "Employee ID",
+    "extractTarget": false
+   },
+   "2,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "3,0": {
+    "value": "Title / Department",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "4,0": {
+    "value": "SSN",
+    "extractTarget": false
+   },
+   "4,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "Pay Period",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "6,0": {
+    "value": "Pay Date",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "7,0": {
+    "value": "Annual Salary",
+    "extractTarget": false
+   },
+   "7,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "9,0": {
+    "value": "Earnings",
+    "extractTarget": false
+   },
+   "10,0": {
+    "value": "Description",
+    "extractTarget": false
+   },
+   "10,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "14,0": {
+    "value": "Total Earnings",
+    "extractTarget": false
+   },
+   "14,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "16,0": {
+    "value": "Deductions",
+    "extractTarget": false
+   },
+   "17,0": {
+    "value": "Description",
+    "extractTarget": false
+   },
+   "17,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "27,0": {
+    "value": "Total Deductions",
+    "extractTarget": false
+   },
+   "27,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "29,0": {
+    "value": "Net Pay",
+    "extractTarget": false
+   },
+   "29,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "30,0": {
+    "value": "YTD Gross Earnings",
+    "extractTarget": false
+   },
+   "30,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "31,0": {
+    "value": "YTD Taxes Withheld",
+    "extractTarget": false
+   },
+   "31,1": {
+    "value": "",
+    "extractTarget": true
+   }
+  },
+  "colWidths": [
+   240,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "0d937086c26850b147ea432a96144d498836bd1148c7546084e83cdd82ecf47e",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "32e1202b1048a156edf5f93142391ec2c12d434d815b60c21b9a05df0ce75803",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "b18f76c06133c9514925f8bdfb07a2745a94fe27ec9b0e38c033db8f361ef1a5",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "3cfff85042555c12726aca729165683045b160596a1fa2ff6925e1de3fb81d6f",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "NEXUS GLOBAL TRADING",
+     "source": "NEXUS GLOBAL TRADING PAY STUB",
+     "page": 1
+    },
+    "F2": {
+     "value": "Marcus A. Thompson",
+     "source": "Employee: Marcus A. Thompson",
+     "page": 1
+    },
+    "F3": {
+     "value": "EMP-0012",
+     "source": "Employee ID: EMP-0012",
+     "page": 1
+    },
+    "F4": {
+     "value": "Purchasing Manager – Procurement",
+     "source": "Title / Dept: Purchasing Manager – Procurement",
+     "page": 1
+    },
+    "F5": {
+     "value": "***-**-4821",
+     "source": "SSN: ***-**-4821",
+     "page": 1
+    },
+    "F6": {
+     "value": "April 1–30, 2024",
+     "source": "Pay Period: April 1–30, 2024",
+     "page": 1
+    },
+    "F7": {
+     "value": "April 30, 2024",
+     "source": "Pay Date: April 30, 2024",
+     "page": 1
+    },
+    "F8": {
+     "value": "$90,000.00",
+     "source": "Annual Salary: $90,000.00",
+     "page": 1
+    },
+    "F9": {
+     "value": "$8,300.00",
+     "source": "Total $8,300.00",
+     "page": 1
+    },
+    "F10": {
+     "value": "($3,117.35)",
+     "source": "Total ($3,117.35)",
+     "page": 1
+    },
+    "F11": {
+     "value": "$5,182.65",
+     "source": "$5,182.65",
+     "page": 2
+    },
+    "F12": {
+     "value": "$33,500.00",
+     "source": "YTD Gross Earnings: $33,500.00",
+     "page": 2
+    },
+    "F13": {
+     "value": "$7,508.70",
+     "source": "YTD Taxes Withheld: $7,508.70",
+     "page": 2
+    }
+   },
+   "tables": {
+    "Earnings": [
+     {
+      "cells": {
+       "Description": "Base Salary",
+       "Value": "$7,500.00"
+      },
+      "source": "Base Salary $7,500.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Performance Bonus",
+       "Value": "$800.00"
+      },
+      "source": "Performance Bonus $800.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Total",
+       "Value": "$8,300.00"
+      },
+      "source": "Total $8,300.00",
+      "page": 1
+     }
+    ],
+    "Deductions": [
+     {
+      "cells": {
+       "Description": "Federal Income Tax",
+       "Value": "($1,245.00)"
+      },
+      "source": "Federal Income Tax ($1,245.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Social Security (6.2%)",
+       "Value": "($515.00)"
+      },
+      "source": "Social Security (6.2%) ($515.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Medicare (1.45%)",
+       "Value": "($120.35)"
+      },
+      "source": "Medicare (1.45%) ($120.35)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "NY State Income Tax",
+       "Value": "($412.00)"
+      },
+      "source": "NY State Income Tax ($412.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "NY City Tax",
+       "Value": "($185.00)"
+      },
+      "source": "NY City Tax ($185.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Health Insurance (Medical)",
+       "Value": "($220.00)"
+      },
+      "source": "Health Insurance (Medical) ($220.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "401(k) Contribution (5%)",
+       "Value": "($375.00)"
+      },
+      "source": "401(k) Contribution (5%) ($375.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Dental & Vision",
+       "Value": "($45.00)"
+      },
+      "source": "Dental & Vision ($45.00)",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Total",
+       "Value": "($3,117.35)"
+      },
+      "source": "Total ($3,117.35)",
+      "page": 1
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "PAYSLIP-EMP-0012-APR2024",
+   "variant": "reworded",
+   "band": "Earnings",
+   "band_keys": [
+    "Description",
+    "Value"
+   ],
+   "note": "reworded: Earnings, Deductions",
+   "returned": 3,
+   "kept": 3,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "PAYSLIP-EMP-0012-APR2024",
+   "variant": "reworded",
+   "band": "Deductions",
+   "band_keys": [
+    "Description",
+    "Value"
+   ],
+   "note": "reworded: Earnings, Deductions",
+   "returned": 9,
+   "kept": 9,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  }
+ ]
+}

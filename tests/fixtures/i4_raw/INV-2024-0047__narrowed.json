@@ -1,0 +1,319 @@
+{
+ "run": "INV-2024-0047__narrowed",
+ "document": "INV-2024-0047",
+ "pdf": "INV-2024-0047.pdf",
+ "variant": "narrowed",
+ "note": "narrowed: table",
+ "captured_at": "2026-09-16 00:26:18",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "Invoice Number",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "1,0": {
+    "value": "Invoice Date",
+    "extractTarget": false
+   },
+   "1,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "2,0": {
+    "value": "Due Date",
+    "extractTarget": false
+   },
+   "2,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "3,0": {
+    "value": "Bill To Company",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "4,0": {
+    "value": "Bill To Address",
+    "extractTarget": false
+   },
+   "4,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "Bill To Contact",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "6,0": {
+    "value": "PO Reference",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "7,0": {
+    "value": "Payment Terms",
+    "extractTarget": false
+   },
+   "7,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "8,0": {
+    "value": "Status",
+    "extractTarget": false
+   },
+   "8,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "18,0": {
+    "value": "Subtotal",
+    "extractTarget": false
+   },
+   "18,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "19,0": {
+    "value": "Shipping & Handling",
+    "extractTarget": false
+   },
+   "19,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "20,0": {
+    "value": "Sales Tax",
+    "extractTarget": false
+   },
+   "20,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "21,0": {
+    "value": "Total Due",
+    "extractTarget": false
+   },
+   "21,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "10,0": {
+    "value": "Description",
+    "style": {}
+   },
+   "10,1": {
+    "value": "Amount",
+    "style": {}
+   }
+  },
+  "colWidths": [
+   260,
+   70,
+   80,
+   100,
+   110,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "e268fc3eac4f6c50605d7c6dc01ebabe1f8c08f8b536f1b8400bcd22f0ce9867",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "29ba8fb0d3d13ce5f85e883b6d855c78ca30bb046245c0ad50ed7e1346a36e6b",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "47d16795b277360af22809687f17d6c7f27a61f047a9cf878c9439a1e8965099",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "40d57cc398432ec97786e993f5cdcad0cfbdae5aad236ea6d5547d86fdf2b3c0",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "INV-2024-0047",
+     "source": "Invoice: INV-2024-0047",
+     "page": 1
+    },
+    "F2": {
+     "value": "February 3, 2024",
+     "source": "Date: February 3, 2024",
+     "page": 1
+    },
+    "F3": {
+     "value": "March 4, 2024",
+     "source": "Due: March 4, 2024",
+     "page": 1
+    },
+    "F4": {
+     "value": "Pinnacle Electronics Corp.",
+     "source": "Pinnacle Electronics Corp.",
+     "page": 1
+    },
+    "F5": {
+     "value": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
+     "source": "3800 Tech Boulevard Floor 5, Austin, TX 78701",
+     "page": 1
+    },
+    "F6": {
+     "value": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
+     "source": "Ms. Sarah Johnson — sjohnson@pinnacleelec.com",
+     "page": 1
+    },
+    "F7": {
+     "value": "PO-2024-0029",
+     "source": "PO Ref: PO-2024-0029",
+     "page": 1
+    },
+    "F8": {
+     "value": "Net 30",
+     "source": "Terms: Net 30",
+     "page": 1
+    },
+    "F9": {
+     "value": "OUTSTANDING",
+     "source": "OUTSTANDING",
+     "page": 1
+    },
+    "F10": {
+     "value": "$15,549.00",
+     "source": "Subtotal: $15,549.00",
+     "page": 1
+    },
+    "F11": {
+     "value": "$580.00",
+     "source": "Shipping & Handling: $580.00",
+     "page": 1
+    },
+    "F12": {
+     "value": "$1,282.79",
+     "source": "Sales Tax (8.25%): $1,282.79",
+     "page": 1
+    },
+    "F13": {
+     "value": "$17,411.79",
+     "source": "TOTAL DUE: $17,411.79",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Description": [
+     {
+      "cells": {
+       "Description": "USB-C Hub 7-Port Model HB-720",
+       "Amount": "$5,175.00"
+      },
+      "source": "USB-C Hub 7-Port Model HB-720 150 units $34.50 $5,175.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Wireless Mouse M300 Series",
+       "Amount": "$3,750.00"
+      },
+      "source": "Wireless Mouse M300 Series 200 units $18.75 $3,750.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Laptop Cooling Stand Aluminium",
+       "Amount": "$2,160.00"
+      },
+      "source": "Laptop Cooling Stand Aluminium 80 units $27.00 $2,160.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "HDMI 2.1 Cable 2m Pack/5",
+       "Amount": "$1,944.00"
+      },
+      "source": "HDMI 2.1 Cable 2m Pack/5 120 packs $16.20 $1,944.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Webcam HD 1080p w/ Mic",
+       "Amount": "$2,520.00"
+      },
+      "source": "Webcam HD 1080p w/ Mic 60 units $42.00 $2,520.00",
+      "page": 1
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "INV-2024-0047",
+   "variant": "narrowed",
+   "band": "Description",
+   "band_keys": [
+    "Description",
+    "Amount"
+   ],
+   "note": "narrowed: table",
+   "returned": 5,
+   "kept": 5,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  }
+ ]
+}

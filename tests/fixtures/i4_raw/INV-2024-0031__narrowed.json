@@ -1,0 +1,311 @@
+{
+ "run": "INV-2024-0031__narrowed",
+ "document": "INV-2024-0031",
+ "pdf": "INV-2024-0031.pdf",
+ "variant": "narrowed",
+ "note": "narrowed: table",
+ "captured_at": "2026-09-16 00:26:03",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "Invoice Number",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "1,0": {
+    "value": "Invoice Date",
+    "extractTarget": false
+   },
+   "1,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "2,0": {
+    "value": "Due Date",
+    "extractTarget": false
+   },
+   "2,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "3,0": {
+    "value": "Bill To Company",
+    "extractTarget": false
+   },
+   "3,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "4,0": {
+    "value": "Bill To Address",
+    "extractTarget": false
+   },
+   "4,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "5,0": {
+    "value": "Bill To Contact",
+    "extractTarget": false
+   },
+   "5,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "6,0": {
+    "value": "PO Reference",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "7,0": {
+    "value": "Payment Terms",
+    "extractTarget": false
+   },
+   "7,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "8,0": {
+    "value": "Status",
+    "extractTarget": false
+   },
+   "8,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "18,0": {
+    "value": "Subtotal",
+    "extractTarget": false
+   },
+   "18,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "19,0": {
+    "value": "Shipping & Handling",
+    "extractTarget": false
+   },
+   "19,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "20,0": {
+    "value": "Sales Tax",
+    "extractTarget": false
+   },
+   "20,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "21,0": {
+    "value": "Total Due",
+    "extractTarget": false
+   },
+   "21,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "10,0": {
+    "value": "Description",
+    "style": {}
+   },
+   "10,1": {
+    "value": "Amount",
+    "style": {}
+   }
+  },
+  "colWidths": [
+   260,
+   70,
+   80,
+   100,
+   110,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "25e593c7ea8b6895983e781c32cf78b6b03f0eb850fc13a470272ee8e10ce898",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "bec3aa631ce6c78954b272de5746cad839459a3f11b96c86483a65c578f7b8c5",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "9d71edc34faacc96ffab6fe009b05d16bac9a90338e1314e0d7eb7fbf534c786",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "e268fc3eac4f6c50605d7c6dc01ebabe1f8c08f8b536f1b8400bcd22f0ce9867",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "INV-2024-0031",
+     "source": "Invoice: INV-2024-0031",
+     "page": 1
+    },
+    "F2": {
+     "value": "January 15, 2024",
+     "source": "Date: January 15, 2024",
+     "page": 1
+    },
+    "F3": {
+     "value": "February 14, 2024",
+     "source": "Due: February 14, 2024",
+     "page": 1
+    },
+    "F4": {
+     "value": "Apex Industrial Supplies Inc.",
+     "source": "Apex Industrial Supplies Inc.",
+     "page": 1
+    },
+    "F5": {
+     "value": "500 Commerce Drive, Chicago, IL 60601",
+     "source": "500 Commerce Drive, Chicago, IL 60601",
+     "page": 1
+    },
+    "F6": {
+     "value": "Mr. Robert Chen — rchen@apexindustrial.com",
+     "source": "Mr. Robert Chen — rchen@apexindustrial.com",
+     "page": 1
+    },
+    "F7": {
+     "value": "PO-2024-0018",
+     "source": "PO Ref: PO-2024-0018",
+     "page": 1
+    },
+    "F8": {
+     "value": "Net 30",
+     "source": "Terms: Net 30",
+     "page": 1
+    },
+    "F9": {
+     "value": "PAID",
+     "source": "PAID",
+     "page": 1
+    },
+    "F10": {
+     "value": "$10,892.50",
+     "source": "Subtotal: $10,892.50",
+     "page": 1
+    },
+    "F11": {
+     "value": "$320.00",
+     "source": "Shipping & Handling: $320.00",
+     "page": 1
+    },
+    "F12": {
+     "value": "$966.71",
+     "source": "Sales Tax (8.88%): $966.71",
+     "page": 1
+    },
+    "F13": {
+     "value": "$12,179.21",
+     "source": "TOTAL DUE: $12,179.21",
+     "page": 1
+    }
+   },
+   "tables": {
+    "Description": [
+     {
+      "cells": {
+       "Description": "Steel Wire Coils Grade A 500m",
+       "Amount": "$7,400.00"
+      },
+      "source": "Steel Wire Coils Grade A 500m 40 pcs $185.00 $7,400.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Industrial Lubricant 5L Drum",
+       "Amount": "$1,700.00"
+      },
+      "source": "Industrial Lubricant 5L Drum 25 drums $68.00 $1,700.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Safety Gloves Heavy Duty Box/12",
+       "Amount": "$1,350.00"
+      },
+      "source": "Safety Gloves Heavy Duty Box/12 60 boxes $22.50 $1,350.00",
+      "page": 1
+     },
+     {
+      "cells": {
+       "Description": "Hex Bolt Set M10 Qty-500",
+       "Amount": "$442.50"
+      },
+      "source": "Hex Bolt Set M10 Qty-500 30 sets $14.75 $442.50",
+      "page": 1
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "INV-2024-0031",
+   "variant": "narrowed",
+   "band": "Description",
+   "band_keys": [
+    "Description",
+    "Amount"
+   ],
+   "note": "narrowed: table",
+   "returned": 4,
+   "kept": 4,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": false,
+   "dropped_row_count": 0
+  }
+ ]
+}

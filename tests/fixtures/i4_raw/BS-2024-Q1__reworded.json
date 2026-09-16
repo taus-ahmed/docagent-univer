@@ -1,0 +1,484 @@
+{
+ "run": "BS-2024-Q1__reworded",
+ "document": "BS-2024-Q1",
+ "pdf": "BS-2024-Q1.pdf",
+ "variant": "reworded",
+ "note": "reworded: CURRENT ASSETS, NON-CURRENT ASSETS, CURRENT LIABILITIES, LONG-TERM LIABILITIES, SHAREHOLDERS' EQUITY",
+ "captured_at": "2026-09-16 00:25:43",
+ "commit": "b6f90f8",
+ "mode": "record",
+ "grid": {
+  "cells": {
+   "0,0": {
+    "value": "CURRENT ASSETS",
+    "extractTarget": false
+   },
+   "0,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "6,0": {
+    "value": "Total Current Assets",
+    "extractTarget": false
+   },
+   "6,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "8,0": {
+    "value": "NON-CURRENT ASSETS",
+    "extractTarget": false
+   },
+   "8,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "13,0": {
+    "value": "Total Non-Current Assets",
+    "extractTarget": false
+   },
+   "13,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "15,0": {
+    "value": "TOTAL ASSETS",
+    "extractTarget": false
+   },
+   "15,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "17,0": {
+    "value": "CURRENT LIABILITIES",
+    "extractTarget": false
+   },
+   "17,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "23,0": {
+    "value": "Total Current Liabilities",
+    "extractTarget": false
+   },
+   "23,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "25,0": {
+    "value": "LONG-TERM LIABILITIES",
+    "extractTarget": false
+   },
+   "25,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "28,0": {
+    "value": "Total Long-Term Liabilities",
+    "extractTarget": false
+   },
+   "28,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "30,0": {
+    "value": "TOTAL LIABILITIES",
+    "extractTarget": false
+   },
+   "30,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "32,0": {
+    "value": "SHAREHOLDERS' EQUITY",
+    "extractTarget": false
+   },
+   "32,1": {
+    "value": "Value",
+    "style": {}
+   },
+   "36,0": {
+    "value": "Total Equity",
+    "extractTarget": false
+   },
+   "36,1": {
+    "value": "",
+    "extractTarget": true
+   },
+   "38,0": {
+    "value": "TOTAL LIABILITIES & EQUITY",
+    "extractTarget": false
+   },
+   "38,1": {
+    "value": "",
+    "extractTarget": true
+   }
+  },
+  "colWidths": [
+   240,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120,
+   120
+  ],
+  "merges": {},
+  "extractTargets": [],
+  "repeatRows": [],
+  "regions": []
+ },
+ "calls": [
+  {
+   "method": "extract",
+   "key": "e7b48e79c75a25f2f971135f0f585308d882647129f547fdbbe5deb878447074",
+   "source": "recorded"
+  },
+  {
+   "method": "extract",
+   "key": "d4e85cf4befa4c0c32426ea176ba0c043d66a172da66c7c49e1b4cd98e9d5a15",
+   "source": "recorded"
+  }
+ ],
+ "answers": [
+  {
+   "fields": {
+    "F1": {
+     "value": "$1,129,003",
+     "source": "Total Current Assets $1,129,003",
+     "page": 1
+    },
+    "F2": {
+     "value": "$236,500",
+     "source": "Total Non-Current Assets $236,500",
+     "page": 1
+    },
+    "F3": {
+     "value": "$1,365,503",
+     "source": "TOTAL ASSETS $1,365,503",
+     "page": 1
+    },
+    "F4": {
+     "value": "$421,200",
+     "source": "Total Current Liabilities $421,200",
+     "page": 1
+    },
+    "F5": {
+     "value": "$129,400",
+     "source": "Total Long-Term Liabilities $129,400",
+     "page": 1
+    },
+    "F6": {
+     "value": "$550,600",
+     "source": "TOTAL LIABILITIES $550,600",
+     "page": 1
+    },
+    "F7": {
+     "value": "$698,104",
+     "source": "Total Equity $698,104",
+     "page": 2
+    },
+    "F8": {
+     "value": "$1,248,704",
+     "source": "TOTAL LIABILITIES & EQUITY $1,248,704",
+     "page": 2
+    }
+   },
+   "tables": {
+    "CURRENT ASSETS": [
+     {
+      "cells": {
+       "CURRENT ASSETS": "Cash & Cash Equivalents",
+       "Value": "$143,803"
+      },
+      "source": "Cash & Cash Equivalents $143,803",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Accounts Receivable (net)",
+       "Value": "$348,200"
+      },
+      "source": "Accounts Receivable (net) $348,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Inventory",
+       "Value": "$612,000"
+      },
+      "source": "Inventory $612,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Prepaid Expenses",
+       "Value": "$16,200"
+      },
+      "source": "Prepaid Expenses $16,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT ASSETS": "Other Current Assets",
+       "Value": "$8,800"
+      },
+      "source": "Other Current Assets $8,800",
+      "page": 1
+     }
+    ],
+    "NON-CURRENT ASSETS": [
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Property & Equipment (gross)",
+       "Value": "$240,000"
+      },
+      "source": "Property & Equipment (gross) $240,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Less: Accum. Depreciation",
+       "Value": "$108,500"
+      },
+      "source": "Less: Accum. Depreciation $108,500",
+      "page": 1
+     },
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Security Deposits",
+       "Value": "$85,000"
+      },
+      "source": "Security Deposits $85,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "NON-CURRENT ASSETS": "Intangibles (net)",
+       "Value": "$20,000"
+      },
+      "source": "Intangibles (net) $20,000",
+      "page": 1
+     }
+    ],
+    "CURRENT LIABILITIES": [
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Accounts Payable",
+       "Value": "$254,800"
+      },
+      "source": "Accounts Payable $254,800",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Accrued Liabilities",
+       "Value": "$44,200"
+      },
+      "source": "Accrued Liabilities $44,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Short-term Loan — First National Bank",
+       "Value": "$80,000"
+      },
+      "source": "Short-term Loan — First National Bank $80,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Deferred Revenue",
+       "Value": "$18,200"
+      },
+      "source": "Deferred Revenue $18,200",
+      "page": 1
+     },
+     {
+      "cells": {
+       "CURRENT LIABILITIES": "Current Portion of Long-term Debt",
+       "Value": "$24,000"
+      },
+      "source": "Current Portion of Long-term Debt $24,000",
+      "page": 1
+     }
+    ],
+    "LONG-TERM LIABILITIES": [
+     {
+      "cells": {
+       "LONG-TERM LIABILITIES": "Long-term Loan — First National Bank",
+       "Value": "$121,000"
+      },
+      "source": "Long-term Loan — First National Bank $121,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "LONG-TERM LIABILITIES": "Deferred Tax Liability",
+       "Value": "$8,400"
+      },
+      "source": "Deferred Tax Liability $8,400",
+      "page": 1
+     }
+    ],
+    "SHAREHOLDERS' EQUITY": [
+     {
+      "cells": {
+       "SHAREHOLDERS' EQUITY": "Common Stock (100 shares @ $1,000 par)",
+       "Value": "$100,000"
+      },
+      "source": "Common Stock (100 shares @ $1,000 par) $100,000",
+      "page": 1
+     },
+     {
+      "cells": {
+       "SHAREHOLDERS' EQUITY": "Retained Earnings",
+       "Value": "$550,751"
+      },
+      "source": "Retained Earnings $550,751",
+      "page": 2
+     },
+     {
+      "cells": {
+       "SHAREHOLDERS' EQUITY": "Net Income YTD Q1",
+       "Value": "$47,353"
+      },
+      "source": "Net Income YTD Q1 $47,353",
+      "page": 2
+     }
+    ]
+   }
+  }
+ ],
+ "measurement": [
+  {
+   "document": "BS-2024-Q1",
+   "variant": "reworded",
+   "band": "CURRENT ASSETS",
+   "band_keys": [
+    "CURRENT ASSETS",
+    "Value"
+   ],
+   "note": "reworded: CURRENT ASSETS, NON-CURRENT ASSETS, CURRENT LIABILITIES, LONG-TERM LIABILITIES, SHAREHOLDERS' EQUITY",
+   "returned": 5,
+   "kept": 5,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "BS-2024-Q1",
+   "variant": "reworded",
+   "band": "NON-CURRENT ASSETS",
+   "band_keys": [
+    "NON-CURRENT ASSETS",
+    "Value"
+   ],
+   "note": "reworded: CURRENT ASSETS, NON-CURRENT ASSETS, CURRENT LIABILITIES, LONG-TERM LIABILITIES, SHAREHOLDERS' EQUITY",
+   "returned": 4,
+   "kept": 4,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "BS-2024-Q1",
+   "variant": "reworded",
+   "band": "CURRENT LIABILITIES",
+   "band_keys": [
+    "CURRENT LIABILITIES",
+    "Value"
+   ],
+   "note": "reworded: CURRENT ASSETS, NON-CURRENT ASSETS, CURRENT LIABILITIES, LONG-TERM LIABILITIES, SHAREHOLDERS' EQUITY",
+   "returned": 5,
+   "kept": 5,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "BS-2024-Q1",
+   "variant": "reworded",
+   "band": "LONG-TERM LIABILITIES",
+   "band_keys": [
+    "LONG-TERM LIABILITIES",
+    "Value"
+   ],
+   "note": "reworded: CURRENT ASSETS, NON-CURRENT ASSETS, CURRENT LIABILITIES, LONG-TERM LIABILITIES, SHAREHOLDERS' EQUITY",
+   "returned": 2,
+   "kept": 2,
+   "accounted": 0,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  },
+  {
+   "document": "BS-2024-Q1",
+   "variant": "reworded",
+   "band": "SHAREHOLDERS' EQUITY",
+   "band_keys": [
+    "SHAREHOLDERS' EQUITY",
+    "Value"
+   ],
+   "note": "reworded: CURRENT ASSETS, NON-CURRENT ASSETS, CURRENT LIABILITIES, LONG-TERM LIABILITIES, SHAREHOLDERS' EQUITY",
+   "returned": 3,
+   "kept": 1,
+   "accounted": 2,
+   "silent": 0,
+   "off_schema_cells": 0,
+   "off_schema_wording": 0,
+   "off_schema_mismatch": 0,
+   "off_schema_keys": {},
+   "rows_with_off_schema_key": 0,
+   "dropped_rows": [],
+   "needs_review": true,
+   "dropped_row_count": 0
+  }
+ ]
+}
