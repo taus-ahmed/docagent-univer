@@ -1519,7 +1519,37 @@ strict xfail in `tests/test_round2_I1.py` and recorded in KNOWN-LIMITATIONS
 WRONG #3. Reaching it means asking the model a **second, different question**
 about the value it already gave and treating disagreement as the signal. The
 pipeline makes one Gemini call today and has no verification pass; that is a
-proposal with a per-document cost, not a recommendation, and it is unmeasured.
+proposal with a per-document cost, not a recommendation.
+
+**Measured 2026-09-16, and REJECTED on the same shape of evidence as the gate
+above** — `docs/SECOND-CALL-VERIFICATION.md`, raw responses in
+`tests/fixtures/attribution_raw/`, harness `tests/harness/attribution.py`. The
+second call was asked two questions about the DOCUMENT, never about our answer:
+which party a value belongs to, and which of the template's labels the document
+presents it as answering. 11 live calls, $0.0023.
+
+| signal | false positives on 115 correct gold values | held-out four |
+|---|---|---|
+| closed-list `answers` | **0 (0.0%)** | 2 of 4 |
+| `party` | **7 of 27 party-bearing (25.9%)** | 2 of 4 |
+| combined | 7 (6.1%) | 4 of 4 |
+
+Two findings survive the rejection. **§22's objection is cleared**: a model
+bridges the synonym gap string matching could not — `No:` → Cheque Number,
+`Terms:` → Payment Terms, `Total` → Total Earnings, 115 for 115 — so the rule
+fails where the question does not. And **the model contradicts itself in one
+response on the case that matters**: `care@engieresources.com` was reported as
+answering `Customer Email Address`, printed beside `Email Us`, and belonging to
+the **ISSUER**, all at once. Re-framing did not dislodge the wrong belief — it
+made the belief incoherent, which is a different and more promising signal.
+
+It is not wired because the 7 false positives are the MODEL's error and not our
+comparison map's (checked: on a purchase order the buyer issues and the vendor
+receives, and the model reversed every party), and the corpus holds exactly ONE
+purchase order, so the failure cannot be bounded. Same refusal as the strict
+span rule, gate rule G and the label-witness gate: a gate that fires on
+legitimate documents at an unmeasurable rate is the bug it was meant to
+replace.
 
 So round 2 closes with **one** open problem, not two. I8 does not merge into the
 fabrication gap — it dissolves, and the fabrication gap is what is left standing.

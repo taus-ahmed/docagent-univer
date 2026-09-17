@@ -1,0 +1,44 @@
+{
+ "raw": "{\"V1\": {\"party\": \"ISSUER\", \"answers\": \"Customer Email Address\", \"printed_label\": \"Email Us\"}, \"V2\": {\"party\": \"THIRD_PARTY\", \"answers\": \"Customer Tax ID\", \"printed_label\": \"Fed. I.D.\"}, \"V3\": {\"party\": \"RECIPIENT\", \"answers\": \"NONE\", \"printed_label\": \"Previous Balance\"}, \"V4\": {\"party\": \"RECIPIENT\", \"answers\": \"NONE\", \"printed_label\": \"Payments\"}}",
+ "results": [
+  {
+   "assigned_label": "Customer Email Address",
+   "value": "care@engieresources.com",
+   "note": "run 9's own answer",
+   "model_answers": "Customer Email Address",
+   "model_party": "ISSUER",
+   "printed_label": "Email Us",
+   "expected_party": "RECIPIENT"
+  },
+  {
+   "assigned_label": "Customer Tax ID",
+   "value": "76-0685946",
+   "note": "probe: the supplier's Fed. I.D.",
+   "model_answers": "Customer Tax ID",
+   "model_party": "THIRD_PARTY",
+   "printed_label": "Fed. I.D.",
+   "expected_party": "RECIPIENT"
+  },
+  {
+   "assigned_label": "Late Fee Amount",
+   "value": "$101.99",
+   "note": "probe: the previous balance",
+   "model_answers": "NONE",
+   "model_party": "RECIPIENT",
+   "printed_label": "Previous Balance",
+   "expected_party": "NONE"
+  },
+  {
+   "assigned_label": "Deposit Amount",
+   "value": "-$101.99",
+   "note": "probe: the payment received",
+   "model_answers": "NONE",
+   "model_party": "RECIPIENT",
+   "printed_label": "Payments",
+   "expected_party": "NONE"
+  }
+ ],
+ "prompt_chars": 10728,
+ "model": "gemini-2.5-flash-lite",
+ "captured_at": "2026-09-16 22:00:09"
+}
