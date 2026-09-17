@@ -1521,12 +1521,20 @@ about the value it already gave and treating disagreement as the signal. The
 pipeline makes one Gemini call today and has no verification pass; that is a
 proposal with a per-document cost, not a recommendation.
 
-**Measured 2026-09-16, and REJECTED on the same shape of evidence as the gate
-above** — `docs/SECOND-CALL-VERIFICATION.md`, raw responses in
-`tests/fixtures/attribution_raw/`, harness `tests/harness/attribution.py`. The
-second call was asked two questions about the DOCUMENT, never about our answer:
-which party a value belongs to, and which of the template's labels the document
-presents it as answering. 11 live calls, $0.0023.
+### 22a. The second call: Q-A measured live, and rejected on false positives
+
+Full scope, criteria and method in `docs/SECOND-CALL-VERIFICATION.md`; harness
+`tests/harness/attribution.py`; every raw response committed to
+`tests/fixtures/attribution_raw/`. The criteria were fixed **before** the
+numbers, and a 0% catch rate was declared publishable in advance.
+
+Q-A asked two questions about the **document**, never about our answer: which
+party a value belongs to, and which of the template's labels the document
+presents it as answering (closed list, shuffled, `NONE` allowed). The model was
+never shown which slot a value had been written into, so it could not agree by
+reading our answer back — that separation is the only thing distinguishing Q-A
+from the circular form the confidence docstring rules out. 11 live calls,
+$0.0023, `gemini-2.5-flash-lite` at temperature 0.
 
 | signal | false positives on 115 correct gold values | held-out four |
 |---|---|---|
@@ -1534,22 +1542,97 @@ presents it as answering. 11 live calls, $0.0023.
 | `party` | **7 of 27 party-bearing (25.9%)** | 2 of 4 |
 | combined | 7 (6.1%) | 4 of 4 |
 
-Two findings survive the rejection. **§22's objection is cleared**: a model
-bridges the synonym gap string matching could not — `No:` → Cheque Number,
-`Terms:` → Payment Terms, `Total` → Total Earnings, 115 for 115 — so the rule
-fails where the question does not. And **the model contradicts itself in one
-response on the case that matters**: `care@engieresources.com` was reported as
-answering `Customer Email Address`, printed beside `Email Us`, and belonging to
-the **ISSUER**, all at once. Re-framing did not dislodge the wrong belief — it
-made the belief incoherent, which is a different and more promising signal.
+A separate arm injected 107 same-kind swaps and caught 107, which is discounted
+on purpose: those are assignments **we** invented and the model has no
+attachment to them.
 
-It is not wired because the 7 false positives are the MODEL's error and not our
-comparison map's (checked: on a purchase order the buyer issues and the vendor
-receives, and the model reversed every party), and the corpus holds exactly ONE
-purchase order, so the failure cannot be bounded. Same refusal as the strict
-span rule, gate rule G and the label-witness gate: a gate that fires on
-legitimate documents at an unmeasurable rate is the bug it was meant to
-replace.
+**REJECTED, beside the label-witness gate above and for the same reason.** The
+7 false positives are all one document, `PO-2024-0018`, and all one error: a
+purchase order is issued by its **buyer** and received by its **vendor**, and
+the model reversed every party on it — it reads a PO as though it were an
+invoice. This was checked rather than assumed; our comparison map has the
+direction right and the model does not. A follow-up scoring the model's own
+`answers` label against its own `party` answer, with no expectation of ours in
+the loop, returns the **identical 7 rows** — because `answers` agreed with the
+true label on all 115 — so there is no cheaper re-scoring that rescues it.
+
+⚠ **The binding constraint is corpus breadth, not the method.** Ten documents,
+nine document types, **one purchase order**. A failure mode with one instance
+cannot be bounded, and shipping a gate whose only measured failure we cannot
+price is the same bug it was built to replace — the refusal already made for
+the strict span rule (§2), gate rule G (R6) and the label-witness gate (§22).
+**That is what would have to change before a retry is worth anything**: more
+document types, several instances of each. A better prompt would not move it.
+
+#### Finding 1 — the wrong belief is stable, and reframing did not move it
+
+`care@engieresources.com` was returned for `Customer Email Address` by **four
+runs across three prompt frames**:
+
+| run | frame |
+|---|---|
+| round-2 run 9 | slot extraction, pre-I1 |
+| `run9_engie_BR4_prefix_fe3385d` | slot extraction, bill SPLIT at page 4 |
+| `run9_engie_BR4` (re-record at `f3d4d4a`) | slot extraction, unsplit, post-I10 text |
+| the Q-A verification call | **a genuine reframing** — different question, closed list, model not shown our assignment |
+
+The reframing was the whole proposal, and it returned the same wrong answer.
+**This defect is not reachable from inside the model as currently asked.** Any
+future attempt starts from that, not from the hope that a better phrasing
+dislodges it.
+
+#### Finding 2 — §22's objection is cleared: the rule fails, the question does not
+
+The label-witness gate flagged 33 correct values because a document's own word
+for a field is a synonym, an abbreviation, a heading above the block, or absent
+(§22). Those same 33 values are inside this experiment's 115, and the model
+placed **33 of 33** correctly: `No: CHQ-001847` answers Cheque Number,
+`Terms: Net 30` answers Payment Terms, `Total $14,583.33` answers Total
+Earnings, an unlabelled name on a cheque answers Payee.
+
+So the two results are not the same result twice. **String matching cannot
+bridge a synonym and a model can.** Anyone reaching for the witness idea again
+should know that what failed was the mechanism, not the question — and that the
+closed-list form of the question costs 0 false positives on this corpus.
+
+#### Finding 3 — THE THREAD: the model contradicts itself inside one answer
+
+The most useful thing the experiment produced, and the place a future attempt
+should start.
+
+Asked about `care@engieresources.com` in a **single response**, the model
+asserted all three of these at once:
+
+- it **answers** `Customer Email Address`
+- the label **printed beside it** is `Email Us`
+- it belongs to the **ISSUER**
+
+Those cannot all be true. A value belonging to the issuer does not answer a
+field asking for the customer's, and `Email Us` is the supplier's own contact
+heading. **No comparison map of ours is required to see it** — the incoherence
+is entirely within the model's own output, which is what makes it different
+from everything rejected so far. Every gate this project has refused needed an
+expectation we supplied; this one would not.
+
+Recorded verbatim in **`tests/fixtures/attribution_raw/heldout.json`**, so the
+contradiction can be re-read rather than taken on trust. It is not built,
+because three consistent signals are not a measurement and one document is not
+a corpus — see the binding constraint above.
+
+#### Keep the swap generator: it is a fabrication probe in its own right
+
+`attribution.py::swaps` pairs each field slot with a **same-kind value from
+another slot of the same document** — a date for a date, money for money, a
+name for a name. Every value it produces is real, printed, grounded, correctly
+typed and correctly placed **by construction**, which is precisely the class
+§22 showed the gold corpus contains none of (110 `correct`, 5 `near`, zero
+defective).
+
+It is therefore worth keeping **independently of Q-A**. Any future check on
+this defect class needs a population of true positives to be priced against,
+and the gold corpus cannot supply one. 107 of 115 slots have a same-kind
+partner, it costs nothing to generate, and it is deterministic. Kept for that
+reason, not because Q-A used it.
 
 So round 2 closes with **one** open problem, not two. I8 does not merge into the
 fabrication gap — it dissolves, and the fabrication gap is what is left standing.
