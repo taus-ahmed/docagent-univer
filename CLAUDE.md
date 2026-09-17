@@ -84,6 +84,16 @@ analysis lists as already correct, written against the CONTRACT AS IT NOW IS
 rather than as observed — pinning the old behaviour would have frozen two
 defects in place.
 
+`tests/test_i8_witness.py` pins a REJECTED rule (DECISION-LOG §22). The
+label-witness gate — a value is trustworthy only if the document prints the
+slot's own label near the quote — flags 33 of 115 gold field slots, 28
+`correct` and 5 `near` and none defective, because a document's own word for a
+field is routinely a synonym, an abbreviation, a heading above the block, or
+absent. It is the first rule anyone re-reading round 2's I8 will reach for, so
+the measurement is committed rather than the conclusion. The counts are a
+measurement and are ALLOWED to fail: if one moves, re-run
+`python -m tests.harness.witness` and update §22 and the test together.
+
 `pytest.ini` deselects `-m live` by default. `-m known_bug` marks a reproduction of an
 unfixed bug; those are additionally `xfail(strict=True)`, so the default suite
 stays green AND the marker cannot go stale — the day the fix lands, the

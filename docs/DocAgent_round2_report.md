@@ -150,6 +150,42 @@ Three instances, all real strings, all wrong:
 
 **Change.** Grounding must carry the quote's location and its nearest source label, not just confirm the string exists somewhere in the document.
 
+**Overturned 2026-09-16, on all three counts.** Investigated from the code
+after the round-2 answers were re-recorded at `f3d4d4a`. None of the three is
+an instance of the class this item names.
+
+- **Billing Period and Meter Number were one defect — the page-4 split — and it
+  was already fixed by I1.** The pre-fix recording
+  (`round2_raw/run9_engie_BR4_prefix_fe3385d.json`) holds both halves of the
+  split bill, and **document 1 answered `Billing Period = Aug 12, 2020 to Sep
+  11, 2020` correctly all along**. Document 2 was page 4 alone, asked for the
+  full slot set, and returned the only date range on that page. The model never
+  confused the reading dates with the billing period; it was asked about a
+  document that should not have existed. `0123456789AB` is likewise the right
+  value from the right column — page 4 prints it under `Meter … Number`. Both
+  re-recorded runs now answer from page 1.
+- **`Total withdrawals = -65.00` is a text-layer defect, not a source-field
+  one, and the arithmetic is coincidence.** `65.00` is printed in its own right
+  at 6.9pt among two `$35.00` at 6.1pt on one baseline; `-35.00 + -30.00 =
+  -65.00` reconciles by chance. Line clustering merges 52 words across four
+  font sizes into one 641-character line, which is what pairs `Total` with
+  `65.00`. It already fails loudly: the value is demoted and flagged, and 52%
+  of that page trips the document gate. I7's remaining axis — see
+  KNOWN-LIMITATIONS.
+- **The recommended change was measured and rejected.** Requiring the
+  document to print the slot's own label near the quote flags 33 of 115 filled
+  gold field slots (28.7%), of which 28 are `correct` and 5 are `near` and
+  **none is defective** — while the corpus holds no defective field slot for it
+  to catch. The misses are systematic and contradict this repo's naming rules
+  1-3: `No:` for Cheque Number, `Terms:` for Payment Terms, `Total` for Total
+  Earnings, `Bill To:` above the block, and nothing at all for a cheque's
+  Drawer and Payee. See DECISION-LOG §22; pinned by `tests/test_i8_witness.py`.
+
+What survives is the fabrication gap (`Customer Email Address` ←
+`care@engieresources.com`), which is a separate item and the round's one
+remaining open problem.
+
+
 ---
 
 ## I9 — Column assignment cannot be verified (carried from round 1)

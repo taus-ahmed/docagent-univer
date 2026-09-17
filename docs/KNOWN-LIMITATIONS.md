@@ -177,6 +177,51 @@ depends on whether the two are set at different sizes.
 which cells to check.
 
 
+## A page that layers several texts is read as very long merged lines
+
+**PRESENT. Flagged, but the flag condemns good values along with bad.**
+
+Some documents print several texts over one band of the page — a statement with
+a legal layer, callouts and annotation overlays stacked on top of the
+transactions. Reading a page means first deciding which words share a line, and
+that decision is made on vertical position alone, within three points. It does
+not know that two words three points apart belong to different layers.
+
+On the worst page in our test set — page 3 of a bank statement, `HTR-043235` —
+**52 words spanning four different font sizes collapse into one line of 641
+characters**, mixing a sentence of small print with amounts from two other
+layers:
+
+```
+Total Total Note Total Direct your service service deposits Ending deposits
+fees fees and Balance other … $9,999.99 - - - $35.00 $35.00 from 65.00 the
+```
+
+Every word there is genuinely printed. What is invented is that they are on one
+line together. A value read off such a line — `65.00` paired with the word
+`Total` — is checked against the page, found, and confirmed, because by then
+the merged line is what the page is taken to say.
+
+**What is flagged.** 2,647 of that page's 5,052 words (52%) are marked as
+overprinted, so values read from them are demoted to low confidence and
+flagged, and the document as a whole is pushed to review. That is the right
+verdict for the bad values and the wrong one for the good: genuine
+transactions on the same page — `Derry Diner`, `19.31` — are condemned
+alongside them. The signal here is indiscriminate rather than absent.
+
+**This is the remaining half of a defect whose other half is fixed.** The same
+root has two axes. Words built from characters laid out side by side at
+different sizes used to shatter into fragments, and that is fixed — a word may
+no longer span a font size. Lines built from words stacked vertically across
+layers are still merged. Only the first axis was addressed.
+
+**What to do.** On a document whose text is visibly layered — dense small
+print, watermarks, annotation overlays over a table — treat the whole page as
+needing review rather than trusting the per-cell flags to separate good from
+bad. Low confidence on such a page means "this page was read badly", not "this
+value is wrong".
+
+
 Missing or refused. Visible, not dangerous.
 
 ## Scanned documents and photographs

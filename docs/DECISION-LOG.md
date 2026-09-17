@@ -1368,6 +1368,162 @@ the same defect that hid the rows hid the heading.
 - **The 1.05 and 1.0pt thresholds are corpus-measured**, on 98 pages and 69
   PDFs, all but two of them drawn in-house.
 
+## 22. I8: the diagnosis is overturned on all three counts, and the obvious detector is measurably worse than nothing
+
+I8 said: *values from the wrong source field validate as correct*, and named
+three. Investigated from the code on 2026-09-16, after the round-2 answers were
+re-recorded at `f3d4d4a`. **None of the three is an instance of the class the
+item names.** Two were one structural defect that I1 had already fixed; the
+third is a text-layer defect on I7's axis that already fails loudly. The item's
+proposed change — "grounding must carry the quote's location and its nearest
+source label" — was then measured on its own terms and **rejected**.
+
+### Symptoms 1 and 2 were the page-4 split, and the prefix recording proves it
+
+The report read `Billing Period = Aug 12 / Sep 11` (page 4, under `Reading
+Dates Previous/Current`) and `Meter Number = 0123456789AB` "returned inside a
+block that should not exist" as two findings about the model's judgement. They
+are one finding about document boundaries, and the phrase "a block that should
+not exist" was literally the whole cause rather than an aside.
+
+`tests/fixtures/round2_raw/run9_engie_BR4_prefix_fe3385d.json` was captured
+before I1, when a keyword classifier read the glossary page as a tax form and
+cut `SampleBill.pdf` in two. **Both halves were asked the full slot set**, and
+both answered:
+
+| | F2 `Billing Period` | F3 `Meter Number` |
+|---|---|---|
+| document 1 — pages 1-3 | `Aug 12, 2020 to Sep 11, 2020` ✔ | *(empty)* |
+| document 2 — page 4 alone | `Aug 12 / Sep 11` | `0123456789AB` |
+
+Document 1 answered it correctly all along. **The model never confused the
+meter reading dates with the billing period**; it was handed a one-page
+document that does not contain a billing period, asked for one, and returned
+the only date range printed on that page. That is correct behaviour under a
+false premise. The report saw the two documents' output together and read
+document 2's answer as the extraction's answer.
+
+The meter number is not even a wrong value. Page 4 prints
+
+```
+Reading Dates    Meter   Meter      Meter Reading      Usage  Usage
+Previous/Current Number  Constant   Previous Current   Type
+Aug 12 / Sep 11  0123456789AB  1    0        0         kWh    982
+```
+
+and `0123456789AB` sits under `Meter … Number`. Right value, right column,
+wrong document — and the document was the defect.
+
+Both re-recorded runs confirm the fix: `run4_engie_E1` and `run9_engie_BR4`
+answer `Aug 12, 2020 to Sep 11, 2020`, quoted from page 1's `Service Aug 12,
+2020 to Sep 11, 2020`, under the printed `BILLING PERIOD` heading, and the
+meter number now comes from page 4 of the one document it belongs to.
+
+### Symptom 3 is a text-layer defect, and the arithmetic that alarmed the report is coincidence
+
+`Total withdrawals = -65.00` on `round2/HTR-043235.pdf`. The report's alarm was
+that `-35.00 + -30.00 = -65.00`, so "the output reconciles" and a reviewer
+checking the arithmetic would pass it.
+
+`65.00` is printed on page 3 in its own right — size **6.9 pt**, x 410.7-429.2,
+top 435.2 — among two `$35.00` at **6.1 pt**, x 407.2-427.5, tops 435.1 and
+435.8. Three amounts from three overlay layers, right-aligned into one column
+on one baseline. The sum is a coincidence, not a synthesised total.
+
+What produced the reading is `group_lines`, which clusters on `y` within
+`LINE_TOL = 3.0` and is blind to layer. On this page that collapses 52 words
+spanning four font sizes into a single 641-character line:
+
+```
+Total Total Note Total Direct your service service deposits Ending deposits
+fees fees and Balance other … $9,999.99 - - - $35.00 $35.00 from 65.00 the
+```
+
+The pairing of `Total` with `65.00` never existed on the page as a visual unit;
+line clustering manufactured it, and a span quoted from that line grounds
+perfectly because the merged line **is** the text layer. This is I7's remaining
+axis — §21 fixed word grouping across font sizes and left line clustering
+untouched.
+
+**It already fails loudly.** `overprinted_value` returns true for the value, so
+`slot_extractor.py` demotes it to `low` and flags it; 2,647 of the page's 5,052
+words (52%) are overprint-tagged, which also trips the >30% document gate. The
+signal is indiscriminate rather than absent — correct values like `Derry Diner`
+and `19.31` are condemned with it — and that is recorded in KNOWN-LIMITATIONS,
+not fixed here.
+
+### The label-witness gate: 33 false positives, and no true positive available
+
+I8's proposed change is one rule: a value is trustworthy only if the document
+prints **the slot's own label** near the quote. Measured over every recorded
+gold answer, replayed (`tests/harness/witness.py`, pinned by
+`tests/test_i8_witness.py`):
+
+| | | |
+|---|---|---|
+| filled field slots | **115** | |
+| label witnessed on the quote's line or the line above | 79 | 68.7% |
+| **not witnessed** | **33** | **28.7%** |
+| undecidable (no content word in the label, or no quote) | 3 | counted apart |
+| of the 33: `correct` / `near` / defective | **28 / 5 / 0** | |
+
+**Not one of the 33 is a defect.** And the corpus contains **no defective field
+slot at all** — 110 `correct`, 5 `near`, nothing wrong, missed or hallucinated —
+so these ten documents can price the gate's false positives and **cannot price
+its true ones**. "Zero true positives" would overstate it; the honest statement
+is that the gate costs 28.7% of correct values to catch something this corpus
+cannot demonstrate it catches.
+
+The misses are systematic, and they are this repo's own naming rules 1-3 seen
+from the other side — *the document's own word for a field is routinely not the
+field's name*:
+
+| the slot asks for | the page prints | kind of miss |
+|---|---|---|
+| `Cheque Number` | `No: CHQ-001847` | a synonym |
+| `Payment Terms` | `Terms: Net 30` | a synonym |
+| `Total Earnings` | `Total $14,583.33` | an abbreviation of the compound label |
+| `Bill To Company` | `Bill To:` as a heading above the block | label not beside the value |
+| `Drawer Name`, `Payee` | nothing | **no printed label at all** — naming rule 2 |
+
+A cheque is the worst case: six of its field slots fail the gate and all six
+are correct, because a cheque labels almost nothing it prints. A gate that
+contradicts the naming policy on its own corpus is not a gate that needs
+tuning; the two cannot both be right. **Rejected, alongside gate rule G (R6)
+and the strict span rule (§2)** — all three fire on legitimate documents, which
+is the same class of bug as the silent failure they were meant to replace.
+
+### Why no rule of this shape can work
+
+Every gate the pipeline has is a property of **the page**: `verify_span` asks
+whether the string is printed, `printed_numbers` whether the number is printed
+whole, `matches_loosely` whether the words are adjacent, `check_placement`
+whether the x-span fits the column, `overprinted_value` whether two texts share
+the ink, `record_span` whether the cell sits in its own record, `select_region`
+which page the row came from. A value that is real, printed, grounded,
+correctly typed and correctly placed satisfies all of them.
+
+The class I8 gestures at is a property of **the claim** — not *is this string
+on the page* but *does this string answer the question this slot asked*. No
+geometric check can reach it, because geometrically nothing is wrong. The only
+meaning-aware checks in the engine are `_single_datum` and `prose_in_a_scalar`
+(§20b), and both compare the label's implied **kind** to the value's kind;
+neither can ask whose value it is.
+
+**What survives of I8 is the fabrication gap**, and that is a different item:
+`Customer Email Address` answered with the supplier's own
+`care@engieresources.com` — page read correctly, value located correctly, typed
+correctly (`_single_datum` passes an email precisely because the label says
+"email"), grounded, and still the wrong party's address. It is pinned as a
+strict xfail in `tests/test_round2_I1.py` and recorded in KNOWN-LIMITATIONS
+WRONG #3. Reaching it means asking the model a **second, different question**
+about the value it already gave and treating disagreement as the signal. The
+pipeline makes one Gemini call today and has no verification pass; that is a
+proposal with a per-document cost, not a recommendation, and it is unmeasured.
+
+So round 2 closes with **one** open problem, not two. I8 does not merge into the
+fabrication gap — it dissolves, and the fabrication gap is what is left standing.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement
