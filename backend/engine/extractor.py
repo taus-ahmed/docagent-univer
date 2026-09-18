@@ -341,6 +341,11 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     # I10 — a page whose text layer had to be un-shredded. FILE page numbers,
     # so a split document still names the page the reader can turn to.
     shredded = list(getattr(doc, "shredded_pages", []) or [])
+    # Checks the READER could not perform, as distinct from checks that came
+    # back clean. See engine/text_layer.py's seam and
+    # docs/OCR-READER-SEAM-DESIGN.md §8.
+    unchecked_overprint = list(getattr(doc, "unchecked_overprint_pages", []) or [])
+    unchecked_shred = list(getattr(doc, "unchecked_shred_pages", []) or [])
 
     ftype = (doc.file_type if getattr(doc, "file_type", "") == "image"
              else ("digital_pdf" if getattr(doc, "has_meaningful_text", False) else "scanned_pdf"))
@@ -389,6 +394,48 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             ed.setdefault("validation", {})["shredded_pages"] = list(shredded)
         return results
 
+    def _note_unchecked(results):
+        """Say which checks the READER could not perform (reader seam, §8).
+
+        A check that did not run is not a check that passed. `shredded_pages`
+        is populated when something was found and repaired; these are populated
+        when something was never looked at, so the note has to say so in as
+        many words rather than borrowing the same phrasing.
+
+        ⚠ DELIBERATELY DOES NOT SET `needs_review`. `shredded_pages` sets it
+        because a shredded page is one a person should check. Whether "this
+        reader could not run one of the checks" deserves the same treatment
+        depends on how many documents arrive that way, and we have never seen a
+        client document — if most of them are scans, setting it on every one
+        makes the flag mean nothing, which is how the coverage indicator failed.
+        Deferred at docs/OCR-READER-SEAM-DESIGN.md §10.4.
+        """
+        if not unchecked_overprint and not unchecked_shred:
+            return results
+        for r in results or []:
+            ed = getattr(r, "extracted_data", None)
+            if not isinstance(ed, dict):
+                continue
+            v = ed.setdefault("validation", {})
+            if unchecked_overprint:
+                pages = ", ".join(str(n) for n in unchecked_overprint)
+                ed.setdefault("validation_notes", []).append(
+                    f"page {pages}: overprint detection was NOT PERFORMED — "
+                    f"the reader used for this document cannot supply "
+                    f"character geometry. This does not mean the page is "
+                    f"clean; it means the check did not run.")
+                v["unchecked_overprint_pages"] = list(unchecked_overprint)
+            if unchecked_shred:
+                pages = ", ".join(str(n) for n in unchecked_shred)
+                ed.setdefault("validation_notes", []).append(
+                    f"page {pages}: the shredded-text-layer check was NOT "
+                    f"PERFORMED — the reader used for this document cannot "
+                    f"read the same page both with and without font size, and "
+                    f"that comparison is the check. This does not mean the "
+                    f"page is clean; it means the check did not run.")
+                v["unchecked_shred_pages"] = list(unchecked_shred)
+        return results
+
     # ── DOCUMENT BOUNDARIES ──
     # One file was one document, unconditionally: three invoices merged into
     # one PDF produced 13 field slots where 3 x 13 were needed, the model
@@ -426,12 +473,12 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                         f"document {n} of {len(slices)} in "
                         f"{file_path.name} ({span})")
             results += part
-        return _note_shredded(results)
+        return _note_unchecked(_note_shredded(results))
 
-    return _note_shredded(
+    return _note_unchecked(_note_shredded(
         _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
                      doc_text_pages, page_images, default_doc_type,
-                     batch_schemas))
+                     batch_schemas)))
 
 
 def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,

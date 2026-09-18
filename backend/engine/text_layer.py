@@ -578,7 +578,22 @@ def overprinted_spans(page):
     inventing one of the two readings.
     """
     try:
-        chars = [c for c in page.chars if str(c.get("text", "")).strip()]
+        raw_chars = page.chars
+    except Exception:
+        return []
+    return overprinted_spans_from_chars(raw_chars)
+
+
+def overprinted_spans_from_chars(raw_chars):
+    """`overprinted_spans` against characters already obtained.
+
+    Split out for the reader seam: `read_page` asks its source for characters
+    and passes them here, while `overprinted_spans(page)` above keeps taking a
+    pdfplumber page so its five existing call sites need no edit. The detection
+    itself is unchanged and lives here.
+    """
+    try:
+        chars = [c for c in raw_chars if str(c.get("text", "")).strip()]
     except Exception:
         return []
     if not chars:
@@ -881,6 +896,311 @@ _WORD_ATTRS = ["size"]
 SHARD_SHRED = 1.05
 
 
+# ── THE READER SEAM ─────────────────────────────────────────────────────────
+#
+# `read_page` used to BE the pdfplumber reader: it called `extract_text()`,
+# `extract_words(extra_attrs=…)`, `page.chars` and `page.page_number` directly,
+# so "the same word-list contract" had nothing to attach to — there was no
+# interface a second reader could implement. See docs/OCR-CONTRACT-SCOPING.md
+# and docs/OCR-READER-SEAM-DESIGN.md.
+#
+# What is pluggable is OBTAINING a page's words and text. What is not is the
+# policy above them — repair, markers, page stamping, overprint marking, the
+# rebuild decision. The seam therefore sits BELOW `read_page`, which keeps its
+# orchestration and its signature.
+#
+# TWO DECLARATIONS, because assuming either one is how a second reader fails
+# silently rather than loudly:
+#
+#   a COORDINATE SPACE  so that pixels are never mistaken for points and a
+#                       bottom-left origin is never mistaken for a top-left one
+#   a CAPABILITY SET    so that "this reader cannot check" is never recorded as
+#                       "this page is clean"
+
+
+class Capability:
+    """What a reader can do. A claim about the READER, not about the document.
+
+    `overprinted` absent has meant two different things — "checked, clean" and
+    "never checked" — and nothing could tell them apart. A capability is how
+    the difference gets recorded.
+    """
+
+    #: Per-character boxes and per-character font size, i.e. `page.chars`.
+    #: Without it `overprinted_spans` has no input and the overprint check does
+    #: not run. NOT a claim that the page is clean — see
+    #: `unchecked_overprint_pages`.
+    CHARACTER_GEOMETRY = "character_geometry"
+
+    #: The reader can tokenise the SAME page twice, once respecting font size
+    #: and once blind to it. `shard_ratio` is the ratio between those two
+    #: readings, so a reader that segments once cannot produce it at all — this
+    #: is a mechanism, not a field (OCR-CONTRACT-SCOPING §2.5).
+    SIZE_AWARE_TOKENISATION = "size_aware_tokenisation"
+
+    #: `size` on a word is a real font size rather than a surrogate. Reserved:
+    #: nothing reads `w["size"]` today, and a bbox-height stand-in would agree
+    #: 97% of the time and disagree on exactly the pages that matter.
+    TRUE_FONT_SIZE = "true_font_size"
+
+
+#: The space everything downstream of the seam is expressed in. Every tolerance
+#: in this module — LINE_TOL, EDGE_TOL, COLUMN_TOL, OVERPRINT_TOP_TOL — is in
+#: POINTS measured from the TOP of the page, and each of them is a bare
+#: inequality, so a reader in another space misaligns quietly instead of
+#: raising.
+ENGINE_UNIT = "pt"
+ENGINE_ORIGIN = "top-left"
+
+
+class CoordinateSpace:
+    """What space a reader's coordinates are in. Declared, never inferred.
+
+    A pixel coordinate and a point coordinate are both plausible floats and
+    nothing about a value distinguishes them, which is exactly why the existing
+    failure mode is silent. Only a declaration makes it detectable.
+
+    THREE AXES ARE COVERED, and they fail independently:
+
+      unit      points vs pixels — a scale error. Coordinates come out wrong by
+                a constant factor, so things land far away.
+      origin    top-left/y-down vs bottom-left/y-up — a MIRROR. A checkbox near
+                the top of the page lands near the bottom, on a line that
+                genuinely exists, at a plausible x. Worse than the scale error
+                because the output looks more reasonable.
+      height    needed to perform the origin flip at all; a flip against a
+                disagreeing height is off by a constant and equally quiet.
+
+    ⚠ ROTATION AND SKEW ARE OUT OF SCOPE (design §10.7). A `/Rotate 90` page
+    and a scan fed in at an angle are two further ways two sources can disagree.
+    All 114 pages of `tests/test_pdfs/` are unrotated, so nothing here would
+    catch a regression in that, and deskew is a property of scanning equipment
+    this repo has never seen. Declaring it handled would be the same kind of
+    false assurance the shredded-layer warning refuses to give about scans.
+    """
+
+    __slots__ = ("unit", "origin", "height", "width", "dpi")
+
+    def __init__(self, unit=ENGINE_UNIT, origin=ENGINE_ORIGIN, height=0.0,
+                 width=0.0, dpi=None):
+        self.unit = str(unit)
+        self.origin = str(origin)
+        self.height = float(height or 0.0)
+        self.width = float(width or 0.0)
+        self.dpi = float(dpi) if dpi else None
+
+    def __repr__(self):
+        return (f"CoordinateSpace(unit={self.unit!r}, origin={self.origin!r}, "
+                f"height={self.height!r}, width={self.width!r}, "
+                f"dpi={self.dpi!r})")
+
+    @property
+    def is_engine_space(self):
+        return self.unit == ENGINE_UNIT and self.origin == ENGINE_ORIGIN
+
+    def scale_to_points(self):
+        if self.unit == "pt":
+            return 1.0
+        if self.unit == "px":
+            return 72.0 / self.dpi
+        raise CoordinateSpaceError(f"unit {self.unit!r} cannot be converted")
+
+    def validate(self):
+        """Refuse a declaration the seam cannot convert. Loudly.
+
+        A failure here is a failure — it does not fall back to "assume points",
+        because assuming is the bug. Same rule as the engine's refusal to wrap
+        extraction in a bare `except`.
+        """
+        if self.unit not in ("pt", "px"):
+            raise CoordinateSpaceError(
+                f"unknown unit {self.unit!r}; expected 'pt' or 'px'")
+        if self.unit == "px" and not self.dpi:
+            raise CoordinateSpaceError(
+                "a reader declaring pixels must declare its dpi, or its "
+                "coordinates cannot be converted to points")
+        if self.origin not in ("top-left", "bottom-left"):
+            raise CoordinateSpaceError(
+                f"unknown origin {self.origin!r}; expected 'top-left' or "
+                f"'bottom-left'")
+        if self.origin == "bottom-left" and self.height <= 0:
+            raise CoordinateSpaceError(
+                "a reader declaring a bottom-left origin must declare the page "
+                "height, or the flip to top-down cannot be performed")
+        return self
+
+
+class CoordinateSpaceError(ValueError):
+    """A reader declared a space the seam cannot convert to the engine's."""
+
+
+_XY_KEYS = ("x0", "x1")
+_Y_KEYS = ("top", "bottom", "doctop")
+
+
+def normalise_words(words, space):
+    """Words in `space` -> words in the engine's space (points, top-left).
+
+    Converts IN PLACE and returns the list: a reader hands its words over, and
+    nothing downstream ever sees a coordinate in any other space. That is the
+    whole point — `LINE_TOL <= 3.0` means three points from the top of the page
+    everywhere, for every reader, without a single call site knowing which
+    reader ran.
+
+    A source already in the engine's space is returned untouched, so the
+    pdfplumber path costs nothing and its floats are bit-identical to before.
+    """
+    space.validate()
+    if space.is_engine_space:
+        return words
+    scale = space.scale_to_points()
+    height_pt = space.height * scale
+    flip = space.origin == "bottom-left"
+    for w in words or ():
+        for k in _XY_KEYS:
+            if k in w:
+                w[k] = float(w[k]) * scale
+        for k in _Y_KEYS:
+            if k in w:
+                y = float(w[k]) * scale
+                w[k] = (height_pt - y) if flip else y
+        if flip and "top" in w and "bottom" in w and w["top"] > w["bottom"]:
+            # The flip reverses which edge is nearer the top of the page.
+            w["top"], w["bottom"] = w["bottom"], w["top"]
+        for k in ("height", "width", "size"):
+            if k in w:
+                try:
+                    w[k] = float(w[k]) * scale
+                except (TypeError, ValueError):
+                    pass
+    return words
+
+
+class PageSource:
+    """One page, from some reader. The interface `read_page` talks to.
+
+    Implementations supply:
+
+        page_number             1-based FILE page, or None
+        space                   CoordinateSpace, declared not inferred
+        capabilities            frozenset of Capability values
+        raw_text()              the page's text as the reader flattens it
+        words(size_aware=bool)  word dicts in `space`
+        chars()                 character dicts, only with CHARACTER_GEOMETRY
+
+    A word must carry `text`, `x0`, `x1`, `top` and `bottom`. `page` and
+    `overprinted` are ANNOTATIONS the engine adds and a reader must not set;
+    `size` is optional and gated on TRUE_FONT_SIZE; `doctop`, `height`,
+    `width`, `upright` and `direction` are pdfplumber passthroughs that nothing
+    reads and no reader is required to supply.
+    """
+
+    page_number = None
+    space = None
+    capabilities = frozenset()
+
+    def raw_text(self):
+        raise NotImplementedError
+
+    def words(self, size_aware=True):
+        raise NotImplementedError
+
+    def chars(self):
+        return []
+
+    def can(self, capability):
+        return capability in (self.capabilities or frozenset())
+
+
+class PdfplumberSource(PageSource):
+    """The default reader: today's behaviour, unchanged, behind the seam.
+
+    Every number this produces is the number `read_page` produced before the
+    seam existed, because it makes the same three calls in the same order. The
+    only thing that is new is that it SAYS what it can do.
+
+    ⚠ `SIZE_AWARE_TOKENISATION` is discovered, not assumed. A pdfplumber old
+    enough to reject `extra_attrs` used to fall into a `TypeError` branch that
+    silently produced a shard ratio of 1.0 — a clean reading, from a reader that
+    could not perform the comparison. That branch is now what DROPS the
+    capability, so the same reader reports "not checked" instead.
+    """
+
+    def __init__(self, page):
+        self._page = page
+        self._size_aware = None          # unknown until first asked
+        self._caps = None
+
+    @property
+    def page_number(self):
+        return getattr(self._page, "page_number", None)
+
+    @property
+    def space(self):
+        # pdfplumber reports x0/top in POINTS from the TOP-LEFT of the page.
+        # `height`/`width` are declared even though no conversion needs them
+        # here, because the declaration is what a second source is checked
+        # against.
+        return CoordinateSpace(
+            unit="pt", origin="top-left",
+            height=float(getattr(self._page, "height", 0.0) or 0.0),
+            width=float(getattr(self._page, "width", 0.0) or 0.0))
+
+    @property
+    def capabilities(self):
+        if self._caps is None:
+            caps = set()
+            if self._probe_size_aware():
+                caps.add(Capability.SIZE_AWARE_TOKENISATION)
+                caps.add(Capability.TRUE_FONT_SIZE)
+            try:
+                if getattr(self._page, "chars", None) is not None:
+                    caps.add(Capability.CHARACTER_GEOMETRY)
+            except Exception:
+                pass
+            self._caps = frozenset(caps)
+        return self._caps
+
+    def _probe_size_aware(self):
+        if self._size_aware is None:
+            try:
+                self._page.extract_words(extra_attrs=_WORD_ATTRS)
+                self._size_aware = True
+            except TypeError:
+                self._size_aware = False
+            except Exception:
+                self._size_aware = False
+        return self._size_aware
+
+    def raw_text(self):
+        return self._page.extract_text() or ""
+
+    def words(self, size_aware=True):
+        if size_aware and self._probe_size_aware():
+            return self._page.extract_words(extra_attrs=_WORD_ATTRS)
+        return self._page.extract_words()
+
+    def chars(self):
+        try:
+            return self._page.chars
+        except Exception:
+            return []
+
+
+def as_page_source(page_or_source):
+    """The backward-compatibility hinge.
+
+    All 31 existing `read_page(...)` call sites pass a pdfplumber page
+    positionally. They keep working, unedited, because anything that is not
+    already a `PageSource` is wrapped in the default one. Rewriting thirty test
+    call sites in the same change as a structural refactor would have destroyed
+    the evidence that tells us the refactor was safe.
+    """
+    if isinstance(page_or_source, PageSource):
+        return page_or_source
+    return PdfplumberSource(page_or_source)
+
+
 def read_page(page, widgets=(), stats=None):
     """(text, lines, repairs) for one pdfplumber page.
 
@@ -892,23 +1212,58 @@ def read_page(page, widgets=(), stats=None):
     this page — `shard_ratio` today. An out-parameter rather than a fourth
     return value because a dozen callers unpack the triple.
     """
-    raw = page.extract_text() or ""
+    source = as_page_source(page)
+    raw = source.raw_text()
     try:
-        words = page.extract_words(extra_attrs=_WORD_ATTRS)
-        plain = page.extract_words()
-    except TypeError:                     # a reader without extra_attrs
-        words = plain = page.extract_words()
+        words = normalise_words(source.words(size_aware=True), source.space)
+    except CoordinateSpaceError:
+        raise
     except Exception:
         return raw, [], []
-    shard = len(plain) / max(len(words), 1)
-    if stats is not None:
-        stats["shard_ratio"] = shard
+
+    # THE SHREDDED-LAYER CHECK IS A MECHANISM, NOT A FIELD. `shard_ratio` is
+    # the ratio between two tokenisations of ONE page by ONE reader, one
+    # respecting font size and one blind to it. A reader that segments a page
+    # once cannot produce the second reading, so it cannot produce the ratio —
+    # and a surrogate derived from its own segmentation would be a diff against
+    # itself, which measures nothing.
+    #
+    # So the check is CAPABILITY-GATED and its absence is recorded. It is not
+    # defaulted to 1.0: that is the value a clean page scores, and reporting a
+    # clean score for a check that never ran is the failure this whole seam
+    # exists to prevent.
+    if source.can(Capability.SIZE_AWARE_TOKENISATION):
+        try:
+            plain = source.words(size_aware=False)
+        except Exception:
+            plain = words
+        shard = len(plain) / max(len(words), 1)
+        if stats is not None:
+            stats["shard_ratio"] = shard
+    else:
+        shard = None
+        if stats is not None:
+            stats["shard_checked"] = False
+
     lines, repairs = repair_wrapped(words)
     lines, placed = inject_markers(lines, widgets)
-    stamp_page(lines, getattr(page, "page_number", None))
+    stamp_page(lines, source.page_number)
     # Marked on the FINAL word list and by geometry, so a fused fragment or an
     # injected marker cannot lose the tag.
-    mark_overprints(lines, overprinted_spans(page))
+    #
+    # ⚠ WITHOUT CHARACTER GEOMETRY THIS DOES NOT RUN, and `overprinted` is left
+    # absent on every word — which is what it already means for a clean page.
+    # The per-word flag stays TWO-VALUED on purpose: `overprinted_value` reads
+    # it through `if not w.get("overprinted")`, and `slot_extractor` reads THAT
+    # through `if overprinted_value(...)`, so a third per-word value would
+    # either be swallowed by the negation or fire the demotion on every value in
+    # the document. The fact that the check did not run is carried at DOCUMENT
+    # level instead — `stats["overprint_checked"]`, and from there
+    # `unchecked_overprint_pages`.
+    if source.can(Capability.CHARACTER_GEOMETRY):
+        mark_overprints(lines, overprinted_spans_from_chars(source.chars()))
+    elif stats is not None:
+        stats["overprint_checked"] = False
     # THE PROMPT HAS TO BE FIXED TOO, or nothing is. `extract_text()` groups
     # characters exactly as the size-blind `extract_words()` did, so the change
     # above repairs the GEOMETRY and leaves the MODEL reading the shards: on
@@ -927,7 +1282,16 @@ def read_page(page, widgets=(), stats=None):
     # including SampleBill and feb2225, which differ from the size-aware reading
     # by four and one token respectively — rewriting a whole page, and every
     # cached answer for it, over one word.
-    if not repairs and not placed and shard < SHARD_SHRED \
+    # `shard is None` means the ratio could not be MEASURED, not that it came
+    # back clean. The two are kept apart deliberately and land in different
+    # places: the rebuild decision here takes the conservative branch (return
+    # the reader's own text verbatim, exactly as an unshredded page does,
+    # because nothing has been shown to be wrong with it), while the fact that
+    # the check never ran travels out through `stats` and is reported. Folding
+    # the unmeasured case into `shard = 1.0` would have made both decisions at
+    # once and reported a clean page.
+    not_shredded = shard is None or shard < SHARD_SHRED
+    if not repairs and not placed and not_shredded \
             and not _recovered_words_missing(raw, lines):
         return raw, lines, []
     return text_from_lines(lines), lines, repairs

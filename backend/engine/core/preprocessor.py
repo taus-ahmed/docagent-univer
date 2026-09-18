@@ -43,6 +43,23 @@ class ProcessedDocument:
     #: in x. Separated and rebuilt by `read_page`; listed here so the warning
     #: survives past the log line. NOT a scanned-page signal (I10).
     shredded_pages: list[int] = field(default_factory=list)
+    #: 1-based page numbers on which OVERPRINT DETECTION WAS NOT PERFORMED,
+    #: because the reader that produced them does not declare
+    #: CHARACTER_GEOMETRY (engine/text_layer.py). NOT a claim that those pages
+    #: are clean — the check did not run. An empty list means every page was
+    #: checked, so the field reads correctly on documents processed before it
+    #: existed.
+    #:
+    #: ⚠ The per-word `overprinted` flag stays TWO-VALUED. A third per-word
+    #: value would be swallowed by `overprinted_value`'s negation or would fire
+    #: `slot_extractor`'s demotion on every value in the document; the fact
+    #: that the check never ran belongs here instead.
+    unchecked_overprint_pages: list[int] = field(default_factory=list)
+    #: 1-based page numbers on which the SHREDDED-LAYER CHECK WAS NOT
+    #: PERFORMED, because the reader cannot tokenise the same page twice (once
+    #: size-aware, once size-blind) and `shard_ratio` is the ratio between
+    #: those two readings. Again: not a clean result, an absent one.
+    unchecked_shred_pages: list[int] = field(default_factory=list)
     processing_notes: str = ""
 
     @property
@@ -177,7 +194,15 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                 # measure. Two different failures, two different signals, and
                 # treating this one as the OCR canary would give false
                 # assurance.
-                if stats.get("shard_ratio", 1.0) >= SHARD_SHRED:
+                #
+                # A reader that cannot perform the two-pass comparison at all
+                # is recorded as UNCHECKED rather than passing the test it was
+                # never able to sit. `stats` carries no `shard_ratio` in that
+                # case, and defaulting it to 1.0 here would read as a clean
+                # page.
+                if stats.get("shard_checked", True) is False:
+                    doc.unchecked_shred_pages.append(page_num + 1)
+                elif stats.get("shard_ratio", 1.0) >= SHARD_SHRED:
                     doc.shredded_pages.append(page_num + 1)
                     print(
                         f"[TEXTLAYER] page {page_num+1}: SHREDDED TEXT LAYER — "
@@ -190,6 +215,12 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                         f"OCR text layers.)",
                         flush=True
                     )
+                # OVERPRINT DETECTION: performed, or recorded as not performed.
+                # Never silently absent — an absent per-word flag already means
+                # "this word is clean", so a reader that cannot look would
+                # otherwise report a clean document.
+                if stats.get("overprint_checked", True) is False:
+                    doc.unchecked_overprint_pages.append(page_num + 1)
                 if repairs:
                     doc.text_repairs.extend(repairs)
                     print(
