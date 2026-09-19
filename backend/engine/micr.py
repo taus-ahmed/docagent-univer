@@ -42,8 +42,25 @@ def _cls(chars):
 
 #: A field is <sentinel> digits <sentinel>, the sentinels being the same role.
 _TRANSIT_RE = re.compile(rf"{_cls(_TRANSIT)}\s*(\d{{9}})\s*{_cls(_TRANSIT)}")
-_ONUS_RE = re.compile(rf"{_cls(_ONUS)}\s*([\d{re.escape('-')}\s]{{4,20}}?)\s*{_cls(_ONUS)}")
 _AMOUNT_RE = re.compile(rf"{_cls(_AMOUNT)}\s*(\d{{4,12}})\s*{_cls(_AMOUNT)}")
+
+#: A run of digits as an on-us field prints it: digit groups joined by a
+#: space or a dash symbol (`1234⑉6678`, `1234d6678`). Never starts or ends on
+#: a separator, so a trailing dash stays a terminator rather than being eaten.
+_RUN = rf"\d+(?:(?:[ ]|{_cls(_DASH)})\d+)*"
+_O = _cls(_ONUS)
+
+#: THE AUXILIARY ON-US FIELD — left of the transit field, bracketed by on-us
+#: symbols at both ends. Business cheques carry the serial here.
+_AUX_RE = re.compile(rf"{_O}\s*({_RUN})\s*{_O}")
+#: An on-us group: optionally opened by an on-us symbol, always CLOSED by one.
+#: "The account number is followed by an On-Us symbol to indicate that it is
+#: an account number" — that closing symbol is the structural marker.
+_GROUP_RE = re.compile(rf"\s*{_O}?\s*({_RUN})\s*{_O}")
+#: A serial trailing the account: digits closed by a dash symbol, an amount
+#: symbol, or the end of the line.
+_TRAIL_RE = re.compile(
+    rf"\s*(\d{{3,12}})\s*(?={_cls(_DASH)}|{_cls(_AMOUNT)}|$)")
 
 #: A line that plausibly IS a MICR band: at least a transit field, mostly
 #: digits and sentinels. Deliberately strict — a sentence containing a nine
@@ -83,29 +100,67 @@ def parse_micr(line: str) -> dict:
     reported only if it passes the ABA checksum; reporting an unchecked one
     would be exactly the kind of confident wrong answer this whole engine is
     built to avoid.
+
+    THE ORDER OF THE ON-US FIELDS IS NOT FIXED, so it is read from STRUCTURE,
+    anchored on the transit field, never from position in the string:
+
+        C001002C  A423511613A  559407816184C     business: auxiliary on-us
+        (serial)   (transit)   (account)         field LEFT of transit
+        A021000021A C7743882201C 001847D         personal: account closed by
+                    (account)    (serial)        on-us, serial trailing it
+
+    The on-us field is bank-defined ("the format for this field may vary").
+    The first version took the first `on-us … on-us` pair ANYWHERE in the line,
+    which on a business cheque is the auxiliary serial — so every business
+    cheque reported its cheque number as its account number.
+
+    ⚠ ONE SHAPE IS GENUINELY AMBIGUOUS and is left unanswered: no auxiliary
+    field, and TWO on-us-closed groups after the transit field
+    (`T…T 0691o 123d6678o` — a documented serial-then-account layout, and
+    structurally identical to an account followed by something else). Nothing
+    in the band says which is the account, and the routing checksum cannot
+    help: it validates the transit field, not which on-us group is which.
+    Slot extraction only fills slots the model left EMPTY, so withholding
+    costs nothing that a guess would not cost more.
     """
     s = str(line or "")
     if not s:
         return {}
-    out = {}
-
     m = _TRANSIT_RE.search(s)
-    if m and aba_is_valid(m.group(1)):
+    if not m:
+        return {}
+    out = {}
+    if aba_is_valid(m.group(1)):
         out["routing_number"] = m.group(1)
 
-    m = _ONUS_RE.search(s)
-    if m:
-        acct = re.sub(r"[\s-]", "", m.group(1))
-        if acct.isdigit() and len(acct) >= 4:
-            out["account_number"] = acct
+    aux = _AUX_RE.search(s[:m.start()])
+    right = s[m.end():]
+    first = _GROUP_RE.match(right)
+    if first is None:
+        if aux:
+            out["serial_number"] = _digits(aux.group(1))
+        return out
+    second = _GROUP_RE.match(right, first.end())
 
-    # The serial usually trails the on-us field, closed by the dash sentinel.
-    tail = s[m.end():] if m else s
-    m2 = re.search(rf"(\d{{3,12}})\s*{_cls(_DASH)}", tail)
-    if m2:
-        out["serial_number"] = m2.group(1)
+    if aux:
+        account, serial = first.group(1), aux.group(1)
+    elif second:
+        return out                      # ambiguous: see the docstring
+    else:
+        account = first.group(1)
+        trail = _TRAIL_RE.match(right, first.end())
+        serial = trail.group(1) if trail else ""
 
+    acct = _digits(account)
+    if len(acct) >= 4:
+        out["account_number"] = acct
+    if serial:
+        out["serial_number"] = _digits(serial)
     return out
+
+
+def _digits(run: str) -> str:
+    return re.sub(r"\D", "", str(run or ""))
 
 
 #: Standard synonyms for the two values that live inside a MICR band. These are
