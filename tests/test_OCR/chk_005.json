@@ -1,0 +1,23 @@
+{
+  "id": "chk_005",
+  "template": "E_dark_and_pattern",
+  "bank": "First Union Bank",
+  "payee": "Chen Wei Trading LLC",
+  "check_number": "001005",
+  "date": "07/06/2026",
+  "amount_numeral": "9,034.31",
+  "amount_words_correct": "nine thousand thirty-four and 31/100",
+  "amount_words_shown": "nine thousand thirty-four and 31/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "122691669",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "978480184514",
+  "memo": "",
+  "files": {
+    "clean": "chk_005_clean.png",
+    "moderate": "chk_005_moderate.jpg",
+    "hard": "chk_005_hard.jpg"
+  }
+}

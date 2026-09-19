@@ -7,6 +7,8 @@ and the model returns the band whole: asked for a routing number it answers
 prompt fixes it — E-13B has a fixed format with a sentinel delimiting each
 field, so it is parsed.
 """
+import json
+
 import pytest
 
 from tests.harness import bootstrap as bs
@@ -56,42 +58,34 @@ class TestParsingTheBand:
         assert find_micr_line(["nothing here"]) == ""
 
 
-#: The 18 synthetic cheques of tests/test_OCR/_index.json, copied here so the
-#: suite does not depend on that corpus being present. Each prints its band in
-#: the BUSINESS layout — auxiliary on-us serial LEFT of the transit field:
+#: The 18 synthetic cheques of tests/test_OCR/, read from the corpus itself so
+#: there is ONE source of truth rather than a copy here that can drift from it.
+#: Each prints its band in the BUSINESS layout — auxiliary on-us serial LEFT of
+#: the transit field:
 #:     C<serial>C  A<routing>A  <account>C
 #: The first parse_micr took the first on-us pair anywhere in the line, so on
 #: all 18 it reported the serial as the account (0/18 account, 0/18 serial).
 #: chk_009 and chk_016 are deliberately checksum-invalid.
-BUSINESS_CHEQUES = [
-    ("chk_001", "001001", "433218197", "600133890838", True),
-    ("chk_002", "001002", "423511613", "559407816184", True),
-    ("chk_003", "001003", "316475251", "534192832764", True),
-    ("chk_004", "001004", "056413955", "376724238849", True),
-    ("chk_005", "001005", "122691669", "978480184514", True),
-    ("chk_006", "001006", "148932522", "880957015430", True),
-    ("chk_007", "001007", "782489635", "834657871331", True),
-    ("chk_008", "001008", "105183479", "382997376311", True),
-    ("chk_009", "001009", "651333871", "624731781080", False),
-    ("chk_010", "001010", "606474687", "723430980500", True),
-    ("chk_011", "001011", "913619397", "909169985435", True),
-    ("chk_012", "001012", "911838426", "513542784980", True),
-    ("chk_013", "001013", "118244936", "534874016400", True),
-    ("chk_014", "001014", "112805986", "262045053315", True),
-    ("chk_015", "001015", "226025636", "421607337543", True),
-    ("chk_016", "001016", "850142944", "196556981693", False),
-    ("chk_017", "001017", "615951489", "465648236629", True),
-    ("chk_018", "001018", "773872141", "895134332003", True),
-]
+BUSINESS_CHEQUES = json.loads(
+    (bs.TESTS_DIR / "test_OCR" / "_index.json").read_text(encoding="utf-8"))
 
 
 class TestTheOnUsOrderIsReadFromStructure:
     """The on-us field is bank-defined, so which on-us group is the account is
     decided relative to the TRANSIT field, never by position in the string."""
 
-    @pytest.mark.parametrize("cid,serial,routing,account,valid",
-                             BUSINESS_CHEQUES, ids=[c[0] for c in BUSINESS_CHEQUES])
-    def test_a_business_cheque_band(self, cid, serial, routing, account, valid):
+    def test_the_corpus_is_the_eighteen_cheques_these_tests_assume(self):
+        """Fail LOUDLY if the fixture changes shape, rather than silently
+        testing fewer cheques than the evidence was measured on."""
+        assert len(BUSINESS_CHEQUES) == 18
+        assert sum(1 for g in BUSINESS_CHEQUES
+                   if not g["routing_checksum_valid"]) == 2
+
+    @pytest.mark.parametrize("gt", BUSINESS_CHEQUES,
+                             ids=[g["id"] for g in BUSINESS_CHEQUES])
+    def test_a_business_cheque_band(self, gt):
+        serial, routing = gt["check_number"], gt["routing_number"]
+        account, valid = gt["account_number"], gt["routing_checksum_valid"]
         band = f"C{serial}C  A{routing}A  {account}C"
         assert aba_is_valid(routing) is valid
         want = {"account_number": account, "serial_number": serial}

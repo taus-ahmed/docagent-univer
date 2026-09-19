@@ -1,0 +1,23 @@
+{
+  "id": "chk_002",
+  "template": "B_dark_logo",
+  "bank": "Golden Plains Credit Union",
+  "payee": "Maria Gonzalez",
+  "check_number": "001002",
+  "date": "11/20/2026",
+  "amount_numeral": "3,572.78",
+  "amount_words_correct": "three thousand five hundred seventy-two and 78/100",
+  "amount_words_shown": "three thousand five hundred seventy-two and 78/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "423511613",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "559407816184",
+  "memo": "Consulting fee",
+  "files": {
+    "clean": "chk_002_clean.png",
+    "moderate": "chk_002_moderate.jpg",
+    "hard": "chk_002_hard.jpg"
+  }
+}

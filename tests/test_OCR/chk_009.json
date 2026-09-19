@@ -1,0 +1,23 @@
+{
+  "id": "chk_009",
+  "template": "D_compact",
+  "bank": "Prairie State Bank",
+  "payee": "Nguyen Van Long",
+  "check_number": "001009",
+  "date": "02/25/2026",
+  "amount_numeral": "640.56",
+  "amount_words_correct": "six hundred forty and 56/100",
+  "amount_words_shown": "six hundred forty and 56/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "651333871",
+  "routing_checksum_valid": false,
+  "intentional_invalid_checksum_test_case": true,
+  "account_number": "624731781080",
+  "memo": "Rent - March",
+  "files": {
+    "clean": "chk_009_clean.png",
+    "moderate": "chk_009_moderate.jpg",
+    "hard": "chk_009_hard.jpg"
+  }
+}

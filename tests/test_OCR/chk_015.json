@@ -1,0 +1,23 @@
+{
+  "id": "chk_015",
+  "template": "E_dark_and_pattern",
+  "bank": "Cascade Trust Bank",
+  "payee": "Grant Family Trust",
+  "check_number": "001015",
+  "date": "04/01/2026",
+  "amount_numeral": "9,071.04",
+  "amount_words_correct": "nine thousand seventy-one and 04/100",
+  "amount_words_shown": "nine thousand seventy-one and 04/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "226025636",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "421607337543",
+  "memo": "Rent - March",
+  "files": {
+    "clean": "chk_015_clean.png",
+    "moderate": "chk_015_moderate.jpg",
+    "hard": "chk_015_hard.jpg"
+  }
+}

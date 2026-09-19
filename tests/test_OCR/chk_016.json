@@ -1,0 +1,23 @@
+{
+  "id": "chk_016",
+  "template": "A_standard",
+  "bank": "Golden Plains Credit Union",
+  "payee": "Summit Landscaping LLC",
+  "check_number": "001016",
+  "date": "05/02/2026",
+  "amount_numeral": "7,130.26",
+  "amount_words_correct": "seven thousand one hundred thirty and 26/100",
+  "amount_words_shown": "seven thousand one hundred thirty and 26/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "850142944",
+  "routing_checksum_valid": false,
+  "intentional_invalid_checksum_test_case": true,
+  "account_number": "196556981693",
+  "memo": "",
+  "files": {
+    "clean": "chk_016_clean.png",
+    "moderate": "chk_016_moderate.jpg",
+    "hard": "chk_016_hard.jpg"
+  }
+}

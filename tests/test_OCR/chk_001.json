@@ -1,0 +1,23 @@
+{
+  "id": "chk_001",
+  "template": "A_standard",
+  "bank": "Prairie State Bank",
+  "payee": "John A. Smith",
+  "check_number": "001001",
+  "date": "07/08/2026",
+  "amount_numeral": "267.25",
+  "amount_words_correct": "two hundred sixty-seven and 25/100",
+  "amount_words_shown": "two hundred sixty-seven and 25/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "433218197",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "600133890838",
+  "memo": "",
+  "files": {
+    "clean": "chk_001_clean.png",
+    "moderate": "chk_001_moderate.jpg",
+    "hard": "chk_001_hard.jpg"
+  }
+}

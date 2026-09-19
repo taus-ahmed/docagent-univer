@@ -1,0 +1,23 @@
+{
+  "id": "chk_017",
+  "template": "B_dark_logo",
+  "bank": "Cascade Trust Bank",
+  "payee": "Ana Beatriz Ferreira",
+  "check_number": "001017",
+  "date": "10/10/2026",
+  "amount_numeral": "3,824.13",
+  "amount_words_correct": "three thousand eight hundred twenty-four and 13/100",
+  "amount_words_shown": "three thousand eight hundred twenty-four and 13/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "615951489",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "465648236629",
+  "memo": "",
+  "files": {
+    "clean": "chk_017_clean.png",
+    "moderate": "chk_017_moderate.jpg",
+    "hard": "chk_017_hard.jpg"
+  }
+}

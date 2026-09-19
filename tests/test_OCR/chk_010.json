@@ -1,0 +1,23 @@
+{
+  "id": "chk_010",
+  "template": "E_dark_and_pattern",
+  "bank": "First Union Bank",
+  "payee": "Blackwood Consulting",
+  "check_number": "001010",
+  "date": "10/16/2026",
+  "amount_numeral": "1,731.34",
+  "amount_words_correct": "one thousand seven hundred thirty-one and 34/100",
+  "amount_words_shown": "one thousand seven hundred thirty-one and 34/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "606474687",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "723430980500",
+  "memo": "Refund",
+  "files": {
+    "clean": "chk_010_clean.png",
+    "moderate": "chk_010_moderate.jpg",
+    "hard": "chk_010_hard.jpg"
+  }
+}

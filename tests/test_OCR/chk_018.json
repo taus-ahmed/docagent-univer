@@ -1,0 +1,23 @@
+{
+  "id": "chk_018",
+  "template": "C_pattern_bg",
+  "bank": "Harborview Community Bank",
+  "payee": "Douglas Whitfield",
+  "check_number": "001018",
+  "date": "08/20/2026",
+  "amount_numeral": "4,880.75",
+  "amount_words_correct": "four thousand eight hundred eighty and 75/100",
+  "amount_words_shown": "four thousand eight hundred eighty and 75/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "773872141",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "895134332003",
+  "memo": "Invoice #4471",
+  "files": {
+    "clean": "chk_018_clean.png",
+    "moderate": "chk_018_moderate.jpg",
+    "hard": "chk_018_hard.jpg"
+  }
+}

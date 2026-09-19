@@ -1,0 +1,23 @@
+{
+  "id": "chk_013",
+  "template": "C_pattern_bg",
+  "bank": "Rosewood Federal Credit Union",
+  "payee": "Robert Kim",
+  "check_number": "001013",
+  "date": "06/25/2026",
+  "amount_numeral": "2,778.12",
+  "amount_words_correct": "two thousand seven hundred seventy-eight and 12/100",
+  "amount_words_shown": "two thousand seven hundred seventy-eight and 12/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "118244936",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "534874016400",
+  "memo": "Rent - March",
+  "files": {
+    "clean": "chk_013_clean.png",
+    "moderate": "chk_013_moderate.jpg",
+    "hard": "chk_013_hard.jpg"
+  }
+}

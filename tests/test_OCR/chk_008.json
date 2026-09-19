@@ -1,0 +1,23 @@
+{
+  "id": "chk_008",
+  "template": "C_pattern_bg",
+  "bank": "First Union Bank",
+  "payee": "Priya Patel",
+  "check_number": "001008",
+  "date": "11/14/2026",
+  "amount_numeral": "2,405.62",
+  "amount_words_correct": "two thousand four hundred five and 62/100",
+  "amount_words_shown": "two thousand four hundred five and 62/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "105183479",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "382997376311",
+  "memo": "Consulting fee",
+  "files": {
+    "clean": "chk_008_clean.png",
+    "moderate": "chk_008_moderate.jpg",
+    "hard": "chk_008_hard.jpg"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "chk_014",
+  "template": "D_compact",
+  "bank": "Golden Plains Credit Union",
+  "payee": "Fatima Al-Sayed",
+  "check_number": "001014",
+  "date": "09/28/2026",
+  "amount_numeral": "5,886.53",
+  "amount_words_correct": "five thousand eight hundred eighty-six and 53/100",
+  "amount_words_shown": "five thousand eight hundred eighty-seven and 53/100",
+  "amount_words_matches_numeral": false,
+  "intentional_mismatch_test_case": true,
+  "routing_number": "112805986",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "262045053315",
+  "memo": "",
+  "files": {
+    "clean": "chk_014_clean.png",
+    "moderate": "chk_014_moderate.jpg",
+    "hard": "chk_014_hard.jpg"
+  }
+}

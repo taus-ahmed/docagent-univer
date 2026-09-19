@@ -1,0 +1,23 @@
+{
+  "id": "chk_006",
+  "template": "A_standard",
+  "bank": "Rosewood Federal Credit Union",
+  "payee": "Sarah Thompson",
+  "check_number": "001006",
+  "date": "04/19/2026",
+  "amount_numeral": "5,328.42",
+  "amount_words_correct": "five thousand three hundred twenty-eight and 42/100",
+  "amount_words_shown": "five thousand three hundred twenty-eight and 42/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "148932522",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "880957015430",
+  "memo": "Invoice #4471",
+  "files": {
+    "clean": "chk_006_clean.png",
+    "moderate": "chk_006_moderate.jpg",
+    "hard": "chk_006_hard.jpg"
+  }
+}

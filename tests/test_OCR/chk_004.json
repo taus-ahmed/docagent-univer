@@ -1,0 +1,23 @@
+{
+  "id": "chk_004",
+  "template": "D_compact",
+  "bank": "First Union Bank",
+  "payee": "David Okafor",
+  "check_number": "001004",
+  "date": "07/19/2026",
+  "amount_numeral": "2,406.74",
+  "amount_words_correct": "two thousand four hundred six and 74/100",
+  "amount_words_shown": "two thousand four hundred six and 74/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "056413955",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "376724238849",
+  "memo": "",
+  "files": {
+    "clean": "chk_004_clean.png",
+    "moderate": "chk_004_moderate.jpg",
+    "hard": "chk_004_hard.jpg"
+  }
+}

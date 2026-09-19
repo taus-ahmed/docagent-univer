@@ -1,0 +1,23 @@
+{
+  "id": "chk_011",
+  "template": "A_standard",
+  "bank": "Rosewood Federal Credit Union",
+  "payee": "Emily Carter",
+  "check_number": "001011",
+  "date": "04/09/2026",
+  "amount_numeral": "723.49",
+  "amount_words_correct": "seven hundred twenty-three and 49/100",
+  "amount_words_shown": "seven hundred twenty-three and 49/100",
+  "amount_words_matches_numeral": true,
+  "intentional_mismatch_test_case": false,
+  "routing_number": "913619397",
+  "routing_checksum_valid": true,
+  "intentional_invalid_checksum_test_case": false,
+  "account_number": "909169985435",
+  "memo": "",
+  "files": {
+    "clean": "chk_011_clean.png",
+    "moderate": "chk_011_moderate.jpg",
+    "hard": "chk_011_hard.jpg"
+  }
+}
