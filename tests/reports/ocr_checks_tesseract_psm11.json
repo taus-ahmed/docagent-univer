@@ -1,0 +1,4703 @@
+{
+  "summary": {
+    "by_tier": {
+      "clean": {
+        "fields": {
+          "routing": [
+            17,
+            18
+          ],
+          "account": [
+            0,
+            18
+          ],
+          "check_number": [
+            0,
+            18
+          ],
+          "check_number_fallback": [
+            18,
+            18
+          ],
+          "payee": [
+            18,
+            18
+          ],
+          "amount_numeral": [
+            18,
+            18
+          ],
+          "amount_words": [
+            18,
+            18
+          ],
+          "date": [
+            18,
+            18
+          ],
+          "bank": [
+            18,
+            18
+          ],
+          "routing_transit_read": [
+            16,
+            18
+          ]
+        },
+        "micr_located": [
+          16,
+          18
+        ],
+        "checksum_correct": [
+          16,
+          18
+        ],
+        "checksum_verdicts": {
+          "chk_001": "valid",
+          "chk_002": "valid",
+          "chk_003": "valid",
+          "chk_004": "valid",
+          "chk_005": "valid",
+          "chk_006": "valid",
+          "chk_007": "valid",
+          "chk_008": "valid",
+          "chk_009": "no read",
+          "chk_010": "valid",
+          "chk_011": "valid",
+          "chk_012": "valid",
+          "chk_013": "valid",
+          "chk_014": "valid",
+          "chk_015": "valid",
+          "chk_016": "invalid",
+          "chk_017": "no read",
+          "chk_018": "valid"
+        },
+        "mismatch_correct": [
+          18,
+          18
+        ],
+        "mismatch_outcomes": {
+          "chk_001": "agree",
+          "chk_002": "agree",
+          "chk_003": "agree",
+          "chk_004": "agree",
+          "chk_005": "agree",
+          "chk_006": "agree",
+          "chk_007": "mismatch",
+          "chk_008": "agree",
+          "chk_009": "agree",
+          "chk_010": "agree",
+          "chk_011": "agree",
+          "chk_012": "agree",
+          "chk_013": "agree",
+          "chk_014": "mismatch",
+          "chk_015": "agree",
+          "chk_016": "agree",
+          "chk_017": "agree",
+          "chk_018": "agree"
+        },
+        "ocr_s_mean": 0.40386793888885425
+      },
+      "moderate": {
+        "fields": {
+          "routing": [
+            10,
+            18
+          ],
+          "account": [
+            0,
+            18
+          ],
+          "check_number": [
+            0,
+            18
+          ],
+          "check_number_fallback": [
+            18,
+            18
+          ],
+          "payee": [
+            11,
+            18
+          ],
+          "amount_numeral": [
+            14,
+            18
+          ],
+          "amount_words": [
+            6,
+            18
+          ],
+          "date": [
+            17,
+            18
+          ],
+          "bank": [
+            17,
+            18
+          ],
+          "routing_transit_read": [
+            10,
+            18
+          ]
+        },
+        "micr_located": [
+          10,
+          18
+        ],
+        "checksum_correct": [
+          10,
+          18
+        ],
+        "checksum_verdicts": {
+          "chk_001": "no read",
+          "chk_002": "no read",
+          "chk_003": "valid",
+          "chk_004": "valid",
+          "chk_005": "valid",
+          "chk_006": "valid",
+          "chk_007": "no read",
+          "chk_008": "no read",
+          "chk_009": "invalid",
+          "chk_010": "no read",
+          "chk_011": "valid",
+          "chk_012": "valid",
+          "chk_013": "no read",
+          "chk_014": "no read",
+          "chk_015": "valid",
+          "chk_016": "invalid",
+          "chk_017": "no read",
+          "chk_018": "valid"
+        },
+        "mismatch_correct": [
+          5,
+          18
+        ],
+        "mismatch_outcomes": {
+          "chk_001": "undecidable",
+          "chk_002": "mismatch",
+          "chk_003": "undecidable",
+          "chk_004": "undecidable",
+          "chk_005": "agree",
+          "chk_006": "agree",
+          "chk_007": "undecidable",
+          "chk_008": "undecidable",
+          "chk_009": "agree",
+          "chk_010": "undecidable",
+          "chk_011": "agree",
+          "chk_012": "undecidable",
+          "chk_013": "undecidable",
+          "chk_014": "undecidable",
+          "chk_015": "undecidable",
+          "chk_016": "agree",
+          "chk_017": "undecidable",
+          "chk_018": "undecidable"
+        },
+        "ocr_s_mean": 0.36800975000005565
+      },
+      "hard": {
+        "fields": {
+          "routing": [
+            2,
+            18
+          ],
+          "account": [
+            0,
+            18
+          ],
+          "check_number": [
+            0,
+            18
+          ],
+          "check_number_fallback": [
+            1,
+            18
+          ],
+          "payee": [
+            0,
+            18
+          ],
+          "amount_numeral": [
+            0,
+            18
+          ],
+          "amount_words": [
+            0,
+            18
+          ],
+          "date": [
+            0,
+            18
+          ],
+          "bank": [
+            1,
+            18
+          ],
+          "routing_transit_read": [
+            0,
+            18
+          ]
+        },
+        "micr_located": [
+          0,
+          18
+        ],
+        "checksum_correct": [
+          0,
+          18
+        ],
+        "checksum_verdicts": {
+          "chk_001": "no read",
+          "chk_002": "no read",
+          "chk_003": "no read",
+          "chk_004": "no read",
+          "chk_005": "no read",
+          "chk_006": "no read",
+          "chk_007": "no read",
+          "chk_008": "no read",
+          "chk_009": "no read",
+          "chk_010": "no read",
+          "chk_011": "no read",
+          "chk_012": "no read",
+          "chk_013": "no read",
+          "chk_014": "no read",
+          "chk_015": "no read",
+          "chk_016": "no read",
+          "chk_017": "no read",
+          "chk_018": "no read"
+        },
+        "mismatch_correct": [
+          0,
+          18
+        ],
+        "mismatch_outcomes": {
+          "chk_001": "undecidable",
+          "chk_002": "undecidable",
+          "chk_003": "undecidable",
+          "chk_004": "undecidable",
+          "chk_005": "undecidable",
+          "chk_006": "undecidable",
+          "chk_007": "undecidable",
+          "chk_008": "undecidable",
+          "chk_009": "undecidable",
+          "chk_010": "undecidable",
+          "chk_011": "undecidable",
+          "chk_012": "undecidable",
+          "chk_013": "undecidable",
+          "chk_014": "undecidable",
+          "chk_015": "undecidable",
+          "chk_016": "undecidable",
+          "chk_017": "undecidable",
+          "chk_018": "undecidable"
+        },
+        "ocr_s_mean": 0.4052049666667396
+      }
+    },
+    "by_template_tier": {
+      "A_standard": {
+        "clean": {
+          "cheques": 4,
+          "field_hits": [
+            24,
+            32
+          ],
+          "micr_located": [
+            4,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              4,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              4,
+              4
+            ],
+            "payee": [
+              4,
+              4
+            ],
+            "amount_numeral": [
+              4,
+              4
+            ],
+            "amount_words": [
+              4,
+              4
+            ],
+            "date": [
+              4,
+              4
+            ],
+            "bank": [
+              4,
+              4
+            ],
+            "routing_transit_read": [
+              4,
+              4
+            ]
+          }
+        },
+        "moderate": {
+          "cheques": 4,
+          "field_hits": [
+            22,
+            32
+          ],
+          "micr_located": [
+            3,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              3,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              4,
+              4
+            ],
+            "payee": [
+              4,
+              4
+            ],
+            "amount_numeral": [
+              4,
+              4
+            ],
+            "amount_words": [
+              3,
+              4
+            ],
+            "date": [
+              4,
+              4
+            ],
+            "bank": [
+              4,
+              4
+            ],
+            "routing_transit_read": [
+              3,
+              4
+            ]
+          }
+        },
+        "hard": {
+          "cheques": 4,
+          "field_hits": [
+            1,
+            32
+          ],
+          "micr_located": [
+            0,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              1,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              0,
+              4
+            ],
+            "payee": [
+              0,
+              4
+            ],
+            "amount_numeral": [
+              0,
+              4
+            ],
+            "amount_words": [
+              0,
+              4
+            ],
+            "date": [
+              0,
+              4
+            ],
+            "bank": [
+              0,
+              4
+            ],
+            "routing_transit_read": [
+              0,
+              4
+            ]
+          }
+        }
+      },
+      "B_dark_logo": {
+        "clean": {
+          "cheques": 4,
+          "field_hits": [
+            23,
+            32
+          ],
+          "micr_located": [
+            3,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              3,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              4,
+              4
+            ],
+            "payee": [
+              4,
+              4
+            ],
+            "amount_numeral": [
+              4,
+              4
+            ],
+            "amount_words": [
+              4,
+              4
+            ],
+            "date": [
+              4,
+              4
+            ],
+            "bank": [
+              4,
+              4
+            ],
+            "routing_transit_read": [
+              3,
+              4
+            ]
+          }
+        },
+        "moderate": {
+          "cheques": 4,
+          "field_hits": [
+            14,
+            32
+          ],
+          "micr_located": [
+            1,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              1,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              4,
+              4
+            ],
+            "payee": [
+              1,
+              4
+            ],
+            "amount_numeral": [
+              4,
+              4
+            ],
+            "amount_words": [
+              0,
+              4
+            ],
+            "date": [
+              4,
+              4
+            ],
+            "bank": [
+              4,
+              4
+            ],
+            "routing_transit_read": [
+              1,
+              4
+            ]
+          }
+        },
+        "hard": {
+          "cheques": 4,
+          "field_hits": [
+            0,
+            32
+          ],
+          "micr_located": [
+            0,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              0,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              1,
+              4
+            ],
+            "payee": [
+              0,
+              4
+            ],
+            "amount_numeral": [
+              0,
+              4
+            ],
+            "amount_words": [
+              0,
+              4
+            ],
+            "date": [
+              0,
+              4
+            ],
+            "bank": [
+              0,
+              4
+            ],
+            "routing_transit_read": [
+              0,
+              4
+            ]
+          }
+        }
+      },
+      "C_pattern_bg": {
+        "clean": {
+          "cheques": 4,
+          "field_hits": [
+            24,
+            32
+          ],
+          "micr_located": [
+            4,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              4,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              4,
+              4
+            ],
+            "payee": [
+              4,
+              4
+            ],
+            "amount_numeral": [
+              4,
+              4
+            ],
+            "amount_words": [
+              4,
+              4
+            ],
+            "date": [
+              4,
+              4
+            ],
+            "bank": [
+              4,
+              4
+            ],
+            "routing_transit_read": [
+              4,
+              4
+            ]
+          }
+        },
+        "moderate": {
+          "cheques": 4,
+          "field_hits": [
+            12,
+            32
+          ],
+          "micr_located": [
+            2,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              2,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              4,
+              4
+            ],
+            "payee": [
+              2,
+              4
+            ],
+            "amount_numeral": [
+              0,
+              4
+            ],
+            "amount_words": [
+              1,
+              4
+            ],
+            "date": [
+              3,
+              4
+            ],
+            "bank": [
+              4,
+              4
+            ],
+            "routing_transit_read": [
+              2,
+              4
+            ]
+          }
+        },
+        "hard": {
+          "cheques": 4,
+          "field_hits": [
+            0,
+            32
+          ],
+          "micr_located": [
+            0,
+            4
+          ],
+          "per_field": {
+            "routing": [
+              0,
+              4
+            ],
+            "account": [
+              0,
+              4
+            ],
+            "check_number": [
+              0,
+              4
+            ],
+            "check_number_fallback": [
+              0,
+              4
+            ],
+            "payee": [
+              0,
+              4
+            ],
+            "amount_numeral": [
+              0,
+              4
+            ],
+            "amount_words": [
+              0,
+              4
+            ],
+            "date": [
+              0,
+              4
+            ],
+            "bank": [
+              0,
+              4
+            ],
+            "routing_transit_read": [
+              0,
+              4
+            ]
+          }
+        }
+      },
+      "D_compact": {
+        "clean": {
+          "cheques": 3,
+          "field_hits": [
+            18,
+            24
+          ],
+          "micr_located": [
+            2,
+            3
+          ],
+          "per_field": {
+            "routing": [
+              3,
+              3
+            ],
+            "account": [
+              0,
+              3
+            ],
+            "check_number": [
+              0,
+              3
+            ],
+            "check_number_fallback": [
+              3,
+              3
+            ],
+            "payee": [
+              3,
+              3
+            ],
+            "amount_numeral": [
+              3,
+              3
+            ],
+            "amount_words": [
+              3,
+              3
+            ],
+            "date": [
+              3,
+              3
+            ],
+            "bank": [
+              3,
+              3
+            ],
+            "routing_transit_read": [
+              2,
+              3
+            ]
+          }
+        },
+        "moderate": {
+          "cheques": 3,
+          "field_hits": [
+            13,
+            24
+          ],
+          "micr_located": [
+            2,
+            3
+          ],
+          "per_field": {
+            "routing": [
+              2,
+              3
+            ],
+            "account": [
+              0,
+              3
+            ],
+            "check_number": [
+              0,
+              3
+            ],
+            "check_number_fallback": [
+              3,
+              3
+            ],
+            "payee": [
+              2,
+              3
+            ],
+            "amount_numeral": [
+              3,
+              3
+            ],
+            "amount_words": [
+              1,
+              3
+            ],
+            "date": [
+              3,
+              3
+            ],
+            "bank": [
+              2,
+              3
+            ],
+            "routing_transit_read": [
+              2,
+              3
+            ]
+          }
+        },
+        "hard": {
+          "cheques": 3,
+          "field_hits": [
+            1,
+            24
+          ],
+          "micr_located": [
+            0,
+            3
+          ],
+          "per_field": {
+            "routing": [
+              1,
+              3
+            ],
+            "account": [
+              0,
+              3
+            ],
+            "check_number": [
+              0,
+              3
+            ],
+            "check_number_fallback": [
+              0,
+              3
+            ],
+            "payee": [
+              0,
+              3
+            ],
+            "amount_numeral": [
+              0,
+              3
+            ],
+            "amount_words": [
+              0,
+              3
+            ],
+            "date": [
+              0,
+              3
+            ],
+            "bank": [
+              0,
+              3
+            ],
+            "routing_transit_read": [
+              0,
+              3
+            ]
+          }
+        }
+      },
+      "E_dark_and_pattern": {
+        "clean": {
+          "cheques": 3,
+          "field_hits": [
+            18,
+            24
+          ],
+          "micr_located": [
+            3,
+            3
+          ],
+          "per_field": {
+            "routing": [
+              3,
+              3
+            ],
+            "account": [
+              0,
+              3
+            ],
+            "check_number": [
+              0,
+              3
+            ],
+            "check_number_fallback": [
+              3,
+              3
+            ],
+            "payee": [
+              3,
+              3
+            ],
+            "amount_numeral": [
+              3,
+              3
+            ],
+            "amount_words": [
+              3,
+              3
+            ],
+            "date": [
+              3,
+              3
+            ],
+            "bank": [
+              3,
+              3
+            ],
+            "routing_transit_read": [
+              3,
+              3
+            ]
+          }
+        },
+        "moderate": {
+          "cheques": 3,
+          "field_hits": [
+            14,
+            24
+          ],
+          "micr_located": [
+            2,
+            3
+          ],
+          "per_field": {
+            "routing": [
+              2,
+              3
+            ],
+            "account": [
+              0,
+              3
+            ],
+            "check_number": [
+              0,
+              3
+            ],
+            "check_number_fallback": [
+              3,
+              3
+            ],
+            "payee": [
+              2,
+              3
+            ],
+            "amount_numeral": [
+              3,
+              3
+            ],
+            "amount_words": [
+              1,
+              3
+            ],
+            "date": [
+              3,
+              3
+            ],
+            "bank": [
+              3,
+              3
+            ],
+            "routing_transit_read": [
+              2,
+              3
+            ]
+          }
+        },
+        "hard": {
+          "cheques": 3,
+          "field_hits": [
+            1,
+            24
+          ],
+          "micr_located": [
+            0,
+            3
+          ],
+          "per_field": {
+            "routing": [
+              0,
+              3
+            ],
+            "account": [
+              0,
+              3
+            ],
+            "check_number": [
+              0,
+              3
+            ],
+            "check_number_fallback": [
+              0,
+              3
+            ],
+            "payee": [
+              0,
+              3
+            ],
+            "amount_numeral": [
+              0,
+              3
+            ],
+            "amount_words": [
+              0,
+              3
+            ],
+            "date": [
+              0,
+              3
+            ],
+            "bank": [
+              1,
+              3
+            ],
+            "routing_transit_read": [
+              0,
+              3
+            ]
+          }
+        }
+      }
+    },
+    "oracle": {
+      "micr_located": [
+        18,
+        18
+      ],
+      "parsed_examples": {
+        "chk_001": {
+          "routing_number": "433218197",
+          "account_number": "001001"
+        },
+        "chk_002": {
+          "routing_number": "423511613",
+          "account_number": "001002"
+        },
+        "chk_003": {
+          "routing_number": "316475251",
+          "account_number": "001003"
+        }
+      },
+      "account_equals_gt": [
+        0,
+        18
+      ],
+      "serial_present": [
+        0,
+        18
+      ]
+    },
+    "psm": 11
+  },
+  "results": [
+    {
+      "id": "chk_001",
+      "template": "A_standard",
+      "tier": "clean",
+      "ocr_s": 0.3988561000005575,
+      "ocr_text": "Prairie State Bank\n\nDate: 07/08/2026\n\n001001\n\n$ 267.25\n\nPAY TO THE ORDER OF: John A. Smith\n\nTWO HUNDRED SIXTY-SEVEN AND 25/100 DOLLARS\n\nPrairie State Bank\n\nMEMO:\n\nAuthorized Signature\n\nC001001C A433218197A 600133890838C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "433218197",
+          "account_number": "001001"
+        }
+      },
+      "got": {
+        "routing": "433218197",
+        "account": "001001",
+        "check_number": "",
+        "check_number_fallback": "001001",
+        "payee": "John A. Smith",
+        "amount_numeral": "267.25",
+        "amount_words": "TWO HUNDRED SIXTY-SEVEN AND 25/100",
+        "date": "07/08/2026",
+        "bank": "Prairie State Bank"
+      },
+      "want": {
+        "routing": "433218197",
+        "account": "600133890838",
+        "check_number": "001001",
+        "check_number_fallback": "001001",
+        "payee": "John A. Smith",
+        "amount_numeral": "267.25",
+        "amount_words": "two hundred sixty-seven and 25/100",
+        "date": "07/08/2026",
+        "bank": "Prairie State Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001001C A433218197A 600133890838C",
+        "parsed": {
+          "routing_number": "433218197",
+          "account_number": "001001"
+        },
+        "transit": "433218197",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001001C A433218197A 600133890838C"
+      ]
+    },
+    {
+      "id": "chk_001",
+      "template": "A_standard",
+      "tier": "moderate",
+      "ocr_s": 0.3674194000013813,
+      "ocr_text": "Date: 07/08/2026\n\n$ 267.25\n\nPrairie State Bank\n\n001001\n\nPAY TO THE ORDER OF: John A. Smith\n\nMARS\n\nTWO H'\n\nUNDRED SUKTY-SEVEN AND 25/200 DO\n\nPrairie State Bank\n\nAuthorized Signature\n\nMEMO:\n\ncee10e1C 433218197\n\nA 600133890838C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "433218197",
+          "account_number": "001001"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001001",
+        "payee": "John A. Smith",
+        "amount_numeral": "267.25",
+        "amount_words": "",
+        "date": "07/08/2026",
+        "bank": "Prairie State Bank"
+      },
+      "want": {
+        "routing": "433218197",
+        "account": "600133890838",
+        "check_number": "001001",
+        "check_number_fallback": "001001",
+        "payee": "John A. Smith",
+        "amount_numeral": "267.25",
+        "amount_words": "two hundred sixty-seven and 25/100",
+        "date": "07/08/2026",
+        "bank": "Prairie State Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "cee10e1C 433218197",
+        "A 600133890838C"
+      ]
+    },
+    {
+      "id": "chk_001",
+      "template": "A_standard",
+      "tier": "hard",
+      "ocr_s": 0.3660115000020596,
+      "ocr_text": "17002028\n\nprairie §\n\n=\n\ngosov*\n\nagente\n\nae\n\nof: one\n\nqwe ORDER\n\n2sn00 008\n\npay TO\n\nu\n\nre\n\nwo HONORED\n\noem\n\nies\n\naoe\n\nre\n\nes\n\npassnnsio7™\n\nwl\n\n901003¢\n\nSate\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "433218197",
+          "account_number": "001001"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "433218197",
+        "account": "600133890838",
+        "check_number": "001001",
+        "check_number_fallback": "001001",
+        "payee": "John A. Smith",
+        "amount_numeral": "267.25",
+        "amount_words": "two hundred sixty-seven and 25/100",
+        "date": "07/08/2026",
+        "bank": "Prairie State Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "901003¢",
+        "Sate"
+      ]
+    },
+    {
+      "id": "chk_002",
+      "template": "B_dark_logo",
+      "tier": "clean",
+      "ocr_s": 0.41038320000006934,
+      "ocr_text": "001002\n\nPS BANK\n\nDate: 11/20/2026\n\n$ 3,572.78\n\nPAY TO THE ORDER OF: Maria Gonzalez\n\nTHREE THOUSAND FIVE HUNDRED SEVENTY-TWO AND 78/100 DOLLARS\n\nGolden Plains Credit Union\n\nMEMO: Consulting fee\n\nAuthorized Signature\n\nC001002C A423511613A 559407816184C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "423511613",
+          "account_number": "001002"
+        }
+      },
+      "got": {
+        "routing": "423511613",
+        "account": "001002",
+        "check_number": "",
+        "check_number_fallback": "001002",
+        "payee": "Maria Gonzalez",
+        "amount_numeral": "3,572.78",
+        "amount_words": "THREE THOUSAND FIVE HUNDRED SEVENTY-TWO AND 78/100",
+        "date": "11/20/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "want": {
+        "routing": "423511613",
+        "account": "559407816184",
+        "check_number": "001002",
+        "check_number_fallback": "001002",
+        "payee": "Maria Gonzalez",
+        "amount_numeral": "3,572.78",
+        "amount_words": "three thousand five hundred seventy-two and 78/100",
+        "date": "11/20/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001002C A423511613A 559407816184C",
+        "parsed": {
+          "routing_number": "423511613",
+          "account_number": "001002"
+        },
+        "transit": "423511613",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001002C A423511613A 559407816184C"
+      ]
+    },
+    {
+      "id": "chk_002",
+      "template": "B_dark_logo",
+      "tier": "moderate",
+      "ocr_s": 0.3710395000016433,
+      "ocr_text": "PS BANK\n\n001002\n\nDate: 11/20/2026\n\n[$3,572.78\n\nPAY TOT\n\nHE ORDER OF: Maria Gonzalez\n\n=\n\nSEVENTY-TWO AND 78/100 DOLLARS _\n\nTHREE THOUSAND FIVE HUNDRED\n\nss\n\nvss\n\nGolden Plains Credit Union\n\n“authorized Signature\n\nMEMO: Consulting fee\n\nc901002C A423511\n\n613A 559407816184C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "423511613",
+          "account_number": "001002"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001002",
+        "payee": "",
+        "amount_numeral": "3,572.78",
+        "amount_words": "SEVENTY-TWO AND 78/100",
+        "date": "11/20/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "want": {
+        "routing": "423511613",
+        "account": "559407816184",
+        "check_number": "001002",
+        "check_number_fallback": "001002",
+        "payee": "Maria Gonzalez",
+        "amount_numeral": "3,572.78",
+        "amount_words": "three thousand five hundred seventy-two and 78/100",
+        "date": "11/20/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "mismatch",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "c901002C A423511",
+        "613A 559407816184C"
+      ]
+    },
+    {
+      "id": "chk_002",
+      "template": "B_dark_logo",
+      "tier": "hard",
+      "ocr_s": 0.37766220000048634,
+      "ocr_text": "pone: 11:2002028\n\n90100?\n\na OF: we\n\nano 70/008 ©\n\nee\n\nTO THE\n\ngive HUNDRED —\n\n—\n\nnet\n\nqwnce TP\n\n_\n\nconmsnind 1°\n\n—\n\npita\n\nSag\n\nnaz3523603\"\n\n901002\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "423511613",
+          "account_number": "001002"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "901002",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "423511613",
+        "account": "559407816184",
+        "check_number": "001002",
+        "check_number_fallback": "001002",
+        "payee": "Maria Gonzalez",
+        "amount_numeral": "3,572.78",
+        "amount_words": "three thousand five hundred seventy-two and 78/100",
+        "date": "11/20/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "naz3523603\"",
+        "901002"
+      ]
+    },
+    {
+      "id": "chk_003",
+      "template": "C_pattern_bg",
+      "tier": "clean",
+      "ocr_s": 0.4028236000012839,
+      "ocr_text": "Millbrook Savings & Loan\n\nDate: 11/23/2026| $ 841.67\n\nPAY TO THE ORDER OF: Acme Supply Co.\n\nEIGHT HUNDRED FORTY-ONE AND 67/100 DOLLARS\n\n001003\n\nMEMO: Refund\n\nAuthorized Signature\n\nC001003C. A316475251A 534192832764C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "316475251",
+          "account_number": "001003"
+        }
+      },
+      "got": {
+        "routing": "316475251",
+        "account": "001003",
+        "check_number": "",
+        "check_number_fallback": "001003",
+        "payee": "Acme Supply Co.",
+        "amount_numeral": "841.67",
+        "amount_words": "EIGHT HUNDRED FORTY-ONE AND 67/100",
+        "date": "11/23/2026",
+        "bank": "Millbrook Savings & Loan"
+      },
+      "want": {
+        "routing": "316475251",
+        "account": "534192832764",
+        "check_number": "001003",
+        "check_number_fallback": "001003",
+        "payee": "Acme Supply Co.",
+        "amount_numeral": "841.67",
+        "amount_words": "eight hundred forty-one and 67/100",
+        "date": "11/23/2026",
+        "bank": "Millbrook Savings & Loan"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001003C. A316475251A 534192832764C",
+        "parsed": {
+          "routing_number": "316475251",
+          "account_number": "001003"
+        },
+        "transit": "316475251",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001003C. A316475251A 534192832764C"
+      ]
+    },
+    {
+      "id": "chk_003",
+      "template": "C_pattern_bg",
+      "tier": "moderate",
+      "ocr_s": 0.34381329999814625,
+      "ocr_text": "Millbrook Savings & Loan\n\nDate: 11/23/2026\n\nPAY TO THE ORDER OF: Acme Supply Co.\n\nEIGHT HUNDRED FORTY-ONE AND 67/100 DOLLARS\n\n001003\n\nMEMO: Refund\n\nAuthorized Signature\n\n€601603C A316475251A 534192832764C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "316475251",
+          "account_number": "001003"
+        }
+      },
+      "got": {
+        "routing": "316475251",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001003",
+        "payee": "Acme Supply Co.",
+        "amount_numeral": "",
+        "amount_words": "EIGHT HUNDRED FORTY-ONE AND 67/100",
+        "date": "11/23/2026",
+        "bank": "Millbrook Savings & Loan"
+      },
+      "want": {
+        "routing": "316475251",
+        "account": "534192832764",
+        "check_number": "001003",
+        "check_number_fallback": "001003",
+        "payee": "Acme Supply Co.",
+        "amount_numeral": "841.67",
+        "amount_words": "eight hundred forty-one and 67/100",
+        "date": "11/23/2026",
+        "bank": "Millbrook Savings & Loan"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": false,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "€601603C A316475251A 534192832764C",
+        "parsed": {
+          "routing_number": "316475251"
+        },
+        "transit": "316475251",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "€601603C A316475251A 534192832764C"
+      ]
+    },
+    {
+      "id": "chk_003",
+      "template": "C_pattern_bg",
+      "tier": "hard",
+      "ocr_s": 0.40174800000022515,
+      "ocr_text": "savings & Loe\"\n\npete: 11/23/2028\n\nsupply Co\n\npay TO THE ORDER OF ano 67/100 DOUARS\n\nBS\n\napt\n\nnel\n\nEIGHT HUNDRED\n\n$8,\n\nar,\n\n5 il\n\npage: Refund\n\nae\n\ncoors M5)\n\nval:\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "316475251",
+          "account_number": "001003"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "ano 67/100 DOUARS",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "316475251",
+        "account": "534192832764",
+        "check_number": "001003",
+        "check_number_fallback": "001003",
+        "payee": "Acme Supply Co.",
+        "amount_numeral": "841.67",
+        "amount_words": "eight hundred forty-one and 67/100",
+        "date": "11/23/2026",
+        "bank": "Millbrook Savings & Loan"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "coors M5)",
+        "val:"
+      ]
+    },
+    {
+      "id": "chk_004",
+      "template": "D_compact",
+      "tier": "clean",
+      "ocr_s": 0.3763201999972807,
+      "ocr_text": "First Union Bank\n\n001004\n\nDate: 07/19/2026\n\n$ 2,406.74\n\nPAY TO THE ORDER OF: David Okafor\n\nTWO THOUSAND FOUR HUNDRED SIX AND 74/100 DOLLARS\n\nAuthorized Signature\n\nMEMO:\n\nC001004C A056413955A 376724238849C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "056413955",
+          "account_number": "001004"
+        }
+      },
+      "got": {
+        "routing": "056413955",
+        "account": "001004",
+        "check_number": "",
+        "check_number_fallback": "001004",
+        "payee": "David Okafor",
+        "amount_numeral": "2,406.74",
+        "amount_words": "TWO THOUSAND FOUR HUNDRED SIX AND 74/100",
+        "date": "07/19/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "056413955",
+        "account": "376724238849",
+        "check_number": "001004",
+        "check_number_fallback": "001004",
+        "payee": "David Okafor",
+        "amount_numeral": "2,406.74",
+        "amount_words": "two thousand four hundred six and 74/100",
+        "date": "07/19/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001004C A056413955A 376724238849C",
+        "parsed": {
+          "routing_number": "056413955",
+          "account_number": "001004"
+        },
+        "transit": "056413955",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "MEMO:",
+        "C001004C A056413955A 376724238849C"
+      ]
+    },
+    {
+      "id": "chk_004",
+      "template": "D_compact",
+      "tier": "moderate",
+      "ocr_s": 0.3382817999990948,
+      "ocr_text": "001004\n\nDate: 07/19/2026\n\nFirst Union Bank\n\n| $ 2,406.74\n\nPAY TO THE ORDER OF: David Okafor\n\nED SIX AND 74/100 DOLLARS\n\nTwo THOUSAND FOUR HUNDR'\n\nAuthorized Signature\n\nMEMO:\n\nc991004C A056413955A 376724238849C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "056413955",
+          "account_number": "001004"
+        }
+      },
+      "got": {
+        "routing": "056413955",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001004",
+        "payee": "David Okafor",
+        "amount_numeral": "2,406.74",
+        "amount_words": "ED SIX AND 74/100",
+        "date": "07/19/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "056413955",
+        "account": "376724238849",
+        "check_number": "001004",
+        "check_number_fallback": "001004",
+        "payee": "David Okafor",
+        "amount_numeral": "2,406.74",
+        "amount_words": "two thousand four hundred six and 74/100",
+        "date": "07/19/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "c991004C A056413955A 376724238849C",
+        "parsed": {
+          "routing_number": "056413955"
+        },
+        "transit": "056413955",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "MEMO:",
+        "c991004C A056413955A 376724238849C"
+      ]
+    },
+    {
+      "id": "chk_004",
+      "template": "D_compact",
+      "tier": "hard",
+      "ocr_s": 0.4687501999978849,
+      "ocr_text": "orn sere\n\nyest UENON\n\nao\n\nworse\n\nak\n\nPe\n\naD)\n\naie\n\npas)\n\nof. oo?\n\nae\n\nie\n\nol\n\nance OMS\n\ni\n\nonve®\n\nee!\n\nie\n\nie\n\nas\n\nBE\n\npar to”\n\nA\n\naay\n\nake\n\nae\n\noie)\n\na\n\net\n\nSate\n\nan\n\nee\n\nait)\n\nweno\n\noak\n\n<u\n\nae\n\n)\n\na\n\nSTE\n\n[=2\n\nie\n\nfagli=\n\niy\n\na\n\nyh\n\n7\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "056413955",
+          "account_number": "001004"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "056413955",
+        "account": "376724238849",
+        "check_number": "001004",
+        "check_number_fallback": "001004",
+        "payee": "David Okafor",
+        "amount_numeral": "2,406.74",
+        "amount_words": "two thousand four hundred six and 74/100",
+        "date": "07/19/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "yh",
+        "7"
+      ]
+    },
+    {
+      "id": "chk_005",
+      "template": "E_dark_and_pattern",
+      "tier": "clean",
+      "ocr_s": 0.403462700000091,
+      "ocr_text": "First Union Bank\n\nGOLDEN PLAINS\n\n001005\n\nDate: 07/06/2026\n\n$ 9,034.31\n\nPAY TO THE ORDER OF: Chen Wei Trading LLC\n\nNINE THOUSAND THIRTY-FOUR AND 31/100 DOLLARS\n\nMEMO:\n\nAuthorized Signature\n\nC001005C A122691669A 978480184514C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "122691669",
+          "account_number": "001005"
+        }
+      },
+      "got": {
+        "routing": "122691669",
+        "account": "001005",
+        "check_number": "",
+        "check_number_fallback": "001005",
+        "payee": "Chen Wei Trading LLC",
+        "amount_numeral": "9,034.31",
+        "amount_words": "NINE THOUSAND THIRTY-FOUR AND 31/100",
+        "date": "07/06/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "122691669",
+        "account": "978480184514",
+        "check_number": "001005",
+        "check_number_fallback": "001005",
+        "payee": "Chen Wei Trading LLC",
+        "amount_numeral": "9,034.31",
+        "amount_words": "nine thousand thirty-four and 31/100",
+        "date": "07/06/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001005C A122691669A 978480184514C",
+        "parsed": {
+          "routing_number": "122691669",
+          "account_number": "001005"
+        },
+        "transit": "122691669",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001005C A122691669A 978480184514C"
+      ]
+    },
+    {
+      "id": "chk_005",
+      "template": "E_dark_and_pattern",
+      "tier": "moderate",
+      "ocr_s": 0.35404709999784245,
+      "ocr_text": "GOLDEN PLAINS\n\nFirst Union Bank\n\nDate: 07/06/2026\n\n001005\n\n$ 9,034.31\n\nPAY TO THE ORDER OF: Chen Wei Trading LLC\n\nNINE THOUSAND THIRTY-FOUR AND 31/100 DOLLARS\n\nMEMO:\n\nAuthorized Signature\n\nC@01005C A122691669A 978480184514C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "122691669",
+          "account_number": "001005"
+        }
+      },
+      "got": {
+        "routing": "122691669",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001005",
+        "payee": "Chen Wei Trading LLC",
+        "amount_numeral": "9,034.31",
+        "amount_words": "NINE THOUSAND THIRTY-FOUR AND 31/100",
+        "date": "07/06/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "122691669",
+        "account": "978480184514",
+        "check_number": "001005",
+        "check_number_fallback": "001005",
+        "payee": "Chen Wei Trading LLC",
+        "amount_numeral": "9,034.31",
+        "amount_words": "nine thousand thirty-four and 31/100",
+        "date": "07/06/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C@01005C A122691669A 978480184514C",
+        "parsed": {
+          "routing_number": "122691669"
+        },
+        "transit": "122691669",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C@01005C A122691669A 978480184514C"
+      ]
+    },
+    {
+      "id": "chk_005",
+      "template": "E_dark_and_pattern",
+      "tier": "hard",
+      "ocr_s": 0.39248869999937597,
+      "ocr_text": "pate: 9106/2028\n\njest UAHOM\n\n90300\n\na oF a\n\nme:\n\nzo THE\n\nsoo BOARS\n\npar\n\nano 3\n\nweno:\n\n8\n\npiel\n\ngreanersasi®\n\n901005\n\nsicoene\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "122691669",
+          "account_number": "001005"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "901005",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "122691669",
+        "account": "978480184514",
+        "check_number": "001005",
+        "check_number_fallback": "001005",
+        "payee": "Chen Wei Trading LLC",
+        "amount_numeral": "9,034.31",
+        "amount_words": "nine thousand thirty-four and 31/100",
+        "date": "07/06/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "901005",
+        "sicoene"
+      ]
+    },
+    {
+      "id": "chk_006",
+      "template": "A_standard",
+      "tier": "clean",
+      "ocr_s": 0.4153243000000657,
+      "ocr_text": "Rosewood Federal Credit Union\n\nDate: 04/19/2026\n\n001006\n\n$ 5,328.42\n\nPAY TO THE ORDER OF: Sarah Thompson\n\nFIVE THOUSAND THREE HUNDRED TWENTY-EIGHT AND 42/100 DOLLARS\n\nRosewood Federal Credit Union\n\nMEMO: Invoice #4471\n\nAuthorized Signature\n\nC001006C A148932522A 880957015430C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "148932522",
+          "account_number": "001006"
+        }
+      },
+      "got": {
+        "routing": "148932522",
+        "account": "001006",
+        "check_number": "",
+        "check_number_fallback": "001006",
+        "payee": "Sarah Thompson",
+        "amount_numeral": "5,328.42",
+        "amount_words": "FIVE THOUSAND THREE HUNDRED TWENTY-EIGHT AND 42/100",
+        "date": "04/19/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "148932522",
+        "account": "880957015430",
+        "check_number": "001006",
+        "check_number_fallback": "001006",
+        "payee": "Sarah Thompson",
+        "amount_numeral": "5,328.42",
+        "amount_words": "five thousand three hundred twenty-eight and 42/100",
+        "date": "04/19/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001006C A148932522A 880957015430C",
+        "parsed": {
+          "routing_number": "148932522",
+          "account_number": "001006"
+        },
+        "transit": "148932522",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001006C A148932522A 880957015430C"
+      ]
+    },
+    {
+      "id": "chk_006",
+      "template": "A_standard",
+      "tier": "moderate",
+      "ocr_s": 0.38259910000124364,
+      "ocr_text": "Date: 04/19/2026\n\nRosewood Federal Credit Union\n\n$ 5,328.42\n\n001006\n\nPAY TO THE ORDER OF: Sarah Thompson\n\nFIVE THOUSAND THREE HUNDRED TWENTY-EIGHT AND 42/100 DOLLARS\n\nRosewood Federal Credit Union\n\nMEMO: Invoice #4471\n\ni Authorized Signature\n\nC001006C A148932522A 880957015430C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "148932522",
+          "account_number": "001006"
+        }
+      },
+      "got": {
+        "routing": "148932522",
+        "account": "001006",
+        "check_number": "",
+        "check_number_fallback": "001006",
+        "payee": "Sarah Thompson",
+        "amount_numeral": "5,328.42",
+        "amount_words": "FIVE THOUSAND THREE HUNDRED TWENTY-EIGHT AND 42/100",
+        "date": "04/19/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "148932522",
+        "account": "880957015430",
+        "check_number": "001006",
+        "check_number_fallback": "001006",
+        "payee": "Sarah Thompson",
+        "amount_numeral": "5,328.42",
+        "amount_words": "five thousand three hundred twenty-eight and 42/100",
+        "date": "04/19/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001006C A148932522A 880957015430C",
+        "parsed": {
+          "routing_number": "148932522",
+          "account_number": "001006"
+        },
+        "transit": "148932522",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "i Authorized Signature",
+        "C001006C A148932522A 880957015430C"
+      ]
+    },
+    {
+      "id": "chk_006",
+      "template": "A_standard",
+      "tier": "hard",
+      "ocr_s": 0.4099984000022232,
+      "ocr_text": "oass9r2026\n\ngederal ©\n\n901006\n\nily\n\norf: sarah\n\nno 42/100 09\n\npay TO THE\n\neras\n\nsauce TWENTY\n\nsoy\n\ngave THOUSAND THREE\n\ncesersi cred\n\nme\n\nHee\n\neaath\n\nie\n\ni\n\ni\n\nweno: 1\"\n\nod\n\na\n\nms\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "148932522",
+          "account_number": "001006"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "901006",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "148932522",
+        "account": "880957015430",
+        "check_number": "001006",
+        "check_number_fallback": "001006",
+        "payee": "Sarah Thompson",
+        "amount_numeral": "5,328.42",
+        "amount_words": "five thousand three hundred twenty-eight and 42/100",
+        "date": "04/19/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "a",
+        "ms"
+      ]
+    },
+    {
+      "id": "chk_007",
+      "template": "B_dark_logo",
+      "tier": "clean",
+      "ocr_s": 0.4131908999988809,
+      "ocr_text": "001007\n\nPS BANK\n\nDate: 06/01/2026\n\n$ 1,351.28\n\nPAY TO THE ORDER OF: Riverside Plumbing Inc.\n\nONE THOUSAND THREE HUNDRED SIXTY-ONE AND 28/100 DOLLARS\n\nRosewood Federal Credit Union\n\nMEMO: Refund\n\nAuthorized Signature\n\nC001007C A782489635A 834657871331C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "782489635",
+          "account_number": "001007"
+        }
+      },
+      "got": {
+        "routing": "782489635",
+        "account": "001007",
+        "check_number": "",
+        "check_number_fallback": "001007",
+        "payee": "Riverside Plumbing Inc.",
+        "amount_numeral": "1,351.28",
+        "amount_words": "ONE THOUSAND THREE HUNDRED SIXTY-ONE AND 28/100",
+        "date": "06/01/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "782489635",
+        "account": "834657871331",
+        "check_number": "001007",
+        "check_number_fallback": "001007",
+        "payee": "Riverside Plumbing Inc.",
+        "amount_numeral": "1,351.28",
+        "amount_words": "one thousand three hundred sixty-one and 28/100",
+        "date": "06/01/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001007C A782489635A 834657871331C",
+        "parsed": {
+          "routing_number": "782489635",
+          "account_number": "001007"
+        },
+        "transit": "782489635",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "mismatch",
+      "mismatch_truth": "mismatch",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001007C A782489635A 834657871331C"
+      ]
+    },
+    {
+      "id": "chk_007",
+      "template": "B_dark_logo",
+      "tier": "moderate",
+      "ocr_s": 0.37202809999871533,
+      "ocr_text": "PS BANK\n\n001007\n\nDate: 06/01/2026\n\n[$1,351.28\n\ng Inc.\n\nPAY TO TH\n\n—E ORDER OF: Riverside Plumbin\n\nT-ONE AND 28/100 DOLLARS\n\nONE THOUSAND THREE HUNDRED 5\n\n=\n\naise\n\nSs\n\nae\n\nRosewood Federal Credit Union\n\nAuthorized Signature\n\nMEMO: Refund\n\ncee1ee7C A7824896\n\n35A 834657871331C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "782489635",
+          "account_number": "001007"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001007",
+        "payee": "",
+        "amount_numeral": "1,351.28",
+        "amount_words": "T-ONE AND 28/100",
+        "date": "06/01/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "782489635",
+        "account": "834657871331",
+        "check_number": "001007",
+        "check_number_fallback": "001007",
+        "payee": "Riverside Plumbing Inc.",
+        "amount_numeral": "1,351.28",
+        "amount_words": "one thousand three hundred sixty-one and 28/100",
+        "date": "06/01/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "mismatch",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "cee1ee7C A7824896",
+        "35A 834657871331C"
+      ]
+    },
+    {
+      "id": "chk_007",
+      "template": "B_dark_logo",
+      "tier": "hard",
+      "ocr_s": 0.3850992999978189,
+      "ocr_text": "pate: 06/0\n\n901007\n\niverside f\n\naor: ®\n\neo\n\npay TO THE\n\na\n\nwae\n\nne\n\n_\n\nan\n\ncoder OF\n\nee\n\nweno:\n\nBa\n\nss9S\n\n=\n\noa\n\npe\n\n“pak\n\nc9oi007¢\n\nnee\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "782489635",
+          "account_number": "001007"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "901007",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "782489635",
+        "account": "834657871331",
+        "check_number": "001007",
+        "check_number_fallback": "001007",
+        "payee": "Riverside Plumbing Inc.",
+        "amount_numeral": "1,351.28",
+        "amount_words": "one thousand three hundred sixty-one and 28/100",
+        "date": "06/01/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "mismatch",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "c9oi007¢",
+        "nee"
+      ]
+    },
+    {
+      "id": "chk_008",
+      "template": "C_pattern_bg",
+      "tier": "clean",
+      "ocr_s": 0.4037982000008924,
+      "ocr_text": "First Union Bank\n\nDate: 11/14/2026] $ 2,405.62\n\nPAY TO THE ORDER OF: Priya Patel\n\nTWO THOUSAND FOUR HUNDRED FIVE AND 62/100 DOLLARS\n\n001008\n\nMEMO: Consulting fee\n\nAuthorized Signature\n\nC001008C_ A105183479A 382997376311C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "105183479",
+          "account_number": "001008"
+        }
+      },
+      "got": {
+        "routing": "105183479",
+        "account": "001008",
+        "check_number": "",
+        "check_number_fallback": "001008",
+        "payee": "Priya Patel",
+        "amount_numeral": "2,405.62",
+        "amount_words": "TWO THOUSAND FOUR HUNDRED FIVE AND 62/100",
+        "date": "11/14/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "105183479",
+        "account": "382997376311",
+        "check_number": "001008",
+        "check_number_fallback": "001008",
+        "payee": "Priya Patel",
+        "amount_numeral": "2,405.62",
+        "amount_words": "two thousand four hundred five and 62/100",
+        "date": "11/14/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001008C_ A105183479A 382997376311C",
+        "parsed": {
+          "routing_number": "105183479",
+          "account_number": "001008"
+        },
+        "transit": "105183479",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001008C_ A105183479A 382997376311C"
+      ]
+    },
+    {
+      "id": "chk_008",
+      "template": "C_pattern_bg",
+      "tier": "moderate",
+      "ocr_s": 0.35255550000147196,
+      "ocr_text": "First Union Bank\n\nDate: 11/14/2026\n\nPAY TO THE ORDER OF: Priya Patel\n\nTWO THOU!\n\nSAND FOUR HUNDRED FIVE AND 62/100 DOLLARS\n\n001008\n\nAuthorized Signature\n\nMEMO: Consulting fee\n\nceo1eesc A105 183479A 382997\n\n376311C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "105183479",
+          "account_number": "001008"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001008",
+        "payee": "Priya Patel",
+        "amount_numeral": "",
+        "amount_words": "SAND FOUR HUNDRED FIVE AND 62/100",
+        "date": "11/14/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "105183479",
+        "account": "382997376311",
+        "check_number": "001008",
+        "check_number_fallback": "001008",
+        "payee": "Priya Patel",
+        "amount_numeral": "2,405.62",
+        "amount_words": "two thousand four hundred five and 62/100",
+        "date": "11/14/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "ceo1eesc A105 183479A 382997",
+        "376311C"
+      ]
+    },
+    {
+      "id": "chk_008",
+      "template": "C_pattern_bg",
+      "tier": "hard",
+      "ocr_s": 0.44070149999970454,
+      "ocr_text": "union Bent\n\nFirst\n\npete: 11/24/2028\n\npriya Pate!\n\napi\n\nOF:\n\net\n\n«7100 DOUAS\n\nee\n\nRee oe\n\npay TO THE\n\nrive AND\n\nes\n\nae\n\nqo THOUSAND\n\na\n\ney\n\nconmsning **\n\nCe\n\neh\n\nEe\n\n.\n\ncone\n\net\n\nay\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "105183479",
+          "account_number": "001008"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "105183479",
+        "account": "382997376311",
+        "check_number": "001008",
+        "check_number_fallback": "001008",
+        "payee": "Priya Patel",
+        "amount_numeral": "2,405.62",
+        "amount_words": "two thousand four hundred five and 62/100",
+        "date": "11/14/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "et",
+        "ay"
+      ]
+    },
+    {
+      "id": "chk_009",
+      "template": "D_compact",
+      "tier": "clean",
+      "ocr_s": 0.3774450999990222,
+      "ocr_text": "Prairie State Bank\n\n001009\n\nDate: 02/25/2026\n\n$ 640.56\n\nPAY TO THE ORDER OF: Nguyen Van Long\n\nSIX HUNDRED FORTY AND 56/100 DOLLARS\n\nAuthorized Signature\n\nMEMO: Rent - March\n\nC001009C AG651333871A 624731781080C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "invalid",
+        "parsed": {
+          "account_number": "001009"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001009",
+        "payee": "Nguyen Van Long",
+        "amount_numeral": "640.56",
+        "amount_words": "SIX HUNDRED FORTY AND 56/100",
+        "date": "02/25/2026",
+        "bank": "Prairie State Bank"
+      },
+      "want": {
+        "routing": "",
+        "account": "624731781080",
+        "check_number": "001009",
+        "check_number_fallback": "001009",
+        "payee": "Nguyen Van Long",
+        "amount_numeral": "640.56",
+        "amount_words": "six hundred forty and 56/100",
+        "date": "02/25/2026",
+        "bank": "Prairie State Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "MEMO: Rent - March",
+        "C001009C AG651333871A 624731781080C"
+      ]
+    },
+    {
+      "id": "chk_009",
+      "template": "D_compact",
+      "tier": "moderate",
+      "ocr_s": 0.34295859999838285,
+      "ocr_text": "001009\n\nPrairie State Bank\n\nDate: 02/25/2026\n\n$ 640.56\n\n]\n\nPAY TO THE ORDER OF: Nguyen Van Long\n\nSIX HUNDRED FORTY AND 56/100 DOLLARS\n\nAuthorized Signature\n\nMEMO: Rent - March\n\nC@01009C A651333871A 624731781080C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "invalid",
+        "parsed": {
+          "account_number": "001009"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001009",
+        "payee": "Nguyen Van Long",
+        "amount_numeral": "640.56",
+        "amount_words": "SIX HUNDRED FORTY AND 56/100",
+        "date": "02/25/2026",
+        "bank": "Prairie State Bank"
+      },
+      "want": {
+        "routing": "",
+        "account": "624731781080",
+        "check_number": "001009",
+        "check_number_fallback": "001009",
+        "payee": "Nguyen Van Long",
+        "amount_numeral": "640.56",
+        "amount_words": "six hundred forty and 56/100",
+        "date": "02/25/2026",
+        "bank": "Prairie State Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C@01009C A651333871A 624731781080C",
+        "parsed": {},
+        "transit": "651333871",
+        "verdict": "invalid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "invalid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "MEMO: Rent - March",
+        "C@01009C A651333871A 624731781080C"
+      ]
+    },
+    {
+      "id": "chk_009",
+      "template": "D_compact",
+      "tier": "hard",
+      "ocr_s": 0.4271865999980946,
+      "ocr_text": "991009\n\npete: 02/25/2028\n\nprairie state ©\n\n2\n\nay\n\nnguyen von 429\n\n(2\n\neo\n\nie ORDER OF\n\npar TO\n\n_a=s anit)\n\nos100 DOUARS\n\nete\n\nws\n\narch\n\neS hs\n\noes\n\npagno: Rent\n\nSa\n\nBe\n\nape\n\neb\n\n=\n\nwe\n\nRe\n\n1\n\nca, ET\n\nsel\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "invalid",
+        "parsed": {
+          "account_number": "001009"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "991009",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "",
+        "account": "624731781080",
+        "check_number": "001009",
+        "check_number_fallback": "001009",
+        "payee": "Nguyen Van Long",
+        "amount_numeral": "640.56",
+        "amount_words": "six hundred forty and 56/100",
+        "date": "02/25/2026",
+        "bank": "Prairie State Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "ca, ET",
+        "sel"
+      ]
+    },
+    {
+      "id": "chk_010",
+      "template": "E_dark_and_pattern",
+      "tier": "clean",
+      "ocr_s": 0.4228554000001168,
+      "ocr_text": "First Union Bank\n\nGOLDEN PLAINS\n\n001010\n\nDate: 10/16/2026\n\n$ 1,731.34\n\nPAY TO THE ORDER OF: Blackwood Consulting\n\nONE THOUSAND SEVEN HUNDRED THIRTY-ONE AND 34/100 DOLLARS\n\nMEMO: Refund\n\nAuthorized Signature\n\nC001010C A606474687A 723430980500C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "606474687",
+          "account_number": "001010"
+        }
+      },
+      "got": {
+        "routing": "606474687",
+        "account": "001010",
+        "check_number": "",
+        "check_number_fallback": "001010",
+        "payee": "Blackwood Consulting",
+        "amount_numeral": "1,731.34",
+        "amount_words": "ONE THOUSAND SEVEN HUNDRED THIRTY-ONE AND 34/100",
+        "date": "10/16/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "606474687",
+        "account": "723430980500",
+        "check_number": "001010",
+        "check_number_fallback": "001010",
+        "payee": "Blackwood Consulting",
+        "amount_numeral": "1,731.34",
+        "amount_words": "one thousand seven hundred thirty-one and 34/100",
+        "date": "10/16/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001010C A606474687A 723430980500C",
+        "parsed": {
+          "routing_number": "606474687",
+          "account_number": "001010"
+        },
+        "transit": "606474687",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001010C A606474687A 723430980500C"
+      ]
+    },
+    {
+      "id": "chk_010",
+      "template": "E_dark_and_pattern",
+      "tier": "moderate",
+      "ocr_s": 0.3778026999971189,
+      "ocr_text": "GOLDEN PLAINS\n\nFirst Union Bank\n\nDate: 10/16/2026\n\n[$1,731.34\n\n001010\n\nBlackwood Consulting\n\npay TO THE ORDER OF:\n\nNE ANO 34/100 DOLLARS\n\nONE THOUSAND\n\nSEVEN HUNDRED THIRTY-O!\n\n=\n\n=\n\n“Authorized Signature\n\nMEMO: Refund\n\ng0500C\n\nce61010C AGO\n\n6474687A 7234309\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "606474687",
+          "account_number": "001010"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001010",
+        "payee": "NE ANO 34/100 DOLLARS",
+        "amount_numeral": "1,731.34",
+        "amount_words": "NE ANO 34/100",
+        "date": "10/16/2026",
+        "bank": "First Union Bank"
+      },
+      "want": {
+        "routing": "606474687",
+        "account": "723430980500",
+        "check_number": "001010",
+        "check_number_fallback": "001010",
+        "payee": "Blackwood Consulting",
+        "amount_numeral": "1,731.34",
+        "amount_words": "one thousand seven hundred thirty-one and 34/100",
+        "date": "10/16/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "ce61010C AGO",
+        "6474687A 7234309"
+      ]
+    },
+    {
+      "id": "chk_010",
+      "template": "E_dark_and_pattern",
+      "tier": "hard",
+      "ocr_s": 0.36075889999847277,
+      "ocr_text": "pate: eg\n\ninst Unio\n\n901030\n\nR OF\n\ngiackwood\n\npo 94/200\n\nPAY yo THE\n\nmelt)\n\neven HUNDRED\n\n—\n\nweno red\n\n10¢ poncarscnTs |\n\ni\n\ncoei®\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "606474687",
+          "account_number": "001010"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "901030",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "606474687",
+        "account": "723430980500",
+        "check_number": "001010",
+        "check_number_fallback": "001010",
+        "payee": "Blackwood Consulting",
+        "amount_numeral": "1,731.34",
+        "amount_words": "one thousand seven hundred thirty-one and 34/100",
+        "date": "10/16/2026",
+        "bank": "First Union Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "i",
+        "coei®"
+      ]
+    },
+    {
+      "id": "chk_011",
+      "template": "A_standard",
+      "tier": "clean",
+      "ocr_s": 0.39950669999961974,
+      "ocr_text": "Rosewood Federal Credit Union\n\nDate: 04/09/2026\n\n001011\n\n$ 723.49\n\nPAY TO THE ORDER OF: Emily Carter\n\nSEVEN HUNDRED TWENTY-THREE AND 49/100 DOLLARS\n\nRosewood Federal Credit Union\n\nMEMO:\n\nAuthorized Signature\n\nC001011C A913619397A 909169985435C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "913619397",
+          "account_number": "001011"
+        }
+      },
+      "got": {
+        "routing": "913619397",
+        "account": "001011",
+        "check_number": "",
+        "check_number_fallback": "001011",
+        "payee": "Emily Carter",
+        "amount_numeral": "723.49",
+        "amount_words": "SEVEN HUNDRED TWENTY-THREE AND 49/100",
+        "date": "04/09/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "913619397",
+        "account": "909169985435",
+        "check_number": "001011",
+        "check_number_fallback": "001011",
+        "payee": "Emily Carter",
+        "amount_numeral": "723.49",
+        "amount_words": "seven hundred twenty-three and 49/100",
+        "date": "04/09/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001011C A913619397A 909169985435C",
+        "parsed": {
+          "routing_number": "913619397",
+          "account_number": "001011"
+        },
+        "transit": "913619397",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001011C A913619397A 909169985435C"
+      ]
+    },
+    {
+      "id": "chk_011",
+      "template": "A_standard",
+      "tier": "moderate",
+      "ocr_s": 0.3606184000018402,
+      "ocr_text": "Date: 04/09/2026\n\nRosewood Federal Credit Union\n\n| $723.49\n\n001011\n\nPAY TO THE ORDER OF: Emily Carter\n\nSEVEN HUNDRED TWENTY-THREE AND 49/100 DOLLARS\n\nRosewood Federal Credit Union\n\nMEMO:\n\nAuthorized Signature\n\n€@01011C A913619397A 909169985435C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "913619397",
+          "account_number": "001011"
+        }
+      },
+      "got": {
+        "routing": "913619397",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001011",
+        "payee": "Emily Carter",
+        "amount_numeral": "723.49",
+        "amount_words": "SEVEN HUNDRED TWENTY-THREE AND 49/100",
+        "date": "04/09/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "913619397",
+        "account": "909169985435",
+        "check_number": "001011",
+        "check_number_fallback": "001011",
+        "payee": "Emily Carter",
+        "amount_numeral": "723.49",
+        "amount_words": "seven hundred twenty-three and 49/100",
+        "date": "04/09/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "€@01011C A913619397A 909169985435C",
+        "parsed": {
+          "routing_number": "913619397"
+        },
+        "transit": "913619397",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "€@01011C A913619397A 909169985435C"
+      ]
+    },
+    {
+      "id": "chk_011",
+      "template": "A_standard",
+      "tier": "hard",
+      "ocr_s": 0.38341159999981755,
+      "ocr_text": "eve: oAFOM2SZS\n\nfederal ©\n\n90108}\n\nemily CO\n\nORDER OF\n\nos\n\nPoa:\n\npay To THE\n\nano 49/300 ©\n\nSS\n\nSal\n\neven HONORED\n\nDey\n\na\n\nsity,\n\nfeserst S\n\nPas\n\nFeineh:\n\n2\n\na5\n\na\n\ni\n\nre\n\naf\n\nae\n\nal\n\ncoorerie |\n\nWS)\n\nSt\n\nfea\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "913619397",
+          "account_number": "001011"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "913619397",
+        "account": "909169985435",
+        "check_number": "001011",
+        "check_number_fallback": "001011",
+        "payee": "Emily Carter",
+        "amount_numeral": "723.49",
+        "amount_words": "seven hundred twenty-three and 49/100",
+        "date": "04/09/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "St",
+        "fea"
+      ]
+    },
+    {
+      "id": "chk_012",
+      "template": "B_dark_logo",
+      "tier": "clean",
+      "ocr_s": 0.4007784999994328,
+      "ocr_text": "001012\n\nPS BANK\n\nDate: 11/27/2026\n\n$ 6,518.32\n\nPAY TO THE ORDER OF: Metro Office Supplies\n\nSIX THOUSAND FIVE HUNDRED EIGHTEEN AND 32/100 DOLLARS\n\nStonebridge National Bank\n\nMEMO: Refund\n\nAuthorized Signature\n\nC001012C A911838426A 513542784980C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "911838426",
+          "account_number": "001012"
+        }
+      },
+      "got": {
+        "routing": "911838426",
+        "account": "001012",
+        "check_number": "",
+        "check_number_fallback": "001012",
+        "payee": "Metro Office Supplies",
+        "amount_numeral": "6,518.32",
+        "amount_words": "SIX THOUSAND FIVE HUNDRED EIGHTEEN AND 32/100",
+        "date": "11/27/2026",
+        "bank": "Stonebridge National Bank"
+      },
+      "want": {
+        "routing": "911838426",
+        "account": "513542784980",
+        "check_number": "001012",
+        "check_number_fallback": "001012",
+        "payee": "Metro Office Supplies",
+        "amount_numeral": "6,518.32",
+        "amount_words": "six thousand five hundred eighteen and 32/100",
+        "date": "11/27/2026",
+        "bank": "Stonebridge National Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001012C A911838426A 513542784980C",
+        "parsed": {
+          "routing_number": "911838426",
+          "account_number": "001012"
+        },
+        "transit": "911838426",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001012C A911838426A 513542784980C"
+      ]
+    },
+    {
+      "id": "chk_012",
+      "template": "B_dark_logo",
+      "tier": "moderate",
+      "ocr_s": 0.3628158000028634,
+      "ocr_text": "PS BANK\n\n001012\n\nDate: 11/27/2026\n\n| $ 6,518.32\n\nPAY TO THE ORDER OF: Metro Office Supplies\n\nEN AND 32/100 DOLLARS\n\nSik THOUSAND FIVE HUNDRED EIGHTE\n\nStonebridge National Bank\n\nMEMO: Refund\n\nAuthorized Signature\n\n€001012C A911838426A 513542784980C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "911838426",
+          "account_number": "001012"
+        }
+      },
+      "got": {
+        "routing": "911838426",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001012",
+        "payee": "Metro Office Supplies",
+        "amount_numeral": "6,518.32",
+        "amount_words": "EN AND 32/100",
+        "date": "11/27/2026",
+        "bank": "Stonebridge National Bank"
+      },
+      "want": {
+        "routing": "911838426",
+        "account": "513542784980",
+        "check_number": "001012",
+        "check_number_fallback": "001012",
+        "payee": "Metro Office Supplies",
+        "amount_numeral": "6,518.32",
+        "amount_words": "six thousand five hundred eighteen and 32/100",
+        "date": "11/27/2026",
+        "bank": "Stonebridge National Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "€001012C A911838426A 513542784980C",
+        "parsed": {
+          "routing_number": "911838426"
+        },
+        "transit": "911838426",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "€001012C A911838426A 513542784980C"
+      ]
+    },
+    {
+      "id": "chk_012",
+      "template": "B_dark_logo",
+      "tier": "hard",
+      "ocr_s": 0.39408150000235764,
+      "ocr_text": "are: }\n\n42772028\n\n901032\n\na OF Le\n\nano 32/2008\n\npe\n\npay\n\nzo THE\n\nFive\n\nwunored\n\nee\n\n=\n\niy\n\nnationsl oor\n\n35427849006\n\nyore\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "911838426",
+          "account_number": "001012"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "901032",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "911838426",
+        "account": "513542784980",
+        "check_number": "001012",
+        "check_number_fallback": "001012",
+        "payee": "Metro Office Supplies",
+        "amount_numeral": "6,518.32",
+        "amount_words": "six thousand five hundred eighteen and 32/100",
+        "date": "11/27/2026",
+        "bank": "Stonebridge National Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "35427849006",
+        "yore"
+      ]
+    },
+    {
+      "id": "chk_013",
+      "template": "C_pattern_bg",
+      "tier": "clean",
+      "ocr_s": 0.41702720000103,
+      "ocr_text": "Rosewood Federal Credit Union\n\nDate: 06/25/2026] $ 2,778.12\n\nPAY TO THE ORDER OF: Robert Kim\n\nTWO THOUSAND SEVEN HUNDRED SEVENTY-EIGHT AND 12/100 DOLLARS\n\n001013\n\nMEMO: Rent - March\n\nAuthorized Signature\n\nC001013C A118244936A 534874016400C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "118244936",
+          "account_number": "001013"
+        }
+      },
+      "got": {
+        "routing": "118244936",
+        "account": "001013",
+        "check_number": "",
+        "check_number_fallback": "001013",
+        "payee": "Robert Kim",
+        "amount_numeral": "2,778.12",
+        "amount_words": "TWO THOUSAND SEVEN HUNDRED SEVENTY-EIGHT AND 12/100",
+        "date": "06/25/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "118244936",
+        "account": "534874016400",
+        "check_number": "001013",
+        "check_number_fallback": "001013",
+        "payee": "Robert Kim",
+        "amount_numeral": "2,778.12",
+        "amount_words": "two thousand seven hundred seventy-eight and 12/100",
+        "date": "06/25/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001013C A118244936A 534874016400C",
+        "parsed": {
+          "routing_number": "118244936",
+          "account_number": "001013"
+        },
+        "transit": "118244936",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001013C A118244936A 534874016400C"
+      ]
+    },
+    {
+      "id": "chk_013",
+      "template": "C_pattern_bg",
+      "tier": "moderate",
+      "ocr_s": 0.3951394999967306,
+      "ocr_text": "Rosewood\n\nFederal Credit Union\n\nDate: 06/25/2026\n\nPAY TO THE ORDER O}\n\nF: Robert Kim\n\n—\n\n=\n\nae\n\noe\n\nEIGHT AND 12/100 DOLLARS\n\nTWO TH'\n\n—\n\nOUSAND SEVEN HUNDRED SEVENTY-\n\n>.\n\n001013\n\n~puthorized Signature\n\nMEMO: Rent - March\n\n€901013C A118244936\n\nA 534874016400\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "118244936",
+          "account_number": "001013"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001013",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "EIGHT AND 12/100",
+        "date": "06/25/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "want": {
+        "routing": "118244936",
+        "account": "534874016400",
+        "check_number": "001013",
+        "check_number_fallback": "001013",
+        "payee": "Robert Kim",
+        "amount_numeral": "2,778.12",
+        "amount_words": "two thousand seven hundred seventy-eight and 12/100",
+        "date": "06/25/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "€901013C A118244936",
+        "A 534874016400"
+      ]
+    },
+    {
+      "id": "chk_013",
+      "template": "C_pattern_bg",
+      "tier": "hard",
+      "ocr_s": 0.43588119999913033,
+      "ocr_text": "Federal credit\n\nanaes ones\n\n%\n\nro\n\nof. Robert Kim\n\nano 12/100 OOM\n\npay TO THE OF\n\n$e\n\nneal\n\nyrs\n\nTHOUSAND SEVEN\n\n“8\n\noe\n\n‘Lair\n\na5\n\n~ March\n\nEMO: Rent\n\nZe\n\nae\n\noy)\n\nphe\n\nay\n\ncoorersc A118?\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "118244936",
+          "account_number": "001013"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "118244936",
+        "account": "534874016400",
+        "check_number": "001013",
+        "check_number_fallback": "001013",
+        "payee": "Robert Kim",
+        "amount_numeral": "2,778.12",
+        "amount_words": "two thousand seven hundred seventy-eight and 12/100",
+        "date": "06/25/2026",
+        "bank": "Rosewood Federal Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "ay",
+        "coorersc A118?"
+      ]
+    },
+    {
+      "id": "chk_014",
+      "template": "D_compact",
+      "tier": "clean",
+      "ocr_s": 0.39141120000203955,
+      "ocr_text": "Golden Plains Credit Union\n\n001014\n\nDate: 09/28/2026\n\n$ 5,886.53\n\nPAY TO THE ORDER OF: Fatima Al-Sayed\n\nFIVE THOUSAND EIGHT HUNDRED EIGHTY-SEVEN AND 53/100 DOLLARS\n\nAuthorized Signature\n\nMEMO:\n\nC001014C A112805986A 262045053315C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "112805986",
+          "account_number": "001014"
+        }
+      },
+      "got": {
+        "routing": "112805986",
+        "account": "001014",
+        "check_number": "",
+        "check_number_fallback": "001014",
+        "payee": "Fatima Al-Sayed",
+        "amount_numeral": "5,886.53",
+        "amount_words": "FIVE THOUSAND EIGHT HUNDRED EIGHTY-SEVEN AND 53/100",
+        "date": "09/28/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "want": {
+        "routing": "112805986",
+        "account": "262045053315",
+        "check_number": "001014",
+        "check_number_fallback": "001014",
+        "payee": "Fatima Al-Sayed",
+        "amount_numeral": "5,886.53",
+        "amount_words": "five thousand eight hundred eighty-seven and 53/100",
+        "date": "09/28/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001014C A112805986A 262045053315C",
+        "parsed": {
+          "routing_number": "112805986",
+          "account_number": "001014"
+        },
+        "transit": "112805986",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "mismatch",
+      "mismatch_truth": "mismatch",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "MEMO:",
+        "C001014C A112805986A 262045053315C"
+      ]
+    },
+    {
+      "id": "chk_014",
+      "template": "D_compact",
+      "tier": "moderate",
+      "ocr_s": 0.44114360000094166,
+      "ocr_text": "001014\n\nDate: 09/28/2026\n\n$ 5,886.53\n\nGolden P\n\njains Credit Union\n\npies\n\nee\n\n=\n\nsoar\n\naah\n\n—\n\n——\n\nTO THE ORDER OF:\n\nFatima Al-Sayed\n\n=\n\n=\n\n—\n\n=\n\na\n\n—\n\n—\n\na\n\na\n\npcan\n\n—\n\n=\n\na\n\noe\n\npi\n\nRs\n\nats\n\npe\n\nPAY\n\ninaal bs\n\n=\n\naos\n\na\n\nTY SEVEN AND 51300 POL\n\nAuthorized Signature\n\n—\n\nNI\n\naeons\n\nD EIGHT HUNDRED EG\n\nFIVE THOUSAN\n\nie\n\nMEMO:\n\n315C\n\nC€001014C A112\n\n805986A 262045053\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "112805986",
+          "account_number": "001014"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001014",
+        "payee": "",
+        "amount_numeral": "5,886.53",
+        "amount_words": "",
+        "date": "09/28/2026",
+        "bank": ""
+      },
+      "want": {
+        "routing": "112805986",
+        "account": "262045053315",
+        "check_number": "001014",
+        "check_number_fallback": "001014",
+        "payee": "Fatima Al-Sayed",
+        "amount_numeral": "5,886.53",
+        "amount_words": "five thousand eight hundred eighty-seven and 53/100",
+        "date": "09/28/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "mismatch",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "C€001014C A112",
+        "805986A 262045053"
+      ]
+    },
+    {
+      "id": "chk_014",
+      "template": "D_compact",
+      "tier": "hard",
+      "ocr_s": 0.4347124000014446,
+      "ocr_text": "oso14\n\nate 000\n\npiains Cr°\n\ngpni00 DOLARS\n\nae\n\nof. Fe\n\nise\n\nhae\n\nxo THE ORO\n\n=\n\nca\n\npar\n\nie\n\nei.\n\n2\n\nte\n\nah\n\neeu\n\nae\n\nne\n\nae\n\net ee\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "112805986",
+          "account_number": "001014"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "112805986",
+        "account": "262045053315",
+        "check_number": "001014",
+        "check_number_fallback": "001014",
+        "payee": "Fatima Al-Sayed",
+        "amount_numeral": "5,886.53",
+        "amount_words": "five thousand eight hundred eighty-seven and 53/100",
+        "date": "09/28/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "mismatch",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "ae",
+        "et ee"
+      ]
+    },
+    {
+      "id": "chk_015",
+      "template": "E_dark_and_pattern",
+      "tier": "clean",
+      "ocr_s": 0.4127239000008558,
+      "ocr_text": "Cascade Trust Bank\n\nGOLDEN PLAINS\n\n001015\n\nDate: 04/01/2026\n\n$ 9,071.04\n\nPAY TO THE ORDER OF: Grant Family Trust\n\nNINE THOUSAND SEVENTY-ONE AND 04/100 DOLLARS\n\nMEMO: Rent - March\n\nAuthorized Signature\n\nC001015C A226025636A 421607337543C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "226025636",
+          "account_number": "001015"
+        }
+      },
+      "got": {
+        "routing": "226025636",
+        "account": "001015",
+        "check_number": "",
+        "check_number_fallback": "001015",
+        "payee": "Grant Family Trust",
+        "amount_numeral": "9,071.04",
+        "amount_words": "NINE THOUSAND SEVENTY-ONE AND 04/100",
+        "date": "04/01/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "want": {
+        "routing": "226025636",
+        "account": "421607337543",
+        "check_number": "001015",
+        "check_number_fallback": "001015",
+        "payee": "Grant Family Trust",
+        "amount_numeral": "9,071.04",
+        "amount_words": "nine thousand seventy-one and 04/100",
+        "date": "04/01/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001015C A226025636A 421607337543C",
+        "parsed": {
+          "routing_number": "226025636",
+          "account_number": "001015"
+        },
+        "transit": "226025636",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001015C A226025636A 421607337543C"
+      ]
+    },
+    {
+      "id": "chk_015",
+      "template": "E_dark_and_pattern",
+      "tier": "moderate",
+      "ocr_s": 0.3601675999998406,
+      "ocr_text": "GOLDEN PLAINS\n\nCascade Trust Bank\n\nDate: 04/01/2026\n\n001015\n\n[ $ 9,071.04\n\nPAY TO THE ORDER OF: Grant Family Trust\n\nNINE THOUSAND SEVENTY-ONE A\n\nND 04/100 DOLLARS\n\nMEMO: Rent - March\n\nAuthorized Signature\n\nc901015C A226025636A 421607337543C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "226025636",
+          "account_number": "001015"
+        }
+      },
+      "got": {
+        "routing": "226025636",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001015",
+        "payee": "Grant Family Trust",
+        "amount_numeral": "9,071.04",
+        "amount_words": "ND 04/100",
+        "date": "04/01/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "want": {
+        "routing": "226025636",
+        "account": "421607337543",
+        "check_number": "001015",
+        "check_number_fallback": "001015",
+        "payee": "Grant Family Trust",
+        "amount_numeral": "9,071.04",
+        "amount_words": "nine thousand seventy-one and 04/100",
+        "date": "04/01/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "c901015C A226025636A 421607337543C",
+        "parsed": {
+          "routing_number": "226025636"
+        },
+        "transit": "226025636",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "c901015C A226025636A 421607337543C"
+      ]
+    },
+    {
+      "id": "chk_015",
+      "template": "E_dark_and_pattern",
+      "tier": "hard",
+      "ocr_s": 0.3526784999994561,
+      "ocr_text": "Date am eee\n\ncascade Trust Bank\n\n001035\n\noa OF Grant\n\nnm\n\namily Trust\n\nP\n\n190 DOLLAR\n\n1y-ONE AND 04\n\npsrerant OF\n\nNINE\n\nTHOUSAND SEVEN\n\nweno: ®\n\nart March\n\n901015\n\n¢ 02260258\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "226025636",
+          "account_number": "001015"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001035",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": "Cascade Trust Bank"
+      },
+      "want": {
+        "routing": "226025636",
+        "account": "421607337543",
+        "check_number": "001015",
+        "check_number_fallback": "001015",
+        "payee": "Grant Family Trust",
+        "amount_numeral": "9,071.04",
+        "amount_words": "nine thousand seventy-one and 04/100",
+        "date": "04/01/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "901015",
+        "¢ 02260258"
+      ]
+    },
+    {
+      "id": "chk_016",
+      "template": "A_standard",
+      "tier": "clean",
+      "ocr_s": 0.4091207999990729,
+      "ocr_text": "Golden Plains Credit Union\n\nDate: 05/02/2026\n\n001016\n\n$ 7,130.26\n\nPAY TO THE ORDER OF: Summit Landscaping LLC\n\nSEVEN THOUSAND ONE HUNDRED THIRTY AND 26/100 DOLLARS\n\nGolden Plains Credit Union\n\nMEMO:\n\nAuthorized Signature\n\nC001016C A850142944A 196556981693C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "invalid",
+        "parsed": {
+          "account_number": "001016"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "001016",
+        "check_number": "",
+        "check_number_fallback": "001016",
+        "payee": "Summit Landscaping LLC",
+        "amount_numeral": "7,130.26",
+        "amount_words": "SEVEN THOUSAND ONE HUNDRED THIRTY AND 26/100",
+        "date": "05/02/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "want": {
+        "routing": "",
+        "account": "196556981693",
+        "check_number": "001016",
+        "check_number_fallback": "001016",
+        "payee": "Summit Landscaping LLC",
+        "amount_numeral": "7,130.26",
+        "amount_words": "seven thousand one hundred thirty and 26/100",
+        "date": "05/02/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001016C A850142944A 196556981693C",
+        "parsed": {
+          "account_number": "001016"
+        },
+        "transit": "850142944",
+        "verdict": "invalid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "invalid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001016C A850142944A 196556981693C"
+      ]
+    },
+    {
+      "id": "chk_016",
+      "template": "A_standard",
+      "tier": "moderate",
+      "ocr_s": 0.3700778000020364,
+      "ocr_text": "Date: 05/02/2026\n\nGolden Plains Credit Union\n\n$ 7,130.26\n\n001016\n\nPAY TO THE ORDER OF: Summit Landscaping LLC\n\nSEVEN THOUSAND ONE HUNDRED THIRTY AND 26/100 DOLLARS\n\nGolden Plains Credit Union\n\nMEMO:\n\nAuthorized Signature\n\nC@01016C A850142944A 196556981693C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "invalid",
+        "parsed": {
+          "account_number": "001016"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001016",
+        "payee": "Summit Landscaping LLC",
+        "amount_numeral": "7,130.26",
+        "amount_words": "SEVEN THOUSAND ONE HUNDRED THIRTY AND 26/100",
+        "date": "05/02/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "want": {
+        "routing": "",
+        "account": "196556981693",
+        "check_number": "001016",
+        "check_number_fallback": "001016",
+        "payee": "Summit Landscaping LLC",
+        "amount_numeral": "7,130.26",
+        "amount_words": "seven thousand one hundred thirty and 26/100",
+        "date": "05/02/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C@01016C A850142944A 196556981693C",
+        "parsed": {},
+        "transit": "850142944",
+        "verdict": "invalid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "invalid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C@01016C A850142944A 196556981693C"
+      ]
+    },
+    {
+      "id": "chk_016",
+      "template": "A_standard",
+      "tier": "hard",
+      "ocr_s": 0.48973190000106115,
+      "ocr_text": "credit\n\ngoider\n\na\n\nDin\n\na\n\n26110\n\nonver OF\n\ni\n\nnee\n\nswore AND\n\npar TOT\n\nyd\n\naks:\n\nSee\n\nqoussno ONE\n\nOY\n\nBPs\n\nDest\n\nhace\n\nNes\n\n4\n\nBi\n\n2D\n\npains\n\nare\n\npas\n\nis\n\nin\n\nie\n\nie\n\n=\n\nae 1\n\nae\n\noe\n\n=\n\n—\n\nui?\n\nfe\n\na\n\nbaie\n\nreali\n\nBi\n\nnim\n\nsi\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "invalid",
+        "parsed": {
+          "account_number": "001016"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "",
+        "account": "196556981693",
+        "check_number": "001016",
+        "check_number_fallback": "001016",
+        "payee": "Summit Landscaping LLC",
+        "amount_numeral": "7,130.26",
+        "amount_words": "seven thousand one hundred thirty and 26/100",
+        "date": "05/02/2026",
+        "bank": "Golden Plains Credit Union"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "nim",
+        "si"
+      ]
+    },
+    {
+      "id": "chk_017",
+      "template": "B_dark_logo",
+      "tier": "clean",
+      "ocr_s": 0.3983078999990539,
+      "ocr_text": "001017\n\nPS BANK\n\nDate: 10/10/2026\n\n$ 3,824.13\n\nPAY TO THE ORDER OF: Ana Beatriz Ferreira\n\nTHREE THOUSAND EIGHT HUNDRED TWENTY-FOUR AND 13/100 DOLLARS\n\nCascade Trust Bank\n\nMEMO:\n\nAuthorized Signature\n\nC001017C AG15951489A 465648236629C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "615951489",
+          "account_number": "001017"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001017",
+        "payee": "Ana Beatriz Ferreira",
+        "amount_numeral": "3,824.13",
+        "amount_words": "THREE THOUSAND EIGHT HUNDRED TWENTY-FOUR AND 13/100",
+        "date": "10/10/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "want": {
+        "routing": "615951489",
+        "account": "465648236629",
+        "check_number": "001017",
+        "check_number_fallback": "001017",
+        "payee": "Ana Beatriz Ferreira",
+        "amount_numeral": "3,824.13",
+        "amount_words": "three thousand eight hundred twenty-four and 13/100",
+        "date": "10/10/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001017C AG15951489A 465648236629C"
+      ]
+    },
+    {
+      "id": "chk_017",
+      "template": "B_dark_logo",
+      "tier": "moderate",
+      "ocr_s": 0.3667953000003763,
+      "ocr_text": "PS BANK\n\n001017\n\nDate: 10/10/2026\n\n[$3,824.13\n\nFerreira\n\nPAY TO THE ORDER OF: Ana Beatriz\n\nDOLLARS\n\nHUNDRED TWENTY-FOUR AND 22/200\n\nTHREE THOUSAND EIGHT\n\n=\n\n=\n\nCascade Trust Bank\n\n“authorized Signature\n\nMEMO:\n\ncoe1017C A615951489\n\nA 465648236629C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "615951489",
+          "account_number": "001017"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001017",
+        "payee": "Ana Beatriz",
+        "amount_numeral": "3,824.13",
+        "amount_words": "PAY TO THE ORDER OF: Ana Beatriz",
+        "date": "10/10/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "want": {
+        "routing": "615951489",
+        "account": "465648236629",
+        "check_number": "001017",
+        "check_number_fallback": "001017",
+        "payee": "Ana Beatriz Ferreira",
+        "amount_numeral": "3,824.13",
+        "amount_words": "three thousand eight hundred twenty-four and 13/100",
+        "date": "10/10/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": true,
+        "amount_words": false,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "coe1017C A615951489",
+        "A 465648236629C"
+      ]
+    },
+    {
+      "id": "chk_017",
+      "template": "B_dark_logo",
+      "tier": "hard",
+      "ocr_s": 0.331760299999587,
+      "ocr_text": "001017\n\ngeatriz Ferreir®\n\neal\n\npay TO THE\n\nORDER OF: Ane\n\n—\n\nHUNDRED TWENTY\n\ncascade Trust Ber\n\nMEMO\n\ncee1ei7¢ «AS\n\n159514894 465648236629\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "615951489",
+          "account_number": "001017"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001017",
+        "payee": "Ane",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "615951489",
+        "account": "465648236629",
+        "check_number": "001017",
+        "check_number_fallback": "001017",
+        "payee": "Ana Beatriz Ferreira",
+        "amount_numeral": "3,824.13",
+        "amount_words": "three thousand eight hundred twenty-four and 13/100",
+        "date": "10/10/2026",
+        "bank": "Cascade Trust Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "cee1ei7¢ «AS",
+        "159514894 465648236629"
+      ]
+    },
+    {
+      "id": "chk_018",
+      "template": "C_pattern_bg",
+      "tier": "clean",
+      "ocr_s": 0.4162870000000112,
+      "ocr_text": "Harborview Community Bank\n\nDate: 08/20/2026) $ 4,880.75\n\nPAY TO THE ORDER OF: Douglas Whitfield\n\nFOUR THOUSAND EIGHT HUNDRED EIGHTY AND 75/100 DOLLARS\n\n001018\n\nMEMO: Invoice #4471\n\nAuthorized Signature\n\nC001018C A773872141A 895134332003C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "773872141",
+          "account_number": "001018"
+        }
+      },
+      "got": {
+        "routing": "773872141",
+        "account": "001018",
+        "check_number": "",
+        "check_number_fallback": "001018",
+        "payee": "Douglas Whitfield",
+        "amount_numeral": "4,880.75",
+        "amount_words": "FOUR THOUSAND EIGHT HUNDRED EIGHTY AND 75/100",
+        "date": "08/20/2026",
+        "bank": "Harborview Community Bank"
+      },
+      "want": {
+        "routing": "773872141",
+        "account": "895134332003",
+        "check_number": "001018",
+        "check_number_fallback": "001018",
+        "payee": "Douglas Whitfield",
+        "amount_numeral": "4,880.75",
+        "amount_words": "four thousand eight hundred eighty and 75/100",
+        "date": "08/20/2026",
+        "bank": "Harborview Community Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": true,
+        "amount_numeral": true,
+        "amount_words": true,
+        "date": true,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "C001018C A773872141A 895134332003C",
+        "parsed": {
+          "routing_number": "773872141",
+          "account_number": "001018"
+        },
+        "transit": "773872141",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "agree",
+      "mismatch_truth": "agree",
+      "mismatch_correct": true,
+      "tail_ocr_lines": [
+        "Authorized Signature",
+        "C001018C A773872141A 895134332003C"
+      ]
+    },
+    {
+      "id": "chk_018",
+      "template": "C_pattern_bg",
+      "tier": "moderate",
+      "ocr_s": 0.3648724000013317,
+      "ocr_text": "Harborview Community Bank\n\nDate; 08/20/2026\n\nPAY TO THE ORDER OF: Doug\n\nlas Whitfield\n\nDOLLARS\n\nFOUR THOU\n\nSAND EIGHT HUNDRED EIGHTY AND 75/100\n\n001018\n\nAuthorized Signature\n\nMEMO: Invoice #4471\n\nc€901018C A773872141A 8951\n\n34332003C\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "773872141",
+          "account_number": "001018"
+        }
+      },
+      "got": {
+        "routing": "773872141",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "001018",
+        "payee": "Doug",
+        "amount_numeral": "",
+        "amount_words": "las Whitfield",
+        "date": "",
+        "bank": "Harborview Community Bank"
+      },
+      "want": {
+        "routing": "773872141",
+        "account": "895134332003",
+        "check_number": "001018",
+        "check_number_fallback": "001018",
+        "payee": "Douglas Whitfield",
+        "amount_numeral": "4,880.75",
+        "amount_words": "four thousand eight hundred eighty and 75/100",
+        "date": "08/20/2026",
+        "bank": "Harborview Community Bank"
+      },
+      "ok": {
+        "routing": true,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": true,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": true,
+        "routing_transit_read": true
+      },
+      "micr": {
+        "line": "c€901018C A773872141A 8951",
+        "parsed": {
+          "routing_number": "773872141"
+        },
+        "transit": "773872141",
+        "verdict": "valid"
+      },
+      "micr_located": true,
+      "checksum_verdict": "valid",
+      "checksum_correct": true,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "c€901018C A773872141A 8951",
+        "34332003C"
+      ]
+    },
+    {
+      "id": "chk_018",
+      "template": "C_pattern_bg",
+      "tier": "hard",
+      "ocr_s": 0.4410267000021122,
+      "ocr_text": "ae\n\ncae\n\nSe\n\niN\n\noon an\n\ner\n\nOy\n\n1snc0 oS\n\na\n\nAver OF\n\nuf\n\nEw\n\npac To THE\n\nif\n\ncs\n\na\n\ncon HOME\n\nat\n\nox\n\nas\n\nfos\n\n*\n\nat\n\nworse OAT\n\nio\n\na\n\net)\n\noe\n\nee\n\nae.\n\na\n\naot\n",
+      "oracle_micr": {
+        "micr_located": true,
+        "checksum_verdict": "valid",
+        "parsed": {
+          "routing_number": "773872141",
+          "account_number": "001018"
+        }
+      },
+      "got": {
+        "routing": "",
+        "account": "",
+        "check_number": "",
+        "check_number_fallback": "",
+        "payee": "",
+        "amount_numeral": "",
+        "amount_words": "",
+        "date": "",
+        "bank": ""
+      },
+      "want": {
+        "routing": "773872141",
+        "account": "895134332003",
+        "check_number": "001018",
+        "check_number_fallback": "001018",
+        "payee": "Douglas Whitfield",
+        "amount_numeral": "4,880.75",
+        "amount_words": "four thousand eight hundred eighty and 75/100",
+        "date": "08/20/2026",
+        "bank": "Harborview Community Bank"
+      },
+      "ok": {
+        "routing": false,
+        "account": false,
+        "check_number": false,
+        "check_number_fallback": false,
+        "payee": false,
+        "amount_numeral": false,
+        "amount_words": false,
+        "date": false,
+        "bank": false,
+        "routing_transit_read": false
+      },
+      "micr": {
+        "line": "",
+        "parsed": {},
+        "transit": "",
+        "verdict": "no read"
+      },
+      "micr_located": false,
+      "checksum_verdict": "no read",
+      "checksum_correct": false,
+      "mismatch": "undecidable",
+      "mismatch_truth": "agree",
+      "mismatch_correct": false,
+      "tail_ocr_lines": [
+        "a",
+        "aot"
+      ]
+    }
+  ]
+}

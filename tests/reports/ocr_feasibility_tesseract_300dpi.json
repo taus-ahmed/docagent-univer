@@ -1,0 +1,1692 @@
+{
+  "engine": "tesseract",
+  "engine_version": "5.4.0.20240606",
+  "dpi": 300,
+  "EDGE_TOL": 1.0,
+  "LINE_TOL": 3.0,
+  "overlap_frac": 0.3,
+  "caveat": "clean digitally-rendered pages: best case, not a scan",
+  "documents": 10,
+  "pages": [
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 1,
+      "truth_words": 140,
+      "ocr_words": 131,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 0.664,
+      "ocr_s": 2.084,
+      "classes": {
+        "clean": 124,
+        "misread": 1,
+        "split": 0,
+        "merge": 2,
+        "tangle": 2,
+        "missed": 0,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 2,
+      "truth_words": 30,
+      "ocr_words": 30,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 0.664,
+      "ocr_s": 1.552,
+      "classes": {
+        "clean": 30,
+        "misread": 0,
+        "split": 0,
+        "merge": 0,
+        "tangle": 0,
+        "missed": 0,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "CHQ-001847.pdf",
+      "page": 1,
+      "truth_words": 83,
+      "ocr_words": 84,
+      "image_px": [
+        2550,
+        1050
+      ],
+      "expected_px": [
+        2550.0,
+        1050.0
+      ],
+      "render_s": 1.102,
+      "ocr_s": 0.91,
+      "classes": {
+        "clean": 79,
+        "misread": 0,
+        "split": 0,
+        "merge": 0,
+        "tangle": 1,
+        "missed": 0,
+        "spurious": 2
+      }
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth_words": 163,
+      "ocr_words": 156,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 1.091,
+      "ocr_s": 2.395,
+      "classes": {
+        "clean": 140,
+        "misread": 2,
+        "split": 0,
+        "merge": 0,
+        "tangle": 2,
+        "missed": 8,
+        "spurious": 1
+      }
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth_words": 145,
+      "ocr_words": 139,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 1.509,
+      "ocr_s": 2.409,
+      "classes": {
+        "clean": 124,
+        "misread": 0,
+        "split": 0,
+        "merge": 0,
+        "tangle": 2,
+        "missed": 8,
+        "spurious": 2
+      }
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth_words": 155,
+      "ocr_words": 150,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 1.171,
+      "ocr_s": 2.152,
+      "classes": {
+        "clean": 134,
+        "misread": 0,
+        "split": 1,
+        "merge": 0,
+        "tangle": 2,
+        "missed": 7,
+        "spurious": 1
+      }
+    },
+    {
+      "doc": "IS-2024-Q4.pdf",
+      "page": 1,
+      "truth_words": 125,
+      "ocr_words": 116,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 0.683,
+      "ocr_s": 2.157,
+      "classes": {
+        "clean": 109,
+        "misread": 1,
+        "split": 0,
+        "merge": 2,
+        "tangle": 2,
+        "missed": 0,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "IS-2024-Q4.pdf",
+      "page": 2,
+      "truth_words": 13,
+      "ocr_words": 13,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 0.683,
+      "ocr_s": 1.539,
+      "classes": {
+        "clean": 13,
+        "misread": 0,
+        "split": 0,
+        "merge": 0,
+        "tangle": 0,
+        "missed": 0,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 1,
+      "truth_words": 97,
+      "ocr_words": 96,
+      "image_px": [
+        1950,
+        2700
+      ],
+      "expected_px": [
+        1950.0,
+        2700.0
+      ],
+      "render_s": 0.577,
+      "ocr_s": 1.554,
+      "classes": {
+        "clean": 88,
+        "misread": 2,
+        "split": 1,
+        "merge": 3,
+        "tangle": 0,
+        "missed": 0,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 2,
+      "truth_words": 29,
+      "ocr_words": 27,
+      "image_px": [
+        1950,
+        2700
+      ],
+      "expected_px": [
+        1950.0,
+        2700.0
+      ],
+      "render_s": 0.577,
+      "ocr_s": 1.097,
+      "classes": {
+        "clean": 27,
+        "misread": 0,
+        "split": 0,
+        "merge": 0,
+        "tangle": 0,
+        "missed": 2,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "truth_words": 96,
+      "ocr_words": 93,
+      "image_px": [
+        1950,
+        2700
+      ],
+      "expected_px": [
+        1950.0,
+        2700.0
+      ],
+      "render_s": 0.567,
+      "ocr_s": 1.561,
+      "classes": {
+        "clean": 89,
+        "misread": 2,
+        "split": 1,
+        "merge": 0,
+        "tangle": 0,
+        "missed": 4,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 2,
+      "truth_words": 24,
+      "ocr_words": 24,
+      "image_px": [
+        1950,
+        2700
+      ],
+      "expected_px": [
+        1950.0,
+        2700.0
+      ],
+      "render_s": 0.567,
+      "ocr_s": 1.034,
+      "classes": {
+        "clean": 23,
+        "misread": 1,
+        "split": 0,
+        "merge": 0,
+        "tangle": 0,
+        "missed": 0,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth_words": 156,
+      "ocr_words": 146,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 1.04,
+      "ocr_s": 2.074,
+      "classes": {
+        "clean": 133,
+        "misread": 0,
+        "split": 0,
+        "merge": 0,
+        "tangle": 2,
+        "missed": 10,
+        "spurious": 0
+      }
+    },
+    {
+      "doc": "STMT-2024-01.pdf",
+      "page": 1,
+      "truth_words": 195,
+      "ocr_words": 197,
+      "image_px": [
+        2550,
+        3300
+      ],
+      "expected_px": [
+        2550.0,
+        3300.0
+      ],
+      "render_s": 1.18,
+      "ocr_s": 2.562,
+      "classes": {
+        "clean": 178,
+        "misread": 2,
+        "split": 3,
+        "merge": 1,
+        "tangle": 1,
+        "missed": 4,
+        "spurious": 8
+      }
+    }
+  ],
+  "truth_words": 1451,
+  "ocr_words": 1402,
+  "components": {
+    "clean": 1291,
+    "misread": 11,
+    "split": 6,
+    "merge": 8,
+    "tangle": 14,
+    "missed": 43,
+    "spurious": 14
+  },
+  "truth_words_by_class": {
+    "clean": 1291,
+    "misread": 11,
+    "split": 6,
+    "merge": 22,
+    "tangle": 78,
+    "missed": 43,
+    "spurious": 0
+  },
+  "truth_word_fraction_by_class": {
+    "clean": 0.89,
+    "misread": 0.008,
+    "split": 0.004,
+    "merge": 0.015,
+    "tangle": 0.054,
+    "missed": 0.03,
+    "spurious": 0.0
+  },
+  "edge_error_abs_pt": {
+    "x0": {
+      "n": 1291,
+      "min": 0.0,
+      "median": 0.387,
+      "p90": 0.72,
+      "p99": 1.0,
+      "max": 2.572,
+      "within_EDGE_TOL": 0.99
+    },
+    "x1": {
+      "n": 1291,
+      "min": 0.0,
+      "median": 0.495,
+      "p90": 0.872,
+      "p99": 1.725,
+      "max": 3.012,
+      "within_EDGE_TOL": 0.96
+    },
+    "top": {
+      "n": 1291,
+      "min": 0.003,
+      "median": 0.517,
+      "p90": 0.7,
+      "p99": 4.12,
+      "max": 6.149,
+      "within_EDGE_TOL": 0.967
+    },
+    "bottom": {
+      "n": 1291,
+      "min": 0.0,
+      "median": 1.723,
+      "p90": 2.07,
+      "p99": 3.82,
+      "max": 5.703,
+      "within_EDGE_TOL": 0.356
+    }
+  },
+  "edge_error_signed_median_pt": {
+    "x0": 0.387,
+    "x1": -0.495,
+    "top": 0.5,
+    "bottom": -1.723
+  },
+  "worst_edge_per_word_pt": {
+    "n": 1291,
+    "min": 0.34,
+    "median": 1.723,
+    "p90": 2.083,
+    "p99": 4.2,
+    "max": 6.149,
+    "within_EDGE_TOL": 0.344
+  },
+  "edge_error_after_removing_median_bias_pt": {
+    "x0": {
+      "n": 1291,
+      "min": 0.0,
+      "median": 0.213,
+      "p90": 0.394,
+      "p99": 0.618,
+      "max": 2.185,
+      "within_EDGE_TOL": 0.999
+    },
+    "x1": {
+      "n": 1291,
+      "min": 0.0,
+      "median": 0.158,
+      "p90": 0.451,
+      "p99": 1.23,
+      "max": 2.517,
+      "within_EDGE_TOL": 0.981
+    },
+    "top": {
+      "n": 1291,
+      "min": 0.0,
+      "median": 0.096,
+      "p90": 0.504,
+      "p99": 3.777,
+      "max": 5.649,
+      "within_EDGE_TOL": 0.952
+    },
+    "bottom": {
+      "n": 1291,
+      "min": 0.0,
+      "median": 0.34,
+      "p90": 1.68,
+      "p99": 2.92,
+      "max": 5.54,
+      "within_EDGE_TOL": 0.679
+    }
+  },
+  "right_aligned_pairs_ocr_x1_gap_pt": {
+    "n": 1272,
+    "min": 0.0,
+    "median": 0.0,
+    "p90": 0.24,
+    "p99": 1.2,
+    "max": 1.2,
+    "within_EDGE_TOL": 0.969
+  },
+  "right_aligned_pairs_worst": [
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 2,
+      "a": "$550,751",
+      "b": "$47,353",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 2,
+      "a": "$550,751",
+      "b": "$698,104",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 2,
+      "a": "$550,751",
+      "b": "$1,248,704",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "INV-2024-0031",
+      "b": "2024",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "INV-2024-0031",
+      "b": "2024",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "INV-2024-0031",
+      "b": "PO-2024-0018",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "INV-2024-0031",
+      "b": "30",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "INV-2024-0031",
+      "b": "$10,892.50",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "INV-2024-0031",
+      "b": "$320.00",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "2024",
+      "b": "$966.71",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "2024",
+      "b": "$12,179.21",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "2024",
+      "b": "$966.71",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "2024",
+      "b": "$12,179.21",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "PO-2024-0018",
+      "b": "$966.71",
+      "ocr_x1_gap": 1.2
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "a": "PO-2024-0018",
+      "b": "$12,179.21",
+      "ocr_x1_gap": 1.2
+    }
+  ],
+  "clean_but_beyond_LINE_TOL": [
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.04,
+        "x1": 0.08,
+        "top": 6.149,
+        "bottom": 5.411
+      }
+    },
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.087,
+        "x1": 0.033,
+        "top": 4.277,
+        "bottom": 4.003
+      }
+    },
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.033,
+        "x1": 0.087,
+        "top": 4.317,
+        "bottom": 3.963
+      }
+    },
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 2,
+      "text": "=",
+      "err": {
+        "x0": 0.356,
+        "x1": 0.424,
+        "top": 1.948,
+        "bottom": 3.152
+      }
+    },
+    {
+      "doc": "CHQ-001847.pdf",
+      "page": 1,
+      "text": "***",
+      "err": {
+        "x0": 1.11,
+        "x1": 0.207,
+        "top": 0.657,
+        "bottom": 5.703
+      }
+    },
+    {
+      "doc": "CHQ-001847.pdf",
+      "page": 1,
+      "text": "***",
+      "err": {
+        "x0": 1.104,
+        "x1": 0.201,
+        "top": 0.657,
+        "bottom": 5.703
+      }
+    },
+    {
+      "doc": "CHQ-001847.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.019,
+        "x1": 0.081,
+        "top": 4.34,
+        "bottom": 3.68
+      }
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "text": "LLC",
+      "err": {
+        "x0": 1.008,
+        "x1": 1.08,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "text": "EXPENSE",
+      "err": {
+        "x0": 1.073,
+        "x1": 0.995,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "text": "REPORT",
+      "err": {
+        "x0": 0.999,
+        "x1": 0.48,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.231,
+        "x1": 0.111,
+        "top": 4.077,
+        "bottom": 3.963
+      }
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.037,
+        "x1": 0.137,
+        "top": 4.3,
+        "bottom": 3.72
+      }
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "text": "LLC",
+      "err": {
+        "x0": 1.008,
+        "x1": 1.08,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "text": "INVOICE",
+      "err": {
+        "x0": 1.024,
+        "x1": 0.96,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.141,
+        "x1": 0.021,
+        "top": 4.477,
+        "bottom": 3.803
+      }
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "text": "LLC",
+      "err": {
+        "x0": 1.008,
+        "x1": 1.08,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "text": "INVOICE",
+      "err": {
+        "x0": 1.024,
+        "x1": 0.96,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.117,
+        "x1": 0.003,
+        "top": 4.477,
+        "bottom": 3.803
+      }
+    },
+    {
+      "doc": "IS-2024-Q4.pdf",
+      "page": 1,
+      "text": "—",
+      "err": {
+        "x0": 0.07,
+        "x1": 0.11,
+        "top": 6.149,
+        "bottom": 5.411
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 1,
+      "text": "PAY",
+      "err": {
+        "x0": 0.944,
+        "x1": 0.0,
+        "top": 0.822,
+        "bottom": 3.098
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 2,
+      "text": "Total",
+      "err": {
+        "x0": 0.24,
+        "x1": 0.621,
+        "top": 4.063,
+        "bottom": 0.857
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 2,
+      "text": "—",
+      "err": {
+        "x0": 0.004,
+        "x1": 0.064,
+        "top": 3.587,
+        "bottom": 3.433
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "text": "PAY",
+      "err": {
+        "x0": 0.944,
+        "x1": 0.0,
+        "top": 0.822,
+        "bottom": 3.098
+      }
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 2,
+      "text": "—",
+      "err": {
+        "x0": 0.004,
+        "x1": 0.064,
+        "top": 3.667,
+        "bottom": 3.353
+      }
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "text": "LLC",
+      "err": {
+        "x0": 1.008,
+        "x1": 1.08,
+        "top": 0.921,
+        "bottom": 3.359
+      }
+    }
+  ],
+  "origin_check": {
+    "probe_word": {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "text": "OUTSTANDING",
+      "page_height_pt": 792,
+      "truth_pt": {
+        "x0": 273.002,
+        "x1": 338.999,
+        "top": 194.183,
+        "bottom": 203.183
+      },
+      "tesseract_raw_px": {
+        "left": 1139,
+        "top": 811,
+        "width": 271,
+        "height": 27
+      },
+      "raw_px_as_pt": {
+        "left": 273.36,
+        "top": 194.64,
+        "right": 338.4,
+        "bottom": 201.12
+      },
+      "if_top_left_origin_top_pt": 194.64,
+      "if_bottom_left_origin_top_pt": 590.88
+    },
+    "median_abs_top_err_pt_if_top_left": 0.517,
+    "median_abs_top_err_pt_if_bottom_left": 286.173
+  },
+  "timing_s_per_page": {
+    "ocr": {
+      "n": 14,
+      "min": 0.91,
+      "median": 1.818,
+      "p90": 2.405,
+      "p99": 2.542,
+      "max": 2.562,
+      "mean": 1.791,
+      "total": 25.079
+    },
+    "render_mean": 0.862
+  },
+  "segmentation_examples": {
+    "split": [
+      {
+        "doc": "INV-2024-0047.pdf",
+        "page": 1,
+        "truth": [
+          "USB-C"
+        ],
+        "ocr": [
+          "“usB.",
+          "C"
+        ]
+      },
+      {
+        "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+        "page": 1,
+        "truth": [
+          "***-**-3317"
+        ],
+        "ocr": [
+          "***",
+          "**",
+          "3317"
+        ]
+      },
+      {
+        "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+        "page": 1,
+        "truth": [
+          "***-**-4821"
+        ],
+        "ocr": [
+          "+t",
+          "A894"
+        ]
+      },
+      {
+        "doc": "STMT-2024-01.pdf",
+        "page": 1,
+        "truth": [
+          "CHQ"
+        ],
+        "ocr": [
+          "(ers",
+          "(el)"
+        ]
+      },
+      {
+        "doc": "STMT-2024-01.pdf",
+        "page": 1,
+        "truth": [
+          "ACH"
+        ],
+        "ocr": [
+          "7",
+          "Xeis@e"
+        ]
+      },
+      {
+        "doc": "STMT-2024-01.pdf",
+        "page": 1,
+        "truth": [
+          "ACH"
+        ],
+        "ocr": [
+          "7",
+          "Xeise"
+        ]
+      }
+    ],
+    "merge": [
+      {
+        "doc": "BS-2024-Q1.pdf",
+        "page": 1,
+        "truth": [
+          "Global",
+          "Suite",
+          "1800,",
+          "New"
+        ],
+        "ocr": [
+          "Global"
+        ]
+      },
+      {
+        "doc": "BS-2024-Q1.pdf",
+        "page": 1,
+        "truth": [
+          "LLC",
+          "|",
+          "EIN:"
+        ],
+        "ocr": [
+          "LEG"
+        ]
+      },
+      {
+        "doc": "IS-2024-Q4.pdf",
+        "page": 1,
+        "truth": [
+          "Global",
+          "Suite",
+          "1800,",
+          "New"
+        ],
+        "ocr": [
+          "Global"
+        ]
+      },
+      {
+        "doc": "IS-2024-Q4.pdf",
+        "page": 1,
+        "truth": [
+          "LLC",
+          "|",
+          "EIN:"
+        ],
+        "ocr": [
+          "LEG"
+        ]
+      },
+      {
+        "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+        "page": 1,
+        "truth": [
+          "NEXUS",
+          "LLC"
+        ],
+        "ocr": [
+          "NEXUS"
+        ]
+      },
+      {
+        "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+        "page": 1,
+        "truth": [
+          "Description",
+          "Amount"
+        ],
+        "ocr": [
+          "|"
+        ]
+      },
+      {
+        "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+        "page": 1,
+        "truth": [
+          "Description",
+          "Amount"
+        ],
+        "ocr": [
+          "a"
+        ]
+      },
+      {
+        "doc": "STMT-2024-01.pdf",
+        "page": 1,
+        "truth": [
+          "FIRST",
+          "YORK"
+        ],
+        "ocr": [
+          "PiRST"
+        ]
+      }
+    ],
+    "tangle": [
+      {
+        "doc": "BS-2024-Q1.pdf",
+        "page": 1,
+        "truth": [
+          "Nexus",
+          "West",
+          "57th",
+          "Street,"
+        ],
+        "ocr": [
+          "welexus",
+          ","
+        ]
+      },
+      {
+        "doc": "BS-2024-Q1.pdf",
+        "page": 1,
+        "truth": [
+          "Trading",
+          "York,",
+          "NY",
+          "10019"
+        ],
+        "ocr": [
+          "Trad",
+          "ing"
+        ]
+      },
+      {
+        "doc": "CHQ-001847.pdf",
+        "page": 1,
+        "truth": [
+          "AUTHORIZED",
+          "SIGNATURE",
+          "Janet",
+          "Wu"
+        ],
+        "ocr": [
+          "AUTHOR",
+          "EEE",
+          "NATURE"
+        ]
+      },
+      {
+        "doc": "EXP-2024-0081.pdf",
+        "page": 1,
+        "truth": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ],
+        "ocr": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ]
+      },
+      {
+        "doc": "EXP-2024-0081.pdf",
+        "page": 1,
+        "truth": [
+          "TRADING",
+          "York,",
+          "NY",
+          "10019"
+        ],
+        "ocr": [
+          "TRADING",
+          "York,",
+          "NY",
+          "1"
+        ]
+      },
+      {
+        "doc": "INV-2024-0031.pdf",
+        "page": 1,
+        "truth": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ],
+        "ocr": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ]
+      },
+      {
+        "doc": "INV-2024-0031.pdf",
+        "page": 1,
+        "truth": [
+          "TRADING",
+          "York,",
+          "NY",
+          "10019"
+        ],
+        "ocr": [
+          "TRADING",
+          "York,",
+          "NY",
+          "1"
+        ]
+      },
+      {
+        "doc": "INV-2024-0047.pdf",
+        "page": 1,
+        "truth": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ],
+        "ocr": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ]
+      },
+      {
+        "doc": "INV-2024-0047.pdf",
+        "page": 1,
+        "truth": [
+          "TRADING",
+          "York,",
+          "NY",
+          "10019"
+        ],
+        "ocr": [
+          "TRADING",
+          "York,",
+          "NY",
+          "1"
+        ]
+      },
+      {
+        "doc": "IS-2024-Q4.pdf",
+        "page": 1,
+        "truth": [
+          "Nexus",
+          "West",
+          "57th",
+          "Street,"
+        ],
+        "ocr": [
+          "welexus",
+          ","
+        ]
+      },
+      {
+        "doc": "IS-2024-Q4.pdf",
+        "page": 1,
+        "truth": [
+          "Trading",
+          "York,",
+          "NY",
+          "10019"
+        ],
+        "ocr": [
+          "Trad",
+          "ing"
+        ]
+      },
+      {
+        "doc": "PO-2024-0018.pdf",
+        "page": 1,
+        "truth": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ],
+        "ocr": [
+          "NEXUS",
+          "GLOBAL",
+          "142",
+          "West",
+          "57th",
+          "Street,",
+          "Suite",
+          "1800,",
+          "New"
+        ]
+      },
+      {
+        "doc": "PO-2024-0018.pdf",
+        "page": 1,
+        "truth": [
+          "TRADING",
+          "York,",
+          "NY",
+          "10019"
+        ],
+        "ocr": [
+          "TRADING",
+          "York,",
+          "NY",
+          "1"
+        ]
+      },
+      {
+        "doc": "STMT-2024-01.pdf",
+        "page": 1,
+        "truth": [
+          "Date",
+          "Type",
+          "Description",
+          "Debit",
+          "Credit",
+          "Balance"
+        ],
+        "ocr": [
+          "ee",
+          "eee"
+        ]
+      }
+    ]
+  },
+  "misread_examples": [
+    {
+      "doc": "BS-2024-Q1.pdf",
+      "page": 1,
+      "truth": "47-3821654",
+      "ocr": "seoi05s"
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": "15–22,",
+      "ocr": "15-22,"
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": "JFK–LAX",
+      "ocr": "JFK—LAX"
+    },
+    {
+      "doc": "IS-2024-Q4.pdf",
+      "page": 1,
+      "truth": "47-3821654",
+      "ocr": "seoi05s"
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 1,
+      "truth": "–",
+      "ocr": "—"
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 1,
+      "truth": "1–30,",
+      "ocr": "1-30,"
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "truth": "–",
+      "ocr": "—"
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "truth": "1–30,",
+      "ocr": "1-30,"
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 2,
+      "truth": "5",
+      "ocr": ")"
+    },
+    {
+      "doc": "STMT-2024-01.pdf",
+      "page": 1,
+      "truth": "ACH",
+      "ocr": "yXej5i)"
+    },
+    {
+      "doc": "STMT-2024-01.pdf",
+      "page": 1,
+      "truth": "FEE",
+      "ocr": "BGS"
+    }
+  ],
+  "missed_examples": [
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "Date"
+      ]
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "Type"
+      ]
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "Description"
+      ]
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "Category"
+      ]
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "Amount"
+      ]
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "_______________________"
+      ]
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "_______________________"
+      ]
+    },
+    {
+      "doc": "EXP-2024-0081.pdf",
+      "page": 1,
+      "truth": [
+        "_______________________"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "Description"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "Qty"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "Unit"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "Unit"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "Price"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "Amount"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "40"
+      ]
+    },
+    {
+      "doc": "INV-2024-0031.pdf",
+      "page": 1,
+      "truth": [
+        "pcs"
+      ]
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth": [
+        "Description"
+      ]
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth": [
+        "Qty"
+      ]
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth": [
+        "Unit"
+      ]
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth": [
+        "Unit"
+      ]
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth": [
+        "Price"
+      ]
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth": [
+        "Amount"
+      ]
+    },
+    {
+      "doc": "INV-2024-0047.pdf",
+      "page": 1,
+      "truth": [
+        "150"
+      ]
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 2,
+      "truth": [
+        "$7,513.0"
+      ]
+    },
+    {
+      "doc": "PAYSLIP-EMP-0007-APR2024.pdf",
+      "page": 2,
+      "truth": [
+        "3"
+      ]
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "truth": [
+        "Description"
+      ]
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "truth": [
+        "Amount"
+      ]
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "truth": [
+        "Description"
+      ]
+    },
+    {
+      "doc": "PAYSLIP-EMP-0012-APR2024.pdf",
+      "page": 1,
+      "truth": [
+        "Amount"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "Item"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "/"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "Description"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "Qty"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "Unit"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "Unit"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "Cost"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "Total"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "50"
+      ]
+    },
+    {
+      "doc": "PO-2024-0018.pdf",
+      "page": 1,
+      "truth": [
+        "pcs"
+      ]
+    },
+    {
+      "doc": "STMT-2024-01.pdf",
+      "page": 1,
+      "truth": [
+        "CHQ"
+      ]
+    }
+  ]
+}
