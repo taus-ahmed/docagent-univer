@@ -401,6 +401,35 @@ references and anything starting with a zero — routing numbers, account number
 
 **What to do.** Name the column for what it holds: `NMLS ID` rather than `NMLS`.
 
+## A line of payment instructions can be mistaken for a cheque's MICR band
+
+**ABSENT (nothing is lost) — but it is a false alarm, and the risk in it is
+latent.** A cheque's routing and account numbers are printed in the MICR band
+along the bottom, which is read by pattern rather than asked of the model. The
+pattern that decides "this line IS a MICR band" is too loose: an invoice line
+of payment instructions reading `ABA: 021000021 Account: 7743882201 …` is
+accepted as one, because the `:` and the `A` of `Account` both stand in for the
+symbol that brackets a routing number in the real band.
+
+**Confirmed on five documents** — `INV-2024-0031`, `-0047`, `-0063`, `-0089`
+and `-0112`. On all five the routing number that comes out **is correct**, and
+it is correct **by coincidence**: the nine digits sitting in that position
+happen to be the real routing number, printed there on purpose. Since the
+field-order fix no account number and no serial number are returned from these
+lines at all.
+
+**This is a detection fault, not a parsing one.** The parser does the right
+thing with what it is handed; what is wrong is that it was handed an ordinary
+sentence and told it was a cheque's MICR band. Anything it reports still has to
+pass the ABA checksum first, which is what has kept it harmless so far. The
+latent risk is a document whose payment prose carries some other nine-digit
+number that happens to satisfy that checksum — roughly one in ten such numbers
+do — which would then be reported as a routing number. **No wrong value has
+been observed from this**, on any document in the test corpus.
+
+**What to do.** Nothing, on an invoice: the routing number reported is the one
+the page prints. On a cheque the band is read properly.
+
 ## Confidence is worked out per cell but only shown per document
 
 **ABSENT (from the screen, not from the data).** Every value carries its own
