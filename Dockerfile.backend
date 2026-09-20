@@ -6,10 +6,18 @@ WORKDIR /app
 # poppler-utils is REQUIRED for pdf2image (PDF -> page images for vision/layout
 # extraction); without it pages=0 / has_vision=False and balance-sheet layout
 # templates lose all spatial structure.
+# tesseract-ocr is REQUIRED for engine/ocr_source.py: a PDF page with no text
+# layer is rendered and READ, instead of reaching the model as an empty page.
+# tesseract-ocr-eng is the English trained data and is a SEPARATE package —
+# without it the binary installs and every call fails at run time, which is the
+# worst of both (the image grows and nothing works). The corpus is English;
+# another language means another -<lang> package here.
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     poppler-utils \
+    tesseract-ocr \
+    tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
