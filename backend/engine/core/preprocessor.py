@@ -60,6 +60,22 @@ class ProcessedDocument:
     #: size-aware, once size-blind) and `shard_ratio` is the ratio between
     #: those two readings. Again: not a clean result, an absent one.
     unchecked_shred_pages: list[int] = field(default_factory=list)
+    #: 1-based page numbers whose text did NOT come from the PDF's own text
+    #: layer but from OCR of a rendered image, each with what straightening was
+    #: applied: {"page": n, "rotated": deg, "deskewed": deg, "words": n}. A
+    #: machine-read page is not the document's own words, and the reader that
+    #: produced it declares no capabilities, so this list is what stops "we
+    #: OCR'd it" from being invisible downstream.
+    ocr_pages: list[dict] = field(default_factory=list)
+    #: Pages with no text layer that could NOT be OCR'd (no binary, no render).
+    #: Absent and said out loud, rather than an empty page nobody explains.
+    ocr_failed_pages: list[int] = field(default_factory=list)
+    #: Characters the PDF's OWN text layer yielded, before any OCR. Kept apart
+    #: from `extracted_text` because `has_meaningful_text` decides the document
+    #: type, and a document typed `digital_pdf` on the strength of text a
+    #: machine read off a picture would claim `high` confidence for values no
+    #: text layer ever witnessed.
+    native_text_chars: int = 0
     processing_notes: str = ""
 
     @property
@@ -151,6 +167,46 @@ def _fix_within_page_decimals(text: str) -> str:
     )
 
 
+def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
+              stats: dict):
+    """(text, lines, repairs) for a page with no text layer, read by OCR.
+
+    THROUGH THE SEAM, NOT AROUND IT. `read_page` takes a `PageSource`, so the
+    OCR reader is handed to the same function the pdfplumber reader goes
+    through: wrapped-value repair, page stamping and the capability gates all
+    run exactly as they do for a digital page, and the gates SKIP loudly
+    because `OcrPageSource` declares nothing.
+
+    A failure here is recorded, never swallowed: a page that could not be OCR'd
+    is listed in `ocr_failed_pages` and comes back as empty as it was before,
+    which is the honest answer — but a named one.
+    """
+    try:
+        from ocr_source import OcrPageSource, OCR_DPI, render_pdf_page
+        image = render_pdf_page(file_path, page_number, dpi=OCR_DPI)
+        if image is None:
+            raise RuntimeError("the page could not be rendered")
+        source = OcrPageSource(image, page_number=page_number, dpi=OCR_DPI)
+        text, lines, repairs = read_page(source, stats=stats)
+    except Exception as exc:
+        doc.ocr_failed_pages.append(page_number)
+        doc.processing_notes += (
+            f"page {page_number} has no text layer and could not be OCR'd "
+            f"({type(exc).__name__}: {exc}). ")
+        print(f"[OCR] page {page_number}: NO TEXT LAYER and OCR unavailable — "
+              f"{type(exc).__name__}: {exc}", flush=True)
+        return "", [], []
+
+    doc.ocr_pages.append({"page": page_number, "words": sum(len(ln) for ln in lines),
+                          **source.applied})
+    print(f"[OCR] page {page_number}: no text layer — read by Tesseract at "
+          f"{OCR_DPI}dpi, rotated {source.applied['rotated']}deg, deskewed "
+          f"{source.applied['deskewed']}deg, {len(text)} chars, "
+          f"{sum(len(ln) for ln in lines)} words. These are a MACHINE's "
+          f"reading, not the document's own text.", flush=True)
+    return text, lines, repairs
+
+
 def _process_pdf(file_path: Path) -> ProcessedDocument:
     """Process a PDF file: extract text from ALL pages and convert to images."""
     doc = ProcessedDocument(
@@ -161,6 +217,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
 
     # Step 1: Extract text from ALL pages using pdfplumber
     try:
+        native_chars = 0
         with pdfplumber.open(file_path) as pdf:
             doc.total_pages = len(pdf.pages)
             # A fillable form's checkboxes are widget annotations carrying no
@@ -180,6 +237,17 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                 stats = {}
                 text, lines, repairs = read_page(page, widgets.get(page_num) or [],
                                                  stats=stats)
+                native_chars += len((text or "").strip())
+                # A PAGE WITH NO TEXT LAYER IS NOT A PAGE WITH NOTHING ON IT.
+                # pdfplumber returns nothing for a scan, and everything
+                # downstream — the prompt, grounding, placement, row identity —
+                # then has nothing to work with and says so only by being
+                # empty. Render it and read it with OCR instead, through the
+                # SAME seam: `read_page` takes a PageSource, so nothing below
+                # this line learns that a different reader ran.
+                if len((text or "").strip()) < MIN_TEXT_LENGTH:
+                    text, lines, repairs = _ocr_page(
+                        file_path, page_num + 1, doc, stats)
                 doc.page_lines.append(lines)
                 # I10 — SHREDDED TEXT LAYER, said BEFORE the model is asked.
                 # Several texts set at different sizes over one band of y have
@@ -255,9 +323,14 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
     except Exception as e:
         doc.processing_notes += f"Text extraction failed: {e}. "
 
-    # Determine if text extraction was meaningful
+    # Determine if text extraction was meaningful — FROM THE DOCUMENT'S OWN
+    # TEXT LAYER. A scan whose text came from OCR stays `scanned_pdf`, so
+    # slot extraction still floors its confidences to UNVERIFIED: OCR gives
+    # the model something to read and grounding something to check against, and
+    # it does not make a machine's reading into the document's own words.
     clean_text = doc.extracted_text.strip()
-    doc.has_meaningful_text = len(clean_text) > MIN_TEXT_LENGTH
+    native = doc.native_text_chars if doc.ocr_pages else len(clean_text)
+    doc.has_meaningful_text = native > MIN_TEXT_LENGTH
 
     # Step 2: Convert pages to images (for vision or scanned docs)
     try:

@@ -47,6 +47,21 @@ FIELDS = ("routing", "account", "check_number", "payee", "amount_numeral",
 
 
 PSM = None       # None = Tesseract's default (3); set by --psm
+READER = "raw"   # "raw" = pytesseract as-is; "seam" = OcrPageSource+read_page
+DESKEW = True    # --no-deskew measures the straightening step against itself
+
+
+def ocr_via_seam(path):
+    """The PRODUCTION path: OcrPageSource through read_page, straightening and
+    all. Measures what the pipeline would actually see, not what a bare
+    pytesseract call returns."""
+    from ocr_source import OcrPageSource
+    from text_layer import read_page
+    img = Image.open(path)
+    t0 = time.perf_counter()
+    src = OcrPageSource(img, page_number=1, straighten_page=DESKEW)
+    text, _lines, _repairs = read_page(src)
+    return text, time.perf_counter() - t0, src.applied
 
 
 def ocr(path):
@@ -207,16 +222,27 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--psm", type=int, default=None,
                     help="Tesseract page-segmentation mode; default = engine default")
-    PSM = ap.parse_args(argv).psm
+    ap.add_argument("--reader", choices=("raw", "seam"), default="raw",
+                    help="raw = pytesseract; seam = OcrPageSource via read_page")
+    ap.add_argument("--no-deskew", action="store_true",
+                    help="seam reader only: skip straightening, to measure it")
+    a = ap.parse_args(argv)
+    global READER, DESKEW
+    PSM, READER, DESKEW = a.psm, a.reader, not a.no_deskew
     idx = json.loads((CORPUS / "_index.json").read_text(encoding="utf-8"))
     results = []
     for gt in idx:
         oracle = score(gt, printed_micr(gt))
         for tier in TIERS:
-            text, secs = ocr(CORPUS / gt["files"][tier])
+            applied = {}
+            if READER == "seam":
+                text, secs, applied = ocr_via_seam(CORPUS / gt["files"][tier])
+            else:
+                text, secs = ocr(CORPUS / gt["files"][tier])
             s = score(gt, text)
             results.append({"id": gt["id"], "template": gt["template"],
                             "tier": tier, "ocr_s": secs, "ocr_text": text,
+                            "applied": applied,
                             "oracle_micr": {k: oracle[k] for k in (
                                 "micr_located", "checksum_verdict")}
                             | {"parsed": oracle["micr"]["parsed"]},
@@ -263,8 +289,14 @@ def main(argv=None):
     }
 
     summary["psm"] = PSM or "default(3)"
-    out = bs.REPORTS_DIR / ("ocr_checks_tesseract.json" if not PSM
-                            else f"ocr_checks_tesseract_psm{PSM}.json")
+    summary["reader"] = READER
+    summary["deskew"] = DESKEW
+    name = "ocr_checks_tesseract"
+    if READER == "seam":
+        name += "_seam" + ("" if DESKEW else "_nodeskew")
+    if PSM:
+        name += f"_psm{PSM}"
+    out = bs.REPORTS_DIR / f"{name}.json"
     out.write_text(json.dumps({"summary": summary, "results": results},
                               indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nwrote {out}")
