@@ -72,8 +72,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth import get_current_user
-from app.core.demo import (check_uploads_enabled,
-                           enforce_upload_policy, is_demo_user)
+from app.core.demo import (check_uploads_enabled, enforce_upload_policy,
+                           is_demo_user)
 from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
