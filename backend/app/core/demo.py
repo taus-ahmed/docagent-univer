@@ -27,7 +27,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
+from typing import Optional
 
 from fastapi import HTTPException, status
 
@@ -48,6 +48,13 @@ SCANNED_DOC_MESSAGE = (
 UPLOADS_DISABLED_MESSAGE = (
     "Uploads are disabled in this demo. Please use the sample documents."
 )
+
+# Said when a demo account reaches a Google Drive route. Drive needs an OAuth
+# connection, a folder of someone's real documents and a watch loop, none of
+# which a demo has — so every Drive door answers this rather than failing later
+# with "Google Drive not authenticated", which reads like a broken product
+# instead of an absent feature.
+DRIVE_UNAVAILABLE_MESSAGE = "Google Drive is not available in this demo."
 
 #: Marks a refusal as one the DEMO MEANT TO SHOW SOMEBODY, as opposed to a
 #: technical error that happens to have a status code. The Extract page replaces
@@ -121,6 +128,17 @@ def _scanned() -> HTTPException:
                        SCANNED_DOC_MESSAGE)
 
 
+def check_drive_available(user) -> None:
+    """Google Drive, for a demo account: closed, with a sentence.
+
+    Unconditional for a demo tenant — there is no switch, because Drive is not
+    part of what the demo shows at all. A no-op for everyone else.
+    """
+    if not is_demo_user(user):
+        return
+    raise _demo_error(status.HTTP_403_FORBIDDEN, DRIVE_UNAVAILABLE_MESSAGE)
+
+
 def uploads_enabled() -> bool:
     return bool(getattr(settings, "DEMO_UPLOADS_ENABLED", True))
 
@@ -128,7 +146,7 @@ def uploads_enabled() -> bool:
 def check_uploads_enabled(user) -> None:
     """The demo's upload door, open or closed. A no-op for everyone else.
 
-    Deliberately NOT part of `enforce_upload_policy`: that function is the
+    Deliberately NOT part of `_start_extraction_job`: that function is the
     shared pipeline both doors go through, and closing the upload door must
     leave the sample documents working — which is the only thing the demo has
     left when it is closed.
@@ -160,8 +178,24 @@ def check_upload_quota(db, user) -> None:
             f"Get in touch and we will raise the limit.")
 
 
-def check_demo_file(filename: str, content: bytes) -> None:
+def check_upload_file(user, filename: str, content: bytes) -> None:
     """One file, against the demo's rules. Raises, or returns None.
+
+    PER FILE, and gated here, because the upload path holds ONE file's bytes at
+    a time: it reads a file, validates it, and lets it go before reading the
+    next. A batch-shaped check would have to keep every file in memory to run,
+    which is the whole reason this is not a batch-shaped check.
+
+    A no-op for a user whose client_id is not a configured demo tenant, which
+    is what makes it safe to call from the shared upload path.
+    """
+    if not is_demo_user(user):
+        return
+    _check_demo_file(filename, content)
+
+
+def _check_demo_file(filename: str, content: bytes) -> None:
+    """The rules themselves, with no gate — for `check_upload_file` and tests.
 
     ORDER MATTERS. An image is answered with the scanned-document sentence
     rather than "PDF only", because "this is a picture of a document" is
@@ -244,19 +278,6 @@ def pdf_is_entirely_scanned(content: bytes) -> bool:
             os.unlink(tmp.name)
         except OSError:
             pass
-
-
-def enforce_upload_policy(db, user, files: Sequence[tuple[str, bytes]]) -> None:
-    """The whole demo upload gate: quota first, then every file.
-
-    A no-op for a user whose client_id is not configured as a demo tenant,
-    which is the only reason it is safe to call from the shared upload path.
-    """
-    if not is_demo_user(user):
-        return
-    check_upload_quota(db, user)
-    for filename, content in files:
-        check_demo_file(filename, content)
 
 
 # ── C — the sample documents folder ───────────────────────────────────────────

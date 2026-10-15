@@ -72,8 +72,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth import get_current_user
-from app.core.demo import (check_uploads_enabled, enforce_upload_policy,
-                           is_demo_user)
+from app.core.demo import (check_upload_file, check_upload_quota,
+                           check_uploads_enabled, is_demo_user)
 from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
@@ -245,9 +245,12 @@ class _IncomingUpload:
     sample document goes through the same code path as an upload" is a claim
     rather than a fact. This is the only thing the two doors differ in.
 
-    `read()` may be called more than once and gives the same bytes both times,
-    which is what lets the pipeline validate every file BEFORE it writes any of
-    them.
+    `read()` MAY BE CALLED MORE THAN ONCE AND GIVES THE SAME BYTES EVERY TIME.
+    That is what lets the pipeline validate every file before it writes any of
+    them while holding only ONE file's bytes at a time: the validation pass
+    reads a file and lets it go, and the save pass reads it again. A list of
+    every file's bytes would be simpler and would multiply peak memory by the
+    batch size — 100 files is an allowed batch here, and 50MB an allowed file.
     """
 
     __slots__ = ("filename", "_upload", "_path", "_bytes")
@@ -298,20 +301,24 @@ async def _start_extraction_job(
     if len(sources) > settings.MAX_FILES_PER_BATCH:
         raise HTTPException(status_code=400, detail=f"Max {settings.MAX_FILES_PER_BATCH} files.")
 
-    read_files: list[tuple[str, bytes]] = []
+    # The demo's own ceiling on how many jobs this account may start, asked
+    # before anything is read. A no-op for every non-demo tenant.
+    check_upload_quota(db, current_user)
+
+    # ONE FILE'S BYTES AT A TIME. `content` is rebound each iteration and the
+    # previous file's bytes become collectable, exactly as before this path was
+    # shared, so peak memory is one file and not the batch. Both checks are per
+    # file and neither needs to see the others: `validate_upload` is the
+    # product's (extension, size) and `check_upload_file` is the demo's (PDF
+    # only, DEMO_MAX_MB, and a document that is nothing but a scan refused with
+    # an explanation instead of being OCR'd). Both run BEFORE the job row
+    # exists, so a refused upload leaves nothing behind and costs no model call.
     for src in sources:
         content = await src.read()
         error = storage.validate_upload(src.filename, len(content))
         if error:
             raise HTTPException(status_code=400, detail=f"{src.filename}: {error}")
-        read_files.append((src.filename, content))
-
-    # B1/B2 - PDF only, a size ceiling, a quota, and a scanned document refused
-    # with an explanation instead of being OCR'd. Raises; a no-op unless this
-    # user's client_id is configured as a demo tenant. It runs BEFORE the job
-    # row exists, so a refused demo upload leaves nothing behind and costs no
-    # model call.
-    enforce_upload_policy(db, current_user, read_files)
+        check_upload_file(current_user, src.filename, content)
 
     # The tenant and the template both come from the token's authority, never
     # from the multipart body.
@@ -346,7 +353,7 @@ async def _start_extraction_job(
         user_id=current_user.id,
         client_id=client_id,
         status="pending",
-        total_docs=len(read_files),
+        total_docs=len(sources),
         input_source="upload",
         started_at=datetime.utcnow(),
         schema_id=str(template_id) if template_id else None,
@@ -360,8 +367,9 @@ async def _start_extraction_job(
     # meaningless to a separate worker process or an object store, and passing
     # one is what tied extraction to this container's own disk.
     saved_keys = []
-    for filename, content in read_files:
-        key, _ = storage.save_upload(content, filename, job_id,
+    for src in sources:
+        content = await src.read()
+        key, _ = storage.save_upload(content, src.filename, job_id,
                                      client_id=client_id)
         saved_keys.append(key)
 
@@ -376,8 +384,8 @@ async def _start_extraction_job(
 
     return ExtractUploadResponse(
         job_id=job_id,
-        message=f"Extraction started for {len(read_files)} file(s)",
-        total_files=len(read_files),
+        message=f"Extraction started for {len(sources)} file(s)",
+        total_files=len(sources),
         status="processing",
     )
 

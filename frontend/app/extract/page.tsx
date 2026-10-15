@@ -739,7 +739,12 @@ export default function ExtractPage() {
             <div className="card" style={{ padding: 14 }}>
               <span className="label" style={{ display: "block", marginBottom: 10 }}>Documents</span>
               <div className="src-tabs">
-                {(["upload","folder","drive"] as SourceTab[]).map(tab => (
+                {/* Drive is closed for a demo account in the BACKEND (every
+                    /api/drive route answers 403); the tab is hidden so nobody
+                    clicks into a dead end. */}
+                {(isDemo
+                  ? (["upload","folder"] as SourceTab[])
+                  : (["upload","folder","drive"] as SourceTab[])).map(tab => (
                   <div key={tab} className={`src-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
                     {tab === "upload" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>}
                     {tab === "folder" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}

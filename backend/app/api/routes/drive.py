@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
+from app.core.demo import check_drive_available
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, WatchFolder
 from app.schemas.schemas import (
@@ -32,7 +33,28 @@ from app.schemas.schemas import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["drive"])
+def _drive_not_in_the_demo(current_user: User = Depends(get_current_user)):
+    """Google Drive is closed for a demo account — EVERY route in this file.
+
+    A router-level dependency rather than a call in each handler, for two
+    reasons. It cannot be forgotten on a route added later, which a Drive
+    INGESTION route must not be: `/drive/extract` and the watch loop build
+    their own `ExtractionJob` instead of going through
+    `extract.py::_start_extraction_job`, so none of the demo's per-file rules
+    (PDF only, DEMO_MAX_MB, the scanned-document refusal) would apply to a
+    document arriving that way. And browsing is not harmless either: Drive here
+    is one server-wide OAuth credential, so `/drive/folders` would show a demo
+    user whatever Drive that credential belongs to.
+
+    Every route in this file already depends on `get_current_user`, and FastAPI
+    resolves a dependency once per request, so this costs a non-demo user
+    nothing and changes nothing for them.
+    """
+    check_drive_available(current_user)
+
+
+router = APIRouter(prefix="/api", tags=["drive"],
+                   dependencies=[Depends(_drive_not_in_the_demo)])
 
 
 def _get_drive():
@@ -152,16 +174,14 @@ def extract_from_drive(
     current_user: User = Depends(get_current_user),
     storage=Depends(get_storage),
 ):
-    """Download files from a Drive folder and run extraction."""
-    # Drive is an upload door too, so the demo's kill switch closes it as well.
-    # ⚠ It is the ONLY demo rule this route applies: it builds its own job
-    # rather than going through `_start_extraction_job`, so PDF-only, the size
-    # ceiling and the quota do NOT apply to Drive ingestion. A demo account has
-    # no Drive connection today; if one is ever given one, this route needs the
-    # same gate the upload endpoint has.
-    from app.core.demo import check_uploads_enabled
-    check_uploads_enabled(current_user)
+    """Download files from a Drive folder and run extraction.
 
+    ⚠ This route builds its own job rather than going through
+    `extract.py::_start_extraction_job`, so the demo's per-file rules do not
+    apply to a document arriving this way. That is why the whole file is closed
+    to a demo account at the router (`_drive_not_in_the_demo`) rather than this
+    route carrying one check of its own.
+    """
     drive = _get_drive()
     if not drive.is_authenticated:
         raise HTTPException(status_code=401, detail="Google Drive not authenticated")
