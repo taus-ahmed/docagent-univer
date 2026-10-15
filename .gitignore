@@ -12,3 +12,7 @@ backend/storage/
 # Root-level only. Anchored so it cannot match backend/storage/ or the
 # backend/engine/storage/ package.
 /storage/
+
+# Local admin credentials — never commit (rotate if this ever shipped)
+backend/login.json
+login.json

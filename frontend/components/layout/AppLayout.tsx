@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
+import DemoBanner from "./DemoBanner";
 
 const NAV = [
   { href: "/extract",   label: "Extract",   icon: "extract"   },
@@ -126,7 +127,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className="sb-resize-handle"
         />
       </aside>
-      <main className="page-content" style={{ marginLeft: sidebarWidth }}>{children}</main>
+      <main className="page-content" style={{ marginLeft: sidebarWidth }}>
+        {/* Renders nothing unless this user's tenant is a configured demo. */}
+        <DemoBanner />
+        {children}
+      </main>
     </div>
   );
 }

@@ -18,6 +18,7 @@ from app.core.auth import (
     verify_password, create_access_token,
     get_current_user, hash_password,
 )
+from app.core.demo import is_demo_user
 from app.models import get_db, User
 from app.schemas.schemas import (
     LoginRequest, TokenResponse, UserResponse, UserUpdate,
@@ -123,6 +124,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
             role=user.role,
             client_id=user.client_id,
             is_active=user.is_active,
+            is_demo=is_demo_user(user),
         ),
     )
 
@@ -138,6 +140,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         role=current_user.role,
         client_id=current_user.client_id,
         is_active=current_user.is_active,
+        is_demo=is_demo_user(current_user),
     )
 
 
@@ -168,6 +171,7 @@ def update_me(
         role=current_user.role,
         client_id=current_user.client_id,
         is_active=current_user.is_active,
+        is_demo=is_demo_user(current_user),
     )
 
 

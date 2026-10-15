@@ -125,6 +125,19 @@ class Settings(BaseSettings):
     )
     MAX_FILES_PER_BATCH: int = 100
 
+    # ── Demo accounts ─────────────────────────────────────────────────────────
+    # A comma-separated list of client_ids that get the investor-demo
+    # behaviour. EMPTY BY DEFAULT, which is what makes every demo rule OFF for
+    # everyone until someone sets the variable: the gate is membership in this
+    # list, read from the JWT's own client_id, never a role or a username.
+    DEMO_CLIENT_IDS: str = ""
+    #: Per-file upload ceiling for a demo client, in megabytes. Separate from
+    #: MAX_UPLOAD_SIZE_MB, which still applies to everyone.
+    DEMO_MAX_MB: int = 10
+    #: How many extraction jobs a demo user may ever start, counted from the
+    #: jobs already on their account. A demo is not a subscription.
+    DEMO_MAX_UPLOADS: int = 20
+
     @property
     def max_upload_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024

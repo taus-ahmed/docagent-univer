@@ -1,8 +1,8 @@
 """
 DocAgent v2 — Schema Routes
-GET    /api/schemas           — list all schemas
-POST   /api/schemas           — upload new YAML schema
-GET    /api/schemas/{id}      — get schema detail with YAML content
+GET    /api/schemas           — the schemas this user may see
+POST   /api/schemas           — upload new YAML schema (ADMIN)
+GET    /api/schemas/{id}      — get schema detail with YAML content (own tenant)
 PUT    /api/schemas/{id}      — update schema
 DELETE /api/schemas/{id}      — delete schema
 """
@@ -23,24 +23,59 @@ from app.schemas.schemas import SchemaResponse, SchemaDetailResponse
 router = APIRouter(prefix="/api/schemas", tags=["schemas"])
 
 
+def _may_see_all_schemas(current_user: User) -> bool:
+    """Only a super-admin — role=admin with NO tenant of their own.
+
+    This is the same test the rest of the app uses for "sees everything"
+    (`extract.py::_get_job_or_404`, `templates.py::_get_template_or_403`), and
+    a tenanted admin is deliberately scoped to their own client here: they have
+    a tenant, their own schema is the one they administer, and a schema is the
+    one object in this app that carries another company's field vocabulary.
+    """
+    return current_user.role == "admin" and not current_user.client_id
+
+
 @router.get("", response_model=list[SchemaResponse])
 def list_schemas(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all active client schemas."""
-    schemas = db.query(ClientSchema).filter(ClientSchema.is_active == True).all()
-    return [_to_response(s) for s in schemas]
+    """The active schemas this user may see — their own tenant's, unless they
+    are a super-admin.
+
+    This used to return EVERY tenant's schema to any authenticated user: the
+    client_id, the company name and the document types of every other customer
+    on the deployment.
+
+    ⚠ The Extract page reads `schemas[0].client_id` to fill the upload form, so
+    this list is load-bearing for ordinary use, not just informational. It
+    still works: a tenanted user now gets their own schema first because it is
+    the only one they get. A user with NO schema gets `[]`, which the page
+    already handles (it falls back to "demo_001"), and the upload endpoint
+    ignores the form value anyway — `resolve_client_id` takes the tenant from
+    the token.
+    """
+    q = db.query(ClientSchema).filter(ClientSchema.is_active == True)
+    if not _may_see_all_schemas(current_user):
+        q = q.filter(ClientSchema.client_id == current_user.client_id)
+    return [_to_response(s) for s in q.all()]
 
 
 @router.post("", response_model=SchemaResponse, status_code=201)
 async def upload_schema(
     file: UploadFile = File(..., description="YAML schema file"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
     storage=Depends(get_storage),
 ):
-    """Upload a new client YAML schema."""
+    """Upload a new client YAML schema. ADMIN ONLY.
+
+    This endpoint keys on the `client_id` INSIDE the uploaded YAML and
+    overwrites the existing row for that client (see below), so as an
+    authenticated-user endpoint it let any user replace any other tenant's
+    extraction vocabulary — a cross-tenant WRITE, not merely a read. There is
+    no per-tenant upload story that needs this: schemas are provisioned.
+    """
     if not file.filename.endswith((".yaml", ".yml")):
         raise HTTPException(status_code=400, detail="File must be .yaml or .yml")
 
@@ -98,13 +133,23 @@ def get_schema(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get schema details including raw YAML."""
+    """Get schema details including raw YAML — own tenant only.
+
+    The raw YAML is another company's field vocabulary, document types and
+    naming, and this endpoint handed it to any authenticated user who could
+    guess or read a client_id (the list endpoint above printed them all).
+
+    A tenant the caller may not read answers 404, WORD FOR WORD the same as a
+    client_id that does not exist. A 403 here would confirm which other
+    companies are on the deployment, which is most of what the leak was worth.
+    """
     schema = db.query(ClientSchema).filter(
         ClientSchema.client_id == client_id,
         ClientSchema.is_active == True,
     ).first()
 
-    if not schema:
+    if not schema or not (_may_see_all_schemas(current_user)
+                          or schema.client_id == current_user.client_id):
         raise HTTPException(status_code=404, detail=f"Schema '{client_id}' not found")
 
     return SchemaDetailResponse(

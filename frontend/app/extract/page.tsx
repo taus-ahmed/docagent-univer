@@ -8,10 +8,12 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
+import SampleDocsPanel from "@/components/extract/SampleDocsPanel";
 import {
   extractApi, exportApi, templatesApi, schemasApi,
   type ColumnTemplate, type JobStatus, type DocumentResult,
 } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
 import Link from "next/link";
 
 type SourceTab = "upload" | "folder" | "drive";
@@ -393,6 +395,7 @@ function InsightsPanel({
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ExtractPage() {
+  const { user } = useAuthStore();
   const [selectedTemplate, setSelectedTemplate] = useState<ColumnTemplate | null>(null);
   const [templateSearch, setTemplateSearch] = useState("");
   const [activeTab, setActiveTab] = useState<SourceTab>("upload");
@@ -459,6 +462,9 @@ export default function ExtractPage() {
   });
 
   const clientId = schemas[0]?.client_id ?? "demo_001";
+  // A demo account, as the SERVER computed it. Presentation only: /api/demo/*
+  // is 404 for everyone else regardless of what this flag says.
+  const isDemo = user?.is_demo === true;
 
   function toggleOption(id: OptionId) {
     setSelectedOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
@@ -474,6 +480,26 @@ export default function ExtractPage() {
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
       toast.error(e?.response?.data?.detail ?? "Upload failed");
+      setIsExtracting(false);
+    }
+  }
+
+  /**
+   * Extract one of the demo's shipped sample documents. Deliberately shaped
+   * like `startExtract` above — same reset, same job id, same polling — because
+   * the server runs the same pipeline; only the source of the bytes differs.
+   */
+  async function startExtractSample(filename: string) {
+    setIsExtracting(true);
+    setResults([]);
+    prevStatus.current = "";
+    try {
+      const res = await extractApi.extractSampleDoc(
+        filename, selectedTemplate?.id, selectedOptions);
+      setActiveJobId(res.job_id);
+      toast.success(`Extraction started — ${filename}`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail ?? "Could not start extraction");
       setIsExtracting(false);
     }
   }
@@ -762,6 +788,14 @@ export default function ExtractPage() {
               )}
             </div>
           )}
+
+          {/* Demo only, and empty for anyone else: renders null unless the
+              server says this account is a demo tenant AND ships samples. */}
+          <SampleDocsPanel
+            enabled={isDemo}
+            busy={isExtracting || isRunning}
+            onUse={startExtractSample}
+          />
 
           {/* Extract button */}
           {!isRunning && !hasResults && activeTab !== "drive" && (

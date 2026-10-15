@@ -28,6 +28,12 @@ class UserResponse(BaseModel):
     role: str
     client_id: Optional[str]
     is_active: bool
+    #: Is this user's tenant one of DEMO_CLIENT_IDS? Computed per response from
+    #: the configured list, NEVER stored: the demo is a deployment setting, and
+    #: a column would let a row disagree with the variable that actually gates
+    #: the behaviour. False whenever the variable is unset, which is the
+    #: shipped default.
+    is_demo: bool = False
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)

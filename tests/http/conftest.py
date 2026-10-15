@@ -12,6 +12,7 @@ to the working database is a suite people stop running.
 """
 from __future__ import annotations
 
+import io
 import tempfile
 from pathlib import Path
 
@@ -182,6 +183,117 @@ def templates(db, users):
             db.refresh(t)
         made[name] = t
     return made
+
+
+# ── the demo tenant ──────────────────────────────────────────────────────────
+# A fifth principal, for the investor demo. It is deliberately NOT in `users`:
+# every demo rule is gated on DEMO_CLIENT_IDS, and the tests that prove nothing
+# changed for anybody else need a population that does not include it.
+#
+# `pearx_demo` has NO schema in the scratch storage on purpose — a real demo
+# tenant provisioned nothing, and the upload path's fallback to demo_001 is
+# exactly what has to keep working.
+
+@pytest.fixture(scope="session")
+def demo_user(db):
+    return _mkuser(db, "pearx2027", "client", "pearx_demo")
+
+
+@pytest.fixture(scope="session")
+def demo_auth(demo_user):
+    from app.core.auth import create_access_token
+    tok = create_access_token({"sub": str(demo_user.id), "role": demo_user.role,
+                               "client_id": demo_user.client_id})
+    return {"Authorization": f"Bearer {tok}"}
+
+
+@pytest.fixture
+def demo_on(monkeypatch):
+    """Turn the demo on for `pearx_demo`, for one test.
+
+    The variable is read at call time (`core/demo.py::demo_client_ids`), so this
+    is the whole switch — and because it is a fixture, a test that does not ask
+    for it runs against the SHIPPED default of empty, which is what makes
+    "nothing changes for anyone else" testable rather than asserted.
+    """
+    from app.config import settings
+    monkeypatch.setattr(settings, "DEMO_CLIENT_IDS", "pearx_demo")
+    return "pearx_demo"
+
+
+@pytest.fixture
+def demo_docs(monkeypatch, tmp_path, pdf_bytes):
+    """A sample-documents folder for `pearx_demo`, somewhere disposable.
+
+    `core/demo.py` resolves the folder from the backend directory, so the test
+    moves the backend directory rather than writing into the repo's own
+    `backend/demo_docs/`. Everything else — the listing, the whitelist, the
+    traversal refusal — is the real code.
+    """
+    import app.core.demo as demo_mod
+    root = tmp_path / "backend"
+    folder = root / demo_mod.SAMPLE_DOCS_DIRNAME / "pearx_demo"
+    folder.mkdir(parents=True)
+    (folder / "sample-invoice.pdf").write_bytes(pdf_bytes)
+    (folder / "notes.txt").write_text("not a pdf", encoding="utf-8")
+    monkeypatch.setattr(demo_mod, "_BACKEND_DIR", root)
+    return folder
+
+
+@pytest.fixture(scope="session")
+def demo_templates(db, demo_user, users):
+    """Two templates the demo-visibility rule has to tell apart: one the demo
+    client owns that is ALSO flagged default, and one default it does not own.
+    """
+    import json
+
+    from app.models.models import ColumnTemplate
+    grid = json.dumps({
+        "cells": {"0,0": {"value": "Invoice Number", "style": {}},
+                  "0,1": {"value": "", "style": {}}},
+        "colWidths": [160, 160], "merges": {}, "repeatRows": [],
+    })
+    made = {}
+    spec = [
+        ("demo_owned_default", demo_user.id, "pearx_demo", False, True),
+        ("demo_private", demo_user.id, "pearx_demo", False, False),
+    ]
+    for name, uid, cid, shared, default in spec:
+        t = db.query(ColumnTemplate).filter(ColumnTemplate.name == name).first()
+        if not t:
+            t = ColumnTemplate(name=name, document_type="sales_invoice",
+                               description=grid, columns_json="[]",
+                               user_id=uid, client_id=cid,
+                               is_shared=shared, is_default=default)
+            db.add(t)
+            db.commit()
+            db.refresh(t)
+        made[name] = t
+    return made
+
+
+@pytest.fixture
+def scanned_pdf_bytes():
+    """A PDF whose pages carry no text layer: one image, nothing else.
+
+    Built the same way `tests/test_ocr_source.py` builds its textless page, from
+    a committed corpus image, so "no text layer" is a property of the file and
+    not of a mock.
+    """
+    from PIL import Image
+    out = io.BytesIO()
+    Image.open(bs.TESTS_DIR / "test_OCR" / "chk_003_clean.png").convert(
+        "RGB").save(out, "PDF")
+    return out.getvalue()
+
+
+@pytest.fixture
+def png_bytes():
+    """A real (tiny) PNG — the "photo of a receipt" upload."""
+    from PIL import Image
+    out = io.BytesIO()
+    Image.new("RGB", (8, 8), "white").save(out, "PNG")
+    return out.getvalue()
 
 
 @pytest.fixture

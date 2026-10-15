@@ -15,6 +15,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
+from app.core.demo import is_demo_user
 from app.models import get_db, User, ColumnTemplate
 from app.schemas.schemas import TemplateCreate, TemplateUpdate, TemplateResponse, TemplateColumn
 
@@ -36,14 +37,19 @@ def list_templates(
         # 1. Their own templates
         # 2. Default system templates (is_default=True)
         # 3. Shared templates from THEIR OWN company only
-        query = db.query(ColumnTemplate).filter(
-            (ColumnTemplate.user_id == current_user.id)
-            | (ColumnTemplate.is_default == True)
-            | (
-                (ColumnTemplate.is_shared == True)
-                & (ColumnTemplate.client_id == current_user.client_id)
-            )
+        #
+        # EXCEPT on a demo account, which sees (1) and (3) and no system
+        # defaults it does not own. `is_default` is a visible-to-everyone flag,
+        # so every template anyone ever marked default would otherwise turn up
+        # in the demo's picker — our own test fixtures in an investor's screen
+        # share. A default the demo client OWNS still shows, through (1).
+        visible = (ColumnTemplate.user_id == current_user.id) | (
+            (ColumnTemplate.is_shared == True)
+            & (ColumnTemplate.client_id == current_user.client_id)
         )
+        if not is_demo_user(current_user):
+            visible = visible | (ColumnTemplate.is_default == True)
+        query = db.query(ColumnTemplate).filter(visible)
 
     if document_type:
         query = query.filter(ColumnTemplate.document_type == document_type)
@@ -74,8 +80,9 @@ def get_template(
     if tpl.is_shared and tpl.client_id == current_user.client_id:
         return _to_response(tpl)
 
-    # Default templates visible to all
-    if tpl.is_default:
+    # Default templates visible to all — but not to a demo account, whose
+    # picker is deliberately limited to its own and its client's templates.
+    if tpl.is_default and not is_demo_user(current_user):
         return _to_response(tpl)
 
     raise HTTPException(status_code=403, detail="Access denied")
