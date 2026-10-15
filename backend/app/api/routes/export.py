@@ -15,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
+from app.core.demo import is_demo_user
 from app.core.confidence import display as confidence_display
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
 from app.schemas.schemas import ExportRequest, ExportPerFileRequest
@@ -79,7 +80,8 @@ def export_combined(
 
     excel_bytes = _build_excel(job, docs, template_columns, per_file=False,
                                selected_columns=payload.selected_columns,
-                               column_order=payload.column_order)
+                               column_order=payload.column_order,
+                               show_filename=not is_demo_user(current_user))
     filename = f"docagent_job{job.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(
         io.BytesIO(excel_bytes),
@@ -123,7 +125,8 @@ def export_perfile(
                 pass
 
     excel_bytes = _build_excel(job, docs, template_columns, per_file=True,
-                               selected_columns=payload.selected_columns)
+                               selected_columns=payload.selected_columns,
+                               show_filename=not is_demo_user(current_user))
     filename = f"docagent_perfile_job{job.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(
         io.BytesIO(excel_bytes),
@@ -162,8 +165,16 @@ def _apply_column_controls(col_names: list, selected: list | None,
 
 def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                  selected_columns: list | None = None,
-                 column_order: list | None = None) -> bytes:
-    """Build Excel using openpyxl directly — no dependency on engine ExcelWriter."""
+                 column_order: list | None = None,
+                 show_filename: bool = True) -> bytes:
+    """Build Excel using openpyxl directly — no dependency on engine ExcelWriter.
+
+    `show_filename=False` is what a demo export passes. The stored filename of
+    a document that went to the object store is a TEMP NAME
+    (`tmphjtbr12o.pdf`, from `storage.get_local_path`), and it appears twice
+    here: as the combined sheet's File column, and as each per-file sheet's
+    TAB TITLE. Both go.
+    """
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -188,7 +199,8 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
         for doc in docs:
             ext = doc.get_extracted_data() or {}
             ext_data = ext.get("extracted_data", {})
-            sheet_name = Path(doc.filename).stem[:31]
+            sheet_name = (Path(doc.filename).stem[:31] if show_filename
+                          else f"Document {len(wb.sheetnames) + 1}")
             ws = wb.create_sheet(title=sheet_name)
 
             # Determine columns
@@ -258,7 +270,8 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                                            column_order)
 
         ws = wb.create_sheet(title="Extracted Data")
-        headers = ["File", "Doc Type", "Confidence", "Status"] + col_names
+        headers = (["File"] if show_filename else []) + \
+                  ["Doc Type", "Confidence", "Status"] + col_names
         ws.append(headers)
 
         for col_idx, header in enumerate(headers, 1):
@@ -274,8 +287,7 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
             ext = (doc.get_extracted_data() or {}).get("extracted_data", {})
             fill = REVIEW_FILL if doc.needs_review else (ALT_FILL if row_idx % 2 == 0 else None)
 
-            row_data = [
-                doc.filename,
+            row_data = ([doc.filename] if show_filename else []) + [
                 doc.document_type or "",
                 confidence_display(doc.overall_confidence),
                 "Review" if doc.needs_review else "OK",

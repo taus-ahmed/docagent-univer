@@ -6,6 +6,7 @@ import type { ColDef, CellValueChangedEvent, ICellRendererParams } from "ag-grid
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import { extractApi, type DocumentResult, type ColumnTemplate } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -117,6 +118,8 @@ function TableRowsPanel({ rows }: { rows: Record<string, any>[] }) {
 
 export default function ResultsGrid({ results, jobId, template }: Props) {
   const gridRef = useRef<AgGridReact>(null);
+  // Presentation only, as everywhere else: the server decides who is a demo.
+  const isDemo = useAuthStore(st => st.user?.is_demo === true);
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -159,15 +162,21 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
       return row;
     });
 
+    // The File column shows the STORED filename, which for a document that
+    // went to the object store is a temp name (`tmphjtbr12o.pdf`, from
+    // storage.get_local_path) rather than what the user uploaded. A demo
+    // audience should not be reading that, and the demo's exports drop it for
+    // the same reason, so the on-screen column goes with them. Everyone else
+    // keeps it.
     const fixed: ColDef[] = [
-      {
+      ...(isDemo ? [] : [{
         field: "_filename",
         headerName: "File",
-        pinned: "left",
+        pinned: "left" as const,
         width: 170,
         editable: false,
         cellStyle: { fontWeight: 500, color: "var(--text1)" },
-      },
+      }]),
       {
         field: "_confidence",
         headerName: "Confidence",
@@ -214,7 +223,7 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
     }));
 
     return { rowData: rows, colDefs: [...fixed, ...dynamic] };
-  }, [results, template]);
+  }, [results, template, isDemo]);
 
   const onCellValueChanged = useCallback(async (e: CellValueChangedEvent) => {
     const row = e.data as Record<string, unknown>;
