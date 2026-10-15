@@ -153,6 +153,15 @@ def extract_from_drive(
     storage=Depends(get_storage),
 ):
     """Download files from a Drive folder and run extraction."""
+    # Drive is an upload door too, so the demo's kill switch closes it as well.
+    # ⚠ It is the ONLY demo rule this route applies: it builds its own job
+    # rather than going through `_start_extraction_job`, so PDF-only, the size
+    # ceiling and the quota do NOT apply to Drive ingestion. A demo account has
+    # no Drive connection today; if one is ever given one, this route needs the
+    # same gate the upload endpoint has.
+    from app.core.demo import check_uploads_enabled
+    check_uploads_enabled(current_user)
+
     drive = _get_drive()
     if not drive.is_authenticated:
         raise HTTPException(status_code=401, detail="Google Drive not authenticated")

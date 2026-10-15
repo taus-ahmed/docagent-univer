@@ -110,13 +110,19 @@ def page_needs_ocr(text: str) -> bool:
     return len((text or "").strip()) < MIN_TEXT_LENGTH
 
 
-def pages_without_text_layer(file_path: str | Path) -> list[int]:
-    """The 1-based pages of this PDF that `_process_pdf` would send to OCR.
+def text_layer_pages(file_path: str | Path) -> tuple[list[int], int]:
+    """(the 1-based pages `_process_pdf` would send to OCR, the page count).
 
     Reads the PDF's own text layer and NOTHING else: it renders no page, runs
     no OCR, and calls no model. It reads each page exactly the way the pipeline
     does (`read_page`, with the file's AcroForm markers) so that the answer is
     the pipeline's answer and not an approximation of it.
+
+    BOTH NUMBERS COME FROM ONE PARSE, because the interesting questions are
+    ratios — "is any page a scan" and "is EVERY page a scan" are different
+    questions with different answers, and a caller that has to open the file a
+    second time to learn the denominator will sooner or later compare two
+    readings of two different files.
 
     Raises whatever pdfplumber raises on a file that is not a readable PDF —
     the caller is deciding whether to accept an upload and must not read "this
@@ -124,14 +130,21 @@ def pages_without_text_layer(file_path: str | Path) -> list[int]:
     """
     path = Path(file_path)
     widgets = acroform_widgets(path) or {}
-    out: list[int] = []
+    missing: list[int] = []
+    total = 0
     with pdfplumber.open(path) as pdf:
         for page_num, page in enumerate(pdf.pages):
+            total += 1
             text, _lines, _repairs = read_page(
                 page, widgets.get(page_num) or [], stats={})
             if page_needs_ocr(text):
-                out.append(page_num + 1)
-    return out
+                missing.append(page_num + 1)
+    return missing, total
+
+
+def pages_without_text_layer(file_path: str | Path) -> list[int]:
+    """The 1-based pages of this PDF that `_process_pdf` would send to OCR."""
+    return text_layer_pages(file_path)[0]
 
 
 def preprocess_file(file_path: str | Path) -> ProcessedDocument:

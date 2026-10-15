@@ -1,13 +1,16 @@
 """Do the shipped demo PDFs actually work in the demo?
 
-The demo refuses a document whose text layer would send it to OCR (B2), so a
-sample document with no text layer would be offered in the panel and then
-rejected the moment an investor clicked Extract. This answers that question
-before the demo rather than during it.
+The demo refuses a document that is nothing but a scan (B2), so such a sample
+would be offered in the panel and then rejected the moment an investor clicked
+Extract. This answers that question before the demo rather than during it.
 
 It reads the PDF's own text layer through the SAME predicate the pipeline
-routes on (`core.preprocessor.pages_without_text_layer`), renders nothing, runs
-no OCR, and CALLS NO MODEL.
+routes on (`core.preprocessor.text_layer_pages`), renders nothing, runs no OCR,
+and CALLS NO MODEL.
+
+The demo refuses a file only when EVERY page lacks a text layer, so this prints
+three verdicts, not two: OK, MIXED (accepted, and those pages will be OCR'd —
+worth knowing before a demo), and NO TEXT LAYER (refused).
 
     backend\\.venv\\Scripts\\python.exe -m scripts.check_demo_docs
     backend\\.venv\\Scripts\\python.exe -m scripts.check_demo_docs pearx_demo
@@ -43,7 +46,7 @@ def _preview(path: Path) -> str:
 
 
 def main(argv: list[str]) -> int:
-    from core.preprocessor import pages_without_text_layer
+    from core.preprocessor import text_layer_pages
 
     root = _BACKEND / "demo_docs"
     clients = argv[1:] or ([d.name for d in sorted(root.iterdir()) if d.is_dir()]
@@ -62,20 +65,24 @@ def main(argv: list[str]) -> int:
             continue
         for pdf in pdfs:
             try:
-                ocr_pages = pages_without_text_layer(pdf)
+                ocr_pages, total = text_layer_pages(pdf)
             except Exception as exc:                      # unreadable file
                 bad += 1
                 print(f"\n  [UNREADABLE] {pdf.name}: {exc}")
                 continue
             size_kb = pdf.stat().st_size / 1024
-            if ocr_pages:
+            if total and len(ocr_pages) == total:
                 bad += 1
-                print(f"\n  [NO TEXT LAYER] {pdf.name} ({size_kb:.0f} KB) — "
-                      f"page(s) {ocr_pages} would route to OCR, so the demo "
-                      f"REFUSES this file (422).")
+                print(f"\n  [NO TEXT LAYER] {pdf.name} ({size_kb:.0f} KB) — all "
+                      f"{total} page(s) lack a text layer, so the demo REFUSES "
+                      f"this file (422).")
+            elif ocr_pages:
+                print(f"\n  [MIXED] {pdf.name} ({size_kb:.0f} KB) — {len(ocr_pages)} "
+                      f"of {total} page(s) lack a text layer ({ocr_pages}). The "
+                      f"demo ACCEPTS it and those pages are read by OCR.")
             else:
-                print(f"\n  [OK] {pdf.name} ({size_kb:.0f} KB) — every page has "
-                      f"a text layer.")
+                print(f"\n  [OK] {pdf.name} ({size_kb:.0f} KB) — all {total} "
+                      f"page(s) have a text layer.")
             try:
                 print(f"       first {PREVIEW_CHARS} chars: {_preview(pdf)!r}")
             except Exception as exc:

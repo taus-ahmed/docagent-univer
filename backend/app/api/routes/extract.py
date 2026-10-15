@@ -72,7 +72,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth import get_current_user
-from app.core.demo import enforce_upload_policy, is_demo_user
+from app.core.demo import (check_uploads_enabled,
+                           enforce_upload_policy, is_demo_user)
 from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
@@ -392,6 +393,10 @@ async def upload_and_extract(
     current_user: User = Depends(get_current_user),
     storage=Depends(get_storage),
 ):
+    # The demo's kill switch, checked HERE and not in `_start_extraction_job`:
+    # it closes this door and leaves the sample documents open. A no-op for
+    # every non-demo tenant, and for a demo tenant while the switch is true.
+    check_uploads_enabled(current_user)
     return await _start_extraction_job(
         [_IncomingUpload.from_upload(f) for f in files],
         requested_client_id=client_id,

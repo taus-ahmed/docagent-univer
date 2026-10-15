@@ -288,6 +288,38 @@ def scanned_pdf_bytes():
 
 
 @pytest.fixture
+def scanned_two_page_pdf_bytes():
+    """A scan of more than one page: EVERY page without a text layer.
+
+    One page is not enough to test a rule about "every page" — a rule that
+    only looked at the first page would pass that test.
+    """
+    from PIL import Image
+    img = Image.open(bs.TESTS_DIR / "test_OCR" / "chk_003_clean.png").convert(
+        "RGB")
+    out = io.BytesIO()
+    img.save(out, "PDF", save_all=True, append_images=[img])
+    return out.getvalue()
+
+
+@pytest.fixture
+def mixed_pdf_bytes(pdf_bytes, scanned_pdf_bytes):
+    """One digital page, then one scanned page, in a single file.
+
+    This is the shape the rule change is ABOUT: under "any page" it was
+    refused, under "every page" it is accepted.
+    """
+    from pypdf import PdfReader, PdfWriter
+    w = PdfWriter()
+    for src in (pdf_bytes, scanned_pdf_bytes):
+        for page in PdfReader(io.BytesIO(src)).pages:
+            w.add_page(page)
+    out = io.BytesIO()
+    w.write(out)
+    return out.getvalue()
+
+
+@pytest.fixture
 def png_bytes():
     """A real (tiny) PNG — the "photo of a receipt" upload."""
     from PIL import Image

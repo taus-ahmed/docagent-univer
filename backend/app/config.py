@@ -137,6 +137,12 @@ class Settings(BaseSettings):
     #: How many extraction jobs a demo user may ever start, counted from the
     #: jobs already on their account. A demo is not a subscription.
     DEMO_MAX_UPLOADS: int = 20
+    #: Kill switch for the demo's own upload door. TRUE by default, so the
+    #: shipped behaviour is unchanged; set it false to run a demo off the
+    #: sample documents alone — mid-demo, without a deploy. It does NOT touch
+    #: the sample-document endpoints, and it does not apply to anyone whose
+    #: client_id is not a demo tenant.
+    DEMO_UPLOADS_ENABLED: bool = True
 
     @property
     def max_upload_bytes(self) -> int:

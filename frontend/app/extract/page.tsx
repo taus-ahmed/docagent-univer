@@ -14,6 +14,7 @@ import {
   type ColumnTemplate, type JobStatus, type DocumentResult,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { apiErrorText, jobErrorText } from "@/lib/demo-error";
 import Link from "next/link";
 
 type SourceTab = "upload" | "folder" | "drive";
@@ -479,7 +480,7 @@ export default function ExtractPage() {
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
-      toast.error(e?.response?.data?.detail ?? "Upload failed");
+      toast.error(apiErrorText(e, { isDemo, fallback: "Upload failed" }));
       setIsExtracting(false);
     }
   }
@@ -499,7 +500,7 @@ export default function ExtractPage() {
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${filename}`);
     } catch (e: any) {
-      toast.error(e?.response?.data?.detail ?? "Could not start extraction");
+      toast.error(apiErrorText(e, { isDemo, fallback: "Could not start extraction" }));
       setIsExtracting(false);
     }
   }
@@ -760,6 +761,11 @@ export default function ExtractPage() {
                     </p>
                     <p style={{ fontSize: 11, color: "var(--text4)" }}>PDF · PNG · JPG · TIFF · WEBP · HEIC · BMP · GIF — 50MB max</p>
                   </div>
+                  {isDemo && (
+                    <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 8 }}>
+                      Best results with digital PDFs. Try the sample documents first.
+                    </p>
+                  )}
                   {files.map(f => (
                     <div key={f.name} className="file-item">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -845,7 +851,7 @@ export default function ExtractPage() {
               )}
               {(isFailed || isPartial) && jobStatus?.error_message && (
                 <p style={{ fontSize: 11, color: isPartial ? "var(--amber)" : "var(--red)", marginTop: 8 }}>
-                  {jobStatus.error_message}
+                  {jobErrorText(jobStatus.error_message, isDemo)}
                 </p>
               )}
               {/* N1: download available for ANY completed job — with or without a template
@@ -946,7 +952,7 @@ export default function ExtractPage() {
                     {jobStatus?.error_message ? (
                       <div style={{ padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--text2)", lineHeight: 1.55, textAlign: "left" }}>
                         <p style={{ fontWeight: 600, color: "var(--text1)", marginBottom: 4, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>What went wrong</p>
-                        {jobStatus.error_message}
+                        {jobErrorText(jobStatus.error_message, isDemo)}
                       </div>
                     ) : (
                     <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 11, color: "var(--text3)" }}>

@@ -43,6 +43,21 @@ SCANNED_DOC_MESSAGE = (
     "development and is not part of this demo. Please try a digital PDF."
 )
 
+# Said when the demo's upload door is closed (DEMO_UPLOADS_ENABLED=false).
+# Same rule as the sentence above: verbatim, once.
+UPLOADS_DISABLED_MESSAGE = (
+    "Uploads are disabled in this demo. Please use the sample documents."
+)
+
+#: Marks a refusal as one the DEMO MEANT TO SHOW SOMEBODY, as opposed to a
+#: technical error that happens to have a status code. The Extract page replaces
+#: raw error text with a neutral sentence for demo users, and without this it
+#: would have to either show every message (defeating the point) or hide ours
+#: too (leaving an investor with "Something went wrong" where we had written a
+#: real explanation). It is a header rather than a shape inside `detail` because
+#: `detail` is asserted verbatim, by tests and by the brief.
+DEMO_NOTICE_HEADER = "X-Demo-Notice"
+
 #: Where a demo client's sample documents live, relative to `backend/`. Shipped
 #: in the image, read-only at runtime, and never written by a request.
 SAMPLE_DOCS_DIRNAME = "demo_docs"
@@ -94,11 +109,34 @@ def demo_max_uploads() -> int:
     return int(getattr(settings, "DEMO_MAX_UPLOADS", 20))
 
 
+def _demo_error(status_code: int, detail: str) -> HTTPException:
+    """A refusal written FOR a demo user, tagged as such. See
+    DEMO_NOTICE_HEADER."""
+    return HTTPException(status_code=status_code, detail=detail,
+                         headers={DEMO_NOTICE_HEADER: "1"})
+
+
 def _scanned() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail=SCANNED_DOC_MESSAGE,
-    )
+    return _demo_error(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                       SCANNED_DOC_MESSAGE)
+
+
+def uploads_enabled() -> bool:
+    return bool(getattr(settings, "DEMO_UPLOADS_ENABLED", True))
+
+
+def check_uploads_enabled(user) -> None:
+    """The demo's upload door, open or closed. A no-op for everyone else.
+
+    Deliberately NOT part of `enforce_upload_policy`: that function is the
+    shared pipeline both doors go through, and closing the upload door must
+    leave the sample documents working — which is the only thing the demo has
+    left when it is closed.
+    """
+    if not is_demo_user(user):
+        return
+    if not uploads_enabled():
+        raise _demo_error(status.HTTP_403_FORBIDDEN, UPLOADS_DISABLED_MESSAGE)
 
 
 def check_upload_quota(db, user) -> None:
@@ -116,11 +154,10 @@ def check_upload_quota(db, user) -> None:
         ExtractionJob.user_id == user.id).count()
     ceiling = demo_max_uploads()
     if used >= ceiling:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=(f"This demo account has used all {ceiling} of its "
-                    f"extractions. Get in touch and we will raise the limit."),
-        )
+        raise _demo_error(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            f"This demo account has used all {ceiling} of its extractions. "
+            f"Get in touch and we will raise the limit.")
 
 
 def check_demo_file(filename: str, content: bytes) -> None:
@@ -140,51 +177,58 @@ def check_demo_file(filename: str, content: bytes) -> None:
         raise _scanned()
 
     if suffix != _PDF_SUFFIX:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This demo accepts PDF files only.",
-        )
+        raise _demo_error(status.HTTP_400_BAD_REQUEST,
+                          "This demo accepts PDF files only.")
 
     ceiling = demo_max_bytes()
     if len(content) > ceiling:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(f"{filename} is "
-                    f"{len(content) / 1024 / 1024:.1f}MB. This demo accepts "
-                    f"files up to {settings.DEMO_MAX_MB}MB."),
-        )
+        raise _demo_error(
+            status.HTTP_400_BAD_REQUEST,
+            f"{filename} is {len(content) / 1024 / 1024:.1f}MB. This demo "
+            f"accepts files up to {settings.DEMO_MAX_MB}MB.")
 
-    if pdf_would_need_ocr(content):
+    if pdf_is_entirely_scanned(content):
         raise _scanned()
 
 
-def pdf_would_need_ocr(content: bytes) -> bool:
-    """Would any page of this PDF be sent to OCR by the real pipeline?
+def pdf_is_entirely_scanned(content: bytes) -> bool:
+    """Is EVERY page of this PDF without a text layer?
 
-    It asks the ENGINE'S OWN question — `core.preprocessor.pages_without_text_
-    layer`, which is the predicate `_process_pdf` routes on — so the demo gate
-    and the pipeline cannot disagree about what a text layer is. Nothing is
-    rendered, no OCR binary runs, and no model is called.
+    It asks the ENGINE'S OWN question — `core.preprocessor.text_layer_pages`,
+    whose per-page predicate is the one `_process_pdf` routes on — so the demo
+    gate and the pipeline cannot disagree about what a text layer is. Nothing
+    is rendered, no OCR binary runs, and no model is called.
 
-    ⚠ ANY page, not every page. That is what "would route to OCR" means: one
-    page without a text layer is one page the pipeline hands to Tesseract. The
-    cost is that a digital PDF with a near-blank page — a trailing page holding
-    only a logo — is refused by the demo although the rest of it reads
-    perfectly. A demo that quietly OCR'd a scan would be worse: the whole point
-    of the sentence is that this is the thing not being claimed yet.
+    EVERY page, not any page. "This is a scan" is a statement about the
+    document, and a document is a scan when none of it is machine-readable. The
+    earlier reading (any page) refused a perfectly good digital PDF for one
+    near-blank page — a trailing page holding only a logo — which an investor
+    would experience as the demo breaking on a real document.
+
+    ⚠ WHAT THAT GIVES UP, SAID PLAINLY: a MIXED document — nine scanned pages
+    behind one digital cover sheet — is now accepted, and the pipeline WILL OCR
+    those nine pages. So the demo's property is no longer "nothing here is ever
+    OCR'd"; it is "a document that is nothing but a scan is refused, with an
+    explanation, instead of being read by machine". The refusal is about not
+    claiming scanned-document support, and a mixed file is a weaker claim than
+    a scan, not the same one.
+
+    A PDF with no pages at all is NOT reported as a scan — there is nothing to
+    have a text layer — and fails later on its own merits.
     """
     for p in (str(_BACKEND_DIR / "engine"), str(_BACKEND_DIR),
               str(_BACKEND_DIR.parent)):
         if p not in sys.path:
             sys.path.insert(0, p)
-    from core.preprocessor import pages_without_text_layer
+    from core.preprocessor import text_layer_pages
 
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     try:
         tmp.write(content)
         tmp.close()
         try:
-            return bool(pages_without_text_layer(tmp.name))
+            missing, total = text_layer_pages(tmp.name)
+            return total > 0 and len(missing) == total
         except HTTPException:
             raise
         except Exception as exc:

@@ -75,11 +75,39 @@ def _job_count(db, user):
 # ── B1 / B2 — what a demo account may upload ─────────────────────────────────
 
 class TestTheDemoRefusesAScan:
+    """REFUSED WHEN EVERY PAGE LACKS A TEXT LAYER — not when any page does.
+
+    "This is a scan" is a statement about the document. The earlier reading
+    refused a good digital PDF for one near-blank trailing page, which in front
+    of an investor looks like the demo breaking on a real file. The cost is
+    stated in `pdf_is_entirely_scanned` and tested below: a mixed file is now
+    accepted and its scanned pages ARE OCR'd.
+    """
+
     def test_a_scanned_pdf_is_refused_with_the_exact_sentence(
             self, client, demo_auth, demo_on, scanned_pdf_bytes):
         r = _upload(client, demo_auth, scanned_pdf_bytes, name="scan.pdf")
         assert r.status_code == 422, r.text
         assert r.json()["detail"] == SCANNED
+
+    def test_a_multi_page_scan_is_refused_too(
+            self, client, demo_auth, demo_on, scanned_two_page_pdf_bytes):
+        """Every page, so a two-page scan is still a scan."""
+        r = _upload(client, demo_auth, scanned_two_page_pdf_bytes,
+                    name="scan2.pdf")
+        assert r.status_code == 422, r.text
+        assert r.json()["detail"] == SCANNED
+
+    def test_a_mixed_pdf_is_ACCEPTED(
+            self, client, demo_auth, demo_on, mixed_pdf_bytes):
+        """One digital page and one scanned page: not a scanned document.
+
+        ⚠ This is the trade, and it is deliberate: the pipeline will OCR that
+        second page. The demo's claim is "we do not support scanned documents
+        yet", not "nothing here is ever OCR'd".
+        """
+        r = _upload(client, demo_auth, mixed_pdf_bytes, name="mixed.pdf")
+        assert r.status_code == 202, r.text
 
     def test_refusing_it_costs_no_job_row(
             self, client, demo_auth, demo_on, scanned_pdf_bytes, db, demo_user):
@@ -101,23 +129,36 @@ class TestTheDemoRefusesAScan:
         r = _upload(client, demo_auth, pdf_bytes)
         assert r.status_code == 202, r.text
 
-    def test_the_predicate_is_the_pipelines_own(self, scanned_pdf_bytes,
-                                                pdf_bytes, tmp_path):
+    def test_the_predicate_is_the_pipelines_own(
+            self, scanned_pdf_bytes, mixed_pdf_bytes, pdf_bytes, tmp_path):
         """Not a second opinion about what a text layer is: the demo asks
-        `core.preprocessor.pages_without_text_layer`, which is the predicate
-        `_process_pdf` routes on."""
-        from core.preprocessor import page_needs_ocr, pages_without_text_layer
+        `core.preprocessor.text_layer_pages`, whose per-page predicate is the
+        one `_process_pdf` routes on."""
+        from core.preprocessor import page_needs_ocr, text_layer_pages
 
         scan = tmp_path / "scan.pdf"
         scan.write_bytes(scanned_pdf_bytes)
         digital = tmp_path / "digital.pdf"
         digital.write_bytes(pdf_bytes)
+        mixed = tmp_path / "mixed.pdf"
+        mixed.write_bytes(mixed_pdf_bytes)
 
-        assert pages_without_text_layer(scan) == [1]
-        assert pages_without_text_layer(digital) == []
+        assert text_layer_pages(scan) == ([1], 1)
+        assert text_layer_pages(digital) == ([], 1)
+        # The denominator is what the rule turns on, so the helper reports it.
+        assert text_layer_pages(mixed) == ([2], 2)
         assert page_needs_ocr("") is True
         assert page_needs_ocr("x" * 49) is True
         assert page_needs_ocr("x" * 50) is False
+
+    def test_the_document_level_rule_is_all_not_any(
+            self, scanned_pdf_bytes, mixed_pdf_bytes, pdf_bytes):
+        """The one-line statement of the change, at the level it was made."""
+        from app.core.demo import pdf_is_entirely_scanned
+
+        assert pdf_is_entirely_scanned(scanned_pdf_bytes) is True
+        assert pdf_is_entirely_scanned(mixed_pdf_bytes) is False
+        assert pdf_is_entirely_scanned(pdf_bytes) is False
 
 
 class TestTheDemosOtherLimits:
@@ -154,6 +195,129 @@ class TestTheDemosOtherLimits:
 
         monkeypatch.setattr(settings, "DEMO_MAX_UPLOADS", used + 1)
         assert _upload(client, demo_auth, pdf_bytes).status_code == 202
+
+
+# ── The kill switch ───────────────────────────────────────────────────────────
+
+class TestUploadsCanBeTurnedOff:
+    """DEMO_UPLOADS_ENABLED=false closes the demo's upload door and leaves the
+    sample documents open — which is the whole point: it is for a demo that has
+    started going badly, not for taking the demo down."""
+
+    @pytest.fixture
+    def uploads_off(self, monkeypatch):
+        from app.config import settings
+        monkeypatch.setattr(settings, "DEMO_UPLOADS_ENABLED", False)
+
+    def test_the_demos_upload_is_refused_with_the_exact_sentence(
+            self, client, demo_auth, demo_on, uploads_off, pdf_bytes):
+        r = _upload(client, demo_auth, pdf_bytes)
+        assert r.status_code == 403, r.text
+        assert r.json()["detail"] == \
+            "Uploads are disabled in this demo. Please use the sample documents."
+
+    def test_it_is_refused_before_the_file_is_even_looked_at(
+            self, client, demo_auth, demo_on, uploads_off, scanned_pdf_bytes,
+            db, demo_user):
+        """A scan would also be refused, with a different sentence. The door
+        comes first, and nothing is read or written."""
+        before = _job_count(db, demo_user)
+        r = _upload(client, demo_auth, scanned_pdf_bytes, name="scan.pdf")
+        assert r.status_code == 403, r.text
+        assert r.json()["detail"] != SCANNED
+        assert _job_count(db, demo_user) == before
+
+    def test_the_sample_documents_still_list(
+            self, client, demo_auth, demo_on, uploads_off, demo_docs):
+        r = client.get("/api/demo/sample-docs", headers=demo_auth)
+        assert r.status_code == 200, r.text
+        assert [f["filename"] for f in r.json()["files"]] == \
+            ["sample-invoice.pdf"]
+
+    def test_a_sample_still_downloads(
+            self, client, demo_auth, demo_on, uploads_off, demo_docs,
+            pdf_bytes):
+        r = client.get("/api/demo/sample-docs/sample-invoice.pdf/download",
+                       headers=demo_auth)
+        assert r.status_code == 200, r.text
+        assert r.content == pdf_bytes
+
+    def test_a_sample_still_extracts(
+            self, client, demo_auth, demo_on, uploads_off, demo_docs, db,
+            demo_user):
+        before = _job_count(db, demo_user)
+        r = client.post("/api/demo/sample-docs/sample-invoice.pdf/extract",
+                        headers=demo_auth)
+        assert r.status_code == 202, r.text
+        assert _job_count(db, demo_user) == before + 1
+
+    def test_the_switch_does_not_touch_anybody_else(
+            self, client, auth, demo_on, uploads_off, pdf_bytes):
+        r = _upload(client, auth["acme2"], pdf_bytes, client_id="acme_001")
+        assert r.status_code == 202, r.text
+
+    def test_it_does_not_touch_a_demo_user_while_it_is_on(
+            self, client, demo_auth, demo_on, pdf_bytes):
+        """The default is true, so this is the shipped behaviour."""
+        from app.config import settings
+        assert settings.DEMO_UPLOADS_ENABLED is True
+        assert _upload(client, demo_auth, pdf_bytes).status_code == 202
+
+    def test_with_the_variable_unset_the_switch_is_inert(
+            self, client, demo_auth, uploads_off, pdf_bytes):
+        """No `demo_on`: not a demo tenant, so the switch means nothing."""
+        assert _upload(client, demo_auth, pdf_bytes).status_code == 202
+
+
+class TestADeliberateRefusalIsMarkedAsOne:
+    """The Extract page replaces raw error text with a neutral sentence for
+    demo users (`frontend/lib/demo-error.ts`). The sentences the demo WROTE
+    must survive that, so the backend tags them — otherwise an investor reads
+    "Something went wrong" where we had written a real explanation."""
+
+    HEADER = "x-demo-notice"
+
+    def test_the_scanned_refusal_is_tagged(
+            self, client, demo_auth, demo_on, scanned_pdf_bytes):
+        r = _upload(client, demo_auth, scanned_pdf_bytes, name="scan.pdf")
+        assert r.headers.get(self.HEADER) == "1", dict(r.headers)
+
+    def test_the_uploads_disabled_refusal_is_tagged(
+            self, client, demo_auth, demo_on, pdf_bytes, monkeypatch):
+        from app.config import settings
+        monkeypatch.setattr(settings, "DEMO_UPLOADS_ENABLED", False)
+        r = _upload(client, demo_auth, pdf_bytes)
+        assert r.headers.get(self.HEADER) == "1", dict(r.headers)
+
+    def test_the_quota_refusal_is_tagged(
+            self, client, demo_auth, demo_on, pdf_bytes, db, demo_user,
+            monkeypatch):
+        from app.config import settings
+        monkeypatch.setattr(settings, "DEMO_MAX_UPLOADS",
+                            _job_count(db, demo_user))
+        r = _upload(client, demo_auth, pdf_bytes)
+        assert r.headers.get(self.HEADER) == "1", dict(r.headers)
+
+    def test_the_pdf_only_refusal_is_tagged(self, client, demo_auth, demo_on):
+        r = _upload(client, demo_auth, b"client_id: x\n", name="s.yaml",
+                    mime="application/x-yaml")
+        assert r.headers.get(self.HEADER) == "1", dict(r.headers)
+
+    def test_an_ordinary_error_is_NOT_tagged(
+            self, client, demo_auth, demo_on, pdf_bytes, templates):
+        """A 403 about somebody else's template is not a demo message, and the
+        demo user should see the neutral sentence for it, not this."""
+        r = _upload(client, demo_auth, pdf_bytes,
+                    template_id=templates["other_private"].id)
+        assert r.status_code == 403
+        assert self.HEADER not in {k.lower() for k in r.headers}
+
+    def test_nothing_is_tagged_for_a_normal_user(
+            self, client, auth, demo_on, png_bytes):
+        r = _upload(client, auth["acme2"], png_bytes, name="r.png",
+                    mime="image/png", client_id="acme_001")
+        assert r.status_code == 202
+        assert self.HEADER not in {k.lower() for k in r.headers}
 
 
 # ── B3 — the template picker ──────────────────────────────────────────────────
@@ -322,6 +486,12 @@ class TestNothingChangesForAnyoneElse:
             self, client, auth, demo_on, scanned_pdf_bytes):
         """The scanned-document refusal is a DEMO rule. The product OCRs."""
         r = _upload(client, auth["acme2"], scanned_pdf_bytes, name="scan.pdf",
+                    client_id="acme_001")
+        assert r.status_code == 202, r.text
+
+    def test_a_normal_user_may_still_upload_a_mixed_pdf(
+            self, client, auth, demo_on, mixed_pdf_bytes):
+        r = _upload(client, auth["acme2"], mixed_pdf_bytes, name="mixed.pdf",
                     client_id="acme_001")
         assert r.status_code == 202, r.text
 
