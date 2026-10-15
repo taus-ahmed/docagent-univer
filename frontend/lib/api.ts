@@ -39,6 +39,14 @@ export interface User {
   role: "admin" | "client";
   client_id: string | null;
   is_active: boolean;
+  /**
+   * This account's client_id is configured as a demo tenant (backend
+   * DEMO_CLIENT_IDS). Computed per response by the server, never stored, and
+   * false for everyone when the variable is unset. The frontend TREATS IT AS
+   * PRESENTATION ONLY -- the limits and the sample-document folder are
+   * enforced in the backend, which is why hiding the panel is enough here.
+   */
+  is_demo?: boolean;
 }
 
 export interface TokenResponse {
@@ -242,6 +250,27 @@ export const schemasApi = {
   delete: async (clientId: string) => api.delete(`/api/schemas/${clientId}`),
 };
 
+// --- Demo API (sample documents; 404 for non-demo accounts) ---
+
+export interface SampleDoc {
+  filename: string;
+  size_bytes: number;
+}
+
+export const demoApi = {
+  listSampleDocs: async (): Promise<SampleDoc[]> => {
+    const res = await api.get<{ files: SampleDoc[] }>("/api/demo/sample-docs");
+    return res.data.files ?? [];
+  },
+  /** Download URL for one sample document, authorised like any other call. */
+  downloadSampleDoc: async (filename: string): Promise<Blob> => {
+    const res = await api.get(
+      `/api/demo/sample-docs/${encodeURIComponent(filename)}/download`,
+      { responseType: "blob" });
+    return res.data as Blob;
+  },
+};
+
 // --- Templates API ---
 
 export interface ShapePreview {
@@ -359,6 +388,26 @@ export const extractApi = {
     if (backendOptions.length > 0) fd.append("options", JSON.stringify(backendOptions));
     if (selectedPages && selectedPages.length > 0) fd.append("selected_pages", JSON.stringify(selectedPages));
     const res = await api.post("/api/extract/upload", fd);
+    return res.data;
+  },
+
+  /**
+   * Start extraction on one of the demo tenant's shipped sample documents.
+   * Server-side this runs the SAME pipeline as `upload`, as this user.
+   */
+  extractSampleDoc: async (
+    filename: string,
+    templateId?: number,
+    options: ExtractionOption[] = [],
+    selectedPages?: number[],
+  ): Promise<{ job_id: number; message: string; total_files: number; status: string }> => {
+    const fd = new FormData();
+    if (templateId != null) fd.append("template_id", String(templateId));
+    const backendOptions = options.filter(o => o !== "graphs");
+    if (backendOptions.length > 0) fd.append("options", JSON.stringify(backendOptions));
+    if (selectedPages && selectedPages.length > 0) fd.append("selected_pages", JSON.stringify(selectedPages));
+    const res = await api.post(
+      `/api/demo/sample-docs/${encodeURIComponent(filename)}/extract`, fd);
     return res.data;
   },
 

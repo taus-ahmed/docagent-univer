@@ -97,6 +97,56 @@ SUPPORTED_EXTENSIONS = {
 MIN_TEXT_LENGTH = 50
 
 
+def page_needs_ocr(text: str) -> bool:
+    """Would this page's text layer send it to OCR? THE one rule.
+
+    It was written inline in `_process_pdf` and nowhere else, so a caller that
+    needed to ask the question BEFORE reading a document — the demo upload gate
+    is the first — had no way to ask it without restating the threshold. A
+    second statement of a threshold is a second threshold: the two drift and
+    nothing fails when they do. This is that rule, named, with both callers
+    going through it.
+    """
+    return len((text or "").strip()) < MIN_TEXT_LENGTH
+
+
+def text_layer_pages(file_path: str | Path) -> tuple[list[int], int]:
+    """(the 1-based pages `_process_pdf` would send to OCR, the page count).
+
+    Reads the PDF's own text layer and NOTHING else: it renders no page, runs
+    no OCR, and calls no model. It reads each page exactly the way the pipeline
+    does (`read_page`, with the file's AcroForm markers) so that the answer is
+    the pipeline's answer and not an approximation of it.
+
+    BOTH NUMBERS COME FROM ONE PARSE, because the interesting questions are
+    ratios — "is any page a scan" and "is EVERY page a scan" are different
+    questions with different answers, and a caller that has to open the file a
+    second time to learn the denominator will sooner or later compare two
+    readings of two different files.
+
+    Raises whatever pdfplumber raises on a file that is not a readable PDF —
+    the caller is deciding whether to accept an upload and must not read "this
+    file is corrupt" as "this file is fine".
+    """
+    path = Path(file_path)
+    widgets = acroform_widgets(path) or {}
+    missing: list[int] = []
+    total = 0
+    with pdfplumber.open(path) as pdf:
+        for page_num, page in enumerate(pdf.pages):
+            total += 1
+            text, _lines, _repairs = read_page(
+                page, widgets.get(page_num) or [], stats={})
+            if page_needs_ocr(text):
+                missing.append(page_num + 1)
+    return missing, total
+
+
+def pages_without_text_layer(file_path: str | Path) -> list[int]:
+    """The 1-based pages of this PDF that `_process_pdf` would send to OCR."""
+    return text_layer_pages(file_path)[0]
+
+
 def preprocess_file(file_path: str | Path) -> ProcessedDocument:
     """Main entry point: process any supported file into a ProcessedDocument."""
     file_path = Path(file_path)
@@ -245,7 +295,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                 # empty. Render it and read it with OCR instead, through the
                 # SAME seam: `read_page` takes a PageSource, so nothing below
                 # this line learns that a different reader ran.
-                if len((text or "").strip()) < MIN_TEXT_LENGTH:
+                if page_needs_ocr(text):
                     text, lines, repairs = _ocr_page(
                         file_path, page_num + 1, doc, stats)
                 doc.page_lines.append(lines)

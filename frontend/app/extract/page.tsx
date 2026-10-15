@@ -8,10 +8,13 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
+import SampleDocsPanel from "@/components/extract/SampleDocsPanel";
 import {
   extractApi, exportApi, templatesApi, schemasApi,
   type ColumnTemplate, type JobStatus, type DocumentResult,
 } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
+import { apiErrorText, jobErrorText } from "@/lib/demo-error";
 import Link from "next/link";
 
 type SourceTab = "upload" | "folder" | "drive";
@@ -393,6 +396,7 @@ function InsightsPanel({
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ExtractPage() {
+  const { user } = useAuthStore();
   const [selectedTemplate, setSelectedTemplate] = useState<ColumnTemplate | null>(null);
   const [templateSearch, setTemplateSearch] = useState("");
   const [activeTab, setActiveTab] = useState<SourceTab>("upload");
@@ -459,6 +463,9 @@ export default function ExtractPage() {
   });
 
   const clientId = schemas[0]?.client_id ?? "demo_001";
+  // A demo account, as the SERVER computed it. Presentation only: /api/demo/*
+  // is 404 for everyone else regardless of what this flag says.
+  const isDemo = user?.is_demo === true;
 
   function toggleOption(id: OptionId) {
     setSelectedOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
@@ -473,7 +480,27 @@ export default function ExtractPage() {
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
-      toast.error(e?.response?.data?.detail ?? "Upload failed");
+      toast.error(apiErrorText(e, { isDemo, fallback: "Upload failed" }));
+      setIsExtracting(false);
+    }
+  }
+
+  /**
+   * Extract one of the demo's shipped sample documents. Deliberately shaped
+   * like `startExtract` above — same reset, same job id, same polling — because
+   * the server runs the same pipeline; only the source of the bytes differs.
+   */
+  async function startExtractSample(filename: string) {
+    setIsExtracting(true);
+    setResults([]);
+    prevStatus.current = "";
+    try {
+      const res = await extractApi.extractSampleDoc(
+        filename, selectedTemplate?.id, selectedOptions);
+      setActiveJobId(res.job_id);
+      toast.success(`Extraction started — ${filename}`);
+    } catch (e: any) {
+      toast.error(apiErrorText(e, { isDemo, fallback: "Could not start extraction" }));
       setIsExtracting(false);
     }
   }
@@ -712,7 +739,12 @@ export default function ExtractPage() {
             <div className="card" style={{ padding: 14 }}>
               <span className="label" style={{ display: "block", marginBottom: 10 }}>Documents</span>
               <div className="src-tabs">
-                {(["upload","folder","drive"] as SourceTab[]).map(tab => (
+                {/* Drive is closed for a demo account in the BACKEND (every
+                    /api/drive route answers 403); the tab is hidden so nobody
+                    clicks into a dead end. */}
+                {(isDemo
+                  ? (["upload","folder"] as SourceTab[])
+                  : (["upload","folder","drive"] as SourceTab[])).map(tab => (
                   <div key={tab} className={`src-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
                     {tab === "upload" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>}
                     {tab === "folder" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
@@ -734,6 +766,11 @@ export default function ExtractPage() {
                     </p>
                     <p style={{ fontSize: 11, color: "var(--text4)" }}>PDF · PNG · JPG · TIFF · WEBP · HEIC · BMP · GIF — 50MB max</p>
                   </div>
+                  {isDemo && (
+                    <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 8 }}>
+                      Best results with digital PDFs. Try the sample documents first.
+                    </p>
+                  )}
                   {files.map(f => (
                     <div key={f.name} className="file-item">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -762,6 +799,14 @@ export default function ExtractPage() {
               )}
             </div>
           )}
+
+          {/* Demo only, and empty for anyone else: renders null unless the
+              server says this account is a demo tenant AND ships samples. */}
+          <SampleDocsPanel
+            enabled={isDemo}
+            busy={isExtracting || isRunning}
+            onUse={startExtractSample}
+          />
 
           {/* Extract button */}
           {!isRunning && !hasResults && activeTab !== "drive" && (
@@ -811,7 +856,7 @@ export default function ExtractPage() {
               )}
               {(isFailed || isPartial) && jobStatus?.error_message && (
                 <p style={{ fontSize: 11, color: isPartial ? "var(--amber)" : "var(--red)", marginTop: 8 }}>
-                  {jobStatus.error_message}
+                  {jobErrorText(jobStatus.error_message, isDemo)}
                 </p>
               )}
               {/* N1: download available for ANY completed job — with or without a template
@@ -912,7 +957,7 @@ export default function ExtractPage() {
                     {jobStatus?.error_message ? (
                       <div style={{ padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--text2)", lineHeight: 1.55, textAlign: "left" }}>
                         <p style={{ fontWeight: 600, color: "var(--text1)", marginBottom: 4, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>What went wrong</p>
-                        {jobStatus.error_message}
+                        {jobErrorText(jobStatus.error_message, isDemo)}
                       </div>
                     ) : (
                     <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 11, color: "var(--text3)" }}>

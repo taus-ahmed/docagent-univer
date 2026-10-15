@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.auth import get_current_user, require_admin, hash_password
+from app.core.demo import is_demo_user
 from app.core.confidence import CONFIDENT_LEVELS
 from app.models import get_db, User, ExtractionJob, DocumentResult
 from app.schemas.schemas import (
@@ -169,5 +170,6 @@ def _user_to_response(u: User) -> UserResponse:
         email=u.email,
         role=u.role,
         client_id=u.client_id,
+        is_demo=is_demo_user(u),
         is_active=u.is_active,
     )

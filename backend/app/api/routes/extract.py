@@ -72,6 +72,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth import get_current_user
+from app.core.demo import (check_upload_file, check_upload_quota,
+                           check_uploads_enabled, is_demo_user)
 from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
@@ -221,8 +223,9 @@ def load_template_for_user(db: Session, template_id: Optional[int], current_user
         return tpl                                   # super-admin sees all
     if tpl.user_id == current_user.id:
         return tpl                                   # owner
-    if tpl.is_default:
-        return tpl
+    if tpl.is_default and not is_demo_user(current_user):
+        return tpl                                   # not offered to a demo
+
     if tpl.is_shared and tpl.client_id == current_user.client_id:
         return tpl                                   # shared inside own client
     raise HTTPException(status_code=403, detail="Not your template")
@@ -232,30 +235,94 @@ def load_template_for_user(db: Session, template_id: Optional[int], current_user
 # UPLOAD ENDPOINT
 # ==============================================================================
 
-@router.post("/extract/upload", response_model=ExtractUploadResponse, status_code=202)
-async def upload_and_extract(
-    files: list[UploadFile] = File(...),
-    client_id: str = Form(...),
-    template_id: Optional[int] = Form(None),
-    options: Optional[str] = Form(None),  # JSON array: ["categorize","summary","anomaly","graphs"]
-    selected_pages: Optional[str] = Form(None),  # JSON array of 1-based page numbers e.g. "[1,2,5]"
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    storage=Depends(get_storage),
-):
-    if len(files) > settings.MAX_FILES_PER_BATCH:
+class _IncomingUpload:
+    """A file on its way into an extraction job: a name, and its bytes.
+
+    ONE SOURCE OF FILES, TWO DOORS. The upload endpoint has a multipart
+    `UploadFile`; the sample-document endpoint has a path on disk. Everything
+    after the bytes - validation, the demo gate, the tenant, the template, the
+    job row, storage, the worker thread - must be identical for both, or "the
+    sample document goes through the same code path as an upload" is a claim
+    rather than a fact. This is the only thing the two doors differ in.
+
+    `read()` MAY BE CALLED MORE THAN ONCE AND GIVES THE SAME BYTES EVERY TIME.
+    That is what lets the pipeline validate every file before it writes any of
+    them while holding only ONE file's bytes at a time: the validation pass
+    reads a file and lets it go, and the save pass reads it again. A list of
+    every file's bytes would be simpler and would multiply peak memory by the
+    batch size — 100 files is an allowed batch here, and 50MB an allowed file.
+    """
+
+    __slots__ = ("filename", "_upload", "_path", "_bytes")
+
+    def __init__(self, filename, upload=None, path=None, content=None):
+        self.filename = filename
+        self._upload = upload
+        self._path = path
+        self._bytes = content
+
+    @classmethod
+    def from_upload(cls, upload: UploadFile):
+        return cls(upload.filename, upload=upload)
+
+    @classmethod
+    def from_path(cls, path, filename=None):
+        path = Path(path)
+        return cls(filename or path.name, path=path)
+
+    async def read(self) -> bytes:
+        if self._bytes is not None:
+            return self._bytes
+        if self._upload is not None:
+            content = await self._upload.read()
+            await self._upload.seek(0)
+            return content
+        return self._path.read_bytes()
+
+
+async def _start_extraction_job(
+    sources: list["_IncomingUpload"],
+    *,
+    requested_client_id: Optional[str],
+    template_id: Optional[int],
+    options: Optional[str],
+    selected_pages: Optional[str],
+    db: Session,
+    current_user: User,
+    storage,
+) -> ExtractUploadResponse:
+    """Validate, persist and start one extraction job. The whole upload path.
+
+    It was the body of `POST /api/extract/upload`. It is a function so that the
+    demo's "use this sample document" button cannot become a second, thinner
+    pipeline that forgets a check - it runs the ordinary one, as the ordinary
+    user, with the same limits and the same tenant resolution.
+    """
+    if len(sources) > settings.MAX_FILES_PER_BATCH:
         raise HTTPException(status_code=400, detail=f"Max {settings.MAX_FILES_PER_BATCH} files.")
 
-    for f in files:
-        content = await f.read()
-        await f.seek(0)
-        error = storage.validate_upload(f.filename, len(content))
+    # The demo's own ceiling on how many jobs this account may start, asked
+    # before anything is read. A no-op for every non-demo tenant.
+    check_upload_quota(db, current_user)
+
+    # ONE FILE'S BYTES AT A TIME. `content` is rebound each iteration and the
+    # previous file's bytes become collectable, exactly as before this path was
+    # shared, so peak memory is one file and not the batch. Both checks are per
+    # file and neither needs to see the others: `validate_upload` is the
+    # product's (extension, size) and `check_upload_file` is the demo's (PDF
+    # only, DEMO_MAX_MB, and a document that is nothing but a scan refused with
+    # an explanation instead of being OCR'd). Both run BEFORE the job row
+    # exists, so a refused upload leaves nothing behind and costs no model call.
+    for src in sources:
+        content = await src.read()
+        error = storage.validate_upload(src.filename, len(content))
         if error:
-            raise HTTPException(status_code=400, detail=f"{f.filename}: {error}")
+            raise HTTPException(status_code=400, detail=f"{src.filename}: {error}")
+        check_upload_file(current_user, src.filename, content)
 
     # The tenant and the template both come from the token's authority, never
     # from the multipart body.
-    client_id = resolve_client_id(current_user, client_id)
+    client_id = resolve_client_id(current_user, requested_client_id)
 
     schema_path = storage.get_schema_path(client_id) or storage.get_schema_path("demo_001")
     if schema_path is None:
@@ -286,7 +353,7 @@ async def upload_and_extract(
         user_id=current_user.id,
         client_id=client_id,
         status="pending",
-        total_docs=len(files),
+        total_docs=len(sources),
         input_source="upload",
         started_at=datetime.utcnow(),
         schema_id=str(template_id) if template_id else None,
@@ -300,9 +367,9 @@ async def upload_and_extract(
     # meaningless to a separate worker process or an object store, and passing
     # one is what tied extraction to this container's own disk.
     saved_keys = []
-    for f in files:
-        content = await f.read()
-        key, _ = storage.save_upload(content, f.filename, job_id,
+    for src in sources:
+        content = await src.read()
+        key, _ = storage.save_upload(content, src.filename, job_id,
                                      client_id=client_id)
         saved_keys.append(key)
 
@@ -317,9 +384,36 @@ async def upload_and_extract(
 
     return ExtractUploadResponse(
         job_id=job_id,
-        message=f"Extraction started for {len(files)} file(s)",
-        total_files=len(files),
+        message=f"Extraction started for {len(sources)} file(s)",
+        total_files=len(sources),
         status="processing",
+    )
+
+
+@router.post("/extract/upload", response_model=ExtractUploadResponse, status_code=202)
+async def upload_and_extract(
+    files: list[UploadFile] = File(...),
+    client_id: str = Form(...),
+    template_id: Optional[int] = Form(None),
+    options: Optional[str] = Form(None),  # JSON array: ["categorize","summary","anomaly","graphs"]
+    selected_pages: Optional[str] = Form(None),  # JSON array of 1-based page numbers e.g. "[1,2,5]"
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    storage=Depends(get_storage),
+):
+    # The demo's kill switch, checked HERE and not in `_start_extraction_job`:
+    # it closes this door and leaves the sample documents open. A no-op for
+    # every non-demo tenant, and for a demo tenant while the switch is true.
+    check_uploads_enabled(current_user)
+    return await _start_extraction_job(
+        [_IncomingUpload.from_upload(f) for f in files],
+        requested_client_id=client_id,
+        template_id=template_id,
+        options=options,
+        selected_pages=selected_pages,
+        db=db,
+        current_user=current_user,
+        storage=storage,
     )
 
 
