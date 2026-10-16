@@ -207,6 +207,20 @@ def demo_auth(demo_user):
     return {"Authorization": f"Bearer {tok}"}
 
 
+@pytest.fixture(autouse=True)
+def _generous_demo_quota(monkeypatch):
+    """Take DEMO_MAX_UPLOADS out of play unless a test is about it.
+
+    The scratch database is session-scoped, so demo job rows accumulate across
+    the whole run and the 20-job default would eventually refuse an upload in a
+    test that has nothing to do with quotas — a failure that depends on test
+    ORDER. The quota's own tests set the ceiling explicitly (and compute it
+    from the rows that exist), so they are unaffected by this.
+    """
+    from app.config import settings
+    monkeypatch.setattr(settings, "DEMO_MAX_UPLOADS", 10_000)
+
+
 @pytest.fixture
 def demo_on(monkeypatch):
     """Turn the demo on for `pearx_demo`, for one test.

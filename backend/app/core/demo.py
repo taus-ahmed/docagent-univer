@@ -117,16 +117,25 @@ def demo_max_uploads() -> int:
     return int(getattr(settings, "DEMO_MAX_UPLOADS", 20))
 
 
-def _demo_error(status_code: int, detail: str) -> HTTPException:
+def _demo_error(status_code: int, detail: str,
+                reason: str = "unknown") -> HTTPException:
     """A refusal written FOR a demo user, tagged as such. See
-    DEMO_NOTICE_HEADER."""
-    return HTTPException(status_code=status_code, detail=detail,
-                         headers={DEMO_NOTICE_HEADER: "1"})
+    DEMO_NOTICE_HEADER.
+
+    `reason` is a short machine-readable code carried on the exception OBJECT
+    (not in the response), so the activity trail can record WHY an upload was
+    refused without pattern-matching the sentence shown to the user — a
+    sentence written for an investor, which will be reworded.
+    """
+    exc = HTTPException(status_code=status_code, detail=detail,
+                        headers={DEMO_NOTICE_HEADER: "1"})
+    exc.demo_reason = reason
+    return exc
 
 
 def _scanned() -> HTTPException:
     return _demo_error(status.HTTP_422_UNPROCESSABLE_ENTITY,
-                       SCANNED_DOC_MESSAGE)
+                       SCANNED_DOC_MESSAGE, reason="scanned")
 
 
 def check_drive_available(user) -> None:
@@ -137,7 +146,8 @@ def check_drive_available(user) -> None:
     """
     if not is_demo_user(user):
         return
-    raise _demo_error(status.HTTP_403_FORBIDDEN, DRIVE_UNAVAILABLE_MESSAGE)
+    raise _demo_error(status.HTTP_403_FORBIDDEN, DRIVE_UNAVAILABLE_MESSAGE,
+                      reason="drive_unavailable")
 
 
 def uploads_enabled() -> bool:
@@ -155,7 +165,8 @@ def check_uploads_enabled(user) -> None:
     if not is_demo_user(user):
         return
     if not uploads_enabled():
-        raise _demo_error(status.HTTP_403_FORBIDDEN, UPLOADS_DISABLED_MESSAGE)
+        raise _demo_error(status.HTTP_403_FORBIDDEN, UPLOADS_DISABLED_MESSAGE,
+                          reason="uploads_disabled")
 
 
 #: The post-extraction extras the Extract page offers. `graphs` is drawn in the
@@ -285,7 +296,7 @@ def check_upload_quota(db, user) -> None:
         raise _demo_error(
             status.HTTP_429_TOO_MANY_REQUESTS,
             f"This demo account has used all {ceiling} of its extractions. "
-            f"Get in touch and we will raise the limit.")
+            f"Get in touch and we will raise the limit.", reason="quota")
 
 
 def check_upload_file(user, filename: str, content: bytes) -> None:
@@ -322,14 +333,16 @@ def _check_demo_file(filename: str, content: bytes) -> None:
 
     if suffix != _PDF_SUFFIX:
         raise _demo_error(status.HTTP_400_BAD_REQUEST,
-                          "This demo accepts PDF files only.")
+                          "This demo accepts PDF files only.",
+                          reason="not_pdf")
 
     ceiling = demo_max_bytes()
     if len(content) > ceiling:
         raise _demo_error(
             status.HTTP_400_BAD_REQUEST,
             f"{filename} is {len(content) / 1024 / 1024:.1f}MB. This demo "
-            f"accepts files up to {settings.DEMO_MAX_MB}MB.")
+            f"accepts files up to {settings.DEMO_MAX_MB}MB.",
+            reason="too_large")
 
     if pdf_is_entirely_scanned(content):
         raise _scanned()

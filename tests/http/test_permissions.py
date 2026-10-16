@@ -130,7 +130,9 @@ class TestJobOwnership:
         assert r.status_code == 200, r.text
 
     def test_a_super_admin_sees_every_job(self, client, auth, jobs):
-        ids = {j["id"] for j in client.get("/api/jobs",
+        # limit=200 because /api/jobs pages at 50 by default and orders newest
+        # first: this asserts WHO can see a job, not which page it is on.
+        ids = {j["id"] for j in client.get("/api/jobs?limit=200",
                                            headers=auth["super"]).json()}
         assert {jobs["acme"].id, jobs["other"].id} <= ids
 

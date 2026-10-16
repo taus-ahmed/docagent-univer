@@ -255,6 +255,48 @@ class ClientSchema(Base):
     is_active = Column(Boolean, default=True)
 
 
+class DemoActivity(Base):
+    """What a demo account did. APPEND-ONLY, and nothing else reads it.
+
+    A demo tenant is handed to an investor and comes back with a story; this is
+    the record of what actually happened, written as it happens. Four decisions
+    are load-bearing:
+
+    NO FOREIGN KEYS, not even on `user_id` or `job_id`. An audit row must
+    outlive what it describes: a FK to `extraction_jobs` would let a cascade
+    delete the evidence, and a FK to `users` would make the row a reason a user
+    cannot be removed. The ids are recorded as plain integers and resolved by
+    the reporting script, which treats a missing job as a fact about the job,
+    not a broken row.
+
+    NOTHING UPDATES IT. There is no `updated_at`, no status column and no code
+    path that writes a row twice — an event either happened or it did not. That
+    is also why a failed extraction is not "the upload row changed": it is the
+    job's own status, which the report joins in.
+
+    `detail` IS A JSON STRING IN A TEXT COLUMN, the same convention as
+    `DocumentResult.extraction_json`, for PostgreSQL/SQLite parity (see
+    DATABASE SCHEMA NOTES in CLAUDE.md). It carries filenames, byte sizes and a
+    template name — NEVER document contents, never an extracted value, never a
+    password or a token.
+
+    `ts` IS NAIVE UTC, like every other timestamp in this file
+    (`default=datetime.utcnow`). The reporting script converts to Phoenix for
+    display; the stored value stays UTC so two readers cannot disagree.
+    """
+    __tablename__ = "demo_activity"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ts = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    #: The user the event is about. Plain integer, no FK (see above). Null only
+    #: where the actor genuinely is not known — a failed login, for instance.
+    user_id = Column(Integer, nullable=True, index=True)
+    client_id = Column(String(100), nullable=False, index=True)
+    event = Column(String(50), nullable=False, index=True)
+    job_id = Column(Integer, nullable=True, index=True)
+    detail = Column(Text, nullable=True)      # JSON object, as a string
+
+
 # Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Database Engine Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 def create_db_engine(database_url: str = None):
