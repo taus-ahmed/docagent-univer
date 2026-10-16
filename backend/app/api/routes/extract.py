@@ -73,7 +73,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.auth import get_current_user
 from app.core.demo import (check_upload_file, check_upload_quota,
-                           check_uploads_enabled, is_demo_user)
+                           check_uploads_enabled, filter_demo_history,
+                           filter_options, is_demo_user, job_hidden_by_cutoff)
 from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
@@ -338,6 +339,11 @@ async def _start_extraction_job(
             selected_options = json.loads(options)
         except Exception:
             selected_options = [o.strip() for o in options.split(",") if o.strip()]
+
+    # Categorisation, charts, summary and anomalies are not part of the demo.
+    # Forced off here rather than at the two doors, so the sample-document
+    # route cannot be the one that forgets. A no-op for everyone else.
+    selected_options = filter_options(current_user, selected_options)
 
     # Parse selected_pages (1-based list of page numbers to process)
     selected_pages_list: Optional[list] = None
@@ -6746,6 +6752,9 @@ def list_jobs(limit: int=50, offset: int=0, status_filter: Optional[str]=None,
     # Regular user sees only their own jobs
     else:
         q = q.filter(ExtractionJob.user_id == current_user.id)
+    # ...and a demo user sees only what happened after the history cutoff. This
+    # is the History page's list and the only list of jobs the app has.
+    q = filter_demo_history(current_user, q)
     if status_filter:
         q = q.filter(ExtractionJob.status == status_filter)
     return q.offset(offset).limit(limit).all()
@@ -7021,6 +7030,12 @@ def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depe
 def _get_job_or_404(job_id, current_user, db):
     job = db.query(ExtractionJob).filter(ExtractionJob.id == job_id).first()
     if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    # A job the history cutoff hides does not exist for a demo account —
+    # the same answer as a job that really does not exist. Hiding it from the
+    # list but serving it by id would leave it reachable from a bookmark or a
+    # stale poll, and its results and its export with it.
+    if job_hidden_by_cutoff(current_user, job):
         raise HTTPException(status_code=404, detail="Job not found")
     # Super admin (no client_id) sees everything
     if current_user.role == "admin" and not current_user.client_id:

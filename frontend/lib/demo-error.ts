@@ -17,6 +17,16 @@
 export const DEMO_GENERIC_ERROR =
   "Something went wrong with this document. Please try another one, or use a sample document.";
 
+/**
+ * Clicking one of the "Additional Options" cards in the demo. The cards stay
+ * visible and unchanged — an investor should see what the product does — but
+ * they do not turn on, because categorisation, charts, the AI summary and
+ * anomaly detection are still being built. The backend forces them off too
+ * (`app/core/demo.py::filter_options`); this is only what the click says.
+ */
+export const DEMO_OPTION_UNAVAILABLE =
+  "Sorry, we're developing this feature right now. It isn't available in the demo.";
+
 const DEMO_NOTICE_HEADER = "x-demo-notice";
 
 /** The text to show for a failed API call. */
