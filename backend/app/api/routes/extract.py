@@ -4511,6 +4511,15 @@ def export_job_excel(
         raise HTTPException(status_code=500, detail="openpyxl not installed.")
 
     job = _get_job_or_404(job_id, current_user, db)
+
+    # A DEMO EXPORT CARRIES NO PROVENANCE. The Source column and the cell
+    # comments both name the stored file, which on the object store is a temp
+    # name (task: `storage.get_local_path`), so for a demo tenant this is
+    # forced off whatever the query says. Non-demo callers keep the default and
+    # the `provenance=false` switch exactly as before.
+    if is_demo_user(current_user):
+        provenance = False
+
     doc_results = (
         db.query(DocumentResult)
         .filter(DocumentResult.job_id == job_id)
@@ -4556,7 +4565,8 @@ def export_job_excel(
         pass          # Phase 3 — written from the template the engine inferred
     else:
         # Nothing to build a sheet from (e.g. an image with no text layer).
-        _write_flat_table(ws, doc_results, openpyxl)
+        _write_flat_table(ws, doc_results, openpyxl,
+                          show_filename=not is_demo_user(current_user))
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -4584,6 +4594,11 @@ def export_job_zip(
     import zipfile
 
     job = _get_job_or_404(job_id, current_user, db)
+
+    # As above: no provenance, and no temp name on the files inside the ZIP.
+    demo = is_demo_user(current_user)
+    if demo:
+        provenance = False
     doc_results = (
         db.query(DocumentResult)
         .filter(DocumentResult.job_id == job_id)
@@ -4628,11 +4643,17 @@ def export_job_zip(
                 _write_excel(ws, [doc], sheet_data, template_regions, openpyxl,
                              provenance=provenance)
             else:
-                _write_flat_table(ws, [doc], openpyxl)
+                _write_flat_table(ws, [doc], openpyxl,
+                                  show_filename=not demo)
 
             # Use the original filename without extension as the Excel filename
-            base = doc.filename.rsplit(".", 1)[0] if "." in doc.filename else doc.filename
-            excel_name = f"{base}_extracted.xlsx"
+            # — except for a demo, where the stored name is a temp name and
+            # would become the name of the file the investor downloads.
+            if demo:
+                excel_name = f"document_{len(zf.namelist()) + 1}_extracted.xlsx"
+            else:
+                base = doc.filename.rsplit(".", 1)[0] if "." in doc.filename else doc.filename
+                excel_name = f"{base}_extracted.xlsx"
 
             excel_buf = io.BytesIO()
             wb.save(excel_buf)
@@ -6597,8 +6618,14 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
           f"{current_output_row} total rows written", flush=True)
 
 
-def _write_flat_table(ws, doc_results, openpyxl_mod):
-    """Fallback flat table when no template."""
+def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True):
+    """Fallback flat table when no template.
+
+    `show_filename=False` drops the Filename column. It is what a demo export
+    passes: the stored filename of a document uploaded to the object store is a
+    TEMP NAME (`tmphjtbr12o.pdf` — see `storage.get_local_path`), and a column
+    of those is worse than no column at all in front of an audience.
+    """
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
     all_keys, seen = [], set()
@@ -6608,17 +6635,22 @@ def _write_flat_table(ws, doc_results, openpyxl_mod):
                 seen.add(k); all_keys.append(k)
     hf = PatternFill(fill_type="solid", fgColor="FF4F46E5")
     hfont = Font(bold=True, color="FFFFFFFF", size=11)
-    c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
-    for ci, key in enumerate(all_keys, 2):
+    first = 1
+    if show_filename:
+        c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
+        first = 2
+    for ci, key in enumerate(all_keys, first):
         c = ws.cell(row=1, column=ci, value=key); c.font=hfont; c.fill=hf
     for ri, dr in enumerate(doc_results, 2):
-        ws.cell(row=ri, column=1, value=dr.filename)
+        if show_filename:
+            ws.cell(row=ri, column=1, value=dr.filename)
         inner = dr.get_extracted_data().get("extracted_data") or {}
-        for ci, key in enumerate(all_keys, 2):
+        for ci, key in enumerate(all_keys, first):
             v = inner.get(key)
             ws.cell(row=ri, column=ci, value=(v.get("value","") if isinstance(v,dict) else (v or "")))
-    ws.column_dimensions["A"].width = 30
-    for ci in range(2, len(all_keys)+2):
+    if show_filename:
+        ws.column_dimensions["A"].width = 30
+    for ci in range(first, len(all_keys)+first):
         ws.column_dimensions[get_column_letter(ci)].width = 20
 
 
