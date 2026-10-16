@@ -14,7 +14,7 @@ import {
   type ColumnTemplate, type JobStatus, type DocumentResult,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-import { apiErrorText, jobErrorText } from "@/lib/demo-error";
+import { DEMO_OPTION_UNAVAILABLE, apiErrorText, jobErrorText } from "@/lib/demo-error";
 import Link from "next/link";
 
 type SourceTab = "upload" | "folder" | "drive";
@@ -468,6 +468,14 @@ export default function ExtractPage() {
   const isDemo = user?.is_demo === true;
 
   function toggleOption(id: OptionId) {
+    // The demo shows all four options and turns none of them on. One guard
+    // here covers both the card and its checkbox, because the checkbox is a
+    // div inside the card and the card carries the only onClick. A toast id
+    // means repeated clicking updates one toast instead of stacking four.
+    if (isDemo) {
+      toast(DEMO_OPTION_UNAVAILABLE, { id: "demo-option-unavailable" });
+      return;
+    }
     setSelectedOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
   }
 

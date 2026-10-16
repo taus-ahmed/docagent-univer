@@ -26,6 +26,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -116,16 +117,25 @@ def demo_max_uploads() -> int:
     return int(getattr(settings, "DEMO_MAX_UPLOADS", 20))
 
 
-def _demo_error(status_code: int, detail: str) -> HTTPException:
+def _demo_error(status_code: int, detail: str,
+                reason: str = "unknown") -> HTTPException:
     """A refusal written FOR a demo user, tagged as such. See
-    DEMO_NOTICE_HEADER."""
-    return HTTPException(status_code=status_code, detail=detail,
-                         headers={DEMO_NOTICE_HEADER: "1"})
+    DEMO_NOTICE_HEADER.
+
+    `reason` is a short machine-readable code carried on the exception OBJECT
+    (not in the response), so the activity trail can record WHY an upload was
+    refused without pattern-matching the sentence shown to the user — a
+    sentence written for an investor, which will be reworded.
+    """
+    exc = HTTPException(status_code=status_code, detail=detail,
+                        headers={DEMO_NOTICE_HEADER: "1"})
+    exc.demo_reason = reason
+    return exc
 
 
 def _scanned() -> HTTPException:
     return _demo_error(status.HTTP_422_UNPROCESSABLE_ENTITY,
-                       SCANNED_DOC_MESSAGE)
+                       SCANNED_DOC_MESSAGE, reason="scanned")
 
 
 def check_drive_available(user) -> None:
@@ -136,7 +146,8 @@ def check_drive_available(user) -> None:
     """
     if not is_demo_user(user):
         return
-    raise _demo_error(status.HTTP_403_FORBIDDEN, DRIVE_UNAVAILABLE_MESSAGE)
+    raise _demo_error(status.HTTP_403_FORBIDDEN, DRIVE_UNAVAILABLE_MESSAGE,
+                      reason="drive_unavailable")
 
 
 def uploads_enabled() -> bool:
@@ -154,7 +165,113 @@ def check_uploads_enabled(user) -> None:
     if not is_demo_user(user):
         return
     if not uploads_enabled():
-        raise _demo_error(status.HTTP_403_FORBIDDEN, UPLOADS_DISABLED_MESSAGE)
+        raise _demo_error(status.HTTP_403_FORBIDDEN, UPLOADS_DISABLED_MESSAGE,
+                          reason="uploads_disabled")
+
+
+#: The post-extraction extras the Extract page offers. `graphs` is drawn in the
+#: browser from data already returned and never reaches the server, so the
+#: three the WORKER reads are the other three (`extract.py`, the `"categorize"`
+#: / `"summary"` / `"anomaly"` tests inside `_run_extraction_sync`). All four
+#: are listed because this is the demo's answer to the whole section, and a
+#: list that silently omitted one would be a list that let one through.
+DEMO_BLOCKED_OPTIONS = ("categorize", "graphs", "summary", "anomaly")
+
+
+def filter_options(user, options):
+    """The post-extraction options this request may actually run.
+
+    For a demo account: NONE, and the request is not rejected. These features
+    are half-built; refusing the upload over one would turn a cosmetic limit
+    into a failed demo, and silently running them would show an investor a
+    half-built feature. The frontend does not let a demo user select one, so
+    anything arriving here came from a stale page or a direct API call — worth
+    a line in the log, not an error.
+    """
+    if not is_demo_user(user):
+        return options
+    asked = [o for o in (options or []) if o]
+    if asked:
+        print(f"[DEMO] user {getattr(user, 'id', '?')} "
+              f"({getattr(user, 'client_id', '?')}) requested post-extraction "
+              f"option(s) {sorted(asked)} — forced OFF for the demo", flush=True)
+    return []
+
+
+# ── 2. the history cutoff ─────────────────────────────────────────────────────
+
+#: Warn once per process about an unparseable cutoff. A bad value is a config
+#: mistake, and one line on boot is a report; the same line on every request is
+#: noise nobody reads.
+_warned_bad_cutoff = False
+
+
+def history_cutoff():
+    """The moment a demo account's visible history starts, or None.
+
+    UTC, and NAIVE, because that is what the rows it is compared against are:
+    `ExtractionJob.created_at` is `Column(DateTime, default=datetime.utcnow)`,
+    i.e. a naive UTC timestamp. A tz-aware value here is converted to UTC and
+    stripped, so `2026-10-01T00:00:00Z`, `+00:00` and a bare
+    `2026-10-01T00:00:00` all mean the same instant, and SQLAlchemy never has
+    to compare an aware value with a naive one (which raises on some backends
+    and silently misbehaves on others).
+
+    An unparseable value HIDES NOTHING. The alternative — treating it as "the
+    beginning of time" or as "now" — is either a no-op dressed up as a setting
+    or a demo whose history is mysteriously empty, and both are worse than a
+    warning plus the documented default.
+    """
+    global _warned_bad_cutoff
+    raw = (getattr(settings, "DEMO_HISTORY_CUTOFF", "") or "").strip()
+    if not raw:
+        return None
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        if not _warned_bad_cutoff:
+            _warned_bad_cutoff = True
+            print(f"[DEMO] DEMO_HISTORY_CUTOFF={raw!r} is not an ISO-8601 "
+                  f"datetime — IGNORED, so no history is hidden", flush=True)
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def filter_demo_history(user, query):
+    """Narrow a query over `extraction_jobs` to what this user may see.
+
+    A no-op for a non-demo tenant and for an unset cutoff, so it is safe on
+    every query that lists or counts jobs — which is the point: the quota, the
+    History page and anything else must agree about which jobs exist, or the
+    allowance will be spent by jobs the user cannot see.
+    """
+    if not is_demo_user(user):
+        return query
+    cutoff = history_cutoff()
+    if cutoff is None:
+        return query
+    from app.models.models import ExtractionJob
+    return query.filter(ExtractionJob.created_at >= cutoff)
+
+
+def job_hidden_by_cutoff(user, job) -> bool:
+    """Is this one job before a demo account's cutoff?
+
+    The single-job counterpart of `filter_demo_history`, and it answers the
+    same way the SQL does — including for a row with NO timestamp, which the
+    `created_at >= cutoff` filter would also drop. `created_at` is
+    `nullable=False`, so that case is theoretical; agreeing with the list is
+    what stops a job appearing nowhere but opening fine.
+    """
+    if not is_demo_user(user):
+        return False
+    cutoff = history_cutoff()
+    if cutoff is None:
+        return False
+    created = getattr(job, "created_at", None)
+    return created is None or created < cutoff
 
 
 def check_upload_quota(db, user) -> None:
@@ -168,14 +285,18 @@ def check_upload_quota(db, user) -> None:
         return
     from app.models.models import ExtractionJob
 
-    used = db.query(ExtractionJob).filter(
-        ExtractionJob.user_id == user.id).count()
+    # Only the jobs this account can SEE. A demo whose allowance was spent by
+    # our own test runs — invisible behind the history cutoff — would refuse a
+    # first upload with "you have used all 20 of your extractions", which is
+    # the worst possible sentence to read in front of an investor.
+    used = filter_demo_history(user, db.query(ExtractionJob).filter(
+        ExtractionJob.user_id == user.id)).count()
     ceiling = demo_max_uploads()
     if used >= ceiling:
         raise _demo_error(
             status.HTTP_429_TOO_MANY_REQUESTS,
             f"This demo account has used all {ceiling} of its extractions. "
-            f"Get in touch and we will raise the limit.")
+            f"Get in touch and we will raise the limit.", reason="quota")
 
 
 def check_upload_file(user, filename: str, content: bytes) -> None:
@@ -212,14 +333,16 @@ def _check_demo_file(filename: str, content: bytes) -> None:
 
     if suffix != _PDF_SUFFIX:
         raise _demo_error(status.HTTP_400_BAD_REQUEST,
-                          "This demo accepts PDF files only.")
+                          "This demo accepts PDF files only.",
+                          reason="not_pdf")
 
     ceiling = demo_max_bytes()
     if len(content) > ceiling:
         raise _demo_error(
             status.HTTP_400_BAD_REQUEST,
             f"{filename} is {len(content) / 1024 / 1024:.1f}MB. This demo "
-            f"accepts files up to {settings.DEMO_MAX_MB}MB.")
+            f"accepts files up to {settings.DEMO_MAX_MB}MB.",
+            reason="too_large")
 
     if pdf_is_entirely_scanned(content):
         raise _scanned()

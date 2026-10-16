@@ -143,6 +143,12 @@ class Settings(BaseSettings):
     #: the sample-document endpoints, and it does not apply to anyone whose
     #: client_id is not a demo tenant.
     DEMO_UPLOADS_ENABLED: bool = True
+    #: Hide everything a demo account did BEFORE this moment: an ISO-8601
+    #: datetime, read as UTC. Unset (the default) hides nothing, and an
+    #: unparseable value is ignored with a warning rather than hiding
+    #: everything or nothing in silence. It is a VIEW, not a delete: no row is
+    #: touched, and a non-demo tenant never sees this filter at all.
+    DEMO_HISTORY_CUTOFF: str = ""
 
     @property
     def max_upload_bytes(self) -> int:

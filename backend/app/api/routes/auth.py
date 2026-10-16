@@ -19,6 +19,7 @@ from app.core.auth import (
     get_current_user, hash_password,
 )
 from app.core.demo import is_demo_user
+from app.core import demo_audit
 from app.models import get_db, User
 from app.schemas.schemas import (
     LoginRequest, TokenResponse, UserResponse, UserUpdate,
@@ -95,6 +96,14 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
 
     if not user or not verify_password(payload.password, user.password_hash):
         _record_failure(ip)
+        # The activity trail, for a demo tenant only. A wrong password on a
+        # known demo account is a row; an attempt on a username that does not
+        # exist is NOT, because nothing identifies which tenant it was aimed
+        # at. The password is never recorded, here or anywhere.
+        demo_audit.record_for_client(
+            db, getattr(user, "client_id", None), demo_audit.LOGIN_FAILED,
+            user_id=getattr(user, "id", None),
+            detail={"username": payload.username, "ip": ip})
         # Same message for both cases — don't reveal whether username exists
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -107,6 +116,11 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     # Update last login timestamp
     user.last_login = datetime.utcnow()
     db.commit()
+
+    # Recorded AFTER the login's own commit, so the audit row can never be the
+    # reason a successful login fails. A no-op for every non-demo tenant.
+    demo_audit.record(db, user, demo_audit.LOGIN,
+                      detail={"username": user.username, "ip": ip})
 
     token = create_access_token(
         data={"sub": str(user.id), "role": user.role, "client_id": user.client_id},

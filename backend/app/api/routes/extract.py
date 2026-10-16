@@ -73,7 +73,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.auth import get_current_user
 from app.core.demo import (check_upload_file, check_upload_quota,
-                           check_uploads_enabled, is_demo_user)
+                           check_uploads_enabled, filter_demo_history,
+                           filter_options, is_demo_user, job_hidden_by_cutoff)
+from app.core import demo_audit
 from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
@@ -290,6 +292,7 @@ async def _start_extraction_job(
     db: Session,
     current_user: User,
     storage,
+    audit_event: str = demo_audit.UPLOAD,
 ) -> ExtractUploadResponse:
     """Validate, persist and start one extraction job. The whole upload path.
 
@@ -303,7 +306,13 @@ async def _start_extraction_job(
 
     # The demo's own ceiling on how many jobs this account may start, asked
     # before anything is read. A no-op for every non-demo tenant.
-    check_upload_quota(db, current_user)
+    try:
+        check_upload_quota(db, current_user)
+    except HTTPException as exc:
+        if getattr(exc, "demo_reason", None):
+            demo_audit.record(db, current_user, demo_audit.UPLOAD_REFUSED,
+                              detail=demo_audit.refusal_detail(exc))
+        raise
 
     # ONE FILE'S BYTES AT A TIME. `content` is rebound each iteration and the
     # previous file's bytes become collectable, exactly as before this path was
@@ -313,12 +322,25 @@ async def _start_extraction_job(
     # only, DEMO_MAX_MB, and a document that is nothing but a scan refused with
     # an explanation instead of being OCR'd). Both run BEFORE the job row
     # exists, so a refused upload leaves nothing behind and costs no model call.
-    for src in sources:
-        content = await src.read()
-        error = storage.validate_upload(src.filename, len(content))
-        if error:
-            raise HTTPException(status_code=400, detail=f"{src.filename}: {error}")
-        check_upload_file(current_user, src.filename, content)
+    sizes: list[tuple[str, int]] = []
+    refused_name: Optional[str] = None
+    try:
+        for src in sources:
+            refused_name = src.filename
+            content = await src.read()
+            error = storage.validate_upload(src.filename, len(content))
+            if error:
+                raise HTTPException(status_code=400, detail=f"{src.filename}: {error}")
+            check_upload_file(current_user, src.filename, content)
+            sizes.append((src.filename, len(content)))
+    except HTTPException as exc:
+        # Only a DEMO refusal goes in the trail, and `demo_reason` is what says
+        # it is one — the product's own "file type not supported" is not a demo
+        # rule and is not this table's business.
+        if getattr(exc, "demo_reason", None):
+            demo_audit.record(db, current_user, demo_audit.UPLOAD_REFUSED,
+                              detail=demo_audit.refusal_detail(exc, refused_name))
+        raise
 
     # The tenant and the template both come from the token's authority, never
     # from the multipart body.
@@ -338,6 +360,11 @@ async def _start_extraction_job(
             selected_options = json.loads(options)
         except Exception:
             selected_options = [o.strip() for o in options.split(",") if o.strip()]
+
+    # Categorisation, charts, summary and anomalies are not part of the demo.
+    # Forced off here rather than at the two doors, so the sample-document
+    # route cannot be the one that forgets. A no-op for everyone else.
+    selected_options = filter_options(current_user, selected_options)
 
     # Parse selected_pages (1-based list of page numbers to process)
     selected_pages_list: Optional[list] = None
@@ -382,6 +409,15 @@ async def _start_extraction_job(
     )
     thread.start()
 
+    # The trail. Filenames, byte sizes and the template's NAME — never a
+    # document's contents. Last, so it cannot affect the job it describes.
+    demo_audit.record(
+        db, current_user, audit_event, job_id=job_id,
+        detail={"files": [{"filename": n, "size_bytes": b} for n, b in sizes],
+                "template": getattr(tpl, "name", None),
+                "template_id": template_id,
+                "options_requested": selected_options or []})
+
     return ExtractUploadResponse(
         job_id=job_id,
         message=f"Extraction started for {len(sources)} file(s)",
@@ -404,7 +440,12 @@ async def upload_and_extract(
     # The demo's kill switch, checked HERE and not in `_start_extraction_job`:
     # it closes this door and leaves the sample documents open. A no-op for
     # every non-demo tenant, and for a demo tenant while the switch is true.
-    check_uploads_enabled(current_user)
+    try:
+        check_uploads_enabled(current_user)
+    except HTTPException as exc:
+        demo_audit.record(db, current_user, demo_audit.UPLOAD_REFUSED,
+                          detail=demo_audit.refusal_detail(exc))
+        raise
     return await _start_extraction_job(
         [_IncomingUpload.from_upload(f) for f in files],
         requested_client_id=client_id,
@@ -4511,6 +4552,8 @@ def export_job_excel(
         raise HTTPException(status_code=500, detail="openpyxl not installed.")
 
     job = _get_job_or_404(job_id, current_user, db)
+    demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job_id,
+                      detail={"kind": "template"})
 
     # A DEMO EXPORT CARRIES NO PROVENANCE. The Source column and the cell
     # comments both name the stored file, which on the object store is a temp
@@ -4594,6 +4637,8 @@ def export_job_zip(
     import zipfile
 
     job = _get_job_or_404(job_id, current_user, db)
+    demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job_id,
+                      detail={"kind": "zip"})
 
     # As above: no provenance, and no temp name on the files inside the ZIP.
     demo = is_demo_user(current_user)
@@ -6746,6 +6791,9 @@ def list_jobs(limit: int=50, offset: int=0, status_filter: Optional[str]=None,
     # Regular user sees only their own jobs
     else:
         q = q.filter(ExtractionJob.user_id == current_user.id)
+    # ...and a demo user sees only what happened after the history cutoff. This
+    # is the History page's list and the only list of jobs the app has.
+    q = filter_demo_history(current_user, q)
     if status_filter:
         q = q.filter(ExtractionJob.status == status_filter)
     return q.offset(offset).limit(limit).all()
@@ -7021,6 +7069,12 @@ def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depe
 def _get_job_or_404(job_id, current_user, db):
     job = db.query(ExtractionJob).filter(ExtractionJob.id == job_id).first()
     if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    # A job the history cutoff hides does not exist for a demo account —
+    # the same answer as a job that really does not exist. Hiding it from the
+    # list but serving it by id would leave it reachable from a bookmark or a
+    # stale poll, and its results and its export with it.
+    if job_hidden_by_cutoff(current_user, job):
         raise HTTPException(status_code=404, detail="Job not found")
     # Super admin (no client_id) sees everything
     if current_user.role == "admin" and not current_user.client_id:

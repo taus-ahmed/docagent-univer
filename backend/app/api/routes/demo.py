@@ -80,9 +80,11 @@ async def extract_demo_document(
     path = resolve_sample_doc(current_user.client_id, filename)
 
     from app.api.routes.extract import _IncomingUpload, _start_extraction_job
+    from app.core import demo_audit
 
     return await _start_extraction_job(
         [_IncomingUpload.from_path(path)],
+        audit_event=demo_audit.SAMPLE_EXTRACT,
         requested_client_id=None,
         template_id=template_id,
         options=options,

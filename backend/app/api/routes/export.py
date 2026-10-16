@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.core.demo import is_demo_user
+from app.core import demo_audit
 from app.core.confidence import display as confidence_display
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
 from app.schemas.schemas import ExportRequest, ExportPerFileRequest
@@ -43,6 +44,8 @@ def export_combined(
     job = _get_job_or_404(payload.job_id, current_user, db)
     if job.status in ("pending", "processing"):
         raise HTTPException(status_code=400, detail="Job is still running — wait for it to finish before exporting")
+    demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job.id,
+                      detail={"kind": "combined"})
 
     docs = db.query(DocumentResult).filter(DocumentResult.job_id == payload.job_id).order_by(DocumentResult.id).all()
     if not docs:
@@ -100,6 +103,8 @@ def export_perfile(
     job = _get_job_or_404(payload.job_id, current_user, db)
     if job.status in ("pending", "processing"):
         raise HTTPException(status_code=400, detail="Job is still running — wait for it to finish before exporting")
+    demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job.id,
+                      detail={"kind": "perfile"})
 
     q = db.query(DocumentResult).filter(DocumentResult.job_id == payload.job_id)
     if payload.doc_ids:
