@@ -16,4 +16,3 @@ backend/storage/
 # Local admin credentials — never commit (rotate if this ever shipped)
 backend/login.json
 login.json
-tests/fixtures/scan_variants/

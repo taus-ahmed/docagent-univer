@@ -49,16 +49,19 @@ them; if it does, these tests change in the same commit, never the outcomes:
                                              low_confidence_cells,
                                              low_confidence_ratio,
                                              review_gate, text_floor}}
-    field_provenance[ref]                  + origin, review_required,
-                                             review_reason ("ocr_origin" |
-                                             "pre_ocr_origin")
+    field_provenance[ref]                  + origin, review_required: bool,
+                                             review_reasons: list[str]
+                                             (APPROVED: a list, not a single
+                                             reason; only "ocr_origin" and
+                                             "pre_ocr_origin" are contracted)
 
-⚠ ITEM 3 IS A PROPOSED RULE, flagged for challenge: an OCR-origin value that
-grounds against the machine-read text is UNVERIFIED (never high/grounded); one
-that FAILS that check stays LOW. `app/core/confidence.py` defines UNVERIFIED as
-"no text layer existed to check the span against", which is not literally true
-of an OCR'd page — it has a machine-read layer. The reviewer should decide
-whether that definition is widened or a new word is introduced.
+ITEM 3 (APPROVED): an OCR-origin value that grounds against the machine-read
+text is exactly UNVERIFIED (never high/grounded); one that FAILS a check stays
+exactly LOW — an origin cap never upgrades low to unverified. Pinned on a
+DETERMINISTIC reader stub (`_StubOcrSource`) so neither Tesseract nor page
+skew can supply or remove a failure. `app/core/confidence.py` defines
+UNVERIFIED as "no text layer existed to check the span against", which is not
+literally true of an OCR'd page; its wording is Gate 2's to change.
 """
 from __future__ import annotations
 
@@ -76,14 +79,19 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
+import importlib.util  # noqa: E402
+
+from PIL import Image  # noqa: E402
+
 import core.preprocessor as preprocessor  # noqa: E402
 import extractor  # noqa: E402
+import ocr_source  # noqa: E402
 import slot_extractor  # noqa: E402
 from app.core.confidence import (  # noqa: E402
     CONFIDENT_LEVELS, HIGH, LOW, UNVERIFIED)
 from ocr_source import available  # noqa: E402
 from slot_extractor import run_slot_extraction  # noqa: E402
-from template_shape import compute_shape  # noqa: E402
+from text_layer import CoordinateSpace, PageSource  # noqa: E402
 
 HAS_TESSERACT, TESSERACT_VERSION = available()
 needs_tesseract = pytest.mark.skipif(
@@ -414,77 +422,283 @@ class TestItem2NativePagesKeepTheirConfidence:
 # (PROPOSED RULE — see the module docstring)
 # ══════════════════════════════════════════════════════════════════════════════
 
-@needs_tesseract
-class TestItem3OcrValuesAreCapped:
+# ── A DETERMINISTIC PAGE, read two ways ─────────────────────────────────────
+#
+# Items 3 and 4's exact semantics are pinned on ONE page whose words are fixed
+# here, so neither Tesseract nor skew can supply — or remove — a failure:
+#
+#   OCR origin     a real image-only PDF goes through the real
+#                  `preprocess_file`, which decides by itself that the page has
+#                  no text layer; only the READER is replaced (`_StubOcrSource`
+#                  behind `ocr_source.OcrPageSource`), returning these words,
+#                  straight, in the reader's own pixel space.
+#   native origin  the SAME words at the SAME positions, written as a native
+#                  text PDF by the generator's own writer.
+#
+# Same template, same stubbed answers. The native run is the control: whatever
+# it reports clean, the OCR run differs from it in ORIGIN ONLY.
 
-    def test_a_true_ocr_value_is_never_confident(self, mixed_run):
-        """GUARD, unmarked: true today only because the whole document is
-        floored. A per-page fix must keep it true for the OCR page.
+PAGE_PT = (612.0, 792.0)          # US Letter
+PX = 300.0 / 72.0                 # points -> pixels at the stub reader's dpi
+FONT = 10.0
+CHAR_W, SPACE_W = 5.5, 2.75       # Helvetica 10pt, near enough for a stub box
 
-        Deliberately `not in CONFIDENT_LEVELS` rather than `== UNVERIFIED`:
-        the proposed rule makes a true OCR value UNVERIFIED, but today D9
-        flags it (skewed OCR lines are split by `group_lines`), so after a
-        per-page fix alone it would read LOW. Which of the two is right is a
-        Gate 2 decision; that it is never HIGH or GROUNDED is not."""
-        ref = mixed_run.refs["Scan Payee"]
-        assert mixed_run.ed["field_provenance"][ref]["page"] == mixed_run.scan
-        assert mixed_run.ed["validation"]["confidence_map"][ref] in (UNVERIFIED, LOW)
-        assert mixed_run.ed["validation"]["confidence_map"][ref] \
-            not in CONFIDENT_LEVELS
+#: (top in points, [(x in points, text), ...]) — a chunk may hold several words.
+FIELD_PAGE = [
+    (72, [(72, "Prairie State Bank")]),
+    (110, [(72, "PAY TO THE ORDER OF: John A. Smith")]),
+    (140, [(72, "Date: 07/08/2026")]),
+    (170, [(72, "$267.25")]),
+]
+TABLE_PAGE = [
+    (72, [(72, "ACME TRADING LTD STATEMENT")]),
+    (110, [(72, "Date"), (180, "Description"), (360, "Amount")]),
+    (130, [(72, "2024-01-04"), (180, "Widget assembly"), (360, "100.00")]),
+]
+
+FIELD_TEMPLATE = {"layout": {
+    "cells": {f"{r},0": {"value": lab, "style": {}}
+              for r, lab in enumerate(["Payee", "Date", "Amount"])},
+    "colWidths": [120] * 26, "merges": {}, "repeatRows": [], "regions": []},
+    "doc_type": "cheque", "mode": "layout"}
+TABLE_TEMPLATE = {"layout": {
+    "cells": {f"0,{c}": {"value": h, "style": {}}
+              for c, h in enumerate(["Date", "Description", "Amount"])},
+    "colWidths": [120] * 26, "merges": {}, "repeatRows": [],
+    "regions": [{"type": "table", "r1": 0, "c1": 0, "r2": 6, "c2": 2,
+                 "orientation": "rows", "name": "items"}]},
+    "doc_type": "other", "mode": "layout"}
+
+#: Every answer quotes a line the page prints and is inside it.
+GROUNDED = {"Payee": (1, "PAY TO THE ORDER OF: John A. Smith", "John A. Smith"),
+            "Date": (1, "Date: 07/08/2026", "07/08/2026"),
+            "Amount": (1, "$267.25", "$267.25")}
+#: `Date` answered with a figure the page prints ELSEWHERE: D9 finds it as a
+#: run of words, span verification does not find it in its quoted line.
+FAILED = dict(GROUNDED, Date=(1, "Date: 07/08/2026", "267.25"))
+TABLE_ROW = {"cells": {"Date": "2024-01-04", "Description": "Widget assembly",
+                       "Amount": "100.00"},
+             "source": "2024-01-04 Widget assembly 100.00", "page": 1}
+
+
+def _stub_words(spec):
+    words = []
+    for top, chunks in spec:
+        for x, text in chunks:
+            for t in text.split():
+                w = CHAR_W * len(t)
+                words.append({"text": t, "x0": x * PX, "x1": (x + w) * PX,
+                              "top": top * PX, "bottom": (top + FONT) * PX})
+                x += w + SPACE_W
+    return words
+
+
+def _stub_reader(spec):
+    """An `OcrPageSource` stand-in: same constructor, same declarations (pixels
+    at the rendered dpi, top-left; NO capabilities), fixed words."""
+
+    class _StubOcrSource(PageSource):
+        capabilities = frozenset()
+
+        def __init__(self, image, page_number=None, dpi=ocr_source.OCR_DPI,
+                     straighten_page=True):
+            self._n, self._dpi = page_number, float(dpi)
+            self.applied = {"rotated": 0, "deskewed": 0.0}
+
+        @property
+        def page_number(self):
+            return self._n
+
+        @property
+        def space(self):
+            return CoordinateSpace(unit="px", origin="top-left", dpi=self._dpi,
+                                   height=PAGE_PT[1] * PX, width=PAGE_PT[0] * PX)
+
+        def raw_text(self):
+            return "\n".join(" ".join(t for _x, c in chunks for t in c.split())
+                             for _top, chunks in spec)
+
+        def words(self, size_aware=True):
+            return _stub_words(spec)       # fresh dicts: the seam normalises in place
+
+        def chars(self):
+            return []
+
+    return _StubOcrSource
+
+
+def _generator():
+    spec = importlib.util.spec_from_file_location("make_scan_variants", GENERATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _native_pdf(path, spec):
+    gen = _generator()
+    lines = [(x, PAGE_PT[1] - top - FONT * 0.8, FONT, text)
+             for top, chunks in spec for x, text in chunks]
+    path.write_bytes(gen.build_pdf([{"w_pt": PAGE_PT[0], "h_pt": PAGE_PT[1],
+                                     "ops": gen._text_ops(lines, 0)}]))
+    return path
+
+
+def _scan_pdf(path):
+    Image.new("L", (int(PAGE_PT[0] * PX), int(PAGE_PT[1] * PX)), 255).save(
+        path, resolution=300.0)
+    return path
+
+
+def _run_page(tmp_path, origin, spec, template, answers=None, tables=None):
+    """One page, one origin, one stubbed answer. Returns the result dict."""
+    if origin == "native":
+        pdf = _native_pdf(tmp_path / "native.pdf", spec)
+    else:
+        pdf = _scan_pdf(tmp_path / "scan.pdf")
+
+    def extract(**kw):
+        parsed = _answer(kw.get("prompt", ""), answers or {})
+        if tables:
+            parsed["tables"] = tables
+        return _Resp(parsed)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(ocr_source, "OcrPageSource", _stub_reader(spec))
+        mp.setattr(ocr_source, "render_pdf_page",
+                   lambda *a, **k: Image.new("L", (2550, 3300), 255))
+        results = extractor.run_extraction(
+            SimpleNamespace(llm=SimpleNamespace(extract=extract)), pdf,
+            copy.deepcopy(template))
+    return _ed(results)
+
+
+def _clean(ed):
+    """No review-triggering defect of any kind other than origin."""
+    v = ed["validation"]
+    for k in ("ungrounded_count", "misplaced_count", "dropped_row_count",
+              "empty_row_count", "off_schema_key_count", "merged_column_count",
+              "overprinted_count", "unwitnessed_count", "low_confidence_cells",
+              "unbound_row_count"):
+        assert v.get(k, 0) == 0, (k, v.get(k))
+    assert v["regions"] == []
+
+
+@pytest.fixture(scope="module")
+def det(tmp_path_factory):
+    """Every deterministic run, once."""
+    runs = {}
+    for origin in ("native", "ocr"):
+        for name, kw in {
+                "grounded": dict(spec=FIELD_PAGE, template=FIELD_TEMPLATE,
+                                 answers=GROUNDED),
+                "failed": dict(spec=FIELD_PAGE, template=FIELD_TEMPLATE,
+                               answers=FAILED),
+                "table": dict(spec=TABLE_PAGE, template=TABLE_TEMPLATE,
+                              tables={"items": [TABLE_ROW]})}.items():
+            runs[(origin, name)] = _run_page(
+                tmp_path_factory.mktemp(f"{origin}_{name}"), origin, **kw)
+    return runs
+
+
+class TestDeterministicControls:
+    """Unmarked. The NATIVE reading of the deterministic page is clean, so
+    anything the OCR reading reports beyond it is caused by origin alone."""
+
+    def test_the_grounded_answers_are_clean_and_high_on_a_native_page(self, det):
+        ed = det[("native", "grounded")]
+        _clean(ed)
+        assert len(ed["extracted_fields"]) == 3
+        assert set(ed["validation"]["confidence_map"].values()) == {HIGH}
+        assert all(p["grounded"] is True for p in ed["field_provenance"].values())
+        assert ed["needs_review"] is False
+
+    def test_the_failed_answer_fails_on_a_native_page_too(self, det):
+        ed = det[("native", "failed")]
+        ref = _refs_by_label(ed)["Date"]
+        assert ed["field_provenance"][ref]["grounded"] is False
+        assert ed["validation"]["confidence_map"][ref] == LOW
+
+    def test_the_table_row_is_clean_and_high_on_a_native_page(self, det):
+        ed = det[("native", "table")]
+        _clean(ed)
+        (row,) = ed["items_rows"]
+        # `_ungrounded` is written only when some column failed.
+        assert row.get("_ungrounded", []) == [] and row["_confidence"] == HIGH
+
+    def test_the_ocr_reading_really_went_through_ocr(self, det):
+        """The scan PDF has no text layer; the stub reader is what read it."""
+        for name in ("grounded", "failed", "table"):
+            v = det[("ocr", name)]["validation"]
+            assert v.get("unchecked_overprint_pages") == [1], v
+            assert "unchecked_overprint_pages" not in \
+                det[("native", name)]["validation"]
+
+
+class TestItem3OcrConfidenceIsExact:
+
+    def test_a_grounded_ocr_value_is_exactly_unverified(self, det):
+        """GUARD, unmarked — it CANNOT be red today: the whole-document floor
+        already makes every field on an all-OCR file `unverified`. It pins the
+        exact level so a per-page fix cannot drift to `low` or `grounded`."""
+        ed = det[("ocr", "grounded")]
+        _clean(ed)
+        for ref, p in ed["field_provenance"].items():
+            assert p["grounded"] is True, (ref, p)
+            assert ed["validation"]["confidence_map"][ref] == UNVERIFIED, ref
 
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason=(
         "the scanned-file floor replaces EVERY conf_map entry with "
-        "unverified, so a value that FAILED its span check (low) is reported "
-        "as unverified — a measured failure turned into no measurement"))
-    def test_an_ocr_value_that_failed_its_check_stays_low(self, mixed_run):
-        """'Failed its check' = flagged by ANY verification gate. Today the
-        fabricated values are caught by D9 (`matches_loosely`) before span
-        verification runs, so `grounded` is None rather than False: a scan
-        skewed by less than ocr_source.SKEW_MIN is not deskewed, and
-        `group_lines` (LINE_TOL) splits each sloping OCR line into fragments,
-        so no run of words spells even a TRUE value. Either gate failing must
-        leave the value LOW."""
-        cm = mixed_run.ed["validation"]["confidence_map"]
-        flagged = {f["ref"] for f in mixed_run.ed["validation"]["flagged_fields"]}
-        for label in ("Scan Date", "Scan Cheque Number"):
-            ref = mixed_run.refs[label]
-            assert mixed_run.ed["field_provenance"][ref]["page"] == mixed_run.scan
-            assert label in flagged, (label, flagged)
-            assert cm[ref] == LOW, (label, cm[ref])
-
-
-class TestItem3TableRowsOnAScan:
-    """The floor touches `conf_map` only. Table rows carry their own
-    `_confidence`, set before the floor and never revisited."""
-
-    PAGE = ("ACME TRADING LTD STATEMENT\n"
-            "Date Description Amount\n"
-            "2024-01-04 Widget assembly 100.00\n")
+        "unverified, so a value that FAILED span verification is reported "
+        "as unverified: a measured failure turned into no measurement"))
+    def test_a_failed_check_on_an_ocr_page_stays_exactly_low(self, det):
+        ed = det[("ocr", "failed")]
+        ref = _refs_by_label(ed)["Date"]
+        assert ed["field_provenance"][ref]["grounded"] is False
+        assert ed["validation"]["confidence_map"][ref] == LOW
 
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason=(
-        "on a scanned_pdf the field conf_map is floored to unverified but "
-        "table rows keep _confidence='high'"))
-    def test_a_table_row_read_from_a_scan_is_not_confident(self):
-        grid = {"cells": {f"0,{c}": {"value": h, "style": {}}
-                          for c, h in enumerate(["Date", "Description", "Amount"])},
-                "colWidths": [120] * 26, "merges": {}, "repeatRows": [],
-                "regions": [{"type": "table", "r1": 0, "c1": 0, "r2": 6,
-                             "c2": 2, "orientation": "rows", "name": "items"}]}
-        shape = compute_shape(grid, log=lambda _m: None)
-        row = {"cells": {"Date": "2024-01-04", "Description": "Widget assembly",
-                         "Amount": "100.00"},
-               "source": "2024-01-04 Widget assembly 100.00", "page": 1}
-        orch = SimpleNamespace(llm=SimpleNamespace(
-            extract=lambda **k: _Resp({"tables": {"items": [row]}})))
-        ed = run_slot_extraction(
-            orch, "scan.pdf", {"layout": grid, "shape": shape}, None,
-            page_images=[], doc_text=self.PAGE, doc_text_pages=[self.PAGE],
-            file_type="scanned_pdf", default_doc_type="other", start=0.0,
-        )[0].extracted_data
-        assert ed["items_rows"], ed
-        assert ed["items_rows"][0]["_confidence"] not in CONFIDENT_LEVELS
+        "the floor rewrites the field conf_map only; a table row read from an "
+        "OCR page keeps _confidence='high'"))
+    def test_a_grounded_table_row_on_an_ocr_page_is_exactly_unverified(self, det):
+        ed = det[("ocr", "table")]
+        _clean(ed)
+        (row,) = ed["items_rows"]
+        assert row.get("_ungrounded", []) == []
+        assert row["_confidence"] == UNVERIFIED
+
+
+class TestItem4OcrOriginAloneRequiresReview:
+    """CORRECTION C — the causal proof. One OCR page, every value grounded, no
+    other defect (`_clean`), and the identical native page needs no review
+    (`TestDeterministicControls`). So review here is owed to origin alone."""
+
+    @pytest.mark.known_bug
+    @pytest.mark.xfail(strict=True, reason=(
+        "a document whose only distinction is OCR origin is not sent for "
+        "review: _note_unchecked deliberately leaves needs_review alone, and "
+        "no per-value review metadata exists"))
+    def test_an_ocr_page_with_only_grounded_values_needs_review(self, det):
+        ed = det[("ocr", "grounded")]
+        _clean(ed)
+        assert len(ed["extracted_fields"]) == 3
+        assert all(p["grounded"] is True for p in ed["field_provenance"].values())
+        assert ed["needs_review"] is True
+        for ref, p in ed["field_provenance"].items():
+            assert p["origin"] == "ocr", (ref, p)
+            assert p["review_required"] is True, (ref, p)
+            assert isinstance(p["review_reasons"], list), (ref, p)
+            assert "ocr_origin" in p["review_reasons"], (ref, p)
+
+    @pytest.mark.known_bug
+    @pytest.mark.xfail(strict=True, reason="no per-value review metadata exists")
+    def test_native_values_carry_no_origin_reason(self, det):
+        ed = det[("native", "grounded")]
+        for ref, p in ed["field_provenance"].items():
+            assert p["origin"] == "native", (ref, p)
+            assert p["review_required"] is False, (ref, p)
+            assert not set(p["review_reasons"]) & OCR_REASONS, (ref, p)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -504,7 +718,8 @@ class TestItem4PerValueReviewFlag:
             p = prov[mixed_run.refs[label]]
             assert p["origin"] == "ocr", (label, p)
             assert p["review_required"] is True, (label, p)
-            assert p["review_reason"] == "ocr_origin", (label, p)
+            assert isinstance(p["review_reasons"], list), (label, p)
+            assert "ocr_origin" in p["review_reasons"], (label, p)
 
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason="no per-value origin exists")
@@ -514,6 +729,7 @@ class TestItem4PerValueReviewFlag:
             p = prov[mixed_run.refs[label]]
             assert p["origin"] == "native", (label, p)
             assert not p.get("review_required"), (label, p)
+            assert not set(p.get("review_reasons") or []) & OCR_REASONS, (label, p)
 
     def test_the_document_needs_review(self, mixed_run):
         """GUARD, unmarked: true today (it has failed values). It must stay
@@ -676,20 +892,51 @@ class TestItem8PreOcrScans:
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason="no per-page origin exists")
     def test_the_real_preocr_bank_statement_is_ocr_origin(self):
+        """Not a scanner's invisible layer — measured: Creator 'Adobe Photoshop
+        CS5', 66 full-page images, 108 VISIBLE words in MyriadPro, 0 text
+        operators in render mode 3. But OCR of the rendered page reads 485
+        words and the whole transaction table (`B&Q`, `WESSEX WATER`,
+        `GREGGS PLC`) is in pixels the text layer does not carry. Most of the
+        page is not in its text layer, so it is not native either."""
         doc = _preprocessed(BANK_STATEMENT_SAMPLE)
         assert doc.page_origins and all(
             o in ORIGIN_OF["pre_ocr"] for o in doc.page_origins), doc.page_origins
 
+    #: VERIFIED-NATIVE CONTROLS — an explicit list, each with the evidence that
+    #: it is native, measured per page (pdffonts; pypdf metadata; content-stream
+    #: walk incl. form XObjects for text render mode 3; pdfplumber chars and
+    #: image boxes). A committed PDF NOT on this list is not claimed either way.
+    #: The test names files; production detection must never.
+    NATIVE_CONTROLS = [
+        # Creator 'Adobe InDesign CC (Macintosh)', Producer 'Adobe PDF Library
+        # 10.0.1'. Fonts ArialMT/Georgia/Arial-BoldMT TrueType + subset-embedded
+        # MyriadPro Type 1C, all with ToUnicode. 6 pages, 0 of 1133 text ops in
+        # render mode 3, 416-3257 chars/page. p1 carries 6 images, the largest
+        # covering 86% of the page; p2-p6 carry none. (A byte-identical copy,
+        # sha256 606a93c8baac…, also sits at tests/test_pdfs/; not listed twice.)
+        bs.PDF_DIR / "round2" / "201403_cfpb_closing-disclosure_cover-H25B.pdf",
+        # Same Creator/Producer and font set (subset prefix UBKJLM). 6 pages,
+        # 0 of 818 text ops in mode 3, 515-3240 chars/page; p1 largest image
+        # 86%, p2-p6 no images.
+        bs.PDF_DIR / "round2" / "201403_cfpb_closing-disclosure_cover-H25E.pdf",
+        # Same Creator/Producer and font set (subset prefix ZLFYDC). 4 pages,
+        # 0 of 477 text ops in mode 3, 553-1731 chars/page; p1 largest image
+        # 86%, p2-p4 no images.
+        bs.PDF_DIR / "round2" / "201403_cfpb_loan-estimate_fixed-rate-loan-sample-H24B.pdf",
+    ]
+
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason="no per-page origin exists")
-    def test_no_digital_pdf_is_classified_as_ocr(self, variants):
-        """ZERO false positives over every committed PDF (the gold set lives
-        in tests/test_pdfs) and the generated digital control. The three
-        CFPB forms carry an image covering 86% of a page and are digital —
-        the hard negatives."""
-        paths = [p for p in sorted(bs.PDF_DIR.rglob("*.pdf"))
-                 if p.resolve() != BANK_STATEMENT_SAMPLE.resolve()]
-        paths.append(_pdf(variants, "digital_batch_3pages"))
+    def test_verified_native_controls_are_never_classified_as_ocr(self, variants):
+        """ZERO false positives on the verified-native controls above and on
+        the generated digital control `digital_batch_3pages` — no Producer or
+        Creator (written by tests/fixtures/make_scan_variants.py, whose
+        `digital_ops` draws in render mode 0 with no image); one font,
+        non-embedded base-14 Helvetica; 3 pages, 0 of 24 text ops in mode 3,
+        192-208 chars/page, no images. The three CFPB forms are the HARD
+        negatives: an image covering 86% of a page, and native."""
+        paths = list(self.NATIVE_CONTROLS) + [
+            _pdf(variants, "digital_batch_3pages")]
         wrong = {}
         for p in paths:
             doc = _REAL_PREPROCESS(p)
@@ -725,8 +972,11 @@ class TestItem8PreOcrScans:
         assert ed["extracted_fields"][ref] == wrong     # the stub's answer landed
         assert ed["validation"]["confidence_map"][ref] not in CONFIDENT_LEVELS
         prov = ed["field_provenance"][ref]
+        assert prov["origin"] in ORIGIN_OF["pre_ocr"], prov
         assert prov["review_required"] is True
-        assert prov["review_reason"] in OCR_REASONS
+        assert isinstance(prov["review_reasons"], list), prov
+        # The reason names the origin the page was classified as.
+        assert f"{prov['origin']}_origin" in prov["review_reasons"], prov
 
 
 # ══════════════════════════════════════════════════════════════════════════════

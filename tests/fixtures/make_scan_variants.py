@@ -4,8 +4,8 @@ Builds the SCAN-VARIANT PDF corpus: cheques composed into the file shapes a
 real accounting workflow produces, with ground truth taken from the generator's
 own inputs (never from engine output).
 
-    python tests/fixtures/make_scan_variants.py                 # writes PDFs + manifest.json
-    python tests/fixtures/make_scan_variants.py --verify        # also checks every PDF against its manifest
+    python tests/fixtures/make_scan_variants.py --out <dir>             # writes PDFs + manifest.json
+    python tests/fixtures/make_scan_variants.py --out <dir> --verify    # also checks every PDF against its manifest
     python tests/fixtures/make_scan_variants.py --out <dir> --seed 7
 
 WHY THIS EXISTS. `tests/test_OCR/` holds 18 single cheques as images. The shapes
@@ -416,7 +416,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     here = Path(__file__).resolve()
     ap.add_argument("--repo", type=Path, default=here.parents[2])
-    ap.add_argument("--out", type=Path, default=here.parent / "scan_variants")
+    ap.add_argument("--out", type=Path, required=True,
+                    help="output directory; required so a run can never "
+                         "write generated PDFs into the repo by default")
     ap.add_argument("--seed", type=int, default=DEFAULT_SEED)
     ap.add_argument("--verify", action="store_true")
     a = ap.parse_args()
