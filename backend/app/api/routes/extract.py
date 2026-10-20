@@ -429,7 +429,7 @@ async def _start_extraction_job(
 @router.post("/extract/upload", response_model=ExtractUploadResponse, status_code=202)
 async def upload_and_extract(
     files: list[UploadFile] = File(...),
-    client_id: str = Form(...),
+    client_id: Optional[str] = Form(None),
     template_id: Optional[int] = Form(None),
     options: Optional[str] = Form(None),  # JSON array: ["categorize","summary","anomaly","graphs"]
     selected_pages: Optional[str] = Form(None),  # JSON array of 1-based page numbers e.g. "[1,2,5]"
