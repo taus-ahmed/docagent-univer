@@ -572,6 +572,14 @@ def _run_page(tmp_path, origin, spec, template, answers=None, tables=None):
     return _ed(results)
 
 
+def _review_schema(p, ctx):
+    """The APPROVED per-value review contract, exactly, on any provenance
+    object — native or OCR. Mandatory fields are indexed, never `.get()`."""
+    assert "review_reason" not in p, (ctx, p)    # no singular beside the plural
+    assert isinstance(p["review_reasons"], list), (ctx, p)
+    assert p["review_required"] is True or p["review_required"] is False, (ctx, p)
+
+
 def _clean(ed):
     """No review-triggering defect of any kind other than origin."""
     v = ed["validation"]
@@ -686,16 +694,18 @@ class TestItem4OcrOriginAloneRequiresReview:
         assert all(p["grounded"] is True for p in ed["field_provenance"].values())
         assert ed["needs_review"] is True
         for ref, p in ed["field_provenance"].items():
+            _review_schema(p, ref)
             assert p["origin"] == "ocr", (ref, p)
             assert p["review_required"] is True, (ref, p)
-            assert isinstance(p["review_reasons"], list), (ref, p)
             assert "ocr_origin" in p["review_reasons"], (ref, p)
 
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason="no per-value review metadata exists")
     def test_native_values_carry_no_origin_reason(self, det):
         ed = det[("native", "grounded")]
+        assert len(ed["field_provenance"]) == 3      # every native value has one
         for ref, p in ed["field_provenance"].items():
+            _review_schema(p, ref)
             assert p["origin"] == "native", (ref, p)
             assert p["review_required"] is False, (ref, p)
             assert not set(p["review_reasons"]) & OCR_REASONS, (ref, p)
@@ -716,9 +726,9 @@ class TestItem4PerValueReviewFlag:
         prov = mixed_run.ed["field_provenance"]
         for label in ("Scan Payee", "Scan Date", "Scan Cheque Number"):
             p = prov[mixed_run.refs[label]]
+            _review_schema(p, label)
             assert p["origin"] == "ocr", (label, p)
             assert p["review_required"] is True, (label, p)
-            assert isinstance(p["review_reasons"], list), (label, p)
             assert "ocr_origin" in p["review_reasons"], (label, p)
 
     @pytest.mark.known_bug
@@ -727,9 +737,10 @@ class TestItem4PerValueReviewFlag:
         prov = mixed_run.ed["field_provenance"]
         for label in ("Bank", "Payee", "Amount"):
             p = prov[mixed_run.refs[label]]
+            _review_schema(p, label)
             assert p["origin"] == "native", (label, p)
-            assert not p.get("review_required"), (label, p)
-            assert not set(p.get("review_reasons") or []) & OCR_REASONS, (label, p)
+            assert p["review_required"] is False, (label, p)
+            assert not set(p["review_reasons"]) & OCR_REASONS, (label, p)
 
     def test_the_document_needs_review(self, mixed_run):
         """GUARD, unmarked: true today (it has failed values). It must stay
@@ -792,8 +803,14 @@ class TestItem6GatesPerPage:
         assert n["origin"] == "native" and s["origin"] == "ocr"
         assert n["graded_cells"] == 3 and n["low_confidence_cells"] == 0
         assert n["review_gate"] is False and n["text_floor"] is False
-        assert s["graded_cells"] == 3 and s["low_confidence_cells"] >= 2
+        assert s["graded_cells"] == 3
+        assert 2 <= s["low_confidence_cells"] <= s["graded_cells"]
         assert s["review_gate"] is True
+        # The reported ratio IS low/graded. abs=5e-5 admits the 4-decimal
+        # rounding the whole-document `low_confidence_ratio` already uses.
+        for g in (n, s):
+            assert g["low_confidence_ratio"] == pytest.approx(
+                g["low_confidence_cells"] / g["graded_cells"], abs=5e-5), g
 
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason=(
@@ -903,25 +920,42 @@ class TestItem8PreOcrScans:
             o in ORIGIN_OF["pre_ocr"] for o in doc.page_origins), doc.page_origins
 
     #: VERIFIED-NATIVE CONTROLS — an explicit list, each with the evidence that
-    #: it is native, measured per page (pdffonts; pypdf metadata; content-stream
-    #: walk incl. form XObjects for text render mode 3; pdfplumber chars and
-    #: image boxes). A committed PDF NOT on this list is not claimed either way.
+    #: it is native. A committed PDF NOT on this list is not claimed either way.
     #: The test names files; production detection must never.
+    #:
+    #: HOW EACH FIGURE WAS MEASURED (2026-10-21, CPython 3.11.9, the S1 secure
+    #: environment: pdfplumber 0.11.9, pdfminer.six 20251230, pypdf 6.21.1):
+    #:   page.chars     len(page.chars), pdfplumber 0.11.9 (includes spaces)
+    #:   image cover    largest single page.images box / page area, pdfplumber
+    #:   Producer etc.  PdfReader.metadata, pypdf 6.21.1
+    #:   render mode 3  pypdf ContentStream walk of every page AND every form
+    #:                  XObject it draws, tracking Tr through q/Q, counting text
+    #:                  show operators (Tj TJ ' ") drawn while Tr == 3
+    #:   fonts          pypdf 6.21.1: /FontDescriptor carries /FontFile,
+    #:                  /FontFile2 or /FontFile3 = embedded; /ToUnicode present on
+    #:                  the font dict. Cross-checked against `pdffonts` (poppler
+    #:                  23.13.0, MiKTeX) columns emb/uni — they agree font by font.
     NATIVE_CONTROLS = [
         # Creator 'Adobe InDesign CC (Macintosh)', Producer 'Adobe PDF Library
-        # 10.0.1'. Fonts ArialMT/Georgia/Arial-BoldMT TrueType + subset-embedded
-        # MyriadPro Type 1C, all with ToUnicode. 6 pages, 0 of 1133 text ops in
-        # render mode 3, 416-3257 chars/page. p1 carries 6 images, the largest
-        # covering 86% of the page; p2-p6 carry none. (A byte-identical copy,
-        # sha256 606a93c8baac…, also sits at tests/test_pdfs/; not listed twice.)
+        # 10.0.1'. 6 pages; page.chars 504, 1881, 2405, 2668, 3947, 3300.
+        # 0 of 1133 text show operators in render mode 3. p1 has 6 images, the
+        # largest covering 86.1% of the page; p2-p6 have none. Fonts: subset
+        # MyriadPro (BYZKFY+ -Regular -Bold -It -Semibold -BoldIt) EMBEDDED with
+        # /ToUnicode; ArialMT, Arial-BoldMT and Georgia NOT embedded and WITHOUT
+        # /ToUnicode. (A byte-identical copy — sha256 606a93c8baac… — also sits
+        # at tests/test_pdfs/; not listed twice.)
         bs.PDF_DIR / "round2" / "201403_cfpb_closing-disclosure_cover-H25B.pdf",
-        # Same Creator/Producer and font set (subset prefix UBKJLM). 6 pages,
-        # 0 of 818 text ops in mode 3, 515-3240 chars/page; p1 largest image
-        # 86%, p2-p6 no images.
+        # Same Creator/Producer. 6 pages; page.chars 618, 1758, 1951, 927,
+        # 3932, 2906. 0 of 818 text show operators in render mode 3. p1 has 6
+        # images, largest 86.1%; p2-p6 none. Fonts: subset MyriadPro (UBKJLM+,
+        # same five faces) embedded with /ToUnicode; ArialMT, Arial-BoldMT,
+        # Georgia not embedded, no /ToUnicode.
         bs.PDF_DIR / "round2" / "201403_cfpb_closing-disclosure_cover-H25E.pdf",
-        # Same Creator/Producer and font set (subset prefix ZLFYDC). 4 pages,
-        # 0 of 477 text ops in mode 3, 553-1731 chars/page; p1 largest image
-        # 86%, p2-p4 no images.
+        # Same Creator/Producer. 4 pages; page.chars 679, 1896, 1527, 2076.
+        # 0 of 477 text show operators in render mode 3. p1 has 6 images,
+        # largest 86.1%; p2-p4 none. Fonts: subset MyriadPro (ZLFYDC+ -Regular
+        # -Bold -It -Semibold) embedded with /ToUnicode; ArialMT, Arial-BoldMT,
+        # Georgia not embedded, no /ToUnicode.
         bs.PDF_DIR / "round2" / "201403_cfpb_loan-estimate_fixed-rate-loan-sample-H24B.pdf",
     ]
 
@@ -929,12 +963,14 @@ class TestItem8PreOcrScans:
     @pytest.mark.xfail(strict=True, reason="no per-page origin exists")
     def test_verified_native_controls_are_never_classified_as_ocr(self, variants):
         """ZERO false positives on the verified-native controls above and on
-        the generated digital control `digital_batch_3pages` — no Producer or
-        Creator (written by tests/fixtures/make_scan_variants.py, whose
-        `digital_ops` draws in render mode 0 with no image); one font,
-        non-embedded base-14 Helvetica; 3 pages, 0 of 24 text ops in mode 3,
-        192-208 chars/page, no images. The three CFPB forms are the HARD
-        negatives: an image covering 86% of a page, and native."""
+        the generated digital control `digital_batch_3pages`, measured the same
+        way in the same environment: no Producer or Creator (written by
+        tests/fixtures/make_scan_variants.py, whose `digital_ops` draws in
+        render mode 0 and places no image); 3 pages, page.chars 234, 239, 221;
+        0 of 24 text show operators in render mode 3; no images; one font,
+        base-14 Helvetica, NOT embedded and WITHOUT /ToUnicode. The three CFPB
+        forms are the HARD negatives: an image covering 86.1% of a page, and
+        native."""
         paths = list(self.NATIVE_CONTROLS) + [
             _pdf(variants, "digital_batch_3pages")]
         wrong = {}
@@ -972,9 +1008,9 @@ class TestItem8PreOcrScans:
         assert ed["extracted_fields"][ref] == wrong     # the stub's answer landed
         assert ed["validation"]["confidence_map"][ref] not in CONFIDENT_LEVELS
         prov = ed["field_provenance"][ref]
+        _review_schema(prov, ref)
         assert prov["origin"] in ORIGIN_OF["pre_ocr"], prov
-        assert prov["review_required"] is True
-        assert isinstance(prov["review_reasons"], list), prov
+        assert prov["review_required"] is True, prov
         # The reason names the origin the page was classified as.
         assert f"{prov['origin']}_origin" in prov["review_reasons"], prov
 
