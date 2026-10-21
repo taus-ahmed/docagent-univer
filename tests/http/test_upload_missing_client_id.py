@@ -44,3 +44,42 @@ def test_unscoped_super_admin_without_client_id_has_no_side_effects(
     assert "client_id is required" in response.json()["detail"]
     db.expire_all()
     assert db.query(ExtractionJob).count() == before
+
+
+def test_tenant_bound_user_may_omit_client_id(
+        client, auth, db, pdf_bytes, monkeypatch):
+    """The authenticated tenant remains authoritative when the form omits it."""
+    import threading
+
+    from app.models.models import ExtractionJob
+
+    saved_for = []
+
+    def capture_save(_storage, _content, _filename, _job_id,
+                     client_id=None, **_kwargs):
+        saved_for.append(client_id)
+        return "test/upload.pdf", "test/upload.pdf"
+
+    class InertThread(threading.Thread):
+        def start(self):
+            return None
+
+    monkeypatch.setattr(
+        "app.core.storage.StorageService.save_upload", capture_save)
+    monkeypatch.setattr(
+        "app.api.routes.extract.threading.Thread", InertThread)
+
+    response = client.post(
+        "/api/extract/upload",
+        headers=auth["acme2"],
+        data={},
+        files=[("files", ("doc.pdf", io.BytesIO(pdf_bytes),
+                          "application/pdf"))],
+    )
+
+    assert response.status_code == 202, response.text
+    db.expire_all()
+    job = db.query(ExtractionJob).filter(
+        ExtractionJob.id == response.json()["job_id"]).one()
+    assert job.client_id == "acme_001"
+    assert saved_for == ["acme_001"]
