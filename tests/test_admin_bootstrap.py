@@ -125,6 +125,16 @@ def test_password_shorter_than_fifteen_characters_is_rejected(
     assert _admins(bootstrap_db) == []
 
 
+@pytest.mark.parametrize("password", ["", "   ", "\t"])
+def test_empty_or_whitespace_password_is_rejected(
+        bootstrap_db, monkeypatch, password):
+    monkeypatch.setenv(USERNAME_ENV, "first.admin")
+    monkeypatch.setenv(PASSWORD_ENV, password)
+    with pytest.raises(RuntimeError, match="bootstrap"):
+        _bootstrap()
+    assert _admins(bootstrap_db) == []
+
+
 def test_password_equal_to_username_is_rejected_case_insensitively(
         bootstrap_db, monkeypatch):
     username = "AnAdministratorName"
@@ -184,8 +194,9 @@ def test_existing_administrator_is_never_mutated(
         ))
         db.commit()
 
-    _set_valid(monkeypatch, username="replacement.admin",
-               display_name="Replacement")
+    monkeypatch.setenv(USERNAME_ENV, "replacement.admin")
+    monkeypatch.setenv(PASSWORD_ENV, "admin123")
+    monkeypatch.setenv(DISPLAY_NAME_ENV, "Replacement")
     _bootstrap()
 
     admins = _admins(bootstrap_db)

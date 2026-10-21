@@ -72,8 +72,8 @@ def app(_db_url, _scratch_storage):
     Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(engine)
 
-    # main.py's lifespan runs migrations and seeds an admin against the REAL
-    # engine, so the app is built directly rather than via TestClient's
+    # main.py's lifespan runs migrations and first-admin bootstrap against the
+    # REAL engine, so the app is built directly rather than via TestClient's
     # lifespan. The routers are identical either way — this suite tests
     # routing, auth and validation, not startup.
     from app.main import create_app
@@ -119,7 +119,7 @@ def _mkuser(db, username, role, client_id):
     if u:
         return u
     # display_name is nullable=False with no server default, so it must be set
-    # explicitly — the app's own _seed_admin does the same.
+    # explicitly — the app's own _bootstrap_admin does the same.
     u = User(username=username, display_name=username,
              password_hash=hash_password("pw-" + username),
              role=role, client_id=client_id, is_active=True)
