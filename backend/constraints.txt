@@ -2,9 +2,9 @@
 #
 # Resolved from requirements.txt + requirements-dev.txt with pip 24.0 on
 # Windows x86-64. Package versions are pinned for both application and test
-# dependencies. Platform-conditional packages are installed only when an
-# upstream requirement selects them. Linux compatibility requires a successful
-# Docker build; a Windows resolution alone is not Linux verification.
+# dependencies. Platform-conditional packages are pinned explicitly. Verified
+# for Linux x86-64 / CPython 3.11 by a real production-image build, not only by
+# the Windows resolution.
 aiofiles==23.2.1
 annotated-doc==0.0.5
 annotated-types==0.8.0
@@ -100,5 +100,6 @@ ujson==6.0.0
 uritemplate==4.2.0
 urllib3==2.8.0
 uvicorn==0.30.1
+uvloop==0.22.1
 watchfiles==1.3.0
 websockets==17.3
