@@ -40,12 +40,13 @@ from tests.harness.reduced_source import (FlippedSource,  # noqa: E402
 HTR = "round2/HTR-043235.pdf"
 CHQ = "CHQ-001847.pdf"
 
-#: Measured 2026-09-18 at the seam commit. HTR page 3 is the corpus's one
-#: genuinely shredded page (DECISION-LOG §21); page 2 is the same damage,
-#: milder. These are the numbers the size-aware reading has produced since I10
-#: and they must not move when a reader is added.
-HTR_SHARD = {1: 0.9779735682819384, 2: 1.1400375939849625,
-             3: 2.5126682501979416, 4: 1.0}
+#: Exact clean-page diagnostics remain stable. Damaged pages are pinned to the
+#: safety decision below instead: pdfplumber 0.10.x / pdfminer.six 20231228
+#: measured p2=1.1400375939849625 and p3=2.5126682501979416; the secured
+#: pdfplumber 0.11.9 / pdfminer.six 20251230 measures p2=1.4013157894736843
+#: and p3=3.8954510703363914. These are historical parser diagnostics, not a
+#: product safety contract.
+HTR_SHARD = {1: 0.9779735682819384, 4: 1.0}
 HTR_MARKED = {1: 0, 2: 260, 3: 2647, 4: 0}
 
 
@@ -100,6 +101,38 @@ def htr_reduced(htr_pages):
     return out
 
 
+@pytest.fixture(scope="module")
+def htr_document(pdf_dir):
+    from core.preprocessor import preprocess_file
+
+    return preprocess_file(str(pdf_dir / HTR))
+
+
+@pytest.fixture
+def htr_result(htr_document, pdf_dir, monkeypatch):
+    """Carry the document-level shredded verdict into an extraction result."""
+    from types import SimpleNamespace
+
+    import core.preprocessor
+    import doc_boundaries
+    import extractor
+
+    monkeypatch.setattr(
+        core.preprocessor, "preprocess_file", lambda _path: htr_document)
+    monkeypatch.setattr(
+        doc_boundaries, "split",
+        lambda texts, lines, images: ([(texts, lines, images, 1)], ""))
+    monkeypatch.setattr(
+        extractor, "_extract_one",
+        lambda *_args, **_kwargs: [SimpleNamespace(
+            filename="HTR-043235.pdf",
+            extracted_data={"needs_review": False, "validation": {}})])
+
+    (result,) = extractor.run_extraction(
+        None, pdf_dir / HTR, {"doc_type": "bank_statement"})
+    return result
+
+
 def _marked(lines):
     return sum(1 for ln in lines for w in ln if w.get("overprinted"))
 
@@ -122,14 +155,26 @@ class TestSizeAwareTokenisationGatesTheShardRatio:
         assert not ReducedPdfplumberSource(page).can(
             Capability.SIZE_AWARE_TOKENISATION)
 
-    @pytest.mark.parametrize("page_no", [1, 2, 3, 4])
+    @pytest.mark.parametrize("page_no", [1, 4])
     def test_with_the_capability_the_real_ratio_is_unchanged(self, htr_full,
                                                              page_no):
-        """THE VALUES DO NOT MOVE. Adding a seam must not change what the
-        existing reader measures."""
+        """Clean-page diagnostics remain exact across the parser upgrade."""
         stats, _lines = htr_full[page_no]
         assert stats["shard_ratio"] == pytest.approx(HTR_SHARD[page_no],
                                                      rel=1e-9)
+
+    @pytest.mark.parametrize("page_no", [2, 3])
+    def test_damaged_pages_keep_their_safety_decisions(
+            self, htr_full, htr_document, htr_result, page_no):
+        """Parser diagnostics may move; the protections must not."""
+        stats, lines = htr_full[page_no]
+        assert stats["shard_ratio"] >= SHARD_SHRED
+        assert _marked(lines) == HTR_MARKED[page_no]
+        assert htr_document.shredded_pages == [2, 3]
+        assert page_no in htr_document.shredded_pages
+        assert htr_result.extracted_data["needs_review"] is True
+        assert htr_result.extracted_data["validation"][
+            "shredded_pages"] == [2, 3]
 
     def test_a_gold_document_still_reads_exactly_1_0(self, chq_page):
         """A clean page scores exactly 1.0 — the two readings agree token for
@@ -161,12 +206,12 @@ class TestTheDocumentRecordsWhichPagesWereNotChecked:
     """End to end: `read_page` stats -> ProcessedDocument -> the two lists."""
 
     @pytest.fixture(scope="class")
-    def docs(self, pdf_dir):
+    def docs(self, pdf_dir, htr_document):
         import text_layer
         from core.preprocessor import preprocess_file
 
         path = str(pdf_dir / HTR)
-        full = preprocess_file(path)
+        full = htr_document
 
         original = text_layer.as_page_source
         text_layer.as_page_source = lambda p: (
