@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Every shipped placeholder for SECRET_KEY. They differ between config.py and
@@ -123,7 +123,24 @@ class Settings(BaseSettings):
         default=50,
         validation_alias=AliasChoices("MAX_UPLOAD_SIZE_MB", "MAX_FILE_SIZE_MB"),
     )
+    MAX_PDF_PAGES: int = 200
+    MAX_IMAGE_PIXELS: int = 50_000_000
     MAX_FILES_PER_BATCH: int = 100
+
+    @field_validator("MAX_UPLOAD_SIZE_MB", "MAX_PDF_PAGES",
+                     "MAX_IMAGE_PIXELS", mode="before")
+    @classmethod
+    def _safe_positive_upload_limits(cls, value, info):
+        defaults = {
+            "MAX_UPLOAD_SIZE_MB": 50,
+            "MAX_PDF_PAGES": 200,
+            "MAX_IMAGE_PIXELS": 50_000_000,
+        }
+        try:
+            parsed = int(value)
+            return parsed if parsed > 0 else defaults[info.field_name]
+        except (TypeError, ValueError):
+            return defaults[info.field_name]
 
     # ── Demo accounts ─────────────────────────────────────────────────────────
     # A comma-separated list of client_ids that get the investor-demo

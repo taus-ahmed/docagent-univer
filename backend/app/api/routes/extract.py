@@ -62,6 +62,7 @@ import time
 import json
 import threading
 import traceback
+import warnings
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -94,6 +95,96 @@ _IMAGE_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp",
     ".heic", ".heif", ".gif", ".avif",
 })
+
+_UPLOAD_IMAGE_FORMATS = {
+    "PNG": ".png",
+    "JPEG": ".jpg",
+    "TIFF": ".tiff",
+}
+
+
+def _safe_upload_name(filename: str, canonical_suffix: str) -> str:
+    """A single safe stored name whose suffix matches the file's content."""
+    raw = str(filename or "")
+    portable = raw.replace("\\", "/")
+    if not raw or portable != Path(portable).name or portable in (".", ".."):
+        raise HTTPException(status_code=400, detail="Unsafe upload filename.")
+    cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", portable).strip("._-")
+    stem = re.sub(r"[^A-Za-z0-9_-]", "_", Path(cleaned).stem).strip("_-")
+    if not stem:
+        stem = "document"
+    return f"{stem[:100]}{canonical_suffix}"
+
+
+def _validate_upload_content(filename: str, content: bytes) -> tuple[str, str, int]:
+    """Validate content before any job, storage write, or worker exists."""
+    if not content:
+        raise HTTPException(status_code=400, detail="File is empty.")
+
+    if content.startswith(b"%PDF-"):
+        from pypdf import PdfReader
+        try:
+            reader = PdfReader(io.BytesIO(content), strict=False)
+            if reader.is_encrypted:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Encrypted or password-protected PDFs are not supported.")
+            page_count = len(reader.pages)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400,
+                                detail="PDF is malformed or truncated.")
+        if page_count > settings.MAX_PDF_PAGES:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"PDF has {page_count} pages; maximum is "
+                        f"{settings.MAX_PDF_PAGES} pages."))
+        return _safe_upload_name(filename, ".pdf"), "pdf", page_count
+
+    image_magic = (
+        content.startswith(b"\x89PNG\r\n\x1a\n")
+        or content.startswith(b"\xff\xd8\xff")
+        or content.startswith((b"II*\x00", b"MM\x00*"))
+    )
+    if not image_magic:
+        raise HTTPException(
+            status_code=400,
+            detail="File content type is not supported. Allowed: PDF, PNG, JPEG, TIFF.")
+
+    from PIL import Image
+    previous_limit = Image.MAX_IMAGE_PIXELS
+    Image.MAX_IMAGE_PIXELS = settings.MAX_IMAGE_PIXELS
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(content)) as image:
+                image_format = image.format
+                width, height = image.size
+                if image_format not in _UPLOAD_IMAGE_FORMATS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="File content type is not supported. Allowed: PDF, PNG, JPEG, TIFF.")
+                if width * height > settings.MAX_IMAGE_PIXELS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(f"Image has {width * height} pixels; maximum is "
+                                f"{settings.MAX_IMAGE_PIXELS} pixels."))
+                image.verify()
+    except HTTPException:
+        raise
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Image exceeds the {settings.MAX_IMAGE_PIXELS} pixel limit.")
+    except Exception:
+        raise HTTPException(status_code=400,
+                            detail="Image is malformed or truncated.")
+    finally:
+        Image.MAX_IMAGE_PIXELS = previous_limit
+
+    return (_safe_upload_name(filename, _UPLOAD_IMAGE_FORMATS[image_format]),
+            "image", 1)
 
 
 def _is_image_file(file_path: Path) -> bool:
@@ -149,19 +240,12 @@ async def get_pdf_page_count(
 ):
     """Return page count for each uploaded file (PDFs only). Used by frontend
     to decide whether to show the page-selection modal before extraction."""
-    import io
     results = []
     for f in files:
         content = await f.read()
-        if f.filename and f.filename.lower().endswith(".pdf"):
-            try:
-                import pdfplumber
-                with pdfplumber.open(io.BytesIO(content)) as pdf:
-                    results.append({"filename": f.filename, "page_count": len(pdf.pages)})
-            except Exception:
-                results.append({"filename": f.filename, "page_count": 1})
-        else:
-            results.append({"filename": f.filename, "page_count": 1})
+        safe_name, _kind, page_count = _validate_upload_content(
+            f.filename, content)
+        results.append({"filename": safe_name, "page_count": page_count})
     return results
 
 
@@ -331,6 +415,17 @@ async def _start_extraction_job(
             error = storage.validate_upload(src.filename, len(content))
             if error:
                 raise HTTPException(status_code=400, detail=f"{src.filename}: {error}")
+            # YAML used to be a product-supported extension but the demo's
+            # PDF-only policy refused it with a demo notice. Preserve that
+            # established demo response; arbitrary unsupported content (for
+            # example .exe) remains a product refusal and is not demo-audited.
+            if (is_demo_user(current_user)
+                    and Path(src.filename or "").suffix.lower()
+                    in (".yaml", ".yml")):
+                check_upload_file(current_user, src.filename, content)
+            safe_name, _kind, _page_count = _validate_upload_content(
+                src.filename, content)
+            src.filename = safe_name
             check_upload_file(current_user, src.filename, content)
             sizes.append((src.filename, len(content)))
     except HTTPException as exc:

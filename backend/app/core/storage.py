@@ -317,10 +317,8 @@ class StorageService:
     # ─── Validation ──────────────────────────────────────────────────────────
 
     def validate_upload(self, filename: str, size: int) -> Optional[str]:
-        ext = Path(filename or "").suffix.lower().lstrip(".")
-        if ext not in ALLOWED_EXTENSIONS:
-            return (f"File type .{ext} not supported. "
-                    f"Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
+        if size == 0:
+            return "File is empty."
         if size > settings.max_upload_bytes:
             return (f"File too large ({size / 1024 / 1024:.1f}MB). "
                     f"Max: {settings.MAX_UPLOAD_SIZE_MB}MB")
