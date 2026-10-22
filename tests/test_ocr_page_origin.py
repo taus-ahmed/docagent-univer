@@ -84,6 +84,8 @@ import importlib.util  # noqa: E402
 from PIL import Image  # noqa: E402
 
 import core.preprocessor as preprocessor  # noqa: E402
+import doc_boundaries  # noqa: E402
+import micr  # noqa: E402
 import extractor  # noqa: E402
 import ocr_source  # noqa: E402
 import slot_extractor  # noqa: E402
@@ -238,6 +240,17 @@ def _run(path, resolved=None, selected_pages=None, fail_vision=False,
     orch = SimpleNamespace(llm=SimpleNamespace(extract=extract))
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(preprocessor, "preprocess_file", preprocess)
+        # ONE DOCUMENT PER FILE, deliberately. These fixtures put two cheques
+        # in one file (a native page and a scan) to test that confidence
+        # follows each PAGE's origin inside one document. Since Gate 4b a
+        # changed MICR band rightly splits them into two records
+        # (tests/test_multi_cheque.py), which would turn every per-page check
+        # here into a per-document one and prove nothing about the floor.
+        mp.setattr(doc_boundaries, "find_starts", lambda texts: ([0], ""))
+        # ...and, having merged two cheques on purpose, not flag the merge
+        # (`possible_multiple_documents`, which is right for a REAL merge and
+        # would mask the per-page review flags these tests are about).
+        mp.setattr(micr, "band_count", lambda text: (0, 0))
         results = extractor.run_extraction(orch, path, copy.deepcopy(template),
                                            selected_pages=selected_pages)
     return results, calls
