@@ -94,6 +94,11 @@ class ProcessedDocument:
     #: coverage on its own never does — the CFPB forms carry an 86% image on
     #: page 1 and are native.
     page_origins: list[str] = field(default_factory=list)
+    #: {file page: (straightened PIL image, dpi)} for every page OCR read —
+    #: the image the reader SAW, in the frame its word boxes are in. Kept so
+    #: a page holding several cheques can be cut into regions whose crops
+    #: match their words (engine/cheque_regions.py). Never serialised.
+    ocr_images: dict = field(default_factory=dict)
     processing_notes: str = ""
 
     @property
@@ -353,6 +358,9 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
 
     from ocr_source import reader_identity
     words = sum(len(ln) for ln in lines)
+    straightened = getattr(source, "_image", None)
+    if straightened is not None:
+        doc.ocr_images[page_number] = (straightened, dpi)
     doc.ocr_pages.append({"page": page_number, "words": words, **source.applied,
                           "dpi": dpi, **reader_identity()})
     if not words:

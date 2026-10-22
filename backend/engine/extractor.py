@@ -594,7 +594,19 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     # and the Excel writer already stacks a list of results.
     from doc_boundaries import split as _split_documents
 
-    slices, why = _split_documents(doc_text_pages, doc_page_lines, page_images)
+    # SEVERAL CHEQUES ON ONE PAGE (Gate 4b, option 2). An OCR'd page whose
+    # MICR bands can be told apart is cut into one REGION per cheque, and each
+    # region becomes a unit of its own — its own text, lines, image crop —
+    # that must start a document. A page that cannot be cut stays whole and is
+    # flagged `possible_multiple_documents` by `_note_bands` below.
+    units = _cheque_units(doc, doc_text_pages, doc_page_lines, page_images,
+                          page_numbers, page_origins)
+    forced, regions = (), {}
+    if units:
+        (doc_text_pages, doc_page_lines, page_images, page_numbers, forced,
+         regions) = units
+    slices, why = _split_documents(doc_text_pages, doc_page_lines, page_images,
+                                   forced=forced)
     if len(slices) > 1:
         _log("SPLIT", f"{file_path.name}: {len(slices)} documents in one file "
                       f"({why}) — extracting each separately")
@@ -612,16 +624,26 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             part = _note_bands(_extract_one(
                 orchestrator, file_path, template_data, sub, sub["doc_text"],
                 texts, images, default_doc_type, batch_schemas), texts)
-            last = first_page + max(len(texts) - 1, 0)
-            span = (f"page {first_page}" if first_page == last
-                    else f"pages {first_page}-{last}")
+            # FILE pages, not unit indices: a page cut into regions is
+            # several units with one page number.
+            first, last = (numbers[0], numbers[-1]) if numbers else (first_page,
+                                                                    first_page)
+            span = (f"page {first}" if first == last
+                    else f"pages {first}-{last}")
+            region = regions.get(first_page - 1)
+            if region:
+                span += (f", cheque {region['index']} of {region['of']} on "
+                         f"that page")
             for r in part:
                 r.filename = f"{file_path.name} [{n} of {len(slices)}]"
                 ed = getattr(r, "extracted_data", None)
                 if isinstance(ed, dict):
                     ed["document_index"] = n
                     ed["document_count"] = len(slices)
-                    ed["source_pages"] = [first_page, last]
+                    ed["source_pages"] = [first, last]
+                    if region:
+                        ed.setdefault("validation", {})["source_region"] = \
+                            dict(region)
                     ed.setdefault("validation_notes", []).append(
                         f"document {n} of {len(slices)} in "
                         f"{file_path.name} ({span})")
@@ -632,6 +654,63 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
                      doc_text_pages, page_images, default_doc_type,
                      batch_schemas), doc_text_pages)))))
+
+
+def _cheque_units(doc, texts, lines, images, numbers, origins):
+    """Pages cut into cheque regions, as units — or None when no page is cut.
+
+    Only OCR pages are cut: their straightened image is the frame their word
+    boxes are in, so a region's crop is exactly what its words were read
+    from. Returns (texts, lines, images, page_numbers, forced unit indices,
+    {unit index: region report}).
+    """
+    from cheque_regions import cut_regions
+    from core.preprocessor import _image_to_base64, _optimize_image
+    ocr_images = getattr(doc, "ocr_images", {}) or {}
+    out_t, out_l, out_i, out_n, forced, report = [], [], [], [], [], {}
+    cut_any = False
+    for k, n in enumerate(numbers):
+        page_lines = lines[k] if k < len(lines) else []
+        image = images[k] if k < len(images) else None
+        regions, why = (None, "")
+        if (origins or {}).get(n) == "ocr" and n in ocr_images and page_lines:
+            regions, why = cut_regions(page_lines)
+            if regions is None and why and not why.startswith(("0 ", "1 ")):
+                _log("REGION", f"page {n}: NOT cut into cheques — {why}; "
+                               f"kept as one record")
+        if not regions:
+            out_t.append(texts[k] if k < len(texts) else "")
+            out_l.append(page_lines)
+            if image is not None:
+                out_i.append(image)
+            out_n.append(n)
+            continue
+        cut_any = True
+        straight, dpi = ocr_images[n]
+        scale = float(dpi) / 72.0          # word boxes are points; crop is pixels
+        _log("REGION", f"page {n}: {len(regions)} cheques on one page — one "
+                       f"record each")
+        for j, reg in enumerate(regions, 1):
+            x0, top, x1, bottom = reg["box"]
+            pad = 12.0
+            box = (max(0, int((x0 - pad) * scale)), max(0, int((top - pad) * scale)),
+                   min(straight.width, int((x1 + pad) * scale)),
+                   min(straight.height, int((bottom + pad) * scale)))
+            forced.append(len(out_t))      # every region opens a document
+            report[len(out_t)] = {"page": n, "index": j, "of": len(regions),
+                                  "box_pt": [round(v, 1) for v in reg["box"]],
+                                  "frame": "straightened page image, points "
+                                           "from its top-left"}
+            out_t.append(reg["text"])
+            out_l.append(reg["lines"])
+            out_i.append(_image_to_base64(_optimize_image(
+                straight.crop(box).convert("RGB"))))
+            out_n.append(n)
+    if not cut_any:
+        return None
+    if len(out_i) != len(out_t):
+        out_i = []                          # never let images and texts drift
+    return out_t, out_l, out_i, out_n, forced, report
 
 
 def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,

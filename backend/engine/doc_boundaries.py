@@ -393,14 +393,24 @@ def _restarts_its_own_numbering(pages_of, i):
     return bool(a and b and b[0] == 1 and a[0] > 1)
 
 
-def split(page_texts, page_lines=None, page_images=None):
+def split(page_texts, page_lines=None, page_images=None, forced=()):
     """[(pages, lines, images, first_page_number)] — one entry per document.
 
     Slices are handed to the ordinary pipeline unchanged, one per document, so
     each gets the full slot set and its own grounding. A file with one document
     yields exactly one slice identical to the whole input.
+
+    `forced` are indices that MUST start a document whatever the signals say —
+    the regions of one page cut into cheques (cheque_regions.py), which are
+    two documents by construction, not by evidence the text could overrule.
     """
     starts, why = find_starts(page_texts)
+    if forced:
+        extra = sorted(set(forced) - set(starts) - {0})
+        starts = sorted(set(starts) | set(forced) | {0})
+        if extra:
+            why = "; ".join(x for x in (why, "several cheques on one page")
+                            if x)
     n = len(page_texts or [])
     out = []
     for a, b in zip(starts, starts[1:] + [n]):
