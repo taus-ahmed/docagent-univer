@@ -171,6 +171,79 @@ def parse_micr(line: str) -> dict:
     return out
 
 
+# ── band IDENTITY, for document boundaries only ──────────────────────────────
+#
+# Telling one cheque from the next needs to know WHICH band a line is, not to
+# report its numbers, so it is read tolerantly: OCR routinely reads the transit
+# field with a space inside it (`A4332 18197A`) or a stray glyph beside the
+# sentinel (`AG651333871A`), and `_LOOKS_MICR` — which must stay strict, since
+# it decides what is REPORTED — then sees no band at all. On the generated
+# scans that was every first page. Nothing read here is ever a value.
+_LOOSE_TRANSIT = re.compile(r"(?<![\d\w])[^\d\s]{1,2}(\d(?:\d| (?=\d)){8,9})[^\d\s]")
+_LOOSE_ACCOUNT = re.compile(r"(\d{6,17})")
+
+
+def band_identity(line: str) -> dict:
+    """{routing, account, serial} as printed in a MICR-looking line, or {}.
+
+    `routing` is the transit digits CHECKSUM OR NOT — identity, not a value.
+    Only the parts actually read are present; a line with a transit field
+    and no account-length digit run after it is not taken for a band.
+    """
+    s = str(line or "")
+    m = _LOOSE_TRANSIT.search(s)
+    if not m:
+        return {}
+    routing = m.group(1).replace(" ", "")
+    if len(routing) != 9:
+        return {}
+    acct = _LOOSE_ACCOUNT.search(s, m.end())
+    if not acct:
+        return {}
+    out = {"routing": routing, "account": acct.group(1)}
+    serial = parse_micr(s).get("serial_number")
+    if serial:
+        out["serial"] = serial
+    return out
+
+
+def page_bands(text) -> list:
+    """The identity of every MICR band on a page, top to bottom."""
+    return [b for b in (band_identity(ln) for ln in str(text or "").split("\n"))
+            if b]
+
+
+#: A line SHAPED like a band whose digits did not survive the reading — a
+#: transit-like field (one or two sentinel glyphs, 8-10 digit-like glyphs, a
+#: sentinel) on a line with at least 10 real digits. `A423S11G18A C5S94…` is
+#: a band; nothing about it can say WHICH band, so it is counted, never
+#: compared.
+_SHAPED_TRANSIT = re.compile(r"(?<!\w)[^\d\s]{1,2}[0-9OoIlSGBZ]{8,10}[^\d\s](?!\w)")
+
+
+def band_count(text) -> tuple:
+    """(readable bands, band-shaped lines that could not be read) on a page."""
+    readable = unreadable = 0
+    for ln in str(text or "").split("\n"):
+        if band_identity(ln):
+            readable += 1
+        elif (_SHAPED_TRANSIT.search(ln)
+              and sum(c.isdigit() for c in ln) >= 10):
+            unreadable += 1
+    return readable, unreadable
+
+
+def same_band(a: dict, b: dict):
+    """True / False / None (cannot tell): do two band identities name one
+    cheque? Any part read on both sides that differs makes them different
+    cheques — the same account with a different serial is the next cheque in
+    the book. No part in common is not evidence either way."""
+    common = [k for k in ("routing", "account", "serial") if k in a and k in b]
+    if not common:
+        return None
+    return all(a[k] == b[k] for k in common)
+
+
 def _digits(run: str) -> str:
     return re.sub(r"\D", "", str(run or ""))
 

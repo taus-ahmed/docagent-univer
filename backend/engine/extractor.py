@@ -523,6 +523,49 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                     ed["needs_review"] = True
         return results
 
+    def _note_bands(results, texts):
+        """FAIL CLOSED on a record that may hold several cheques (Gate 4b).
+
+        A record carrying a readable MICR band and, besides it, another band —
+        readable, or shaped like one but unreadable — is a record whose cheque
+        count the engine could not establish. It is kept as ONE record, never
+        split on a guess and never dropped, and every value in it says why it
+        needs review: `possible_multiple_documents`.
+        """
+        from micr import band_count
+        from slot_extractor import POSSIBLE_MULTIPLE
+        counts = [band_count(t) for t in texts]
+        readable = sum(c[0] for c in counts)
+        total = readable + sum(c[1] for c in counts)
+        if readable < 1 or total < 2:
+            return results
+        for r in results or []:
+            ed = getattr(r, "extracted_data", None)
+            if not isinstance(ed, dict):
+                continue
+            for p in (ed.get("field_provenance") or {}).values():
+                reasons = p.setdefault("review_reasons", [])
+                if POSSIBLE_MULTIPLE not in reasons:
+                    reasons.append(POSSIBLE_MULTIPLE)
+                p["review_required"] = True
+            for key, rows in ed.items():
+                if key.endswith("_rows") and isinstance(rows, list):
+                    for row in rows:
+                        if isinstance(row, dict):
+                            reasons = row.setdefault("_review_reasons", [])
+                            if POSSIBLE_MULTIPLE not in reasons:
+                                reasons.append(POSSIBLE_MULTIPLE)
+                            row["_review_required"] = True
+            ed.setdefault("validation", {})["possible_multiple_documents"] = {
+                "micr_bands": total, "readable": readable}
+            ed.setdefault("validation_notes", []).append(
+                f"{total} MICR band(s) in this record ({readable} readable) — "
+                f"it may hold more than one cheque, and how many could not be "
+                f"established, so it was kept as ONE record. Check it against "
+                f"the original.")
+            ed["needs_review"] = True
+        return results
+
     def _note_selection(results):
         """Selected page numbers this file does not have, said on the result.
         The pages asked for and not extracted are pages nobody has read."""
@@ -566,9 +609,9 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             sub["page_numbers"] = numbers
             sub["page_origins"] = ({n: page_origins[n] for n in numbers
                                     if n in page_origins} or None)
-            part = _extract_one(orchestrator, file_path, template_data, sub,
-                                sub["doc_text"], texts, images,
-                                default_doc_type, batch_schemas)
+            part = _note_bands(_extract_one(
+                orchestrator, file_path, template_data, sub, sub["doc_text"],
+                texts, images, default_doc_type, batch_schemas), texts)
             last = first_page + max(len(texts) - 1, 0)
             span = (f"page {first_page}" if first_page == last
                     else f"pages {first_page}-{last}")
@@ -585,10 +628,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             results += part
         return _note_selection(_note_ocr(_note_unchecked(_note_shredded(results))))
 
-    return _note_selection(_note_ocr(_note_unchecked(_note_shredded(
+    return _note_selection(_note_ocr(_note_unchecked(_note_shredded(_note_bands(
         _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
                      doc_text_pages, page_images, default_doc_type,
-                     batch_schemas)))))
+                     batch_schemas), doc_text_pages)))))
 
 
 def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,

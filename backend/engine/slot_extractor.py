@@ -742,6 +742,7 @@ PLACEMENT_FAILED = "placement_failed"          # under another column, or across
 CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / prose in a scalar
 AMOUNT_MISMATCH = "amount_mismatch"
 CHECKSUM_FAILED = "checksum_failed"            # nine digits no routing number can be
+POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one cheque?
 AMOUNT_UNREADABLE = "amount_unreadable"
 
 
