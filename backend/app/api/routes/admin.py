@@ -143,16 +143,25 @@ def deactivate_user(
 @router.get("/stats", response_model=SystemStats)
 def get_stats(
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_admin: User = Depends(require_admin),
 ):
-    """System-wide statistics."""
+    """Statistics inside the caller's administrative boundary."""
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
 
-    total_jobs = db.query(ExtractionJob).count()
-    total_docs = db.query(DocumentResult).count()
-    total_users = db.query(User).filter(User.is_active == True).count()
-    reviewed = db.query(DocumentResult).filter(DocumentResult.reviewed == True).count()
-    pending_review = db.query(DocumentResult).filter(
+    jobs = db.query(ExtractionJob)
+    docs = db.query(DocumentResult).join(
+        ExtractionJob, DocumentResult.job_id == ExtractionJob.id)
+    users = db.query(User)
+    if not _is_super_admin(current_admin):
+        jobs = jobs.filter(ExtractionJob.client_id == current_admin.client_id)
+        docs = docs.filter(ExtractionJob.client_id == current_admin.client_id)
+        users = users.filter(User.client_id == current_admin.client_id)
+
+    total_jobs = jobs.count()
+    total_docs = docs.count()
+    total_users = users.filter(User.is_active == True).count()
+    reviewed = docs.filter(DocumentResult.reviewed == True).count()
+    pending_review = docs.filter(
         DocumentResult.needs_review == True,
         DocumentResult.reviewed == False,
     ).count()
@@ -162,10 +171,10 @@ def get_stats(
     # and the export; at the document-stat level "confident" is the question.
     # Testing == "high" here would have silently dropped every no-template
     # document from the count the moment the vocabulary split.
-    high_conf = db.query(DocumentResult).filter(
+    high_conf = docs.filter(
         DocumentResult.overall_confidence.in_(CONFIDENT_LEVELS)
     ).count()
-    jobs_7d = db.query(ExtractionJob).filter(
+    jobs_7d = jobs.filter(
         ExtractionJob.created_at >= seven_days_ago
     ).count()
 

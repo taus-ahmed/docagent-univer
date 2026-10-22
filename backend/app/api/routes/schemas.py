@@ -95,6 +95,12 @@ async def upload_schema(
             status_code=400,
             detail="YAML must have 'client_id' and 'client_name' fields",
         )
+    if (not _may_see_all_schemas(current_user)
+            and client_id != current_user.client_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Schema '{client_id}' not found",
+        )
 
     doc_types = list(parsed.get("document_types", {}).keys())
 
@@ -170,7 +176,10 @@ def delete_schema(
     current_user: User = Depends(require_admin),
 ):
     """Soft-delete a schema (admin only)."""
-    schema = db.query(ClientSchema).filter(ClientSchema.client_id == client_id).first()
+    query = db.query(ClientSchema).filter(ClientSchema.client_id == client_id)
+    if not _may_see_all_schemas(current_user):
+        query = query.filter(ClientSchema.client_id == current_user.client_id)
+    schema = query.first()
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
 
