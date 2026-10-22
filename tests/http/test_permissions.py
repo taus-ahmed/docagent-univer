@@ -175,6 +175,23 @@ class TestExportPermissions:
         db.refresh(j)
         return j
 
+    @staticmethod
+    @pytest.fixture(scope="class")
+    def acme_export_job(db, users):
+        from app.models.models import DocumentResult, ExtractionJob
+        j = ExtractionJob(user_id=users["acme"].id, client_id="acme_001",
+                          status="completed", total_docs=1, successful=1,
+                          input_source="upload")
+        db.add(j)
+        db.flush()
+        db.add(DocumentResult(
+            job_id=j.id, filename="tenant-scope.pdf",
+            document_type="sales_invoice",
+            extraction_json=json.dumps({"Invoice Number": "INV-001"})))
+        db.commit()
+        db.refresh(j)
+        return j
+
     def test_exporting_another_tenants_job_is_refused(
             self, client, auth, other_job):
         r = client.post("/api/export/combined", headers=auth["acme"],
@@ -190,3 +207,38 @@ class TestExportPermissions:
         r = client.post("/api/export/combined", headers=auth["acme"],
                         json={"job_id": 987654})
         assert r.status_code == 404, r.text
+
+    @pytest.mark.parametrize("kind", ["combined", "perfile"])
+    def test_another_tenants_template_is_indistinguishable_from_missing(
+            self, client, auth, templates, acme_export_job, kind):
+        foreign = client.post(
+            f"/api/export/{kind}", headers=auth["acme"],
+            json={"job_id": acme_export_job.id,
+                  "template_id": templates["other_private"].id})
+        missing = client.post(
+            f"/api/export/{kind}", headers=auth["acme"],
+            json={"job_id": acme_export_job.id, "template_id": 987654})
+
+        assert foreign.status_code == missing.status_code == 404
+        assert foreign.json() == missing.json() == {"detail": "Template not found"}
+        assert templates["other_private"].name not in foreign.text
+        assert templates["other_private"].columns_json not in foreign.text
+
+    @pytest.mark.parametrize("kind", ["combined", "perfile"])
+    def test_a_tenant_can_export_with_its_own_template(
+            self, client, auth, templates, acme_export_job, kind):
+        r = client.post(
+            f"/api/export/{kind}", headers=auth["acme"],
+            json={"job_id": acme_export_job.id,
+                  "template_id": templates["acme_private"].id})
+        assert r.status_code == 200, r.text
+
+    @pytest.mark.parametrize("kind", ["combined", "perfile"])
+    def test_unscoped_super_admin_can_still_use_any_tenants_template(
+            self, client, auth, templates, acme_export_job, kind):
+        """Platform-admin template visibility is intentionally unchanged."""
+        r = client.post(
+            f"/api/export/{kind}", headers=auth["super"],
+            json={"job_id": acme_export_job.id,
+                  "template_id": templates["other_private"].id})
+        assert r.status_code == 200, r.text
