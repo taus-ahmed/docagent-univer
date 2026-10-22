@@ -346,9 +346,15 @@ async def _start_extraction_job(
     # from the multipart body.
     client_id = resolve_client_id(current_user, requested_client_id)
 
-    schema_path = storage.get_schema_path(client_id) or storage.get_schema_path("demo_001")
+    # A configured demo account intentionally uses the bundled demo schema.
+    # Every other tenant must have its own schema; borrowing demo_001 here
+    # silently extracts real customer documents against another field set.
+    schema_client_id = "demo_001" if is_demo_user(current_user) else client_id
+    schema_path = storage.get_schema_path(schema_client_id)
     if schema_path is None:
-        raise HTTPException(status_code=404, detail="No schema found.")
+        raise HTTPException(
+            status_code=404,
+            detail="No extraction schema is configured for this client.")
 
     tpl = load_template_for_user(db, template_id, current_user)
     template_data = _parse_template(tpl) if tpl else None

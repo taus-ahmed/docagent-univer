@@ -51,7 +51,7 @@ def _scratch_storage():
     yaml_text = src.read_text(encoding="utf-8")
     clients = root / "schemas" / "clients"
     clients.mkdir(parents=True, exist_ok=True)
-    for cid in ("demo_001", "acme_001", "other_002"):
+    for cid in ("demo_001", "acme_001", "other_002", "pearx_demo"):
         (clients / f"{cid}.yaml").write_text(yaml_text, encoding="utf-8")
 
     yield root
@@ -190,9 +190,9 @@ def templates(db, users):
 # every demo rule is gated on DEMO_CLIENT_IDS, and the tests that prove nothing
 # changed for anybody else need a population that does not include it.
 #
-# `pearx_demo` has NO schema in the scratch storage on purpose — a real demo
-# tenant provisioned nothing, and the upload path's fallback to demo_001 is
-# exactly what has to keep working.
+# `pearx_demo` has its own scratch schema when demo mode is off, like any
+# ordinary tenant. When demo mode is on, upload explicitly selects demo_001;
+# it is not a fallback for unprovisioned tenants.
 
 @pytest.fixture(scope="session")
 def demo_user(db):

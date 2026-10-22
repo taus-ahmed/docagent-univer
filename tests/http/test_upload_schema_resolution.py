@@ -29,8 +29,19 @@ def _inert_extraction(monkeypatch):
 
 
 def test_non_demo_tenant_without_schema_is_refused_without_side_effects(
-        client, demo_auth, db, pdf_bytes, monkeypatch):
-    from app.models.models import ExtractionJob
+        client, db, pdf_bytes, monkeypatch):
+    from app.core.auth import create_access_token, hash_password
+    from app.models.models import ExtractionJob, User
+
+    user = User(username="schema_less", display_name="Schema Less",
+                password_hash=hash_password("unused"), role="client",
+                client_id="unprovisioned_003", is_active=True)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    token = create_access_token({"sub": str(user.id), "role": user.role,
+                                 "client_id": user.client_id})
+    headers = {"Authorization": f"Bearer {token}"}
 
     before = db.query(ExtractionJob).count()
 
@@ -45,7 +56,7 @@ def test_non_demo_tenant_without_schema_is_refused_without_side_effects(
     monkeypatch.setattr(
         "app.api.routes.extract.threading.Thread", forbidden_thread)
 
-    response = _upload(client, demo_auth, pdf_bytes, client_id="demo_001")
+    response = _upload(client, headers, pdf_bytes, client_id="demo_001")
 
     assert response.status_code == 404, response.text
     assert response.json() == {
