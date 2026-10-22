@@ -91,3 +91,29 @@ def test_reasons_name_the_side():
     r = compare_amounts("abc", "banana")
     assert any(x.startswith("numeric:") for x in r.reasons)
     assert any(x.startswith("words:") for x in r.reasons)
+
+
+@pytest.mark.parametrize("text", [
+    "one two three and 00/100", "five twenty and 00/100", "one hundred hundred and 00/100",
+    "twenty twenty and 00/100", "one thousand one thousand and 00/100",
+    "five thousand million and 00/100", "twenty one hundred and 00/100",
+    "ninety nine hundred and 00/100", "thousand five and 00/100", "one hundred twenty twenty and 00/100",
+    "ten ten and 00/100", "zero hundred and 00/100",
+])
+def test_badly_ordered_number_words_are_unreadable_not_guessed(text):
+    assert parse_words_amount(text).value is None
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("nineteen hundred and 00/100", D("1900.00")),
+    ("one hundred fifty dollars and no cents", D("150.00")),
+    ("Two hundred and no cents", D("200.00")),
+    ("fifty dollars and 00 cents", D("50.00")),
+    ("one million and 00/100", D("1000000.00")),
+    ("one thousand one and 00/100", D("1001.00")),
+    ("two thousand five hundred and 00/100", D("2500.00")),
+    ("zero dollars and 50/100", D("0.50")),
+    ("one hundred one", D("101.00")),
+])
+def test_more_valid_phrasings(text, expected):
+    assert parse_words_amount(text).value == expected

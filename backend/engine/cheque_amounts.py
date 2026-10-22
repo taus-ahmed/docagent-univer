@@ -12,7 +12,7 @@ module never *raises* confidence on its own. It reports one of three statuses:
 
 A caller should treat "mismatch" as a reason to mark BOTH values low (reason code
 "amount_mismatch"), "unreadable" as a reason to keep the value flagged
-("amount_unverified_cross_check"), and "match" as supporting evidence only.
+("amount_unreadable"), and "match" as supporting evidence only.
 Anything we are not certain about is "unreadable", never guessed.
 
 Scope: English words, US/Canadian style (dollars and cents). European number
@@ -94,34 +94,79 @@ def parse_numeric_amount(text: str) -> ParsedAmount:
     return ParsedAmount(Decimal(f"{int(whole)}.{frac}"))
 
 
+def _group_value(tokens: List[str], only_group: bool) -> Optional[int]:
+    """Value (0..999) of a group of number words, or None if not well formed.
+
+    Accepted shapes: [d hundred] [tens [unit] | teen | unit] with d in 1..9,
+    the colloquial '<10..19> hundred' ('twelve hundred'), and 'zero' on its own.
+    Anything else (for example 'one two three', 'five twenty', 'hundred hundred')
+    is rejected rather than guessed.
+    """
+    if not tokens:
+        return None
+    toks = list(tokens)
+    n = 0
+    if toks == ["zero"]:
+        return 0 if only_group else None
+    if len(toks) >= 2 and toks[1] == "hundred":
+        first = _UNITS.get(toks[0])
+        if first is None or first == 0 or first > 19:
+            return None
+        n = first * 100
+        toks = toks[2:]
+        if first > 9 and toks:
+            # colloquial 'twelve hundred': nothing may follow except a plain 1..99
+            pass
+    elif "hundred" in toks:
+        return None
+    if not toks:
+        return n
+    if len(toks) == 1:
+        t = toks[0]
+        if t in _UNITS and _UNITS[t] != 0:
+            return n + _UNITS[t]
+        if t in _TENS:
+            return n + _TENS[t]
+        return None
+    if len(toks) == 2 and toks[0] in _TENS and toks[1] in _UNITS and 1 <= _UNITS[toks[1]] <= 9:
+        return n + _TENS[toks[0]] + _UNITS[toks[1]]
+    return None
+
+
 def _words_to_int(tokens: List[str]) -> Optional[int]:
-    """Convert number words (no cents, no filler) to an int, or None if unsure."""
+    """Convert number words (no cents, no filler) to an int, or None if unsure.
+
+    Scales (thousand, million, billion) must appear at most once each and in
+    strictly descending order; each scale needs a well formed group before it.
+    """
     if not tokens:
         return None
     total = 0
-    current = 0
-    seen = False
+    group: List[str] = []
+    last_scale: Optional[int] = None
+    saw_scale = False
     for tok in tokens:
-        if tok in _UNITS:
-            current += _UNITS[tok]
-            seen = True
-        elif tok in _TENS:
-            current += _TENS[tok]
-            seen = True
-        elif tok == "hundred":
-            if current == 0:
+        if tok in _SCALES:
+            scale = _SCALES[tok]
+            if last_scale is not None and scale >= last_scale:
                 return None
-            current *= 100
-            seen = True
-        elif tok in _SCALES:
-            if current == 0:
+            val = _group_value(group, only_group=False)
+            if val is None or val == 0:
                 return None
-            total += current * _SCALES[tok]
-            current = 0
-            seen = True
+            total += val * scale
+            last_scale = scale
+            saw_scale = True
+            group = []
         else:
-            return None  # unknown token: never guess
-    return total + current if seen else None
+            group.append(tok)
+    if group:
+        val = _group_value(group, only_group=not saw_scale)
+        if val is None:
+            return None
+        total += val
+    elif not saw_scale:
+        return None
+    return total
 
 
 _FRACTION_RE = re.compile(r"(?:^|\s)(xx|no|zero|\d{1,2})\s*/\s*100(?:ths?)?(?=\s|$)")
@@ -169,7 +214,13 @@ def parse_words_amount(text: str) -> ParsedAmount:
             return ParsedAmount(None, ["cannot_split_dollars_and_cents"])
         dollars_tokens = before[:split_at]
         cents_tokens = [x for x in before[split_at + 1:] if x != "and"]
-        c = _words_to_int([x for x in cents_tokens if x not in _FILLER])
+        cents_words = [x for x in cents_tokens if x not in _FILLER]
+        if cents_words in (["no"], ["zero"]):
+            c = 0
+        elif len(cents_words) == 1 and cents_words[0].isdigit() and len(cents_words[0]) <= 2:
+            c = int(cents_words[0])
+        else:
+            c = _words_to_int(cents_words)
         if c is None or c > 99:
             return ParsedAmount(None, ["unreadable_cents"])
         cents = c
