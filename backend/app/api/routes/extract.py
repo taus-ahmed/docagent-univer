@@ -129,6 +129,46 @@ def _unique_upload_name(filename: str, used_names: set[str]) -> str:
     return candidate
 
 
+def _parse_selected_pages(
+    value: Optional[str], page_counts: list[tuple[str, int]],
+) -> Optional[list[int]]:
+    """Validate a 1-based page list against every document in the batch."""
+    if value is None or value == "":
+        return None
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=400,
+            detail="selected_pages must be a valid JSON array of integers.")
+    if not isinstance(parsed, list):
+        raise HTTPException(
+            status_code=400,
+            detail="selected_pages must be a JSON array of integers.")
+    if not parsed:
+        raise HTTPException(
+            status_code=400, detail="selected_pages cannot be empty.")
+    if any(type(page) is not int for page in parsed):
+        raise HTTPException(
+            status_code=400,
+            detail="Every selected page must be an integer.")
+    if any(page <= 0 for page in parsed):
+        raise HTTPException(
+            status_code=400,
+            detail="Every selected page must be a positive 1-based number.")
+
+    normalized = list(dict.fromkeys(parsed))
+    for filename, page_count in page_counts:
+        too_high = next(
+            (page for page in normalized if page > page_count), None)
+        if too_high is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"Selected page {too_high} is out of range for "
+                        f"{filename}; the document has {page_count} page(s)."))
+    return normalized
+
+
 def _validate_upload_content(filename: str, content: bytes) -> tuple[str, str, int]:
     """Validate content before any job, storage write, or worker exists."""
     if not content:
@@ -429,6 +469,7 @@ async def _start_extraction_job(
     # an explanation instead of being OCR'd). Both run BEFORE the job row
     # exists, so a refused upload leaves nothing behind and costs no model call.
     sizes: list[tuple[str, int]] = []
+    page_counts: list[tuple[str, int]] = []
     used_names: set[str] = set()
     refused_name: Optional[str] = None
     try:
@@ -446,11 +487,12 @@ async def _start_extraction_job(
                     and Path(src.filename or "").suffix.lower()
                     in (".yaml", ".yml")):
                 check_upload_file(current_user, src.filename, content)
-            safe_name, _kind, _page_count = _validate_upload_content(
+            safe_name, _kind, page_count = _validate_upload_content(
                 src.filename, content)
             src.filename = _unique_upload_name(safe_name, used_names)
             check_upload_file(current_user, src.filename, content)
             sizes.append((src.original_filename, len(content)))
+            page_counts.append((src.original_filename, page_count))
     except HTTPException as exc:
         # Only a DEMO refusal goes in the trail, and `demo_reason` is what says
         # it is one — the product's own "file type not supported" is not a demo
@@ -459,6 +501,8 @@ async def _start_extraction_job(
             demo_audit.record(db, current_user, demo_audit.UPLOAD_REFUSED,
                               detail=demo_audit.refusal_detail(exc, refused_name))
         raise
+
+    selected_pages_list = _parse_selected_pages(selected_pages, page_counts)
 
     # The tenant and the template both come from the token's authority, never
     # from the multipart body.
@@ -489,16 +533,6 @@ async def _start_extraction_job(
     # Forced off here rather than at the two doors, so the sample-document
     # route cannot be the one that forgets. A no-op for everyone else.
     selected_options = filter_options(current_user, selected_options)
-
-    # Parse selected_pages (1-based list of page numbers to process)
-    selected_pages_list: Optional[list] = None
-    if selected_pages:
-        try:
-            parsed = json.loads(selected_pages)
-            if isinstance(parsed, list) and parsed:
-                selected_pages_list = [int(p) for p in parsed]
-        except Exception:
-            pass
 
     job = ExtractionJob(
         user_id=current_user.id,
