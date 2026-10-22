@@ -70,9 +70,6 @@ def _run(pdf, selected):
 
 class TestASelectionThatResolvesToNothingFailsClosed:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "an empty resolved selection skips the filter and sends every page"))
     @pytest.mark.parametrize("selected", [[999], [0], [-1], [0, -3, 4]])
     def test_no_model_call_and_a_named_failure(self, pdf, selected):
         results, calls, _sent = _run(pdf, selected)
@@ -84,9 +81,6 @@ class TestASelectionThatResolvesToNothingFailsClosed:
 
 class TestAPartlyValidSelection:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "invalid numbers are dropped without a word"))
     def test_valid_pages_are_kept_and_invalid_ones_reported(self, pdf):
         results, calls, sent = _run(pdf, [2, 999, 0])
         assert calls
@@ -97,17 +91,11 @@ class TestAPartlyValidSelection:
         assert any("999" in n for n in ed["validation_notes"])
         assert ed["needs_review"] is True
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "a duplicated number sends its page twice"))
     def test_a_duplicate_number_sends_its_page_once(self, pdf):
         _results, calls, _sent = _run(pdf, [2, 2])
         assert len(calls) == 1
         assert calls[0]["prompt"].count(SENTINELS[1]) == 1
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "pages are sent in the order given, not the file's order"))
     def test_pages_are_sent_in_file_order(self, pdf):
         results, calls, _sent = _run(pdf, [3, 1])
         prompt = calls[0]["prompt"]

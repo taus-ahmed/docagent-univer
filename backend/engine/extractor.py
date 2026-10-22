@@ -340,16 +340,42 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     # aggregate text that `_llm_json` sends whole on its text fallback, and
     # the only text there is when no page rendered. A page the user left out
     # reached the model on both paths.
+    #
+    # AND IT FAILS CLOSED. A selection that resolves to no page of this file
+    # used to skip the filter and send EVERY page. Now: valid FILE page
+    # numbers are kept once each, in file order; anything else is reported;
+    # and a selection with nothing valid in it fails by name before any model
+    # call.
+    ignored_pages = []
     if selected_pages:
         total = len(doc_text_pages) or len(page_images)
-        keep = [i - 1 for i in selected_pages if 0 < i <= total]
-        if keep:
-            page_images = [page_images[i] for i in keep if i < len(page_images)]
-            doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
-            doc_page_lines = [doc_page_lines[i] for i in keep if i < len(doc_page_lines)]
-            page_numbers = [i + 1 for i in keep if i < len(page_numbers)]
-            from core.preprocessor import PAGE_BREAK, _fix_cross_page_decimals
-            doc_text = _fix_cross_page_decimals(PAGE_BREAK.join(doc_text_pages))
+        wanted = set()
+        for n in selected_pages:
+            try:
+                page = int(n)
+            except (TypeError, ValueError):
+                page = None
+            if (page is not None and page == n and not isinstance(n, bool)
+                    and 0 < page <= total):
+                wanted.add(page)
+            else:
+                ignored_pages.append(n)
+        keep = [p - 1 for p in sorted(wanted)]
+        if not keep:
+            from app.api.routes.extract import _fail
+            shown = ", ".join(str(n) for n in selected_pages)
+            _log("ROUTE", f"{file_path.name}: selected pages [{shown}] name no "
+                          f"page of this {total}-page file — nothing extracted")
+            return [_fail(file_path.name,
+                          f"None of the selected pages ({shown}) exist in this "
+                          f"file, which has {total} page(s). Nothing was "
+                          f"extracted.")]
+        page_images = [page_images[i] for i in keep if i < len(page_images)]
+        doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
+        doc_page_lines = [doc_page_lines[i] for i in keep if i < len(doc_page_lines)]
+        page_numbers = [i + 1 for i in keep if i < len(page_numbers)]
+        from core.preprocessor import PAGE_BREAK, _fix_cross_page_decimals
+        doc_text = _fix_cross_page_decimals(PAGE_BREAK.join(doc_text_pages))
     # Where each extracted page's text came from, by FILE page. Empty when the
     # preprocessor recorded none (an image upload), and slot extraction then
     # keeps its whole-document floor.
@@ -497,6 +523,25 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                     ed["needs_review"] = True
         return results
 
+    def _note_selection(results):
+        """Selected page numbers this file does not have, said on the result.
+        The pages asked for and not extracted are pages nobody has read."""
+        if not ignored_pages:
+            return results
+        shown = ", ".join(str(n) for n in ignored_pages)
+        for r in results or []:
+            ed = getattr(r, "extracted_data", None)
+            if not isinstance(ed, dict):
+                continue
+            ed.setdefault("validation", {})["selected_pages_ignored"] = list(
+                ignored_pages)
+            ed.setdefault("validation_notes", []).append(
+                f"selected page(s) {shown} are not pages of this file "
+                f"({len(all_origins) or len(page_numbers)} page(s)) and were "
+                f"not extracted")
+            ed["needs_review"] = True
+        return results
+
     # ── DOCUMENT BOUNDARIES ──
     # One file was one document, unconditionally: three invoices merged into
     # one PDF produced 13 field slots where 3 x 13 were needed, the model
@@ -538,12 +583,12 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                         f"document {n} of {len(slices)} in "
                         f"{file_path.name} ({span})")
             results += part
-        return _note_ocr(_note_unchecked(_note_shredded(results)))
+        return _note_selection(_note_ocr(_note_unchecked(_note_shredded(results))))
 
-    return _note_ocr(_note_unchecked(_note_shredded(
+    return _note_selection(_note_ocr(_note_unchecked(_note_shredded(
         _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
                      doc_text_pages, page_images, default_doc_type,
-                     batch_schemas))))
+                     batch_schemas)))))
 
 
 def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
