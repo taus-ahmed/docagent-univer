@@ -70,12 +70,24 @@ class ProcessedDocument:
     #: Pages with no text layer that could NOT be OCR'd (no binary, no render).
     #: Absent and said out loud, rather than an empty page nobody explains.
     ocr_failed_pages: list[int] = field(default_factory=list)
-    #: Characters the PDF's OWN text layer yielded, before any OCR. Kept apart
+    #: Characters the PDF's OWN text layer yielded on its NATIVE pages — not
+    #: OCR's reading, and not a scanner's embedded layer. Kept apart
     #: from `extracted_text` because `has_meaningful_text` decides the document
     #: type, and a document typed `digital_pdf` on the strength of text a
     #: machine read off a picture would claim `high` confidence for values no
     #: text layer ever witnessed.
     native_text_chars: int = 0
+    #: Where each page's text came from, one entry per page in file order:
+    #:   "native"   the PDF's own text layer — the document's own words
+    #:   "ocr"      no usable text layer; read (or attempted) by OCR here
+    #:   "pre_ocr"  a text layer that is itself a machine's reading: text drawn
+    #:              INVISIBLY (render mode 3) over a page image, which is what
+    #:              a scanner or MFP that ran its own OCR writes
+    #: Decided per page, so one scan in a file says nothing about its other
+    #: pages. Only strong, explainable signals decide (`page_origin`); image
+    #: coverage on its own never does — the CFPB forms carry an 86% image on
+    #: page 1 and are native.
+    page_origins: list[str] = field(default_factory=list)
     processing_notes: str = ""
 
     @property
@@ -145,6 +157,83 @@ def text_layer_pages(file_path: str | Path) -> tuple[list[int], int]:
 def pages_without_text_layer(file_path: str | Path) -> list[int]:
     """The 1-based pages of this PDF that `_process_pdf` would send to OCR."""
     return text_layer_pages(file_path)[0]
+
+
+#: Text show operators, and the operator that changes the text render mode.
+_SHOW_OPS = {b"Tj", b"TJ", b"'", b'"'}
+#: Render mode 3 paints nothing: neither fill nor stroke, nor a clip.
+_INVISIBLE = 3
+
+
+def invisible_text_shows(page) -> tuple[int, int]:
+    """(text shows drawn in render mode 3, all text shows) on one pypdf page.
+
+    Walks the page's content stream AND every form XObject it draws, tracking
+    `Tr` through `q`/`Q` the way a renderer does — the render mode is part of
+    the graphics state, so it survives `BT`/`ET` and is restored by `Q`, and a
+    form starts from the state current at its `Do` and gives it back after.
+
+    pdfplumber's characters do not carry the render mode, which is why this
+    reads the stream itself.
+    """
+    from pypdf.generic import ContentStream
+
+    counts = [0, 0]
+
+    def walk(contents, resources, mode, depth):
+        if contents is None or depth > 8:
+            return
+        stack = []
+        for operands, op in ContentStream(contents, page.pdf).operations:
+            if op == b"q":
+                stack.append(mode)
+            elif op == b"Q":
+                mode = stack.pop() if stack else mode
+            elif op == b"Tr" and operands:
+                mode = int(operands[0])
+            elif op in _SHOW_OPS:
+                counts[1] += 1
+                counts[0] += mode == _INVISIBLE
+            elif op == b"Do" and operands and resources is not None:
+                xobjects = resources.get("/XObject")
+                xobj = xobjects.get_object().get(operands[0]) if xobjects else None
+                xobj = xobj.get_object() if xobj is not None else None
+                if xobj is not None and xobj.get("/Subtype") == "/Form":
+                    walk(xobj, xobj.get("/Resources", resources), mode, depth + 1)
+
+    walk(page.get_contents(), page.get("/Resources"), 0, 0)
+    return counts[0], counts[1]
+
+
+def page_origin(plumber_page, pypdf_page, needed_ocr: bool) -> str:
+    """"native" | "ocr" | "pre_ocr" for one page. See `ProcessedDocument`.
+
+    THE SIGNALS, strongest first, and why each one is allowed to decide:
+
+      no usable text layer      the page went to OCR: "ocr", whatever OCR
+                                then managed (a failure or zero words is a
+                                named outcome of its own, not a native page)
+      invisible text over an    "pre_ocr". Text that is never painted exists
+      image                     only to be searched; drawn over a picture of
+                                the page it is a scanner's reading of that
+                                picture. Most of the page's text shows must be
+                                invisible, so one hidden marker on a digital
+                                form does not condemn it.
+      otherwise                 "native"
+
+    An image is required as CORROBORATION and is never sufficient: an image
+    without hidden text is a digital page with a logo, a seal or a form
+    background (the three CFPB controls: 86% image cover, 0 hidden shows).
+    A page whose text layer is VISIBLE but thin over a full-page image — the
+    Photoshop-built bank-statement-sample — is not decided here; telling it
+    apart needs an OCR-versus-text-layer comparison (Gate 2c).
+    """
+    if needed_ocr:
+        return "ocr"
+    if pypdf_page is None or not plumber_page.images:
+        return "native"
+    hidden, shows = invisible_text_shows(pypdf_page)
+    return "pre_ocr" if shows and hidden * 2 > shows else "native"
 
 
 def preprocess_file(file_path: str | Path) -> ProcessedDocument:
@@ -266,8 +355,8 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
     )
 
     # Step 1: Extract text from ALL pages using pdfplumber
+    reader = None
     try:
-        native_chars = 0
         with pdfplumber.open(file_path) as pdf:
             doc.total_pages = len(pdf.pages)
             # A fillable form's checkboxes are widget annotations carrying no
@@ -287,7 +376,32 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                 stats = {}
                 text, lines, repairs = read_page(page, widgets.get(page_num) or [],
                                                  stats=stats)
-                native_chars += len((text or "").strip())
+                needed_ocr = page_needs_ocr(text)
+                # The pypdf reader is opened only for a page that could be a
+                # pre-OCR'd scan (a usable text layer AND an image), so a plain
+                # digital document pays nothing for the question.
+                if reader is None and not needed_ocr and page.images:
+                    reader = PdfReader(str(file_path))
+                try:
+                    origin = page_origin(
+                        page, reader.pages[page_num] if reader else None,
+                        needed_ocr)
+                except Exception as exc:
+                    # Said out loud. A page whose stream cannot be walked is
+                    # left native — calling it a scan on no evidence would put
+                    # a digital form under the OCR floor.
+                    origin = "native"
+                    doc.processing_notes += (
+                        f"page {page_num + 1}: could not check for an embedded "
+                        f"OCR layer ({type(exc).__name__}: {exc}). ")
+                doc.page_origins.append(origin)
+                if origin == "native":
+                    doc.native_text_chars += len((text or "").strip())
+                elif origin == "pre_ocr":
+                    print(f"[TEXTLAYER] page {page_num+1}: EMBEDDED OCR LAYER "
+                          f"— its text is drawn invisibly over a page image, "
+                          f"so it is a machine's reading of that image, not "
+                          f"the document's own words.", flush=True)
                 # A PAGE WITH NO TEXT LAYER IS NOT A PAGE WITH NOTHING ON IT.
                 # pdfplumber returns nothing for a scan, and everything
                 # downstream — the prompt, grounding, placement, row identity —
@@ -295,7 +409,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                 # empty. Render it and read it with OCR instead, through the
                 # SAME seam: `read_page` takes a PageSource, so nothing below
                 # this line learns that a different reader ran.
-                if page_needs_ocr(text):
+                if needed_ocr:
                     text, lines, repairs = _ocr_page(
                         file_path, page_num + 1, doc, stats)
                 doc.page_lines.append(lines)
@@ -374,13 +488,13 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
         doc.processing_notes += f"Text extraction failed: {e}. "
 
     # Determine if text extraction was meaningful — FROM THE DOCUMENT'S OWN
-    # TEXT LAYER. A scan whose text came from OCR stays `scanned_pdf`, so
-    # slot extraction still floors its confidences to UNVERIFIED: OCR gives
-    # the model something to read and grounding something to check against, and
-    # it does not make a machine's reading into the document's own words.
-    clean_text = doc.extracted_text.strip()
-    native = doc.native_text_chars if doc.ocr_pages else len(clean_text)
-    doc.has_meaningful_text = native > MIN_TEXT_LENGTH
+    # TEXT LAYER, counted over NATIVE pages only. Text that OCR read here, or
+    # that a scanner embedded (pre_ocr), gives the model something to read and
+    # grounding something to check against; it does not make a machine's
+    # reading into the document's own words. Per-value confidence is decided
+    # by each value's PAGE origin (`page_origins`), so a mixed file is no
+    # longer a scan because one of its pages is.
+    doc.has_meaningful_text = doc.native_text_chars > MIN_TEXT_LENGTH
 
     # Step 2: Convert pages to images (for vision or scanned docs)
     try:

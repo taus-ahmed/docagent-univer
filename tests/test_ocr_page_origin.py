@@ -353,10 +353,6 @@ class TestControlTheStubCanEarnHigh:
 @needs_tesseract
 class TestItem1PerPageOrigin:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "no per-page origin exists: ProcessedDocument records which pages were "
-        "OCR'd (ocr_pages) but not the origin of every page"))
     @pytest.mark.parametrize("name", ["mixed_digital_then_scan",
                                       "mixed_scan_then_digital"])
     def test_each_page_records_its_origin(self, variants, name):
@@ -367,11 +363,6 @@ class TestItem1PerPageOrigin:
         for o, e in zip(got, expected):
             assert o in ORIGIN_OF[e], (got, expected)
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "preprocessor.py computes native_chars per page and drops it; "
-        "doc.native_text_chars is never assigned, so one OCR'd page makes "
-        "has_meaningful_text False for the whole file"))
     @pytest.mark.parametrize("name", ["mixed_digital_then_scan",
                                       "mixed_scan_then_digital"])
     def test_native_text_is_counted_and_one_scan_does_not_make_the_file_a_scan(
@@ -383,9 +374,6 @@ class TestItem1PerPageOrigin:
             len(doc.page_texts[i].strip()) for i in native) > 0
         assert doc.has_meaningful_text is True
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "the result carries no per-page origin"))
     def test_the_result_records_each_pages_origin(self, mixed_run):
         origins = _pages(mixed_run.ed["validation"]["page_origins"])
         assert origins == {mixed_run.native: "native", mixed_run.scan: "ocr"}
@@ -398,10 +386,6 @@ class TestItem1PerPageOrigin:
 @needs_tesseract
 class TestItem2NativePagesKeepTheirConfidence:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "slot_extractor floors the WHOLE conf_map to unverified when the file "
-        "type is scanned_pdf, and one OCR'd page makes the file scanned_pdf"))
     def test_a_grounded_value_on_a_native_page_reaches_high(self, mixed_run):
         cm = mixed_run.ed["validation"]["confidence_map"]
         for label in ("Bank", "Payee", "Amount"):
@@ -409,9 +393,6 @@ class TestItem2NativePagesKeepTheirConfidence:
             assert mixed_run.ed["field_provenance"][ref]["page"] == mixed_run.native
             assert cm[ref] == HIGH, (label, cm[ref])
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "the label-keyed projection reads the floored conf_map"))
     def test_the_label_keyed_projection_agrees(self, mixed_run):
         kv = mixed_run.ed["extracted_data"]
         assert kv["Payee"]["confidence"] == HIGH, kv["Payee"]
@@ -665,10 +646,6 @@ class TestItem3OcrConfidenceIsExact:
         assert ed["field_provenance"][ref]["grounded"] is False
         assert ed["validation"]["confidence_map"][ref] == LOW
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "the floor rewrites the field conf_map only; a table row read from an "
-        "OCR page keeps _confidence='high'"))
     def test_a_grounded_table_row_on_an_ocr_page_is_exactly_unverified(self, det):
         ed = det[("ocr", "table")]
         _clean(ed)
@@ -788,10 +765,6 @@ class TestItem5ZeroWordPages:
 @needs_tesseract
 class TestItem6GatesPerPage:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "the 30% low-confidence gate and the <50-char floor are computed over "
-        "the whole document; no per-page gate exists"))
     def test_each_page_carries_its_own_gate(self, mixed_run):
         """Native page: 3 graded, 0 low. OCR page: 3 graded, at least the 2
         fabricated values low (today all 3: skewed OCR lines are split by
@@ -812,10 +785,6 @@ class TestItem6GatesPerPage:
             assert g["low_confidence_ratio"] == pytest.approx(
                 g["low_confidence_cells"] / g["graded_cells"], abs=5e-5), g
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "a blank OCR page in the same file floors the native page: the "
-        "scanned-file floor is whole-document"))
     def test_a_blank_page_does_not_floor_the_native_page(self, blank_middle_run):
         cm = blank_middle_run.ed["validation"]["confidence_map"]
         for label in ("Bank", "Payee", "Amount"):
@@ -895,10 +864,6 @@ class TestItem8PreOcrScans:
     taken as the document's own words. Outcomes only: no threshold or filename
     is assumed about how the production rule decides."""
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "an embedded OCR layer is indistinguishable from native text today; "
-        "no per-page origin exists"))
     @pytest.mark.parametrize("name", ["preocr_good", "preocr_garbled"])
     def test_generated_preocr_pages_are_ocr_origin(self, variants, name):
         doc = _preprocessed(_pdf(variants, name))
@@ -907,7 +872,10 @@ class TestItem8PreOcrScans:
             doc.page_origins
 
     @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason="no per-page origin exists")
+    @pytest.mark.xfail(strict=True, reason=(
+        "Gate 2c: a VISIBLE but thin text layer over a full-page image is "
+        "classified native; telling it from native needs the OCR-versus-text-"
+        "layer comparison, which needs a measurement phase first"))
     def test_the_real_preocr_bank_statement_is_ocr_origin(self):
         """Not a scanner's invisible layer — measured: Creator 'Adobe Photoshop
         CS5', 66 full-page images, 108 VISIBLE words in MyriadPro, 0 text
@@ -959,8 +927,6 @@ class TestItem8PreOcrScans:
         bs.PDF_DIR / "round2" / "201403_cfpb_loan-estimate_fixed-rate-loan-sample-H24B.pdf",
     ]
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason="no per-page origin exists")
     def test_verified_native_controls_are_never_classified_as_ocr(self, variants):
         """ZERO false positives on the verified-native controls above and on
         the generated digital control `digital_batch_3pages`, measured the same

@@ -331,12 +331,24 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     doc_page_lines = list(getattr(doc, "page_lines", []) or [])
     doc_text = doc.extracted_text or ""
     page_images = doc.page_images_b64 or []
+    # The FILE page number of every entry of doc_text_pages, carried beside it
+    # so that whatever slices the lists — selected_pages here, document
+    # boundaries below — page-level facts are still stated in file pages.
+    page_numbers = list(range(1, len(doc_text_pages) + 1))
     if selected_pages and page_images:
         keep = [i - 1 for i in selected_pages if 0 < i <= len(page_images)]
         if keep:
             page_images = [page_images[i] for i in keep]
             doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
             doc_page_lines = [doc_page_lines[i] for i in keep if i < len(doc_page_lines)]
+            page_numbers = [i + 1 for i in keep if i < len(page_numbers)]
+    # Where each extracted page's text came from, by FILE page. Empty when the
+    # preprocessor recorded none (an image upload), and slot extraction then
+    # keeps its whole-document floor.
+    all_origins = list(getattr(doc, "page_origins", []) or [])
+    page_origins = ({n: all_origins[n - 1] for n in page_numbers}
+                    if all_origins and all(n <= len(all_origins)
+                                           for n in page_numbers) else {})
 
     # I10 — a page whose text layer had to be un-shredded. FILE page numbers,
     # so a split document still names the page the reader can turn to.
@@ -361,7 +373,8 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                binding_map=binding_map, page_images=page_images, doc_text=doc_text,
                doc_text_pages=doc_text_pages, file_type=ftype,
                default_doc_type=default_doc_type, start=start,
-               page_lines=doc_page_lines)
+               page_lines=doc_page_lines, page_origins=page_origins or None,
+               page_numbers=page_numbers)
 
     def _note_shredded(results):
         """Say it on the RESULT, not only in the log (I10).
@@ -456,6 +469,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             sub["doc_text_pages"] = texts
             sub["page_lines"] = lines
             sub["page_images"] = images
+            numbers = page_numbers[first_page - 1:first_page - 1 + len(texts)]
+            sub["page_numbers"] = numbers
+            sub["page_origins"] = ({n: page_origins[n] for n in numbers
+                                    if n in page_origins} or None)
             part = _extract_one(orchestrator, file_path, template_data, sub,
                                 sub["doc_text"], texts, images,
                                 default_doc_type, batch_schemas)

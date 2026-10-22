@@ -701,6 +701,33 @@ def page_of(source, page, all_lines, page_lines, line_no=None):
     return mapped
 
 
+def page_value_page(prov, page_origins, all_lines):
+    """The file page a graded value belongs to, for its origin and its page
+    gate: the page its provenance records, else the one page its quote can be
+    read from, else None. A quote printed on several pages counts as native
+    only when every one of them is native.
+    """
+    prov = prov or {}
+    try:
+        pg = int(prov["page"]) if prov.get("page") is not None else None
+    except (TypeError, ValueError):
+        pg = None
+    if pg in page_origins:
+        return pg
+    if all_lines and str(prov.get("source") or "").strip():
+        found = _pages_of(source_occurrences(all_lines, prov["source"]),
+                          all_lines) & set(page_origins)
+        if len(found) == 1 or (found and all(page_origins[p] == "native"
+                                             for p in found)):
+            return min(found)
+    return None
+
+
+def origin_floor(level):
+    """The level a value keeps when its page is floored."""
+    return UNVERIFIED
+
+
 def _pages_of(occurrences, all_lines):
     return {p for p in (line_page(all_lines[i]) for i in occurrences)
             if p is not None}
@@ -765,8 +792,16 @@ def select_region(located, all_lines, page_lines):
 
 def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         page_images, doc_text, doc_text_pages, file_type,
-                        default_doc_type, start, page_lines=None):
-    """Slot-directed extraction for one file. Returns list[DocumentExtractionResult]."""
+                        default_doc_type, start, page_lines=None,
+                        page_origins=None, page_numbers=None):
+    """Slot-directed extraction for one file. Returns list[DocumentExtractionResult].
+
+    `page_origins` ({file page: "native" | "ocr" | "pre_ocr"}) moves the
+    scanned-document floor from the whole document to each value's own page;
+    `page_numbers` is the file page of each entry of `doc_text_pages`. A
+    caller passing no origins (an image upload, a direct call) keeps the
+    whole-document floor exactly as before.
+    """
     from orchestrator import DocumentExtractionResult
 
     file_path = Path(file_path)
@@ -1289,6 +1324,44 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                  f"{empty_rows} empty, {off_schema_keys} off-schema key(s), "
                  f"{overprinted} overprinted, {unwitnessed} unwitnessed")
 
+    # PAGE ORIGIN. Which page each graded value was read from, and so where its
+    # text came from. Decided before the gates, which count the levels the
+    # checks produced — not the levels the floor below replaces them with.
+    origin_mode = bool(page_origins)
+    if origin_mode:
+        page_origins = {int(k): v for k, v in page_origins.items()}
+        numbers = list(page_numbers or sorted(page_origins))
+        page_text = {n: pages[i] for i, n in enumerate(numbers) if i < len(pages)}
+        thin = {n for n in page_origins
+                if len(str(page_text.get(n, "")).strip()) < 50}
+        floored_pages = thin | {n for n, o in page_origins.items() if o != "native"}
+        field_page = {ref: page_value_page(field_prov.get(ref), page_origins,
+                                           all_lines)
+                      for ref in conf_map}
+        row_page = [(r, page_value_page({"page": r.get("_page"),
+                                         "source": r.get("_source")},
+                                        page_origins, all_lines))
+                    for rows in tables_out.values() for r in rows]
+        page_gates = {}
+        for n in sorted(page_origins):
+            levels = ([lv for ref, lv in conf_map.items() if field_page[ref] == n]
+                      + [r.get("_confidence") for r, pg in row_page if pg == n])
+            low_n = sum(1 for lv in levels if lv == LOW)
+            ratio_n = (low_n / len(levels)) if levels else 0.0
+            page_gates[n] = {
+                "origin": page_origins[n],
+                "graded_cells": len(levels),
+                "low_confidence_cells": low_n,
+                "low_confidence_ratio": round(ratio_n, 4),
+                "review_gate": ratio_n > 0.30,
+                "text_floor": n in thin,
+            }
+
+        def page_floored(pg):
+            # A value nothing can place is floored whenever the document has
+            # any floored page: unplaced is not the same as native.
+            return pg in floored_pages if pg is not None else bool(floored_pages)
+
     # DOCUMENT-LEVEL GATE — a document where more than 30% of cells are low
     # confidence is sent for manual review as a whole, rather than handing the
     # user a wall of per-cell warnings to work through.
@@ -1308,7 +1381,37 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     overall = confident if ungrounded == 0 else (MEDIUM if ungrounded <= 2 else LOW)
     if review_gate:
         overall = LOW
-    if file_type in ("scanned_pdf", "image") or len(doc_text.strip()) < 50:
+    if origin_mode:
+        # THE FLOOR IS PER PAGE. A value read off a page whose text did not
+        # come from the PDF's own text layer, or off a page with under 50
+        # characters of text, is floored; a value read off a native page in the
+        # same file keeps what its checks earned. It used to be one bit for the
+        # whole file, so one scanned page took `high` from every digital page
+        # beside it, and a blank scan floored a native page.
+        conf_map = {ref: (origin_floor(lv) if page_floored(field_page[ref]) else lv)
+                    for ref, lv in conf_map.items()}
+        # Table rows were never floored at all: a row read off a scan kept
+        # `high`. Same rule as a field.
+        for r, pg in row_page:
+            if page_floored(pg):
+                r["_confidence"] = origin_floor(r["_confidence"])
+        for origin, what in (("ocr", "no usable text layer — read by OCR, a "
+                                     "machine's reading of the page image"),
+                             ("pre_ocr", "the text layer is an embedded OCR "
+                                         "layer (invisible text over a page "
+                                         "image), a machine's reading rather "
+                                         "than the document's own words")):
+            those = sorted(n for n, o in page_origins.items() if o == origin)
+            if those:
+                notes.append(f"page {', '.join(map(str, those))}: {what}; "
+                             f"values read from it are unverified")
+        if floored_pages >= set(page_origins):
+            overall = UNVERIFIED
+        elif overall in CONFIDENT_LEVELS and (
+                any(page_floored(pg) for pg in field_page.values())
+                or any(page_floored(pg) for _r, pg in row_page)):
+            overall = MEDIUM
+    elif file_type in ("scanned_pdf", "image") or len(doc_text.strip()) < 50:
         # No text layer to check any span against. Every cell here was reported
         # as "medium" before Phase 8, which implied a verification that never
         # happened; UNVERIFIED says what is actually true.
@@ -1386,6 +1489,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "low_confidence_ratio": round(low_ratio, 4),
             "document_needs_review": review_gate,
             "grounded_count": max(0, total_cells - ungrounded),
+            # {file page: origin} and {file page: that page's own gate}, for
+            # the pages this result was extracted from.
+            **({"page_origins": dict(page_origins), "page_gates": page_gates}
+               if origin_mode else {}),
         },
         "validation_notes": notes,
         "needs_review": needs_review,
