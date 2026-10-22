@@ -97,3 +97,12 @@ def test_a_readable_band_carries_no_such_reason(tmp_path):
     ed, refs = _run(tmp_path, READABLE, ANSWERS)
     assert "micr_band_unreadable" not in json.dumps(ed["field_provenance"])
     assert not ed["validation"].get("micr_band_unreadable")
+
+
+def test_flagged_count_is_the_length_of_flagged_fields(tmp_path):
+    """`validation.flagged_count` counts EVERY entry in `flagged_fields`,
+    including the ones added after slot extraction (the unreadable band's)."""
+    for band in (UNREADABLE, READABLE):
+        ed, _refs = _run(tmp_path, band, ANSWERS)
+        v = ed["validation"]
+        assert v["flagged_count"] == len(v["flagged_fields"]), (band, v["flagged_fields"])

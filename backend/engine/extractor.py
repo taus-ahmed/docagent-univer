@@ -689,12 +689,26 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                         f"document {n} of {len(slices)} in "
                         f"{file_path.name} ({span})")
             results += part
-        return _note_selection(_note_ocr(_note_unchecked(_note_shredded(results))))
+        return _count_flags(_note_selection(_note_ocr(_note_unchecked(
+            _note_shredded(results)))))
 
-    return _note_selection(_note_ocr(_note_unchecked(_note_shredded(_note_bands(
-        _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
-                     doc_text_pages, page_images, default_doc_type,
-                     batch_schemas), doc_text_pages)))))
+    return _count_flags(_note_selection(_note_ocr(_note_unchecked(_note_shredded(
+        _note_bands(_extract_one(orchestrator, file_path, template_data, ctx,
+                                 doc_text, doc_text_pages, page_images,
+                                 default_doc_type, batch_schemas),
+                    doc_text_pages))))))
+
+
+def _count_flags(results):
+    """`validation.flagged_count` is the length of `validation.flagged_fields`,
+    on every record, whatever added an entry after slot extraction counted
+    them. A count that disagrees with the list it counts is a second answer
+    to one question."""
+    for r in results or []:
+        v = (getattr(r, "extracted_data", None) or {}).get("validation")             if isinstance(getattr(r, "extracted_data", None), dict) else None
+        if isinstance(v, dict) and "flagged_fields" in v:
+            v["flagged_count"] = len(v["flagged_fields"])
+    return results
 
 
 def _cheque_units(doc, texts, lines, images, numbers, origins):
