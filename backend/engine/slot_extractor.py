@@ -45,9 +45,8 @@ import time
 from pathlib import Path
 
 from extractor import _llm_json, _log
-from cheque_amounts import compare_amounts
-from micr import (aba_is_valid, field_role, find_micr_line, parse_micr,
-                  transit_number)
+from micr import field_role, find_micr_line, parse_micr
+from validators import FAIL, UNREADABLE, CheckContext, run_checks
 from text_layer import (canonical_value, check_placement, column_bands,
                         find_line, flatten_pages, line_page, matches_loosely,
                         overprinted_value, page_for_prompt_page, record_span,
@@ -740,11 +739,9 @@ def origin_floor(level):
 GROUNDING_FAILED = "grounding_failed"          # the quoted span is not on the page
 PLACEMENT_FAILED = "placement_failed"          # under another column, or across a gutter
 CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / prose in a scalar
-AMOUNT_MISMATCH = "amount_mismatch"
-CHECKSUM_FAILED = "checksum_failed"            # nine digits no routing number can be
 POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one cheque?
-MICR_UNREADABLE = "micr_band_unreadable"       # a band is there; its digits are not
-AMOUNT_UNREADABLE = "amount_unreadable"
+# Family checks' codes (amount_mismatch, checksum_failed, ...) live with their
+# validators: cheque_validators.py, registered in validators.py.
 
 
 def _add(reasons, why):
@@ -759,71 +756,6 @@ def review_metadata(origin, failures=()):
     for why in failures:
         _add(reasons, why)
     return bool(reasons), reasons
-
-
-_FIGURE_WORDS = {"figures", "figure", "numeric", "numerals", "numeral",
-                 "digits", "courtesy"}
-_WRITTEN_WORDS = {"words", "written", "legal"}
-
-
-def amount_role(label):
-    """'figures' | 'words' | '' — which statement of a cheque's amount a slot
-    asks for. The template's and the vocabulary's names are `Amount in Figures`
-    and `Amount in Words`. A bare `Amount` is NEITHER: nothing says which of
-    the two it is (a cheque prints its amount twice, vocabulary.py)."""
-    words = set(re.sub(r"[^a-z ]+", " ", str(label or "").lower()).split())
-    if "amount" not in words:
-        return ""
-    if words & _WRITTEN_WORDS:
-        return "words"
-    if words & _FIGURE_WORDS:
-        return "figures"
-    return ""
-
-
-def cross_check_amounts(fields, extracted, conf_map, field_prov, flagged,
-                        notes, failed):
-    """The cheque amount cross-check (cheque_amounts.compare_amounts), applied.
-
-    Runs only when exactly one slot asks for each statement and BOTH were
-    filled. A MISMATCH makes both values exactly low — at least one of them is
-    wrong and nothing says which. UNREADABLE changes no level and puts a
-    notice on both. A MATCH is supporting evidence only and never raises a
-    level: two readings agreeing is not a measurement of either.
-    Returns {"status", "notice": {ref: [reason]}}.
-    """
-    out = {"status": None, "notice": {}}
-    by_role, label = {}, {}
-    for f in fields:
-        role = amount_role(f["row_label"])
-        if role:
-            by_role.setdefault(role, []).append(f["ref"])
-            label[f["ref"]] = f["row_label"]
-    if len(by_role.get("figures", [])) != 1 or len(by_role.get("words", [])) != 1:
-        return out
-    fig, wrd = by_role["figures"][0], by_role["words"][0]
-    if fig not in extracted or wrd not in extracted:
-        return out
-    check = compare_amounts(str(extracted[fig]), str(extracted[wrd]))
-    out["status"] = check.status
-    for ref in (fig, wrd):
-        if ref in field_prov:
-            field_prov[ref]["amount_cross_check"] = check.status
-    if check.status == "mismatch":
-        for ref in (fig, wrd):
-            conf_map[ref] = LOW
-            failed(ref, AMOUNT_MISMATCH)
-            flagged.append(_flag(
-                label[ref], extracted[ref],
-                f"amount in figures ({check.numeric}) and amount in words "
-                f"({check.words}) disagree — at least one of them is wrong"))
-        notes.append(f"cheque amount cross-check: figures {check.numeric} vs "
-                     f"words {check.words} — MISMATCH, both values marked low")
-    elif check.status == "unreadable":
-        out["notice"] = {fig: [AMOUNT_UNREADABLE], wrd: [AMOUNT_UNREADABLE]}
-        notes.append("cheque amount cross-check could not be completed — "
-                     + ", ".join(check.reasons))
-    return out
 
 
 def _pages_of(occurrences, all_lines):
@@ -1161,41 +1093,29 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             _log("MICR", f"{file_path.name}: band decomposed -> "
                          + ", ".join(sorted(parts)))
 
-    # ── ABA CHECKSUM, on every routing slot, whoever filled it (Gate 4c) ──
-    # The MICR pass above checks the band's transit field before using it and
-    # withholds one that fails — and that withholding was silent: the slot
-    # stayed empty exactly as if no band had been printed. A routing number
-    # the MODEL answered was never checked at all.
-    transit = transit_number(micr_line) if micr_line else ""
-    routing_checksum = (None if not transit
-                        else "pass" if aba_is_valid(transit) else "fail")
-    checksum_withheld = 0
-    for slot in slots["fields"]:
-        if field_role(slot["row_label"]) != "routing":
-            continue
-        ref = slot["ref"]
-        if ref in extracted_fields:
-            ok = aba_is_valid(re.sub(r"\D", "", str(extracted_fields[ref])))
-            field_prov[ref]["aba_checksum"] = "pass" if ok else "fail"
-            if not ok:
+    # ── CROSS-FIELD CHECKS, by document family (validators.py) ──
+    # The family's registered validators, applied by one rule set: FAIL makes
+    # each affected value exactly low with the check's reason; UNREADABLE adds
+    # the reason and moves no level; PASS is evidence only. A family with
+    # nothing registered runs nothing.
+    check_notice, check_validation, check_review = {}, {}, False
+    for res in run_checks(default_doc_type, CheckContext(
+            slots["fields"], extracted_fields, pages)):
+        for ref, ev in res.evidence.items():
+            if ref in field_prov:
+                field_prov[ref].update(ev)
+        for ref in res.slots:
+            if ref not in extracted_fields:
+                continue
+            if res.status == FAIL:
                 conf_map[ref] = LOW
-                failed(ref, CHECKSUM_FAILED)
-                flagged.append(_flag(
-                    slot["row_label"], extracted_fields[ref],
-                    "fails the ABA routing checksum — these digits cannot be a "
-                    "routing number as read"))
-        elif routing_checksum == "fail":
-            checksum_withheld += 1
-            flagged.append(_flag(
-                slot["row_label"], transit,
-                "the MICR band's routing number fails the ABA checksum, so it "
-                "was not reported — read it from the cheque"))
-            notes.append(f'{slot["row_label"]}: MICR routing number {transit} '
-                         f"fails the ABA checksum — left empty")
-
-    amount_check = cross_check_amounts(slots["fields"], extracted_fields,
-                                       conf_map, field_prov, flagged, notes,
-                                       failed)
+                failed(ref, res.reason)
+            elif res.status == UNREADABLE:
+                _add(check_notice.setdefault(ref, []), res.reason)
+        flagged.extend(_flag(*f) for f in res.flags)
+        notes.extend(res.notes)
+        check_validation.update(res.validation)
+        check_review = check_review or res.needs_review
 
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:
@@ -1604,7 +1524,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         origin = origin_of(field_page.get(ref) if origin_mode else None)
         p["origin"] = origin
         p["review_required"], p["review_reasons"] = review_metadata(
-            origin, field_fail.get(ref, []) + amount_check["notice"].get(ref, []))
+            origin, field_fail.get(ref, []) + check_notice.get(ref, []))
         if ref in conf_map:
             value_origins.append(origin)
     for rows in tables_out.values():
@@ -1620,7 +1540,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     or bool(dropped) or bool(merged_columns)
                     or bool(regions_warned)
                     or bool(empty_rows) or bool(off_schema_keys)
-                    or bool(checksum_withheld)
+                    or check_review
                     # THE REVIEW INVARIANT: any value that requires review
                     # makes the document require review — every reason code,
                     # fields and rows alike, no exceptions (amount_unreadable
@@ -1683,9 +1603,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "confidence_map": conf_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
-            # "pass" | "fail" for the MICR band's transit field; None when no
-            # band was found.
-            "routing_checksum": routing_checksum,
+            # What the family's validators record at document level
+            # (routing_checksum, micr_band_unreadable, ...).
+            **check_validation,
             "dropped_row_count": dropped,
             # I4 — a row dropped because none of its values reached a column
             # this template has, and the values discarded for being keyed with

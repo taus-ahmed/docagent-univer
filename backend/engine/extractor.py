@@ -537,8 +537,6 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         counts = [band_count(t) for t in texts]
         readable = sum(c[0] for c in counts)
         total = readable + sum(c[1] for c in counts)
-        if total == 1 and readable == 0:
-            return _note_unreadable_band(results)
         if total < 2:
             return results
         for r in results or []:
@@ -565,45 +563,6 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                 f"it may hold more than one cheque, and how many could not be "
                 f"established, so it was kept as ONE record. Check it against "
                 f"the original.")
-            ed["needs_review"] = True
-        return results
-
-    def _note_unreadable_band(results):
-        """ONE band, and not one digit of it readable (`micr_band_unreadable`).
-
-        The record IS a cheque — the band's shape says so — and its routing and
-        account are printed exactly there, unread. Every value that depends on
-        the band's identity says so; an identity slot left empty is flagged
-        rather than silently blank. Distinct from `checksum_failed` (read, and
-        wrong) and `possible_multiple_documents` (the count is unknown).
-        """
-        from micr import field_role
-        from slot_extractor import MICR_UNREADABLE, _flag
-        for r in results or []:
-            ed = getattr(r, "extracted_data", None)
-            if not isinstance(ed, dict):
-                continue
-            prov = ed.get("field_provenance") or {}
-            v = ed.setdefault("validation", {})
-            for f in (ed.get("slot_map") or {}).get("fields") or []:
-                if not field_role(f.get("row_label")):
-                    continue
-                p = prov.get(f["ref"])
-                if p is not None:
-                    reasons = p.setdefault("review_reasons", [])
-                    if MICR_UNREADABLE not in reasons:
-                        reasons.append(MICR_UNREADABLE)
-                    p["review_required"] = True
-                else:
-                    v.setdefault("flagged_fields", []).append(_flag(
-                        f["row_label"], "",
-                        "the cheque's MICR band is printed but could not be "
-                        "read, so this value was not taken from it — read it "
-                        "from the cheque"))
-            v["micr_band_unreadable"] = True
-            ed.setdefault("validation_notes", []).append(
-                "the MICR band could not be read — routing and account are "
-                "not verified against it")
             ed["needs_review"] = True
         return results
 
