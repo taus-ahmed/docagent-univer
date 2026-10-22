@@ -36,6 +36,10 @@ class CheckContext:
     fields: list
     values: dict
     pages: list
+    #: the template's tables ({name, columns: [{key, header}]}) and the rows
+    #: extracted for each ({name: [row]}); a row is addressed `<name>_rows[i]`.
+    tables: list = field(default_factory=list)
+    rows: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -96,3 +100,4 @@ def _load():
     if not _loaded:
         _loaded = True
         import cheque_validators  # noqa: F401
+        import invoice_validators  # noqa: F401

@@ -758,6 +758,14 @@ def review_metadata(origin, failures=()):
     return bool(reasons), reasons
 
 
+def _row_at(tables_out, ref):
+    """The row a validator addresses as `<table>_rows[i]`, or None."""
+    m = re.fullmatch(r"(.+)_rows\[(\d+)\]", str(ref))
+    rows = tables_out.get(m.group(1)) if m else None
+    i = int(m.group(2)) if m else 0
+    return rows[i] if rows is not None and i < len(rows) else None
+
+
 def _pages_of(occurrences, all_lines):
     return {p for p in (line_page(all_lines[i]) for i in occurrences)
             if p is not None}
@@ -1093,30 +1101,6 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             _log("MICR", f"{file_path.name}: band decomposed -> "
                          + ", ".join(sorted(parts)))
 
-    # ── CROSS-FIELD CHECKS, by document family (validators.py) ──
-    # The family's registered validators, applied by one rule set: FAIL makes
-    # each affected value exactly low with the check's reason; UNREADABLE adds
-    # the reason and moves no level; PASS is evidence only. A family with
-    # nothing registered runs nothing.
-    check_notice, check_validation, check_review = {}, {}, False
-    for res in run_checks(default_doc_type, CheckContext(
-            slots["fields"], extracted_fields, pages)):
-        for ref, ev in res.evidence.items():
-            if ref in field_prov:
-                field_prov[ref].update(ev)
-        for ref in res.slots:
-            if ref not in extracted_fields:
-                continue
-            if res.status == FAIL:
-                conf_map[ref] = LOW
-                failed(ref, res.reason)
-            elif res.status == UNREADABLE:
-                _add(check_notice.setdefault(ref, []), res.reason)
-        flagged.extend(_flag(*f) for f in res.flags)
-        notes.extend(res.notes)
-        check_validation.update(res.validation)
-        check_review = check_review or res.needs_review
-
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:
         notes.append(f"{len(unanswered)} field slot(s) returned no value: "
@@ -1366,6 +1350,45 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
 
+    # ── CROSS-FIELD CHECKS, by document family (validators.py) ──
+    # The family's registered validators, applied by one rule set: FAIL makes
+    # each affected value exactly low with the check's reason; UNREADABLE adds
+    # the reason and moves no level; PASS is evidence only. A family with
+    # nothing registered runs nothing. Run after the tables, so a check may
+    # read rows; a row is addressed `<table>_rows[i]`.
+    check_notice, check_validation, check_review = {}, {}, False
+    row_notice = []
+    for res in run_checks(default_doc_type, CheckContext(
+            slots["fields"], extracted_fields, pages,
+            tables=slots["tables"], rows=tables_out)):
+        for ref, ev in res.evidence.items():
+            if ref in field_prov:
+                field_prov[ref].update(ev)
+        for ref in res.slots:
+            row = _row_at(tables_out, ref)
+            if row is not None:
+                if res.status == FAIL:
+                    row["_confidence"] = LOW
+                    hit = next((w for rr, w in row_fail if rr is row), None)
+                    if hit is None:
+                        row_fail.append((row, [res.reason]))
+                    else:
+                        _add(hit, res.reason)
+                elif res.status == UNREADABLE:
+                    row_notice.append((row, res.reason))
+                continue
+            if ref not in extracted_fields:
+                continue
+            if res.status == FAIL:
+                conf_map[ref] = LOW
+                failed(ref, res.reason)
+            elif res.status == UNREADABLE:
+                _add(check_notice.setdefault(ref, []), res.reason)
+        flagged.extend(_flag(*f) for f in res.flags)
+        notes.extend(res.notes)
+        check_validation.update(res.validation)
+        check_review = check_review or res.needs_review
+
     total_cells = len(extracted_fields) + sum(
         len([v for k, v in r.items() if not k.startswith("_") and str(v).strip()])
         for rows in tables_out.values() for r in rows)
@@ -1534,7 +1557,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             origin = origin_of(pg)
             r["_origin"] = origin
             r["_review_required"], r["_review_reasons"] = review_metadata(
-                origin, next((w for rr, w in row_fail if rr is r), ()))
+                origin, list(next((w for rr, w in row_fail if rr is r), ()))
+                + [why for rr, why in row_notice if rr is r])
             value_origins.append(origin)
     needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
                     or bool(dropped) or bool(merged_columns)
