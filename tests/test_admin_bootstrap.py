@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import traceback
 from pathlib import Path
 
 import pytest
@@ -165,6 +166,19 @@ def test_valid_explicit_bootstrap_creates_exactly_one_administrator(
     assert verify_password(VALID_PASSWORD, admin.password_hash)
 
 
+def test_success_log_discloses_neither_password_nor_hash(
+        bootstrap_db, monkeypatch, caplog):
+    sentinel_hash = "$2b$12$bootstrap-success-hash-must-stay-secret"
+    _set_valid(monkeypatch)
+    monkeypatch.setattr("app.main.hash_password", lambda _password: sentinel_hash)
+
+    with caplog.at_level(logging.INFO, logger="docagent"):
+        _bootstrap()
+
+    assert VALID_PASSWORD not in caplog.text
+    assert sentinel_hash not in caplog.text
+
+
 def test_display_name_safely_defaults_to_username(
         bootstrap_db, monkeypatch):
     _set_valid(monkeypatch, username="first.admin", display_name=None)
@@ -210,6 +224,71 @@ def test_existing_administrator_is_never_mutated(
     assert admin.client_id == "existing-client"
     assert admin.is_active is False
     assert admin.last_login == last_login
+
+
+def test_inactive_administrator_emits_one_secret_free_warning(
+        bootstrap_db, monkeypatch, caplog):
+    from app.models.models import User
+
+    existing_hash = "$2b$12$inactive-admin-hash-must-stay-secret"
+    with bootstrap_db() as db:
+        db.add(User(username="inactive.admin", display_name="Inactive",
+                    password_hash=existing_hash, role="admin", is_active=False))
+        db.commit()
+
+    supplied = "Bootstrap password must not be logged 2026!"
+    monkeypatch.setenv(USERNAME_ENV, "replacement.admin")
+    monkeypatch.setenv(PASSWORD_ENV, supplied)
+    with caplog.at_level(logging.WARNING, logger="docagent"):
+        _bootstrap()
+
+    warnings = [record.getMessage() for record in caplog.records
+                if record.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "inactive" in warnings[0].casefold()
+    assert supplied not in caplog.text
+    assert existing_hash not in caplog.text
+
+
+def test_existing_non_admin_username_fails_without_secret_disclosure(
+        bootstrap_db, monkeypatch, caplog):
+    from app.models.models import User
+
+    with bootstrap_db() as db:
+        db.add(User(username="bootstrap.collision", display_name="Existing User",
+                    password_hash="existing-user-hash", role="user",
+                    client_id="tenant-a", is_active=True))
+        db.commit()
+
+    supplied = "Collision password must stay secret 2026!"
+    sentinel_hash = "$2b$12$collision-hash-must-stay-secret"
+    monkeypatch.setenv(USERNAME_ENV, "bootstrap.collision")
+    monkeypatch.setenv(PASSWORD_ENV, supplied)
+    monkeypatch.setattr("app.main.hash_password", lambda _password: sentinel_hash)
+
+    with caplog.at_level(logging.DEBUG, logger="docagent"):
+        with pytest.raises(RuntimeError) as caught:
+            _bootstrap()
+
+    rendered_traceback = "".join(traceback.format_exception(caught.value))
+    for output in (str(caught.value), caplog.text, rendered_traceback):
+        assert supplied not in output
+        assert sentinel_hash not in output
+    assert "username" in str(caught.value).casefold()
+    assert _admins(bootstrap_db) == []
+
+
+def test_bootstrap_password_is_stripped_before_validation_and_hashing(
+        bootstrap_db, monkeypatch):
+    from app.core.auth import verify_password
+
+    _set_valid(monkeypatch)
+    monkeypatch.setenv(PASSWORD_ENV, f" \t{VALID_PASSWORD}\r\n")
+    _bootstrap()
+
+    admin = _admins(bootstrap_db)[0]
+    assert verify_password(VALID_PASSWORD, admin.password_hash)
+    assert not verify_password(f" \t{VALID_PASSWORD}\r\n", admin.password_hash)
 
 
 def test_existing_administrator_requires_no_bootstrap_variables(bootstrap_db):
