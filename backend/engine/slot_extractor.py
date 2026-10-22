@@ -1618,13 +1618,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     or bool(dropped) or bool(merged_columns)
                     or bool(regions_warned)
                     or bool(empty_rows) or bool(off_schema_keys)
-                    # A value low because a check failed is a value nobody
-                    # may trust unread. ("amount_unreadable" is a notice, not
-                    # a failure, and does not reach here.)
-                    or bool(field_fail.keys() & extracted_fields.keys())
                     or bool(checksum_withheld)
-                    or any(rr is r for rows in tables_out.values()
-                           for r in rows for rr, _w in row_fail)
+                    # THE REVIEW INVARIANT: any value that requires review
+                    # makes the document require review — every reason code,
+                    # fields and rows alike, no exceptions (amount_unreadable
+                    # used to be one). tests/test_review_invariant.py.
+                    or any(field_prov[ref]["review_required"]
+                           for ref in extracted_fields if ref in field_prov)
+                    or any(r.get("_review_required")
+                           for rows in tables_out.values() for r in rows)
                     # Scans always need review: a machine's reading is
                     # unverified however well it grounds, and a page that
                     # yielded nothing is a page nobody has read.

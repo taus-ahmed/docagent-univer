@@ -164,8 +164,9 @@ class TestUnreadableWords:
             assert "amount_unreadable" in p["review_reasons"], p
             assert p["review_required"] is True, p
             assert p["amount_cross_check"] == "unreadable", p
-        # The document's review state is exactly what it was without the check.
-        assert ed["needs_review"] is False
+        # The review invariant: a value that requires review makes the
+        # document require review (decision 2, superseding "stays as it is").
+        assert ed["needs_review"] is True
 
 
 class TestNoWordsField:

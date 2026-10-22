@@ -674,3 +674,41 @@ constants.
 - It does not touch the confidence vocabulary. It reuses the distinction that
   vocabulary already draws between *checked and clean* and *not measured*.
 - It does not propose a replacement canary for scanned pages (§8.1).
+
+---
+
+## 12. Review reason codes — the one reference
+
+Every value carries `review_required` (bool) and `review_reasons` (a list,
+never a singular `review_reason`): on a field in
+`field_provenance[ref]`, on a table row as `_review_required` /
+`_review_reasons`. Origin comes first, then each check the value failed or
+could not complete, in the order they ran. A native value that passed
+everything carries `False` and `[]`.
+
+**The invariant:** if ANY value has `review_required` True, the document's
+`needs_review` is True. No reason code is exempt
+(`tests/test_review_invariant.py`).
+
+| code | meaning | level effect |
+|---|---|---|
+| `ocr_origin` | the page had no usable text layer and was read by OCR (scanned PDF page, or an uploaded image) | a value that passed its checks is exactly `unverified` |
+| `pre_ocr_origin` | the text layer is an embedded OCR layer (invisible text over a page image) — a machine's reading, not the document's own words | as `ocr_origin` |
+| `grounding_failed` | the quoted span is not on the page as quoted, the value was assembled from non-adjacent words, or it is two overprinted texts interleaved | exactly `low` |
+| `placement_failed` | the value sits under a different column than its slot's, or its run crosses a column gutter (two side-by-side blocks merged) | exactly `low` |
+| `content_check_failed` | grounded, but not ONE datum (an email/phone/`\|` where none was asked), or a scalar wrapped in prose | exactly `low` |
+| `checksum_failed` | a routing number that fails the ABA check digit — those nine digits cannot be a routing number as read | exactly `low` |
+| `amount_mismatch` | the cheque's amount in figures and in words both parse and disagree; set on BOTH values, since nothing says which is wrong | both exactly `low` |
+| `amount_unreadable` | the figures/words cross-check could not be completed (one side does not parse with certainty); set on both values | none — a notice, but it requires review |
+| `possible_multiple_documents` | the record may hold more than one document (cheque) and the engine could not establish how many with confidence, so it kept ONE record rather than guess a split; set on every value of that record | none — it requires review |
+
+Document-level facts that have no single value to sit on are reported in
+`validation` and `flagged_fields` and set `needs_review` directly: a MICR
+routing number withheld for failing the checksum
+(`validation.routing_checksum == "fail"`), selected pages that do not exist
+(`validation.selected_pages_ignored`), zero-word OCR pages
+(`validation.ocr_zero_word_pages`), dropped, empty or unbound table rows.
+
+Per-value evidence that is NOT a reason: `amount_cross_check`
+(`match` / `mismatch` / `unreadable` — a match never raises a level) and
+`aba_checksum` (`pass` / `fail`) in a field's provenance.
