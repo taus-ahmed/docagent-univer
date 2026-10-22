@@ -317,7 +317,7 @@ def _fix_within_page_decimals(text: str) -> str:
 
 
 def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
-              stats: dict):
+              stats: dict, image=None, dpi=None):
     """(text, lines, repairs) for a page with no text layer, read by OCR.
 
     THROUGH THE SEAM, NOT AROUND IT. `read_page` takes a `PageSource`, so the
@@ -329,13 +329,18 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
     A failure here is recorded, never swallowed: a page that could not be OCR'd
     is listed in `ocr_failed_pages` and comes back as empty as it was before,
     which is the honest answer — but a named one.
+
+    `image` (with its own `dpi`) is a page that is ALREADY a picture — an
+    uploaded JPG/PNG — and is read exactly as a rendered page is.
     """
     try:
         from ocr_source import OcrPageSource, OCR_DPI, render_pdf_page
-        image = render_pdf_page(file_path, page_number, dpi=OCR_DPI)
+        dpi = dpi or OCR_DPI
+        if image is None:
+            image = render_pdf_page(file_path, page_number, dpi=dpi)
         if image is None:
             raise RuntimeError("the page could not be rendered")
-        source = OcrPageSource(image, page_number=page_number, dpi=OCR_DPI)
+        source = OcrPageSource(image, page_number=page_number, dpi=dpi)
         text, lines, repairs = read_page(source, stats=stats)
     except Exception as exc:
         doc.ocr_failed_pages.append(page_number)
@@ -349,7 +354,7 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
     from ocr_source import reader_identity
     words = sum(len(ln) for ln in lines)
     doc.ocr_pages.append({"page": page_number, "words": words, **source.applied,
-                          "dpi": OCR_DPI, **reader_identity()})
+                          "dpi": dpi, **reader_identity()})
     if not words:
         doc.ocr_zero_word_pages.append(page_number)
         doc.processing_notes += (
@@ -357,8 +362,9 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
             f"from it — blank or unreadable; nothing was extracted from this "
             f"page. ")
     print(f"[OCR] page {page_number}: no text layer — read by Tesseract at "
-          f"{OCR_DPI}dpi, rotated {source.applied['rotated']}deg, deskewed "
-          f"{source.applied['deskewed']}deg, {len(text)} chars, "
+          f"{dpi}dpi, rotated {source.applied['rotated']}deg, deskewed "
+          f"{source.applied['deskewed']}deg ({source.applied.get('skew_detector', 'none')}), "
+          f"retry {source.applied.get('retry', 'none')}, {len(text)} chars, "
           f"{sum(len(ln) for ln in lines)} words. These are a MACHINE's "
           f"reading, not the document's own text.", flush=True)
     return text, lines, repairs
@@ -567,13 +573,49 @@ def _process_image(file_path: Path) -> ProcessedDocument:
         img = Image.open(file_path)
         if img.mode == "RGBA":
             img = img.convert("RGB")
-        img = _optimize_image(img)
-        doc.page_images_b64.append(_image_to_base64(img))
+        page = img if img.mode in ("RGB", "L") else img.convert("RGB")
+        dpi = _image_dpi(img)
+        doc.page_images_b64.append(_image_to_base64(_optimize_image(img)))
     except Exception as e:
         doc.processing_notes += f"Image processing failed: {e}. "
         raise
 
+    # AN IMAGE IS A SCANNED PAGE. It used to reach the engine as a picture
+    # alone — no text, no geometry, no origin — so nothing could be grounded
+    # and every value was floored to `unverified` without one check having
+    # run. It is now read through the SAME seam a scanned PDF page is, at
+    # full resolution (the model's copy above is downscaled; the reader's is
+    # not): origin "ocr", OCR metadata, the per-page floor and every check.
+    # Only the first frame of a multi-frame TIFF is read, as before.
+    stats = {}
+    text, lines, repairs = _ocr_page(file_path, 1, doc, stats, image=page,
+                                     dpi=dpi)
+    doc.page_origins.append("ocr")
+    doc.page_lines.append(lines)
+    if stats.get("shard_checked", True) is False:
+        doc.unchecked_shred_pages.append(1)
+    if stats.get("overprint_checked", True) is False:
+        doc.unchecked_overprint_pages.append(1)
+    if repairs:
+        doc.text_repairs.extend(repairs)
+    text = _fix_within_page_decimals(text)
+    doc.page_texts.append(text)
+    doc.extracted_text = text
     return doc
+
+
+def _image_dpi(img) -> float:
+    """The resolution the image says it was scanned at, or the OCR default.
+
+    A file's own dpi is trusted only inside a plausible scanning range; many
+    encoders write 72 (a screen default, not a measurement) or nothing.
+    """
+    from ocr_source import OCR_DPI
+    try:
+        d = float((img.info.get("dpi") or (0, 0))[0])
+    except (TypeError, ValueError, IndexError):
+        d = 0.0
+    return d if 100.0 <= d <= 1200.0 else float(OCR_DPI)
 
 
 def _optimize_image(img: Image.Image, max_size: int = 2048) -> Image.Image:
