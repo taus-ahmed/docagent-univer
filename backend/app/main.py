@@ -277,13 +277,19 @@ def _bootstrap_admin():
     try:
         admin = db.query(User).filter_by(role="admin").first()
         if admin:
+            active_admin = db.query(User).filter_by(
+                role="admin", is_active=True).first()
+            if not active_admin:
+                logger.warning(
+                    "Administrator lock-out risk: administrator rows exist, "
+                    "but every administrator is inactive.")
             return
 
         username_raw = os.environ.get(_BOOTSTRAP_USERNAME_ENV)
-        password = os.environ.get(_BOOTSTRAP_PASSWORD_ENV)
+        password_raw = os.environ.get(_BOOTSTRAP_PASSWORD_ENV)
         display_name_raw = os.environ.get(_BOOTSTRAP_DISPLAY_NAME_ENV)
 
-        if username_raw is None and password is None and display_name_raw is None:
+        if username_raw is None and password_raw is None and display_name_raw is None:
             logger.warning(
                 "No administrator exists. To provision the first administrator, "
                 "set %s and %s (optionally %s), restart once, then remove %s "
@@ -293,12 +299,18 @@ def _bootstrap_admin():
             return
 
         username = (username_raw or "").strip()
-        if not username or password is None:
+        if not username or password_raw is None:
             raise RuntimeError(
                 "Administrator bootstrap configuration is incomplete: set both "
                 f"{_BOOTSTRAP_USERNAME_ENV} and {_BOOTSTRAP_PASSWORD_ENV}.")
 
+        # Deployment dashboards and secret-file tooling commonly leave a final
+        # newline. It is never intended to be part of an interactive password.
+        password = password_raw.strip()
         _validate_bootstrap_password(username, password)
+        if db.query(User).filter_by(username=username).first():
+            raise RuntimeError(
+                "Administrator bootstrap username is already in use.")
         display_name = (display_name_raw or "").strip() or username
         db.add(User(
             username=username,

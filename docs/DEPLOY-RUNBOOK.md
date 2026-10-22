@@ -53,7 +53,7 @@ one startup:
 | variable | required | purpose |
 |---|---:|---|
 | `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME` | yes | Username for the first administrator |
-| `DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD` | yes | Unique bootstrap password of at least 15 characters |
+| `DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD` | yes | Unique bootstrap password of at least 15 characters; surrounding whitespace is stripped before validation and hashing |
 | `DOCAGENT_BOOTSTRAP_ADMIN_DISPLAY_NAME` | no | Display name; defaults to the username |
 
 Use operator-selected values, for example
