@@ -4533,7 +4533,12 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                                 _flag_summary(validation_data.get("flagged_fields", []))
                                 if has_flags else ""
                             ),
-                            needs_review=has_flags or (result.validation.needs_review if result.validation else False),
+                            needs_review=(
+                                has_flags
+                                or bool(extracted.get("needs_review"))
+                                or (result.validation.needs_review
+                                    if result.validation else False)
+                            ),
                             model_used=(result.extraction_response.model_used
                                         if result.extraction_response else "vision_direct"),
                             tokens_used=(result.extraction_response.tokens_used
