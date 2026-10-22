@@ -27,10 +27,13 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 @router.get("/users", response_model=list[UserResponse])
 def list_users(
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_admin: User = Depends(require_admin),
 ):
-    """List all users."""
-    users = db.query(User).order_by(User.created_at.desc()).all()
+    """List users visible inside the caller's administrative boundary."""
+    query = db.query(User)
+    if not _is_super_admin(current_admin):
+        query = query.filter(User.client_id == current_admin.client_id)
+    users = query.order_by(User.created_at.desc()).all()
     return [_user_to_response(u) for u in users]
 
 
@@ -38,9 +41,16 @@ def list_users(
 def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_admin: User = Depends(require_admin),
 ):
     """Create a new user."""
+    if (not _is_super_admin(current_admin)
+            and payload.client_id != current_admin.client_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Tenant admins can create users only in their own tenant",
+        )
+
     existing = db.query(User).filter(User.username == payload.username).first()
     if existing:
         raise HTTPException(status_code=409, detail=f"Username '{payload.username}' already exists")
@@ -72,7 +82,10 @@ def update_user(
     current_admin: User = Depends(require_admin),
 ):
     """Update a user's details."""
-    user = db.query(User).filter(User.id == user_id).first()
+    query = db.query(User).filter(User.id == user_id)
+    if not _is_super_admin(current_admin):
+        query = query.filter(User.client_id == current_admin.client_id)
+    user = query.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -85,11 +98,15 @@ def update_user(
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
         user.password_hash = hash_password(payload.password)
     if payload.role is not None:
-        # Can't demote self from admin
-        if user.id == current_admin.id and payload.role != "admin":
-            raise HTTPException(status_code=400, detail="Cannot remove your own admin role")
+        if user.id == current_admin.id and payload.role != user.role:
+            raise HTTPException(status_code=400, detail="Cannot change your own role")
         user.role = payload.role
-    if payload.client_id is not None:
+    if "client_id" in payload.model_fields_set:
+        if not _is_super_admin(current_admin):
+            raise HTTPException(
+                status_code=400,
+                detail="Tenant admins cannot change a user's client_id",
+            )
         user.client_id = payload.client_id
     if payload.is_active is not None:
         if user.id == current_admin.id:
@@ -111,7 +128,10 @@ def deactivate_user(
     if user_id == current_admin.id:
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
 
-    user = db.query(User).filter(User.id == user_id).first()
+    query = db.query(User).filter(User.id == user_id)
+    if not _is_super_admin(current_admin):
+        query = query.filter(User.client_id == current_admin.client_id)
+    user = query.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -161,6 +181,10 @@ def get_stats(
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def _is_super_admin(user: User) -> bool:
+    return user.role == "admin" and not user.client_id
+
 
 def _user_to_response(u: User) -> UserResponse:
     return UserResponse(
