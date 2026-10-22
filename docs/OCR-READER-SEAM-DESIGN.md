@@ -526,6 +526,12 @@ something *was found and repaired*, whereas this one is populated when
 something *was not looked at*. The note text has to carry that distinction,
 which is why it says "this does not mean the page is clean" in as many words.
 
+> **Superseded for machine-read pages (Gate 2, 2026-10-21; decided by
+> Tauseef — see §10.4).** A value read off an OCR'd or pre-OCR'd page is
+> UNVERIFIED at best, carries `review_reasons` naming its origin, and sets
+> `needs_review`. The note below is kept as the record of the open question
+> it was; for `unchecked_*` pages on their own it still describes the code.
+
 ⚠ **`needs_review = True` is written above but is NOT settled.** `shredded_pages`
 sets it because a shredded page is a page a person should check. Whether "this
 reader could not run one of the checks" deserves the same treatment depends
@@ -615,6 +621,29 @@ would look measured:
 4. **What is the scanned proportion, and the handwritten proportion within it?**
    Decides whether "not checked" is a rare annotation or the normal state, which
    decides whether §8's loud degradation is useful or is noise (§8.2).
+
+   **DECIDED for machine-read values (Gate 2, 2026-10-21, Tauseef): scans
+   always need review.** Mandatory review is the backstop, not the quality
+   mechanism, and a user who never reviews must not receive a silent wrong
+   value — so a value is verified, visibly uncertain, or empty and flagged.
+   This supersedes "do not set `needs_review`" wherever a value's text is a
+   machine's reading:
+
+   - origin is per PAGE (`page_origins`: native / ocr / pre_ocr), never per
+     file, so a native page beside a scan keeps `high`;
+   - a value from an ocr or pre_ocr page that passes its checks is exactly
+     `unverified`; one that fails any check stays exactly `low`; table rows
+     follow the same rule;
+   - every `field_provenance` entry carries `origin`, `review_required`
+     (bool) and `review_reasons` (list; only `ocr_origin` / `pre_ocr_origin`
+     so far), and every table row the same as `_origin`,
+     `_review_required`, `_review_reasons`;
+   - `needs_review` is set whenever any value or extracted page is
+     machine-read.
+
+   The question stays OPEN for `unchecked_overprint_pages` /
+   `unchecked_shred_pages` on a native page: those still do not set
+   `needs_review` by themselves.
 5. **Does the MICR band need its own capability?** `engine/micr.py` parses E-13B
    from text today. On a scanned cheque the band is an image. Whether that is a
    reader capability, a separate pass, or a different component is not settled

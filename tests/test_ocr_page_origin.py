@@ -635,11 +635,6 @@ class TestItem3OcrConfidenceIsExact:
             assert p["grounded"] is True, (ref, p)
             assert ed["validation"]["confidence_map"][ref] == UNVERIFIED, ref
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "the scanned-file floor replaces EVERY conf_map entry with "
-        "unverified, so a value that FAILED span verification is reported "
-        "as unverified: a measured failure turned into no measurement"))
     def test_a_failed_check_on_an_ocr_page_stays_exactly_low(self, det):
         ed = det[("ocr", "failed")]
         ref = _refs_by_label(ed)["Date"]
@@ -659,11 +654,6 @@ class TestItem4OcrOriginAloneRequiresReview:
     other defect (`_clean`), and the identical native page needs no review
     (`TestDeterministicControls`). So review here is owed to origin alone."""
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "a document whose only distinction is OCR origin is not sent for "
-        "review: _note_unchecked deliberately leaves needs_review alone, and "
-        "no per-value review metadata exists"))
     def test_an_ocr_page_with_only_grounded_values_needs_review(self, det):
         ed = det[("ocr", "grounded")]
         _clean(ed)
@@ -676,8 +666,6 @@ class TestItem4OcrOriginAloneRequiresReview:
             assert p["review_required"] is True, (ref, p)
             assert "ocr_origin" in p["review_reasons"], (ref, p)
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason="no per-value review metadata exists")
     def test_native_values_carry_no_origin_reason(self, det):
         ed = det[("native", "grounded")]
         assert len(ed["field_provenance"]) == 3      # every native value has one
@@ -689,16 +677,92 @@ class TestItem4OcrOriginAloneRequiresReview:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# GATE 2 — ONE FILE, BOTH ORIGINS: the level comes from the value's PAGE
+# ══════════════════════════════════════════════════════════════════════════════
+
+#: Page 2 of the composite file, read by the stub OCR reader. Its words differ
+#: from FIELD_PAGE's, so every quote places itself on exactly one page.
+OCR_FIELD_PAGE = [
+    (72, [(72, "Lakeview Credit Union")]),
+    (110, [(72, "PAY TO THE ORDER OF: Maria Lopez")]),
+    (140, [(72, "Date: 09/10/2026")]),
+    (170, [(72, "$412.50")]),
+]
+COMPOSITE_TEMPLATE = {"layout": {
+    "cells": {f"{r},0": {"value": lab, "style": {}}
+              for r, lab in enumerate(["Payee", "Scan Payee", "Scan Date"])},
+    "colWidths": [120] * 26, "merges": {}, "repeatRows": [], "regions": []},
+    "doc_type": "cheque", "mode": "layout"}
+COMPOSITE_ANSWERS = {
+    # native page, grounded
+    "Payee": (1, "PAY TO THE ORDER OF: John A. Smith", "John A. Smith"),
+    # OCR page, grounded
+    "Scan Payee": (2, "PAY TO THE ORDER OF: Maria Lopez", "Maria Lopez"),
+    # OCR page, a figure the page prints ELSEWHERE: fails span verification
+    "Scan Date": (2, "Date: 09/10/2026", "412.50"),
+}
+
+
+class TestOneFileTheLevelFollowsThePage:
+    """Unmarked, written with Gate 2. A native page and an OCR'd page in ONE
+    file, every answer deterministic. The three levels can only all hold if
+    confidence is decided by each value's page origin: the whole-document
+    floor would make the native value `unverified`, no floor would make the
+    OCR value `high`, and the old floor turned the failed value `unverified`.
+    """
+
+    @pytest.fixture(scope="class")
+    def ed(self, tmp_path_factory):
+        gen = _generator()
+        native_ops = gen._text_ops(
+            [(x, PAGE_PT[1] - top - FONT * 0.8, FONT, text)
+             for top, chunks in FIELD_PAGE for x, text in chunks], 0)
+        blank = Image.new("L", (int(PAGE_PT[0]), int(PAGE_PT[1])), 255)
+        pdf = tmp_path_factory.mktemp("composite") / "native_then_scan.pdf"
+        pdf.write_bytes(gen.build_pdf([
+            {"w_pt": PAGE_PT[0], "h_pt": PAGE_PT[1], "ops": native_ops},
+            {"w_pt": PAGE_PT[0], "h_pt": PAGE_PT[1],
+             "jpeg": gen.jpeg_bytes(blank), "jpeg_px": blank.size}]))
+
+        def extract(**kw):
+            return _Resp(_answer(kw.get("prompt", ""), COMPOSITE_ANSWERS))
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(ocr_source, "OcrPageSource", _stub_reader(OCR_FIELD_PAGE))
+            mp.setattr(ocr_source, "render_pdf_page",
+                       lambda *a, **k: Image.new("L", (2550, 3300), 255))
+            results = extractor.run_extraction(
+                SimpleNamespace(llm=SimpleNamespace(extract=extract)), pdf,
+                copy.deepcopy(COMPOSITE_TEMPLATE))
+        return _ed(results)
+
+    def test_each_level_is_exact_and_follows_its_page(self, ed):
+        refs = _refs_by_label(ed)
+        cm, prov = ed["validation"]["confidence_map"], ed["field_provenance"]
+        assert _pages(ed["validation"]["page_origins"]) == {1: "native", 2: "ocr"}
+        want = {"Payee": (1, True, HIGH, "native"),
+                "Scan Payee": (2, True, UNVERIFIED, "ocr"),
+                "Scan Date": (2, False, LOW, "ocr")}
+        for label, (page, grounded, level, origin) in want.items():
+            p = prov[refs[label]]
+            _review_schema(p, label)
+            assert (p["page"], p["grounded"], cm[refs[label]], p["origin"]) == \
+                (page, grounded, level, origin), (label, p, cm[refs[label]])
+            if origin == "native":
+                assert p["review_required"] is False and p["review_reasons"] == []
+            else:
+                assert p["review_required"] is True
+                assert p["review_reasons"] == ["ocr_origin"]
+        assert ed["needs_review"] is True
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ITEM 4 — every OCR-origin value carries its own review flag
 # ══════════════════════════════════════════════════════════════════════════════
 
 @needs_tesseract
 class TestItem4PerValueReviewFlag:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "no per-value origin or review flag exists; field_provenance carries "
-        "only source, page and grounded"))
     def test_every_ocr_value_is_flagged_with_a_reason(self, mixed_run):
         prov = mixed_run.ed["field_provenance"]
         for label in ("Scan Payee", "Scan Date", "Scan Cheque Number"):
@@ -708,8 +772,6 @@ class TestItem4PerValueReviewFlag:
             assert p["review_required"] is True, (label, p)
             assert "ocr_origin" in p["review_reasons"], (label, p)
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason="no per-value origin exists")
     def test_native_values_are_not_flagged_for_their_origin(self, mixed_run):
         prov = mixed_run.ed["field_provenance"]
         for label in ("Bank", "Payee", "Amount"):
@@ -947,10 +1009,6 @@ class TestItem8PreOcrScans:
                 wrong[p.name] = doc.page_origins
         assert wrong == {}, wrong
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "a wrong value in a pre-OCR'd layer grounds against that same layer "
-        "and is written at HIGH, unflagged"))
     def test_a_wrong_value_from_the_embedded_layer_never_reaches_high(
             self, variants):
         name = "preocr_garbled"

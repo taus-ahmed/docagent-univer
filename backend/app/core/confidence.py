@@ -17,14 +17,24 @@ Phase 8, and two of those words carried a promise nothing backed:
                 fits its own label is circular. This is the most no-template
                 extraction can honestly claim.
 
-    UNVERIFIED  No text layer existed to check the span against at all: an
-                image upload, or a scanned PDF with no extractable text. The
-                value may well be perfect; we simply did not check. Reported
-                as "medium" before Phase 8, which implied a measurement that
-                never happened.
+    UNVERIFIED  Nothing but a MACHINE'S READING witnesses the value: it was
+                not read from the PDF's own text layer. An image upload; a
+                page with no text layer, read by OCR here (origin "ocr"); a
+                scanner's embedded OCR layer (origin "pre_ocr"). On an OCR'd
+                page the span IS checked — against the machine's reading —
+                and a value that passes is UNVERIFIED, never HIGH or
+                GROUNDED, because a misread digit grounds perfectly against
+                the misreading. Decided by the value's own PAGE, so a native
+                page beside a scan keeps HIGH. Every such value requires
+                review (`review_reasons`: "ocr_origin" / "pre_ocr_origin").
+                Reported as "medium" before Phase 8, which implied a
+                measurement that never happened.
 
     LOW         Checked, and failed: the span could not be found, or the cell
-                carries more than one piece of information.
+                carries more than one piece of information. A failed check
+                stays LOW on a machine-read page too — it is never softened
+                to UNVERIFIED, which would turn a measured failure into no
+                measurement.
 
     EDITED      A human typed this value in the results grid. It is an
                 assertion by the user, not an extraction, and must never
@@ -53,7 +63,7 @@ CONFIDENT_LEVELS = (HIGH, GROUNDED)
 DISPLAY = {
     HIGH:       "High",
     GROUNDED:   "Verbatim from the document",
-    UNVERIFIED: "Unverified — no text layer",
+    UNVERIFIED: "Unverified — machine-read, needs review",
     MEDIUM:     "Medium",
     LOW:        "Low",
     EDITED:     "Edited by hand",

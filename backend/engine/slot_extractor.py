@@ -724,8 +724,20 @@ def page_value_page(prov, page_origins, all_lines):
 
 
 def origin_floor(level):
-    """The level a value keeps when its page is floored."""
-    return UNVERIFIED
+    """The level a value keeps when its text is a machine's reading.
+
+    A value that passed its checks is UNVERIFIED — never HIGH or GROUNDED,
+    because the text it was checked against was itself read by a machine. A
+    value that FAILED a check stays exactly what the check said: a measured
+    failure is never turned into "no measurement".
+    """
+    return UNVERIFIED if level in CONFIDENT_LEVELS else level
+
+
+def review_metadata(origin):
+    """(review_required, review_reasons) owed to a value's origin alone."""
+    reasons = [] if origin == "native" else [f"{origin}_origin"]
+    return bool(reasons), reasons
 
 
 def _pages_of(occurrences, all_lines):
@@ -1417,12 +1429,57 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         # happened; UNVERIFIED says what is actually true.
         overall = UNVERIFIED
         notes.append("No text layer — spans could not be verified against the "
-                     "document; values are unverified, not low quality")
-        conf_map = {k: UNVERIFIED for k in conf_map}
+                     "document; values that passed their checks are "
+                     "unverified, and values that failed them stay low")
+        conf_map = {k: origin_floor(v) for k, v in conf_map.items()}
+        for rows in tables_out.values():
+            for r in rows:
+                r["_confidence"] = origin_floor(r["_confidence"])
+
+    # PER-VALUE ORIGIN AND REVIEW (Gate 2). On EVERY value, native or not, so
+    # a reader never has to guess what an absent key means. The only reasons
+    # recorded here are owed to origin; a native value carries none.
+    if origin_mode:
+        machine = [o for o in ("ocr", "pre_ocr") if o in page_origins.values()]
+
+        def origin_of(pg):
+            if pg is not None:
+                return page_origins[pg]
+            # Unplaced, in a document with machine-read pages: assume the
+            # value is one of them. Unplaced is not native.
+            return machine[0] if machine else "native"
+    else:
+        legacy_floored = (file_type in ("scanned_pdf", "image")
+                          or len(doc_text.strip()) < 50)
+
+        def origin_of(_pg):
+            return "ocr" if legacy_floored else "native"
+
+    value_origins = []
+    for ref, p in field_prov.items():
+        origin = origin_of(field_page.get(ref) if origin_mode else None)
+        p["origin"] = origin
+        p["review_required"], p["review_reasons"] = review_metadata(origin)
+        if ref in conf_map:
+            value_origins.append(origin)
+    for rows in tables_out.values():
+        for r in rows:
+            pg = next((pg for rr, pg in row_page if rr is r), None) \
+                if origin_mode else None
+            origin = origin_of(pg)
+            r["_origin"] = origin
+            r["_review_required"], r["_review_reasons"] = review_metadata(origin)
+            value_origins.append(origin)
     needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
                     or bool(dropped) or bool(merged_columns)
                     or bool(regions_warned)
-                    or bool(empty_rows) or bool(off_schema_keys))
+                    or bool(empty_rows) or bool(off_schema_keys)
+                    # Scans always need review: a machine's reading is
+                    # unverified however well it grounds, and a page that
+                    # yielded nothing is a page nobody has read.
+                    or any(o != "native" for o in value_origins)
+                    or (origin_mode and any(o != "native"
+                                            for o in page_origins.values())))
 
     r = DocumentExtractionResult(filename=file_path.name)
     r.document_type = default_doc_type
