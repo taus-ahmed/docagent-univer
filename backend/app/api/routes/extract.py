@@ -116,6 +116,19 @@ def _safe_upload_name(filename: str, canonical_suffix: str) -> str:
     return f"{stem[:100]}{canonical_suffix}"
 
 
+def _unique_upload_name(filename: str, used_names: set[str]) -> str:
+    """Return a case-insensitively unique stored name within one batch."""
+    candidate = filename
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix
+    sequence = 2
+    while candidate.casefold() in used_names:
+        candidate = f"{stem}-{sequence}{suffix}"
+        sequence += 1
+    used_names.add(candidate.casefold())
+    return candidate
+
+
 def _validate_upload_content(filename: str, content: bytes) -> tuple[str, str, int]:
     """Validate content before any job, storage write, or worker exists."""
     if not content:
@@ -126,10 +139,18 @@ def _validate_upload_content(filename: str, content: bytes) -> tuple[str, str, i
         try:
             reader = PdfReader(io.BytesIO(content), strict=False)
             if reader.is_encrypted:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Encrypted or password-protected PDFs are not supported.")
+                try:
+                    decrypted = reader.decrypt("")
+                except Exception:
+                    decrypted = 0
+                if not decrypted:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=("Encrypted or password-protected PDFs are not "
+                                "supported."))
             page_count = len(reader.pages)
+            for page in reader.pages:
+                _ = page.mediabox
         except HTTPException:
             raise
         except Exception:
@@ -339,10 +360,11 @@ class _IncomingUpload:
     batch size — 100 files is an allowed batch here, and 50MB an allowed file.
     """
 
-    __slots__ = ("filename", "_upload", "_path", "_bytes")
+    __slots__ = ("filename", "original_filename", "_upload", "_path", "_bytes")
 
     def __init__(self, filename, upload=None, path=None, content=None):
         self.filename = filename
+        self.original_filename = filename
         self._upload = upload
         self._path = path
         self._bytes = content
@@ -407,6 +429,7 @@ async def _start_extraction_job(
     # an explanation instead of being OCR'd). Both run BEFORE the job row
     # exists, so a refused upload leaves nothing behind and costs no model call.
     sizes: list[tuple[str, int]] = []
+    used_names: set[str] = set()
     refused_name: Optional[str] = None
     try:
         for src in sources:
@@ -425,9 +448,9 @@ async def _start_extraction_job(
                 check_upload_file(current_user, src.filename, content)
             safe_name, _kind, _page_count = _validate_upload_content(
                 src.filename, content)
-            src.filename = safe_name
+            src.filename = _unique_upload_name(safe_name, used_names)
             check_upload_file(current_user, src.filename, content)
-            sizes.append((src.filename, len(content)))
+            sizes.append((src.original_filename, len(content)))
     except HTTPException as exc:
         # Only a DEMO refusal goes in the trail, and `demo_reason` is what says
         # it is one — the product's own "file type not supported" is not a demo
@@ -505,7 +528,9 @@ async def _start_extraction_job(
         target=_run_extraction_sync,
         args=(job_id, saved_keys, str(schema_path), settings.DATABASE_URL,
               template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
-        kwargs={"options": selected_options, "selected_pages": selected_pages_list},
+        kwargs={"options": selected_options,
+                "selected_pages": selected_pages_list,
+                "original_filenames": [src.original_filename for src in sources]},
         daemon=True,
     )
     thread.start()
@@ -4341,7 +4366,7 @@ def _persist_failure(session_factory, job_id, ref, error) -> None:
 
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
-                          selected_pages=None):
+                          selected_pages=None, original_filenames=None):
     import os
     os.environ["PYTHONUTF8"] = "1"
     for p in [engine_dir, backend_dir, project_dir]:
@@ -4399,6 +4424,11 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
         batch_schemas: dict = {}
 
         for i, fp in enumerate(file_keys):
+            display_filename = (
+                original_filenames[i]
+                if original_filenames and i < len(original_filenames)
+                else Path(str(fp)).name or str(fp)
+            )
             print(f"[THREAD] processing file {i+1}/{len(file_keys)}: {fp}", flush=True)
 
             # Issue 2: update job progress so the UI can poll live status
@@ -4424,7 +4454,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                     # result travels the same persistence path as any other, so
                     # the job still completes and still reports.
                     print(f"[THREAD] source missing: {fp}", flush=True)
-                    results = [_fail(Path(fp).name,
+                    results = [_fail(display_filename,
                                      "Source document is no longer in storage "
                                      "— upload it again to re-run this job.")]
                 elif _is_image_file(file_path):        # Issue 3: route image files
@@ -4448,6 +4478,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                     )
 
                 for result in results:
+                    result.filename = display_filename
                     try:
                         validation_data = (result.extracted_data or {}).get("validation", {})
                         has_flags      = validation_data.get("flagged_count", 0) > 0
@@ -4577,7 +4608,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                 print(f"[THREAD] doc error: {doc_err}", flush=True)
                 traceback.print_exc()
                 failed += 1
-                _persist_failure(Session, job_id, fp, doc_err)
+                _persist_failure(Session, job_id, display_filename, doc_err)
 
             # Rate limit protection: delay between documents
             # Prevents Groq/Gemini 429 errors on batch uploads
