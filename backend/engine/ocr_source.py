@@ -108,6 +108,20 @@ def available():
         return False, f"{type(exc).__name__}: {exc}"
 
 
+_IDENTITY = {}
+
+
+def reader_identity():
+    """{"reader", "reader_version"} recorded beside every OCR'd page, so a
+    result says which reader produced its text. Asked of the binary once per
+    process; "unknown" when it cannot be asked, never a guess."""
+    if not _IDENTITY:
+        ok, version = available()
+        _IDENTITY.update(reader="tesseract",
+                         reader_version=version if ok else "unknown")
+    return dict(_IDENTITY)
+
+
 # ── straightening, as two separate steps ─────────────────────────────────────
 
 def orientation(image):

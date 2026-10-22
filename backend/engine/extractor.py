@@ -335,13 +335,21 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     # so that whatever slices the lists — selected_pages here, document
     # boundaries below — page-level facts are still stated in file pages.
     page_numbers = list(range(1, len(doc_text_pages) + 1))
-    if selected_pages and page_images:
-        keep = [i - 1 for i in selected_pages if 0 < i <= len(page_images)]
+    # SELECTED PAGES FILTER EVERYTHING THE MODEL CAN SEE. This used to run
+    # only when page images existed, and never touched `doc_text` — the
+    # aggregate text that `_llm_json` sends whole on its text fallback, and
+    # the only text there is when no page rendered. A page the user left out
+    # reached the model on both paths.
+    if selected_pages:
+        total = len(doc_text_pages) or len(page_images)
+        keep = [i - 1 for i in selected_pages if 0 < i <= total]
         if keep:
-            page_images = [page_images[i] for i in keep]
+            page_images = [page_images[i] for i in keep if i < len(page_images)]
             doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
             doc_page_lines = [doc_page_lines[i] for i in keep if i < len(doc_page_lines)]
             page_numbers = [i + 1 for i in keep if i < len(page_numbers)]
+            from core.preprocessor import PAGE_BREAK, _fix_cross_page_decimals
+            doc_text = _fix_cross_page_decimals(PAGE_BREAK.join(doc_text_pages))
     # Where each extracted page's text came from, by FILE page. Empty when the
     # preprocessor recorded none (an image upload), and slot extraction then
     # keeps its whole-document floor.
@@ -449,6 +457,46 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                 v["unchecked_shred_pages"] = list(unchecked_shred)
         return results
 
+    ocr_records = list(getattr(doc, "ocr_pages", []) or [])
+    ocr_failed = list(getattr(doc, "ocr_failed_pages", []) or [])
+    ocr_zero = list(getattr(doc, "ocr_zero_word_pages", []) or [])
+
+    def _note_ocr(results):
+        """What OCR did, on the RESULT, in FILE pages (Gate 2).
+
+        These lists used to stop at the preprocessor, so a stored result could
+        not say which pages a machine read, how they were straightened, or
+        that a page yielded nothing. Each result reports only the pages it was
+        extracted from — a page left out by `selected_pages`, or belonging to
+        another document in the file, is not this result's to report.
+
+        A page OCR read ZERO words from, or could not read at all, is a named
+        failure and sends the document for review: a blank scan is not a
+        successful reading.
+        """
+        if not page_origins:
+            return results
+        for r in results or []:
+            ed = getattr(r, "extracted_data", None)
+            if not isinstance(ed, dict):
+                continue
+            v = ed.setdefault("validation", {})
+            mine = {int(p) for p in (v.get("page_origins") or page_origins)}
+            v["ocr_pages"] = [dict(e) for e in ocr_records if e["page"] in mine]
+            v["ocr_failed_pages"] = [p for p in ocr_failed if p in mine]
+            v["ocr_zero_word_pages"] = [p for p in ocr_zero if p in mine]
+            for key, what in (("ocr_zero_word_pages",
+                               "OCR read zero words from it — blank or "
+                               "unreadable; nothing was extracted from it"),
+                              ("ocr_failed_pages",
+                               "it has no text layer and could not be OCR'd")):
+                if v[key]:
+                    ed.setdefault("validation_notes", []).append(
+                        f"page {', '.join(map(str, v[key]))}: {what}. Check "
+                        f"this page against the original.")
+                    ed["needs_review"] = True
+        return results
+
     # ── DOCUMENT BOUNDARIES ──
     # One file was one document, unconditionally: three invoices merged into
     # one PDF produced 13 field slots where 3 x 13 were needed, the model
@@ -490,12 +538,12 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                         f"document {n} of {len(slices)} in "
                         f"{file_path.name} ({span})")
             results += part
-        return _note_unchecked(_note_shredded(results))
+        return _note_ocr(_note_unchecked(_note_shredded(results)))
 
-    return _note_unchecked(_note_shredded(
+    return _note_ocr(_note_unchecked(_note_shredded(
         _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
                      doc_text_pages, page_images, default_doc_type,
-                     batch_schemas)))
+                     batch_schemas))))
 
 
 def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,

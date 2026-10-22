@@ -794,10 +794,6 @@ class TestItem4PerValueReviewFlag:
 @needs_tesseract
 class TestItem5ZeroWordPages:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "a zero-word OCR page is appended to ocr_pages as a success with "
-        "words=0; it is not listed as a failure and no note names it"))
     @pytest.mark.parametrize("name,blank", [("scan_blank", 1),
                                             ("mixed_with_blank_middle", 2)])
     def test_a_zero_word_page_is_listed_and_named(self, variants, name, blank):
@@ -808,9 +804,6 @@ class TestItem5ZeroWordPages:
         assert re.search(rf"\bpage {blank}\b", doc.processing_notes), \
             doc.processing_notes
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "neither ocr_pages nor any zero-word record reaches the result"))
     def test_the_result_names_the_zero_word_page(self, blank_middle_run):
         v = blank_middle_run.ed["validation"]
         assert v["ocr_zero_word_pages"] == [2]
@@ -883,10 +876,6 @@ def _check_ocr_entries(entries, doc):
 @needs_tesseract
 class TestItem7OcrMetadataIsPersisted:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "doc.ocr_pages / ocr_failed_pages never leave the preprocessor; the "
-        "extractor reads only the unchecked_* lists"))
     def test_a_single_scan(self, variants):
         path = _pdf(variants, "scan_only_single")
         ed = _ed(_run(path)[0])
@@ -895,8 +884,6 @@ class TestItem7OcrMetadataIsPersisted:
         _check_ocr_entries(v["ocr_pages"], _preprocessed(path))
         assert v["ocr_failed_pages"] == [] and v["ocr_zero_word_pages"] == []
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason="OCR metadata never reaches the result")
     def test_rotated_pages_keep_their_straightening_record(self, variants):
         path = _pdf(variants, "scan_rotated_pages")
         ed = _ed(_run(path)[0])
@@ -904,8 +891,6 @@ class TestItem7OcrMetadataIsPersisted:
         assert [e["page"] for e in v["ocr_pages"]] == [1, 2, 3]
         _check_ocr_entries(v["ocr_pages"], _preprocessed(path))
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason="OCR metadata never reaches the result")
     def test_page_numbers_are_file_pages_under_selected_pages(self, variants):
         """Selecting page 3 alone must report page 3 — not 1, its index in
         the selection — and must not report page 2, which was not extracted."""
@@ -1059,10 +1044,6 @@ class TestItem9SelectedPagesFilterTheText:
         return "\n".join(str(c.get("prompt", "")) + "\n" + str(c.get("text", ""))
                          for c in calls)
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "doc_text is never filtered by selected_pages, and _llm_json's text "
-        "fallback sends it whole"))
     def test_excluded_pages_never_reach_the_model_on_the_text_fallback(
             self, variants):
         _results, calls = _run(_pdf(variants, "digital_batch_3pages"),
@@ -1072,10 +1053,6 @@ class TestItem9SelectedPagesFilterTheText:
         for s in self._sentinels(variants):
             assert s not in sent, s
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "the selected_pages filter is skipped entirely when no page image "
-        "was rendered"))
     def test_excluded_pages_never_reach_the_model_without_page_images(
             self, variants):
         _results, calls = _run(_pdf(variants, "digital_batch_3pages"),

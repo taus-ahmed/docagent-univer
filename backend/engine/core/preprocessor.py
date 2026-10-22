@@ -70,6 +70,12 @@ class ProcessedDocument:
     #: Pages with no text layer that could NOT be OCR'd (no binary, no render).
     #: Absent and said out loud, rather than an empty page nobody explains.
     ocr_failed_pages: list[int] = field(default_factory=list)
+    #: Pages OCR ran on and read ZERO words from. A blank scan is not a
+    #: successful reading: nothing says the page is empty rather than
+    #: unreadable, so it is a named failure, kept apart from
+    #: `ocr_failed_pages` (OCR could not run at all). Such a page still has
+    #: its record in `ocr_pages`, words=0, because OCR did run.
+    ocr_zero_word_pages: list[int] = field(default_factory=list)
     #: Characters the PDF's OWN text layer yielded on its NATIVE pages — not
     #: OCR's reading, and not a scanner's embedded layer. Kept apart
     #: from `extracted_text` because `has_meaningful_text` decides the document
@@ -107,6 +113,10 @@ SUPPORTED_EXTENSIONS = {
 }
 
 MIN_TEXT_LENGTH = 50
+
+#: What joins page texts into `extracted_text`. `_fix_cross_page_decimals`
+#: looks for exactly this, so anything re-joining a subset of pages uses it.
+PAGE_BREAK = "\n\n--- PAGE BREAK ---\n\n"
 
 
 def page_needs_ocr(text: str) -> bool:
@@ -336,8 +346,16 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
               f"{type(exc).__name__}: {exc}", flush=True)
         return "", [], []
 
-    doc.ocr_pages.append({"page": page_number, "words": sum(len(ln) for ln in lines),
-                          **source.applied})
+    from ocr_source import reader_identity
+    words = sum(len(ln) for ln in lines)
+    doc.ocr_pages.append({"page": page_number, "words": words, **source.applied,
+                          "dpi": OCR_DPI, **reader_identity()})
+    if not words:
+        doc.ocr_zero_word_pages.append(page_number)
+        doc.processing_notes += (
+            f"page {page_number} has no text layer and OCR read zero words "
+            f"from it — blank or unreadable; nothing was extracted from this "
+            f"page. ")
     print(f"[OCR] page {page_number}: no text layer — read by Tesseract at "
           f"{OCR_DPI}dpi, rotated {source.applied['rotated']}deg, deskewed "
           f"{source.applied['deskewed']}deg, {len(text)} chars, "
@@ -479,7 +497,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                     )
 
             # Join all pages with clear separator
-            doc.extracted_text = "\n\n--- PAGE BREAK ---\n\n".join(doc.page_texts)
+            doc.extracted_text = PAGE_BREAK.join(doc.page_texts)
 
             # Fix cross-page decimal splits AFTER joining all pages
             doc.extracted_text = _fix_cross_page_decimals(doc.extracted_text)
