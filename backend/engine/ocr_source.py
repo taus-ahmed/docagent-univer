@@ -186,12 +186,25 @@ def skew_angle(image):
     small = small.point(lambda v: 255 - v)
 
     def best(angles):
-        return max(angles, key=lambda a: _profile_variance(small, a))
+        scores = {a: _profile_variance(small, a) for a in angles}
+        if max(scores.values()) == min(scores.values()):
+            # NO ANGLE IS PREFERRED, so nothing was measured. A page with no
+            # ink scores exactly 0 at every angle, and `max` then breaks the
+            # tie by taking the FIRST candidate — the edge of the band: -15.9
+            # degrees on every blank page, rotated as though measured. The
+            # least-structured real scan in the generated fixtures still
+            # varies by 20% across the band; blank pages vary by 0.
+            return None
+        return max(angles, key=scores.__getitem__)
 
     coarse = best([i * SKEW_COARSE
                    for i in range(int(-SKEW_LIMIT / SKEW_COARSE),
                                   int(SKEW_LIMIT / SKEW_COARSE) + 1)])
+    if coarse is None:
+        return 0.0
     fine = best([round(coarse + i * SKEW_FINE, 2) for i in range(-9, 10)])
+    if fine is None:
+        fine = coarse
     return 0.0 if abs(fine) < SKEW_MIN else fine
 
 
@@ -227,6 +240,11 @@ class OcrPageSource(PageSource):
 
     #: Empty, and each absence is argued in the module docstring.
     capabilities = frozenset()
+    #: Tesseract KNOWS which line each word is on — (block, paragraph, line)
+    #: in `image_to_data` — and `raw_text` is built from exactly that. Lines
+    #: re-derived from vertical distance instead cut a page skewed by a few
+    #: degrees into fragments the text does not have (text_layer.group_lines).
+    reader_lines = True
 
     def __init__(self, image, page_number=None, dpi=OCR_DPI, straighten_page=True):
         self._image = image
@@ -264,6 +282,7 @@ class OcrPageSource(PageSource):
         # reading existed would manufacture the very number the shredded-layer
         # check compares against.
         d = self._read()
+        ids = self._line_ids()
         out = []
         for i, level in enumerate(d["level"]):
             text = (d["text"][i] or "").strip()
@@ -272,8 +291,25 @@ class OcrPageSource(PageSource):
             x0, top = float(d["left"][i]), float(d["top"][i])
             out.append({"text": text, "x0": x0, "x1": x0 + float(d["width"][i]),
                         "top": top, "bottom": top + float(d["height"][i]),
-                        "conf": float(d["conf"][i])})
+                        "conf": float(d["conf"][i]),
+                        "line_id": ids[self._line_key(d, i)]})
         return out
+
+    @staticmethod
+    def _line_key(d, i):
+        return (d["block_num"][i], d["par_num"][i], d["line_num"][i])
+
+    def _line_ids(self):
+        """{(block, par, line): ordinal} in the order `raw_text` emits lines,
+        so the geometry's lines and the text's lines are the same lines in the
+        same order."""
+        d = self._read()
+        ids = {}
+        for i, level in enumerate(d["level"]):
+            if level != 5 or not (d["text"][i] or "").strip():
+                continue
+            ids.setdefault(self._line_key(d, i), len(ids))
+        return ids
 
     def raw_text(self):
         """The page as lines, rebuilt from the SAME pass the words come from.
@@ -288,7 +324,7 @@ class OcrPageSource(PageSource):
             text = (d["text"][i] or "").strip()
             if level != 5 or not text:
                 continue
-            key = (d["block_num"][i], d["par_num"][i], d["line_num"][i])
+            key = self._line_key(d, i)
             if key not in lines:
                 lines[key] = []
                 order.append(key)

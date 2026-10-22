@@ -111,10 +111,6 @@ class TestThePagesReallyAreSkewed:
 @needs_tesseract
 class TestOcrLinesAreTheReadersLines:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "group_lines regroups OCR word boxes by vertical distance (LINE_TOL), "
-        "so a line sloping a few degrees becomes fragments out of order"))
     @pytest.mark.parametrize("name", SKEWED)
     def test_geometry_lines_spell_the_readers_lines_in_order(self, variants, name):
         """Red at 838f0a7: group_lines regrouped OCR word boxes by vertical
@@ -124,10 +120,6 @@ class TestOcrLinesAreTheReadersLines:
             geo = [" ".join(w["text"] for w in ln) for ln in lines]
             assert geo == [ln.strip() for ln in raw.split("\n") if ln.strip()]
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "D9 (matches_loosely) runs over the fragmented geometry and flags "
-        "values Tesseract read correctly"))
     @pytest.mark.parametrize("name", SKEWED)
     def test_a_value_ocr_read_correctly_passes_the_geometry_check(
             self, variants, name):
@@ -150,10 +142,6 @@ class TestOcrLinesAreTheReadersLines:
 
 class TestABlankPageHasNoSkew:
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "a flat projection profile ties at every angle and max() returns "
-        "the edge of the search band, -15.9 degrees"))
     def test_a_page_with_no_ink_measures_zero(self):
         """Red at 838f0a7 (-15.9): the projection profile is flat at every
         angle on a blank page, and the search returned the edge of its band."""
@@ -178,10 +166,9 @@ class TestTheHardScan:
 
     @pytest.mark.known_bug
     @pytest.mark.xfail(strict=True, reason=(
-        "Tesseract reads 0 words: the grey-profile skew estimator returns 0 "
-        "on a shaded page, and psm 3 finds no text block on the mostly blank "
-        "page. Measured: ink-only deskew + crop to ink + psm 6 reads 4 of 9 "
-        "true fields"))
+        "Fix B (not approved for production): Tesseract reads 0 words — "
+        "the grey-profile skew estimator returns 0 on a shaded page and psm "
+        "3 finds no text block on the mostly blank page"))
     def test_the_hard_scan_is_actually_read(self, variants):
         _src, _img, raw, _lines = _read(variants, "scan_hard_single", 1)
         rl = _reader_lines(raw)

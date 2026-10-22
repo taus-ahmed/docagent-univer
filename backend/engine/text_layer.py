@@ -160,7 +160,7 @@ def _completes(kind: str, missing: int, cont: str) -> bool:
     return bool(re.fullmatch(rf"\d{{{missing}}}(?:\.\d{{2}})?", c))
 
 
-def group_lines(words, tol: float = LINE_TOL):
+def group_lines(words, tol: float = LINE_TOL, by_reader_line: bool = False):
     """Words grouped into visual lines, each sorted left to right.
 
     Clustered on the GAP between successive tops, not by bucketing `top / tol`.
@@ -169,7 +169,28 @@ def group_lines(words, tol: float = LINE_TOL):
     on FORM-W2-2023 that broke one printed line into two, which put a value's
     continuation fragment two lines below its parent instead of one and lost
     four of the twelve repairs.
+
+    `by_reader_line` — for a reader that DECLARES its own line identity
+    (`PageSource.reader_lines`): lines are the reader's, in the reader's order,
+    keyed on each word's `line_id`. Vertical distance is the wrong question for
+    a scan: a page skewed by a few degrees climbs ~8pt across one printed line,
+    so a 3pt tolerance cut every line of a cheque into fragments in the wrong
+    order, while the reader's text — what the model is prompted with and what
+    grounding checks — had the line whole. Geometry and text then described
+    two different pages and D9 flagged 21.9% of values OCR had read correctly
+    (tests/harness/ocr_line_geometry.py). The pdfplumber reader declares no
+    line identity, so native pages take the tolerance branch, unchanged.
     """
+    if by_reader_line:
+        rows, order = {}, []
+        for w in words:
+            key = w["line_id"]
+            if key not in rows:
+                rows[key] = []
+                order.append(key)
+            rows[key].append(w)
+        return [sorted(rows[k], key=lambda x: float(x["x0"]))
+                for k in sorted(order)]
     out, cur, top = [], [], None
     for w in sorted(words, key=lambda x: (float(x["top"]), float(x["x0"]))):
         t = float(w["top"])
@@ -184,8 +205,10 @@ def group_lines(words, tol: float = LINE_TOL):
     return out
 
 
-def repair_wrapped(words):
+def repair_wrapped(words, reader_lines: bool = False):
     """(repaired_lines, repairs) — fuse values the PDF wrapped inside a cell.
+
+    `reader_lines`: group by the reader's own line ids (see `group_lines`).
 
     A fragment qualifies only if it is on the IMMEDIATELY following line, sits
     within its parent's horizontal span, shares the parent's right edge to
@@ -196,7 +219,7 @@ def repair_wrapped(words):
     changed — a silent rewrite of a number is not something this pipeline is
     allowed to do.
     """
-    lines = group_lines(words)
+    lines = group_lines(words, by_reader_line=reader_lines)
     repairs = []
     fused_ids, fragment_ids = set(), set()
 
@@ -1093,11 +1116,19 @@ class PageSource:
     `size` is optional and gated on TRUE_FONT_SIZE; `doctop`, `height`,
     `width`, `upright` and `direction` are pdfplumber passthroughs that nothing
     reads and no reader is required to supply.
+
+    `reader_lines` — True when the reader knows which LINE each word belongs
+    to and says so with an orderable `line_id` on every word, in reading order.
+    Lines are then the reader's own (`group_lines(by_reader_line=True)`)
+    instead of being re-derived from vertical distance. Not a Capability: a
+    capability gates a CHECK and records its absence; this decides how words
+    are grouped, and a reader without it loses nothing it had before.
     """
 
     page_number = None
     space = None
     capabilities = frozenset()
+    reader_lines = False
 
     def raw_text(self):
         raise NotImplementedError
@@ -1245,7 +1276,8 @@ def read_page(page, widgets=(), stats=None):
         if stats is not None:
             stats["shard_checked"] = False
 
-    lines, repairs = repair_wrapped(words)
+    lines, repairs = repair_wrapped(
+        words, reader_lines=bool(getattr(source, "reader_lines", False)))
     lines, placed = inject_markers(lines, widgets)
     stamp_page(lines, source.page_number)
     # Marked on the FINAL word list and by geometry, so a fused fragment or an
