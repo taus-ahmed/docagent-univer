@@ -752,7 +752,11 @@ class TestOneFileTheLevelFollowsThePage:
                 assert p["review_required"] is False and p["review_reasons"] == []
             else:
                 assert p["review_required"] is True
-                assert p["review_reasons"] == ["ocr_origin"]
+                # Origin first; a value whose check FAILED also names the
+                # check (Task 3b), and a value that passed names nothing else.
+                assert p["review_reasons"] == (
+                    ["ocr_origin"] if grounded
+                    else ["ocr_origin", "grounding_failed"])
         assert ed["needs_review"] is True
 
 

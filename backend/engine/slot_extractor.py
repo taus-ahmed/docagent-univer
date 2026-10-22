@@ -45,6 +45,7 @@ import time
 from pathlib import Path
 
 from extractor import _llm_json, _log
+from cheque_amounts import compare_amounts
 from micr import field_role, find_micr_line, parse_micr
 from text_layer import (canonical_value, check_placement, column_bands,
                         find_line, flatten_pages, line_page, matches_loosely,
@@ -734,10 +735,91 @@ def origin_floor(level):
     return UNVERIFIED if level in CONFIDENT_LEVELS else level
 
 
-def review_metadata(origin):
-    """(review_required, review_reasons) owed to a value's origin alone."""
+#: Why a value needs review because a CHECK FAILED — never because of origin.
+GROUNDING_FAILED = "grounding_failed"          # the quoted span is not on the page
+PLACEMENT_FAILED = "placement_failed"          # under another column, or across a gutter
+CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / prose in a scalar
+AMOUNT_MISMATCH = "amount_mismatch"
+AMOUNT_UNREADABLE = "amount_unreadable"
+
+
+def _add(reasons, why):
+    if why not in reasons:
+        reasons.append(why)
+
+
+def review_metadata(origin, failures=()):
+    """(review_required, review_reasons): owed to the value's origin, then to
+    every check it failed or could not complete, in that order."""
     reasons = [] if origin == "native" else [f"{origin}_origin"]
+    for why in failures:
+        _add(reasons, why)
     return bool(reasons), reasons
+
+
+_FIGURE_WORDS = {"figures", "figure", "numeric", "numerals", "numeral",
+                 "digits", "courtesy"}
+_WRITTEN_WORDS = {"words", "written", "legal"}
+
+
+def amount_role(label):
+    """'figures' | 'words' | '' — which statement of a cheque's amount a slot
+    asks for. The template's and the vocabulary's names are `Amount in Figures`
+    and `Amount in Words`. A bare `Amount` is NEITHER: nothing says which of
+    the two it is (a cheque prints its amount twice, vocabulary.py)."""
+    words = set(re.sub(r"[^a-z ]+", " ", str(label or "").lower()).split())
+    if "amount" not in words:
+        return ""
+    if words & _WRITTEN_WORDS:
+        return "words"
+    if words & _FIGURE_WORDS:
+        return "figures"
+    return ""
+
+
+def cross_check_amounts(fields, extracted, conf_map, field_prov, flagged,
+                        notes, failed):
+    """The cheque amount cross-check (cheque_amounts.compare_amounts), applied.
+
+    Runs only when exactly one slot asks for each statement and BOTH were
+    filled. A MISMATCH makes both values exactly low — at least one of them is
+    wrong and nothing says which. UNREADABLE changes no level and puts a
+    notice on both. A MATCH is supporting evidence only and never raises a
+    level: two readings agreeing is not a measurement of either.
+    Returns {"status", "notice": {ref: [reason]}}.
+    """
+    out = {"status": None, "notice": {}}
+    by_role, label = {}, {}
+    for f in fields:
+        role = amount_role(f["row_label"])
+        if role:
+            by_role.setdefault(role, []).append(f["ref"])
+            label[f["ref"]] = f["row_label"]
+    if len(by_role.get("figures", [])) != 1 or len(by_role.get("words", [])) != 1:
+        return out
+    fig, wrd = by_role["figures"][0], by_role["words"][0]
+    if fig not in extracted or wrd not in extracted:
+        return out
+    check = compare_amounts(str(extracted[fig]), str(extracted[wrd]))
+    out["status"] = check.status
+    for ref in (fig, wrd):
+        if ref in field_prov:
+            field_prov[ref]["amount_cross_check"] = check.status
+    if check.status == "mismatch":
+        for ref in (fig, wrd):
+            conf_map[ref] = LOW
+            failed(ref, AMOUNT_MISMATCH)
+            flagged.append(_flag(
+                label[ref], extracted[ref],
+                f"amount in figures ({check.numeric}) and amount in words "
+                f"({check.words}) disagree — at least one of them is wrong"))
+        notes.append(f"cheque amount cross-check: figures {check.numeric} vs "
+                     f"words {check.words} — MISMATCH, both values marked low")
+    elif check.status == "unreadable":
+        out["notice"] = {fig: [AMOUNT_UNREADABLE], wrd: [AMOUNT_UNREADABLE]}
+        notes.append("cheque amount cross-check could not be completed — "
+                     + ", ".join(check.reasons))
+    return out
 
 
 def _pages_of(occurrences, all_lines):
@@ -859,6 +941,14 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     unwitnessed = 0
     all_lines = flatten_pages(page_lines)
     regions_warned = []
+    # WHICH CHECK FAILED, per value. A value made low by a failed check used
+    # to say so only in `flagged_fields`; its own provenance carried no reason,
+    # so a reader of one value could not tell "checked and failed" from
+    # "never checked". {ref: [reason]} for fields; [(row, [reason])] for rows.
+    field_fail, row_fail = {}, []
+
+    def failed(ref, why):
+        _add(field_fail.setdefault(ref, []), why)
 
     # PLACEMENT FOR FIELD SLOTS (I9). This check used to run on table rows
     # only — one call site, inside the table loop — so a key/value template
@@ -951,6 +1041,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                             "side-by-side blocks were merged into one answer"))
                         extracted_fields[slot["ref"]] = value
                         conf_map[slot["ref"]] = LOW
+                        failed(slot["ref"], PLACEMENT_FAILED)
                         continue
                 elif not matches_loosely(value, all_lines):
                     # NO RUN OF WORDS ON THE PAGE SPELLS THIS, even allowing
@@ -976,6 +1067,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         "was assembled from words that are not adjacent"))
                     extracted_fields[slot["ref"]] = value
                     conf_map[slot["ref"]] = LOW
+                    failed(slot["ref"], GROUNDING_FAILED)
                     continue
 
                 # TWO TEXTS PRINTED OVER ONE ANOTHER (I7). The characters of
@@ -998,6 +1090,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         "anything the page prints"))
                     extracted_fields[slot["ref"]] = value
                     conf_map[slot["ref"]] = LOW
+                    failed(slot["ref"], GROUNDING_FAILED)
                     continue
 
             ok, why = verify_span(value, source, page, pages)
@@ -1010,6 +1103,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 ungrounded += 1
             if lvl not in CONFIDENT_LEVELS:
                 flagged.append(_flag(slot["row_label"], value, reason or why))
+                failed(slot["ref"], GROUNDING_FAILED if not ok
+                       else CONTENT_CHECK_FAILED)
             head = slot.get("col_header", "")
             if field_bands and head and lvl in CONFIDENT_LEVELS:
                 line = find_line(all_lines, source)
@@ -1019,6 +1114,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     misplaced += 1
                     ungrounded += 1
                     conf_map[slot["ref"]] = LOW
+                    failed(slot["ref"], PLACEMENT_FAILED)
                     flagged.append(_flag(slot["row_label"], value, why_p))
 
     # ── MICR decomposition ──
@@ -1055,9 +1151,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 ungrounded += 1
             if lvl not in CONFIDENT_LEVELS:
                 flagged.append(_flag(slot["row_label"], value, reason or why))
+                failed(slot["ref"], GROUNDING_FAILED if not ok
+                       else CONTENT_CHECK_FAILED)
         if parts:
             _log("MICR", f"{file_path.name}: band decomposed -> "
                          + ", ".join(sorted(parts)))
+
+    amount_check = cross_check_amounts(slots["fields"], extracted_fields,
+                                       conf_map, field_prov, flagged, notes,
+                                       failed)
 
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:
@@ -1236,6 +1338,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         f"{', '.join(headers)}"))
                 row, row_conf = {}, confident
                 unverified_cols = []
+                row_why = []
                 for h in headers:
                     v = cells.get(h, "")
                     if v is None:
@@ -1252,6 +1355,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         unverified_cols.append(h)
                     if lvl not in CONFIDENT_LEVELS:
                         row_conf = LOW
+                        _add(row_why, GROUNDING_FAILED if not ok
+                             else CONTENT_CHECK_FAILED)
                         flagged.append(_flag(
                             f'{t["name"]}[{len(rows_out)}].{h}', v,
                             reason or why))
@@ -1261,6 +1366,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     for bad_key, why in check_placement(
                             row, t.get("columns") or [], line, bands):
                         row_conf = LOW
+                        _add(row_why, PLACEMENT_FAILED)
                         ungrounded += 1
                         misplaced += 1
                         flagged.append(_flag(
@@ -1298,6 +1404,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                                        line_no)
                 if unverified_cols:
                     row["_ungrounded"] = unverified_cols
+                if row_why:
+                    row_fail.append((row, row_why))
                 rows_out.append(row)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
@@ -1459,7 +1567,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     for ref, p in field_prov.items():
         origin = origin_of(field_page.get(ref) if origin_mode else None)
         p["origin"] = origin
-        p["review_required"], p["review_reasons"] = review_metadata(origin)
+        p["review_required"], p["review_reasons"] = review_metadata(
+            origin, field_fail.get(ref, []) + amount_check["notice"].get(ref, []))
         if ref in conf_map:
             value_origins.append(origin)
     for rows in tables_out.values():
@@ -1468,12 +1577,19 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 if origin_mode else None
             origin = origin_of(pg)
             r["_origin"] = origin
-            r["_review_required"], r["_review_reasons"] = review_metadata(origin)
+            r["_review_required"], r["_review_reasons"] = review_metadata(
+                origin, next((w for rr, w in row_fail if rr is r), ()))
             value_origins.append(origin)
     needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
                     or bool(dropped) or bool(merged_columns)
                     or bool(regions_warned)
                     or bool(empty_rows) or bool(off_schema_keys)
+                    # A value low because a check failed is a value nobody
+                    # may trust unread. ("amount_unreadable" is a notice, not
+                    # a failure, and does not reach here.)
+                    or bool(field_fail.keys() & extracted_fields.keys())
+                    or any(rr is r for rows in tables_out.values()
+                           for r in rows for rr, _w in row_fail)
                     # Scans always need review: a machine's reading is
                     # unverified however well it grounds, and a page that
                     # yielded nothing is a page nobody has read.
