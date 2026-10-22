@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import re
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from text_layer import CoordinateSpace, PageSource
 
@@ -74,6 +74,19 @@ SKEW_MIN = 6.0
 #: of where the text LINES are, not of the glyphs, so it survives downscaling —
 #: and the search is ~40 rotations, which at full size would cost seconds.
 SKEW_WIDTH = 800
+#: Fix B1: the profile counts only DARK pixels (grey < this) as ink. Inverting
+#: the grey level counted a shaded background as faint ink in every row, which
+#: flattened the profile on the hard scan: 0 degrees measured where the page
+#: is skewed 13.9. Measured on the 36 source cheques it changes the angle on
+#: one image (chk_010_hard, -10.3 to -10.2, one field gained) and loses none.
+SKEW_DARK = 128
+#: Fix B2: when psm 3 (automatic page segmentation) reads ZERO words, crop to
+#: the inked area and read again as one uniform block (psm 6). ZERO, not "few":
+#: at fewer than 10 words the retry also replaced chk_009_hard's 8-word reading
+#: and lost its payee. A page that read anything keeps its reading.
+#: `INK_CUT` is the inverted-grey level above which a pixel bounds the crop.
+RETRY_PSM = "--psm 6"
+INK_CUT = 60
 
 
 #: Where a Tesseract binary is found when it is not on PATH. `TESSERACT_CMD`
@@ -182,8 +195,9 @@ def skew_angle(image):
     if small.width > SKEW_WIDTH:
         h = max(1, int(small.height * SKEW_WIDTH / small.width))
         small = small.resize((SKEW_WIDTH, h), Image.BILINEAR)
-    # Ink as high values: the profile should peak ON the text lines.
-    small = small.point(lambda v: 255 - v)
+    # Ink as high values, background exactly 0: the profile should peak ON
+    # the text lines and shading must not count (SKEW_DARK).
+    small = small.point(lambda v: 255 if v < SKEW_DARK else 0)
 
     def best(angles):
         scores = {a: _profile_variance(small, a) for a in angles}
@@ -216,7 +230,7 @@ def straighten(image):
     can be both. Each is reported separately so a later measurement can say
     which one earned its keep.
     """
-    applied = {"rotated": 0, "deskewed": 0.0}
+    applied = {"rotated": 0, "deskewed": 0.0, "skew_detector": "dark"}
     turn = orientation(image)
     if turn:
         image = image.rotate(-turn, expand=True, fillcolor="white")
@@ -250,9 +264,11 @@ class OcrPageSource(PageSource):
         self._image = image
         self._page_number = page_number
         self._dpi = float(dpi)
-        self.applied = {"rotated": 0, "deskewed": 0.0}
+        self.applied = {"rotated": 0, "deskewed": 0.0, "skew_detector": "none"}
         if straighten_page:
             self._image, self.applied = straighten(self._image)
+        #: "none" | "crop_psm6" — which reading the words came from (B2).
+        self.applied["retry"] = "none"
         self._data = None
 
     @property
@@ -274,7 +290,29 @@ class OcrPageSource(PageSource):
             pytesseract = _configure()
             self._data = pytesseract.image_to_data(
                 self._image, output_type=pytesseract.Output.DICT)
+            if not any((t or "").strip() for t in self._data["text"]):
+                self._retry(pytesseract)
         return self._data
+
+    def _retry(self, pytesseract):
+        """Fix B2: a zero-word psm 3 reading, read again cropped to ink, psm 6.
+
+        Coordinates are shifted back by the crop's corner, so every word stays
+        in THIS page's space (`space`) — the geometry checks compare against
+        the page, not the crop. A retry that also reads nothing leaves the
+        page at zero words, named as before.
+        """
+        grey = self._image.convert("L")
+        box = ImageOps.invert(grey).point(
+            lambda v: 255 if v > INK_CUT else 0).getbbox()
+        if not box:
+            return
+        data = pytesseract.image_to_data(grey.crop(box), config=RETRY_PSM,
+                                         output_type=pytesseract.Output.DICT)
+        data["left"] = [v + box[0] for v in data["left"]]
+        data["top"] = [v + box[1] for v in data["top"]]
+        self._data = data
+        self.applied["retry"] = "crop_psm6"
 
     def words(self, size_aware=True):
         # `size_aware` is IGNORED and the capability is NOT declared. Tesseract

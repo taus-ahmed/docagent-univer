@@ -164,15 +164,37 @@ class TestTheHardScan:
             assert doc.ocr_zero_word_pages == [1]
             assert "page 1" in doc.processing_notes
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "Fix B (not approved for production): Tesseract reads 0 words — "
-        "the grey-profile skew estimator returns 0 on a shaded page and psm "
-        "3 finds no text block on the mostly blank page"))
     def test_the_hard_scan_is_actually_read(self, variants):
+        """Fix B: the dark-pixel skew estimator finds the angle the grey
+        profile missed on a shaded page, and the zero-word retry (crop to ink,
+        psm 6) finds the text block psm 3 did not."""
         _src, _img, raw, _lines = _read(variants, "scan_hard_single", 1)
         rl = _reader_lines(raw)
         fields = variants[1]["scan_hard_single"]["pages"][0]["cheques"][0]["fields"]
         read = [f for f in FIELDS if str(fields.get(f) or "").strip()
                 and matches_loosely(str(fields[f]), rl)]
         assert len(read) >= 3, (read, raw[:200])
+
+
+@needs_tesseract
+class TestTheOcrMetadataSaysWhichPathRan:
+    """Fix B is visible per page: which skew detector measured the angle, and
+    whether the zero-word retry ran. A reviewer — and the bake-off — must be
+    able to tell a psm 3 reading from a cropped psm 6 one."""
+
+    def _page(self, variants, name):
+        from core.preprocessor import preprocess_file
+        doc = preprocess_file(variants[0] / f"{name}.pdf")
+        return doc.ocr_pages[0]
+
+    def test_a_page_that_reads_is_never_retried(self, variants):
+        rec = self._page(variants, "scan_only_single")
+        assert rec["skew_detector"] == "dark"
+        assert rec["retry"] == "none"
+        assert rec["words"] > 0
+
+    def test_the_hard_scan_records_the_retry(self, variants):
+        rec = self._page(variants, "scan_hard_single")
+        assert rec["skew_detector"] == "dark"
+        assert rec["retry"] == "crop_psm6"
+        assert rec["words"] > 0
