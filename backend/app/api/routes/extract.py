@@ -4354,6 +4354,24 @@ def _flag_summary(flagged) -> str:
     return "; ".join(out)
 
 
+def _value_requires_review(value) -> bool:
+    """Whether any extracted field or row carries the engine review gate.
+
+    Field metadata uses ``review_required``; table-row metadata historically
+    used ``_review_required``. Walk the saved payload so either representation
+    enforces the same document-level invariant without projecting away any of
+    the engine's metadata.
+    """
+    if isinstance(value, dict):
+        if (value.get("review_required") is True
+                or value.get("_review_required") is True):
+            return True
+        return any(_value_requires_review(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_value_requires_review(item) for item in value)
+    return False
+
+
 def _persist_failure(session_factory, job_id, ref, error) -> None:
     """Record a document that failed BEFORE it could produce a result.
 
@@ -4491,9 +4509,27 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                     results = [_fail(display_filename,
                                      "Source document is no longer in storage "
                                      "— upload it again to re-run this job.")]
-                elif _is_image_file(file_path):        # Issue 3: route image files
-                    results = _extract_image_with_template(
-                        orchestrator, file_path, template_data)
+                elif _is_image_file(file_path):
+                    # Images now enter the same engine seam as PDFs. That path
+                    # preprocesses them with OCR, retains geometry/origin, and
+                    # applies the same grounding and review rules. The direct
+                    # vision path remains only as a compatibility fallback for
+                    # an engine failure.
+                    if template_data:
+                        results = _extract_with_template(
+                            orchestrator, file_path, template_data,
+                            selected_pages=selected_pages,
+                        )
+                    else:
+                        results = _extract_with_template(
+                            orchestrator, file_path, None,
+                            selected_pages=selected_pages,
+                            batch_schemas=batch_schemas,
+                        )
+                    if not results or not any(
+                            getattr(r, "success", False) for r in results):
+                        results = _extract_image_with_template(
+                            orchestrator, file_path, template_data)
                 elif template_data:
                     results = _extract_with_template(
                         orchestrator, file_path, template_data,
@@ -4601,6 +4637,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                             needs_review=(
                                 has_flags
                                 or bool(extracted.get("needs_review"))
+                                or _value_requires_review(extracted)
                                 or (result.validation.needs_review
                                     if result.validation else False)
                             ),
@@ -6854,18 +6891,30 @@ def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True):
     first = 1
     if show_filename:
         c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
-        first = 2
+        c = ws.cell(row=1, column=2, value="Page"); c.font=hfont; c.fill=hf
+        first = 3
     for ci, key in enumerate(all_keys, first):
         c = ws.cell(row=1, column=ci, value=key); c.font=hfont; c.fill=hf
     for ri, dr in enumerate(doc_results, 2):
         if show_filename:
             ws.cell(row=ri, column=1, value=dr.filename)
+            pages = dr.get_extracted_data().get("source_pages") or []
+            if len(pages) >= 2 and pages[0] == pages[-1]:
+                shown_page = pages[0]
+            elif len(pages) >= 2:
+                shown_page = f"{pages[0]}-{pages[-1]}"
+            elif pages:
+                shown_page = pages[0]
+            else:
+                shown_page = None
+            ws.cell(row=ri, column=2, value=shown_page)
         inner = dr.get_extracted_data().get("extracted_data") or {}
         for ci, key in enumerate(all_keys, first):
             v = inner.get(key)
             ws.cell(row=ri, column=ci, value=(v.get("value","") if isinstance(v,dict) else (v or "")))
     if show_filename:
         ws.column_dimensions["A"].width = 30
+        ws.column_dimensions["B"].width = 12
     for ci in range(first, len(all_keys)+first):
         ws.column_dimensions[get_column_letter(ci)].width = 20
 
