@@ -58,13 +58,13 @@ being absent or empty; the route stores and shows `error`.
 |---|---|---|
 | `confidence_map` | {cell_ref: level} | the level of every field value |
 | `flagged_fields` | [{ref, value, reason}] | one shape only; `ref` is the slot's LABEL, `reason` a sentence |
-| `flagged_count` | int | |
+| `flagged_count` | int | always `len(flagged_fields)` (set last, by the extractor) |
 | `page_origins` | {file page: `native` \| `ocr` \| `pre_ocr`} | pages this record was read from (keys are strings after JSON) |
 | `page_gates` | {file page: {origin, graded_cells, low_confidence_cells, low_confidence_ratio, review_gate, text_floor}} | per-page gate |
 | `ocr_pages` | [{page, words, rotated, deskewed, skew_detector, retry, dpi, reader, reader_version}] | every OCR'd page of this record. `skew_detector`: `dark` \| `none`; `retry`: `none` \| `crop_psm6` |
 | `ocr_failed_pages`, `ocr_zero_word_pages` | [int] | named failures; non-empty ⇒ `needs_review` |
-| `routing_checksum` | `pass` \| `fail` \| null | the MICR band's transit field; null = no band read |
-| `micr_band_unreadable` | true | optional — a band is printed, no digit of it readable |
+| `routing_checksum` | `pass` \| `fail` \| null | the MICR band's transit field; null = no band read. Set by the `aba_checksum` validator, which runs for EVERY family |
+| `micr_band_unreadable` | true | optional, cheque family — a band is printed, no digit of it readable |
 | `possible_multiple_documents` | {micr_bands: int, readable: int} | optional — the record may hold several cheques; kept as one |
 | `source_region` | {page, index, of, box_pt: [x0, top, x1, bottom], frame} | optional — this record is cheque `index` of `of` on `page`; box in points, top-left origin, in the frame of the STRAIGHTENED page image |
 | `selected_pages_ignored` | [any] | optional — requested pages this file does not have |
@@ -87,7 +87,9 @@ being absent or empty; the route stores and shows `error`.
 | `review_required` | bool | exactly True or False, never absent |
 | `review_reasons` | [code] | §12 codes: origin first, then each failed check. `[]` ⇔ nothing owed |
 | `amount_cross_check` | `match` \| `mismatch` \| `unreadable` | optional — only on Amount in Figures / Amount in Words. Evidence, never raises a level |
-| `aba_checksum` | `pass` \| `fail` | optional — only on a filled routing slot |
+| `aba_checksum` | `pass` \| `fail` | optional — only on a filled routing slot (any family) |
+| `lines_check` | `pass` \| `fail` \| `unreadable` | optional, invoice family — only on the Subtotal: do the line items sum to it |
+| `totals_check` | `pass` \| `fail` \| `unreadable` | optional, invoice family — on every value of subtotal + charges + tax - discount = total |
 
 The level is `validation.confidence_map[cell_ref]` (`high` \| `grounded` \|
 `unverified` \| `low`; `edited` after a person types it). Display rule: a value
@@ -98,7 +100,26 @@ whose `review_required` is True is shown as needing review whatever its level.
 Column keys hold values; underscore keys are metadata:
 `_confidence` (level), `_source` (str), `_page` (int or null),
 `_ungrounded` ([column key], optional), `_origin`, `_review_required` (bool),
-`_review_reasons` ([code]).
+`_review_reasons` ([code]). A family validator that addresses a row (invoice
+totals: `totals_mismatch` / `totals_unreadable`) sets `_confidence` and
+`_review_reasons` there exactly as it does on a field.
+
+## 3.3 Who sets the checks: the validator registry
+
+Cross-field checks are registered per document FAMILY in
+`engine/validators.py`; the family comes from the template's `doc_type`
+(`cheque`/`check`; `invoice`/`sales_invoice`/...). Every result is applied by
+one rule: `fail` → each affected value exactly `low`, `review_required`, the
+check's reason; `unreadable` → the reason added, no level change; `pass` →
+evidence only (the provenance keys above), never a raised level. A family with
+nothing registered gets none of these keys.
+
+| family | validator | evidence key | reason codes |
+|---|---|---|---|
+| every family | `aba_checksum` | `aba_checksum`, `validation.routing_checksum` | `checksum_failed` |
+| cheque | `amount_cross_check` | `amount_cross_check` | `amount_mismatch`, `amount_unreadable` |
+| cheque | `micr_band_unreadable` | `validation.micr_band_unreadable` | `micr_band_unreadable` |
+| invoice | `invoice_totals` | `lines_check`, `totals_check` | `totals_mismatch`, `totals_unreadable` |
 
 ## 4. Examples (abridged: only the keys discussed)
 
