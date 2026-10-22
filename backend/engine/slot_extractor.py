@@ -743,6 +743,7 @@ CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / p
 AMOUNT_MISMATCH = "amount_mismatch"
 CHECKSUM_FAILED = "checksum_failed"            # nine digits no routing number can be
 POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one cheque?
+MICR_UNREADABLE = "micr_band_unreadable"       # a band is there; its digits are not
 AMOUNT_UNREADABLE = "amount_unreadable"
 
 

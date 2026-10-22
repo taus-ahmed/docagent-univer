@@ -700,6 +700,7 @@ everything carries `False` and `[]`.
 | `checksum_failed` | a routing number that fails the ABA check digit — those nine digits cannot be a routing number as read | exactly `low` |
 | `amount_mismatch` | the cheque's amount in figures and in words both parse and disagree; set on BOTH values, since nothing says which is wrong | both exactly `low` |
 | `amount_unreadable` | the figures/words cross-check could not be completed (one side does not parse with certainty); set on both values | none — a notice, but it requires review |
+| `micr_band_unreadable` | the record carries a cheque's MICR band, shaped like one, but none of its digits could be read; set on every value that depends on the band's identity (routing, account). An identity slot left empty is flagged in `flagged_fields` instead, and `validation.micr_band_unreadable` is True. Distinct from `checksum_failed` (digits read, and wrong) and `possible_multiple_documents` (the count of cheques is unknown) | none — it requires review |
 | `possible_multiple_documents` | the record may hold more than one document (cheque) and the engine could not establish how many with confidence, so it kept ONE record rather than guess a split; set on every value of that record | none — it requires review |
 
 Document-level facts that have no single value to sit on are reported in
@@ -712,3 +713,20 @@ routing number withheld for failing the checksum
 Per-value evidence that is NOT a reason: `amount_cross_check`
 (`match` / `mismatch` / `unreadable` — a match never raises a level) and
 `aba_checksum` (`pass` / `fail`) in a field's provenance.
+
+### 12.1 Known limitations (cheques)
+
+- **A cover letter before a cheque is not split.** A page with no MICR band
+  never starts a document, and the first band in a file has no earlier band
+  to differ from, so a one-page letter followed by its cheque stays ONE
+  record. Under-splitting is the visible direction; accepted pending real
+  client files.
+- **Pre-OCR pages with several cheques stay one record.** A page whose text is
+  an embedded OCR layer has no straightened image whose frame its words are
+  in, so it is not cut into regions; with more than one band it is ONE record
+  flagged `possible_multiple_documents`. To be revisited with real data.
+- **Handwriting is not read.** A value the model saw only in the image (a
+  handwritten payee, amount or signature) cannot be grounded against OCR text:
+  it is exactly `low` with `grounding_failed`, flagged, and never `high`.
+- **Two or more band-shaped lines, none readable,** are one record flagged
+  `possible_multiple_documents`: the cheque count cannot be established.
