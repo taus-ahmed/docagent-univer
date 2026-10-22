@@ -46,7 +46,8 @@ from pathlib import Path
 
 from extractor import _llm_json, _log
 from cheque_amounts import compare_amounts
-from micr import field_role, find_micr_line, parse_micr
+from micr import (aba_is_valid, field_role, find_micr_line, parse_micr,
+                  transit_number)
 from text_layer import (canonical_value, check_placement, column_bands,
                         find_line, flatten_pages, line_page, matches_loosely,
                         overprinted_value, page_for_prompt_page, record_span,
@@ -740,6 +741,7 @@ GROUNDING_FAILED = "grounding_failed"          # the quoted span is not on the p
 PLACEMENT_FAILED = "placement_failed"          # under another column, or across a gutter
 CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / prose in a scalar
 AMOUNT_MISMATCH = "amount_mismatch"
+CHECKSUM_FAILED = "checksum_failed"            # nine digits no routing number can be
 AMOUNT_UNREADABLE = "amount_unreadable"
 
 
@@ -1156,6 +1158,38 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         if parts:
             _log("MICR", f"{file_path.name}: band decomposed -> "
                          + ", ".join(sorted(parts)))
+
+    # ── ABA CHECKSUM, on every routing slot, whoever filled it (Gate 4c) ──
+    # The MICR pass above checks the band's transit field before using it and
+    # withholds one that fails — and that withholding was silent: the slot
+    # stayed empty exactly as if no band had been printed. A routing number
+    # the MODEL answered was never checked at all.
+    transit = transit_number(micr_line) if micr_line else ""
+    routing_checksum = (None if not transit
+                        else "pass" if aba_is_valid(transit) else "fail")
+    checksum_withheld = 0
+    for slot in slots["fields"]:
+        if field_role(slot["row_label"]) != "routing":
+            continue
+        ref = slot["ref"]
+        if ref in extracted_fields:
+            ok = aba_is_valid(re.sub(r"\D", "", str(extracted_fields[ref])))
+            field_prov[ref]["aba_checksum"] = "pass" if ok else "fail"
+            if not ok:
+                conf_map[ref] = LOW
+                failed(ref, CHECKSUM_FAILED)
+                flagged.append(_flag(
+                    slot["row_label"], extracted_fields[ref],
+                    "fails the ABA routing checksum — these digits cannot be a "
+                    "routing number as read"))
+        elif routing_checksum == "fail":
+            checksum_withheld += 1
+            flagged.append(_flag(
+                slot["row_label"], transit,
+                "the MICR band's routing number fails the ABA checksum, so it "
+                "was not reported — read it from the cheque"))
+            notes.append(f'{slot["row_label"]}: MICR routing number {transit} '
+                         f"fails the ABA checksum — left empty")
 
     amount_check = cross_check_amounts(slots["fields"], extracted_fields,
                                        conf_map, field_prov, flagged, notes,
@@ -1588,6 +1622,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     # may trust unread. ("amount_unreadable" is a notice, not
                     # a failure, and does not reach here.)
                     or bool(field_fail.keys() & extracted_fields.keys())
+                    or bool(checksum_withheld)
                     or any(rr is r for rows in tables_out.values()
                            for r in rows for rr, _w in row_fail)
                     # Scans always need review: a machine's reading is
@@ -1644,6 +1679,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "confidence_map": conf_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
+            # "pass" | "fail" for the MICR band's transit field; None when no
+            # band was found.
+            "routing_checksum": routing_checksum,
             "dropped_row_count": dropped,
             # I4 — a row dropped because none of its values reached a column
             # this template has, and the values discarded for being keyed with

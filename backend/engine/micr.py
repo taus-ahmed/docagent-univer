@@ -92,6 +92,18 @@ def find_micr_line(text) -> str:
     return ""
 
 
+def transit_number(line: str) -> str:
+    """The nine digits in the band's transit field, CHECKSUM OR NOT, or ''.
+
+    Never a value to report — `parse_micr` withholds a transit field that
+    fails the ABA checksum, rightly. This exists so the withholding can be
+    SAID: a band whose routing number was refused is a band a person must
+    read, not a band that printed none.
+    """
+    m = _TRANSIT_RE.search(str(line or ""))
+    return m.group(1) if m else ""
+
+
 def parse_micr(line: str) -> dict:
     """{routing_number, account_number, serial_number} — only the parts that
     are actually there, and only when they are certainly what they claim.
