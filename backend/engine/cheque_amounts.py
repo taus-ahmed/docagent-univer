@@ -112,11 +112,8 @@ def _group_value(tokens: List[str], only_group: bool) -> Optional[int]:
         first = _UNITS.get(toks[0])
         if first is None or first == 0 or first > 19:
             return None
-        n = first * 100
+        n = first * 100  # also the colloquial '<10..19> hundred' ('twelve hundred')
         toks = toks[2:]
-        if first > 9 and toks:
-            # colloquial 'twelve hundred': nothing may follow except a plain 1..99
-            pass
     elif "hundred" in toks:
         return None
     if not toks:
