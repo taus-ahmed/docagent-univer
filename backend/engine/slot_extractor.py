@@ -1107,7 +1107,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                      + ", ".join(f["row_label"] for f in unanswered[:8]))
 
     # ── table slots ──
-    tables_out, row_counts = {}, {}
+    tables_out, row_counts, incomplete = {}, {}, set()
     resp_tables = parsed.get("tables") or {}
     if isinstance(resp_tables, dict):
         for t in slots["tables"]:
@@ -1349,6 +1349,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 rows_out.append(row)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
+            if len(rows_out) < len(raw):
+                incomplete.add(t["name"])
 
     # ── CROSS-FIELD CHECKS, by document family (validators.py) ──
     # The family's registered validators, applied by one rule set: FAIL makes
@@ -1360,7 +1362,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     row_notice = []
     for res in run_checks(default_doc_type, CheckContext(
             slots["fields"], extracted_fields, pages,
-            tables=slots["tables"], rows=tables_out)):
+            tables=slots["tables"], rows=tables_out, incomplete=incomplete)):
         for ref, ev in res.evidence.items():
             if ref in field_prov:
                 field_prov[ref].update(ev)

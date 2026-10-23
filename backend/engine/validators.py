@@ -40,6 +40,10 @@ class CheckContext:
     #: extracted for each ({name: [row]}); a row is addressed `<name>_rows[i]`.
     tables: list = field(default_factory=list)
     rows: dict = field(default_factory=dict)
+    #: names of tables some gate dropped rows from (another region, a
+    #: duplicate, an empty or malformed row): what is left is not the whole
+    #: table, so a check summing or chaining its rows must not run.
+    incomplete: set = field(default_factory=set)
 
 
 @dataclass
@@ -67,6 +71,7 @@ FAMILY_ALIASES = {
     "cheque": {"cheque", "check", "cheques", "checks", "bank_cheque"},
     "invoice": {"invoice", "sales_invoice", "purchase_invoice", "tax_invoice",
                 "commercial_invoice"},
+    "bank_statement": {"bank_statement", "bank_statements", "account_statement"},
 }
 
 
@@ -101,3 +106,4 @@ def _load():
         _loaded = True
         import cheque_validators  # noqa: F401
         import invoice_validators  # noqa: F401
+        import bank_validators  # noqa: F401
