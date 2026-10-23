@@ -30,9 +30,9 @@ def _job(db, owner):
     return job
 
 
-def _result(data, *, success=True):
+def _result(data, *, success=True, filename="stored.png"):
     return SimpleNamespace(
-        filename="stored.png",
+        filename=filename,
         document_type="cheque",
         success=success,
         extracted_data=data,
@@ -160,8 +160,8 @@ def test_multi_cheque_metadata_round_trips_and_exports_one_row_per_cheque(
                 },
             },
             "validation": validation,
-            "needs_review": False,
-        })
+            "needs_review": index == 2,
+        }, filename=f"route.png [{index} of 2]")
 
     _run_worker(
         monkeypatch,
@@ -175,7 +175,10 @@ def test_multi_cheque_metadata_round_trips_and_exports_one_row_per_cheque(
     assert response.status_code == 200, response.text
     rows = response.json()
     assert len(rows) == 2
-    assert [row["filename"] for row in rows] == ["Customer cheque.png"] * 2
+    assert [row["filename"] for row in rows] == [
+        "Customer cheque.png [1 of 2]", "Customer cheque.png [2 of 2]"]
+    assert [row["original_filename"] for row in rows] == [
+        "Customer cheque.png", "Customer cheque.png"]
     assert [row["extracted_data"]["document_index"] for row in rows] == [1, 2]
     assert all(row["extracted_data"]["document_count"] == 2 for row in rows)
     assert all(row["extracted_data"]["source_pages"] == [1, 1] for row in rows)
@@ -186,7 +189,7 @@ def test_multi_cheque_metadata_round_trips_and_exports_one_row_per_cheque(
                   "aba_checksum"):
         assert field in value
         assert field in provenance
-    assert [row["needs_review"] for row in rows] == [True, False]
+    assert [row["needs_review"] for row in rows] == [True, True]
 
     exported = client.get(f"/api/jobs/{job.id}/export", headers=auth["acme"])
     assert exported.status_code == 200, exported.text
@@ -195,5 +198,54 @@ def test_multi_cheque_metadata_round_trips_and_exports_one_row_per_cheque(
     headers = [cell.value for cell in ws[1]]
     assert headers[:3] == ["Filename", "Page", "Cheque Number"]
     assert [ws.cell(row=n, column=1).value for n in (2, 3)] == [
-        "Customer cheque.png", "Customer cheque.png"]
+        "Customer cheque.png [1 of 2]", "Customer cheque.png [2 of 2]"]
     assert [ws.cell(row=n, column=2).value for n in (2, 3)] == [1, 1]
+
+
+def test_validation_warnings_use_flagged_fields_when_count_is_stale(
+        monkeypatch, tmp_path, _db_url, db, users, client, auth):
+    job = _job(db, users["acme"])
+    _run_worker(
+        monkeypatch,
+        tmp_path,
+        _db_url,
+        job.id,
+        [_result({
+            "extracted_data": {},
+            "validation": {
+                "flagged_count": 0,
+                "flagged_fields": [{
+                    "field": "Amount", "reason": "amount_mismatch",
+                }],
+            },
+        })],
+    )
+
+    response = client.get(f"/api/jobs/{job.id}/results", headers=auth["acme"])
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["validation_warnings"]
+    assert response.json()[0]["needs_review"] is True
+
+
+def test_results_are_sorted_by_original_file_then_document_index(
+        db, users, client, auth):
+    from app.models.models import DocumentResult
+
+    job = _job(db, users["acme"])
+    for original, index in (("z.png", 2), ("a.png", 2), ("z.png", 1),
+                            ("a.png", 1)):
+        doc = DocumentResult(
+            job_id=job.id,
+            filename=f"{original} [{index} of 2]",
+            original_filename=original,
+            extraction_json=(
+                f'{{"document_index": {index}, "document_count": 2}}'),
+        )
+        db.add(doc)
+    db.commit()
+
+    response = client.get(f"/api/jobs/{job.id}/results", headers=auth["acme"])
+    assert response.status_code == 200, response.text
+    assert [(row["original_filename"], row["extracted_data"]["document_index"])
+            for row in response.json()] == [
+                ("a.png", 1), ("a.png", 2), ("z.png", 1), ("z.png", 2)]
