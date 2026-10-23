@@ -44,6 +44,35 @@ Production data, read 2026-08-24:
 
 ## 1. What changes
 
+### First-administrator bootstrap
+
+DocAgent does not create a default privileged account. On a database with no
+administrator, provision the first one by setting both of these variables for
+one startup:
+
+| variable | required | purpose |
+|---|---:|---|
+| `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME` | yes | Username for the first administrator |
+| `DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD` | yes | Unique bootstrap password of at least 15 characters; surrounding whitespace is stripped before validation and hashing |
+| `DOCAGENT_BOOTSTRAP_ADMIN_DISPLAY_NAME` | no | Display name; defaults to the username |
+
+Use operator-selected values, for example
+`DOCAGENT_BOOTSTRAP_ADMIN_USERNAME=<operator-selected-username>` and
+`DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD=<unique-secret-at-least-15-characters>`.
+These variables are used only to create the first administrator. Remove
+`DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD` immediately after the successful-bootstrap
+log appears, then restart the service without it.
+
+An existing administrator is never changed and does not require these
+variables. If no administrator and no bootstrap variables exist, startup
+continues but privileged operations remain inaccessible. Supplying only part
+of the configuration, or a weak/known password, fails startup without creating
+an account. The logs and exception do not include the supplied password.
+
+A one-off operator CLI would provide a better secret lifecycle where secure
+shell access is available, but no such command exists today. Treat it as a
+future alternative, not an available recovery procedure.
+
 ### 1.1 Database
 
 | change | reversible? |

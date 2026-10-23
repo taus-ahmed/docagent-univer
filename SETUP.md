@@ -121,12 +121,19 @@ alembic upgrade head
 ### Start the FastAPI server
 
 ```powershell
+# First startup on a database with no administrator: choose your own values.
+$env:DOCAGENT_BOOTSTRAP_ADMIN_USERNAME = "<operator-selected-username>"
+$env:DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD = "<unique-secret-at-least-15-characters>"
+$env:DOCAGENT_BOOTSTRAP_ADMIN_DISPLAY_NAME = "<optional-display-name>"
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Visit http://localhost:8000/docs — you should see the Swagger UI with all endpoints.
 
-Default admin credentials: **admin / admin123** (change immediately!)
+After the successful-bootstrap log appears, remove the bootstrap password from
+the environment immediately. Later startups detect the existing administrator
+and neither require nor apply the bootstrap variables. A fresh database started
+without them has no administrator and no default privileged credential.
 
 ---
 
@@ -136,10 +143,10 @@ Default admin credentials: **admin / admin123** (change immediately!)
 # Health check
 curl http://localhost:8000/health
 
-# Login (should return a JWT token)
+# Login with the operator-selected bootstrap credentials (returns a JWT token)
 curl -X POST http://localhost:8000/api/auth/login `
   -H "Content-Type: application/json" `
-  -d '{"username": "admin", "password": "admin123"}'
+  -d '{"username": "<operator-selected-username>", "password": "<operator-selected-password>"}'
 
 # List schemas (should show demo_accounting)
 curl http://localhost:8000/api/schemas `

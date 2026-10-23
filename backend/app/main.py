@@ -3,6 +3,7 @@ DocAgent v2 — FastAPI Application Entry Point
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -41,8 +42,8 @@ async def lifespan(app: FastAPI):
     settings.ensure_storage_dirs()
     logger.info("Storage directories ready")
 
-    # Seed default admin if DB is empty
-    _seed_admin()
+    # Provision the first administrator only when explicitly configured.
+    _bootstrap_admin()
 
     # Copy demo schema if no schemas exist
     _seed_demo_schema()
@@ -241,25 +242,97 @@ def _release_stranded_jobs():
         db.close()
 
 
-def _seed_admin():
-    """Create default admin user if none exists."""
+_BOOTSTRAP_USERNAME_ENV = "DOCAGENT_BOOTSTRAP_ADMIN_USERNAME"
+_BOOTSTRAP_PASSWORD_ENV = "DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD"
+_BOOTSTRAP_DISPLAY_NAME_ENV = "DOCAGENT_BOOTSTRAP_ADMIN_DISPLAY_NAME"
+_KNOWN_BOOTSTRAP_PASSWORDS = frozenset({
+    "admin",
+    "admin" + "123",
+    "administrator",
+    "change-me",
+    "change-me-in-production",
+    "changeme",
+    "password",
+    "password123",
+    "your_admin_password_here",
+})
+
+
+def _validate_bootstrap_password(username: str, password: str) -> None:
+    """Apply the deliberately small, deterministic first-admin policy."""
+    if not password or not password.strip():
+        raise RuntimeError("Administrator bootstrap password must not be empty.")
+    if len(password) < 15:
+        raise RuntimeError(
+            "Administrator bootstrap password must be at least 15 characters.")
+    if password.casefold() == username.casefold():
+        raise RuntimeError(
+            "Administrator bootstrap password must differ from the username.")
+    if password.casefold() in _KNOWN_BOOTSTRAP_PASSWORDS:
+        raise RuntimeError(
+            "Administrator bootstrap password is a known default or placeholder.")
+
+
+def _bootstrap_admin():
+    """Provision one administrator from explicit environment variables."""
     from app.models import SessionLocal
     from app.models.models import User
+
     db = SessionLocal()
     try:
         admin = db.query(User).filter_by(role="admin").first()
-        if not admin:
-            db.add(User(
-                username="admin",
-                display_name="Administrator",
-                email=None,
-                password_hash=hash_password("admin123"),
-                role="admin",
-                is_active=True,
-            ))
-            db.commit()
-            logger.info("Default admin user created (username: admin, password: admin123)")
-            logger.warning("⚠  CHANGE THE DEFAULT ADMIN PASSWORD BEFORE PRODUCTION DEPLOY!")
+        if admin:
+            active_admin = db.query(User).filter_by(
+                role="admin", is_active=True).first()
+            if not active_admin:
+                logger.warning(
+                    "Administrator lock-out risk: administrator rows exist, "
+                    "but every administrator is inactive.")
+            return
+
+        username_raw = os.environ.get(_BOOTSTRAP_USERNAME_ENV)
+        password_raw = os.environ.get(_BOOTSTRAP_PASSWORD_ENV)
+        display_name_raw = os.environ.get(_BOOTSTRAP_DISPLAY_NAME_ENV)
+
+        if username_raw is None and password_raw is None and display_name_raw is None:
+            logger.warning(
+                "No administrator exists. To provision the first administrator, "
+                "set %s and %s (optionally %s), restart once, then remove %s "
+                "immediately after successful bootstrap.",
+                _BOOTSTRAP_USERNAME_ENV, _BOOTSTRAP_PASSWORD_ENV,
+                _BOOTSTRAP_DISPLAY_NAME_ENV, _BOOTSTRAP_PASSWORD_ENV)
+            return
+
+        username = (username_raw or "").strip()
+        if not username or password_raw is None:
+            raise RuntimeError(
+                "Administrator bootstrap configuration is incomplete: set both "
+                f"{_BOOTSTRAP_USERNAME_ENV} and {_BOOTSTRAP_PASSWORD_ENV}.")
+
+        # Deployment dashboards and secret-file tooling commonly leave a final
+        # newline. It is never intended to be part of an interactive password.
+        password = password_raw.strip()
+        _validate_bootstrap_password(username, password)
+        if db.query(User).filter_by(username=username).first():
+            raise RuntimeError(
+                "Administrator bootstrap username is already in use.")
+        display_name = (display_name_raw or "").strip() or username
+        db.add(User(
+            username=username,
+            display_name=display_name,
+            email=None,
+            password_hash=hash_password(password),
+            role="admin",
+            client_id=None,
+            is_active=True,
+        ))
+        db.commit()
+        logger.info(
+            "Initial administrator bootstrap succeeded for username %r. "
+            "Remove %s immediately.", username, _BOOTSTRAP_PASSWORD_ENV)
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

@@ -1119,7 +1119,7 @@ Still open: per-client schema persistence.
 ### `backend/app/main.py` — app factory + lifespan
 
 Startup order: `init_db()` → `_run_migrations()` → `ensure_storage_dirs()` →
-`_seed_admin()` → `_seed_demo_schema()` → `_materialise_schemas()` →
+`_bootstrap_admin()` → `_seed_demo_schema()` → `_materialise_schemas()` →
 `_release_stranded_jobs()`.
 
 ⚠ **`_release_stranded_jobs()` fails any job left `pending`/`processing`.**
@@ -1131,7 +1131,11 @@ process owns no threads yet, so no age threshold is needed or used. **This
 assumes ONE instance.** Phase 4 moves extraction to Celery, where the queue owns
 liveness; anyone scaling past one worker must rework this in the same commit.
 
-- Default admin: username=`admin`, password=`admin123` (created if no admin exists)
+- No default administrator exists. The first administrator is created only when
+  both `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME` and
+  `DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD` are explicitly supplied; remove the
+  password variable immediately after successful bootstrap. Existing
+  administrators are never mutated by bootstrap variables.
 - Demo schema seeded from `backend/engine/demo_accounting.yaml` as `client_id=demo_001` if `client_schemas` table is empty
 - Swagger/ReDoc disabled in production (`ENVIRONMENT=production`)
 - `_run_migrations()` runs idempotent PostgreSQL DDL on every boot, before Alembic. **It fails loudly**: any failed statement plus `ENVIRONMENT=production` raises and refuses to serve. On non-PostgreSQL dialects it logs a warning that it was SKIPPED rather than reporting success.
