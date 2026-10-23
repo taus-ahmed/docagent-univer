@@ -15,6 +15,7 @@ a uniquely named throwaway database, build the legacy schema there, run the
 startup migrations, assert against it, and stop and remove it at teardown.
 """
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -27,6 +28,30 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
+
+def _find_postgres_binaries():
+    install_bins = sorted(
+        Path("C:/Program Files/PostgreSQL").glob("*/bin"), reverse=True)
+    initdb = shutil.which("initdb") or next(
+        (str(p / "initdb.exe") for p in install_bins
+         if (p / "initdb.exe").is_file()), None)
+    pg_ctl = shutil.which("pg_ctl") or next(
+        (str(p / "pg_ctl.exe") for p in install_bins
+         if (p / "pg_ctl.exe").is_file()), None)
+    return initdb, pg_ctl
+
+
+def _postgres_binaries():
+    initdb, pg_ctl = _find_postgres_binaries()
+    if initdb and pg_ctl:
+        return initdb, pg_ctl
+    reason = ("schema drift isolation needs local PostgreSQL binaries "
+              "(initdb and pg_ctl)")
+    if os.environ.get("DOCAGENT_REQUIRE_PG") == "1":
+        pytest.fail(reason + "; DOCAGENT_REQUIRE_PG=1 forbids skipping")
+    pytest.skip(reason + "; set DOCAGENT_REQUIRE_PG=1 in CI to require it")
+
+
 @pytest.fixture(scope="module")
 def drift_database(tmp_path_factory):
     """A legacy database owned by this test, migrated and always dropped."""
@@ -36,16 +61,7 @@ def drift_database(tmp_path_factory):
     from sqlalchemy.pool import NullPool
     from app.models.models import Base
 
-    install_bins = sorted(
-        Path("C:/Program Files/PostgreSQL").glob("*/bin"), reverse=True)
-    initdb = shutil.which("initdb") or next(
-        (str(p / "initdb.exe") for p in install_bins
-         if (p / "initdb.exe").is_file()), None)
-    pg_ctl = shutil.which("pg_ctl") or next(
-        (str(p / "pg_ctl.exe") for p in install_bins
-         if (p / "pg_ctl.exe").is_file()), None)
-    if not initdb or not pg_ctl:
-        pytest.fail("schema drift isolation requires local PostgreSQL binaries")
+    initdb, pg_ctl = _postgres_binaries()
 
     cluster = tmp_path_factory.mktemp("schema_drift_postgres")
     data_dir = cluster / "data"
