@@ -72,6 +72,8 @@ FAMILY_ALIASES = {
     "invoice": {"invoice", "sales_invoice", "purchase_invoice", "tax_invoice",
                 "commercial_invoice"},
     "bank_statement": {"bank_statement", "bank_statements", "account_statement"},
+    "payslip": {"payslip", "pay_slip", "payslips", "pay_stub", "paystub",
+                "pay_stubs", "salary_slip"},
 }
 
 
@@ -107,3 +109,4 @@ def _load():
         import cheque_validators  # noqa: F401
         import invoice_validators  # noqa: F401
         import bank_validators  # noqa: F401
+        import payslip_validators  # noqa: F401
