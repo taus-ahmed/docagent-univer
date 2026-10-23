@@ -70,8 +70,10 @@ def _run(pdf, selected):
 
 class TestASelectionThatResolvesToNothingFailsClosed:
 
-    @pytest.mark.parametrize("selected", [[999], [0], [-1], [0, -3, 4]])
+    @pytest.mark.parametrize("selected", [[999], [0], [-1], [0, -3, 4], []])
     def test_no_model_call_and_a_named_failure(self, pdf, selected):
+        """`[]` is a selection of NOTHING, not "no selection" (that is None):
+        it used to be falsy and sent every page."""
         results, calls, _sent = _run(pdf, selected)
         assert calls == []
         (r,) = results
@@ -103,6 +105,11 @@ class TestAPartlyValidSelection:
         assert SENTINELS[1] not in prompt
         assert sorted(int(p) for p in
                       results[0].extracted_data["validation"]["page_origins"]) == [1, 3]
+
+    def test_no_selection_means_every_page(self, pdf):
+        """Control, unmarked: None is the absence of a selection."""
+        _results, calls, sent = _run(pdf, None)
+        assert calls and all(t in sent for t in SENTINELS)
 
     def test_a_valid_selection_is_unchanged(self, pdf):
         """Control, unmarked: a plain valid selection filters as before."""

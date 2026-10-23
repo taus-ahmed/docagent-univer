@@ -347,7 +347,9 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     # and a selection with nothing valid in it fails by name before any model
     # call.
     ignored_pages = []
-    if selected_pages:
+    # `[]` is a selection of NOTHING and fails closed below; only None means
+    # "no selection". `if selected_pages:` read an empty list as None.
+    if selected_pages is not None:
         total = len(doc_text_pages) or len(page_images)
         wanted = set()
         for n in selected_pages:
@@ -367,9 +369,11 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             _log("ROUTE", f"{file_path.name}: selected pages [{shown}] name no "
                           f"page of this {total}-page file — nothing extracted")
             return [_fail(file_path.name,
-                          f"None of the selected pages ({shown}) exist in this "
-                          f"file, which has {total} page(s). Nothing was "
-                          f"extracted.")]
+                          (f"None of the selected pages ({shown}) exist in this "
+                           f"file, which has {total} page(s). Nothing was "
+                           f"extracted.") if selected_pages else
+                          (f"No pages were selected from this file, which has "
+                           f"{total} page(s). Nothing was extracted."))]
         page_images = [page_images[i] for i in keep if i < len(page_images)]
         doc_text_pages = [doc_text_pages[i] for i in keep if i < len(doc_text_pages)]
         doc_page_lines = [doc_page_lines[i] for i in keep if i < len(doc_page_lines)]
