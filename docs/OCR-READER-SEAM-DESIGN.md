@@ -703,6 +703,10 @@ everything carries `False` and `[]`.
 | `micr_band_unreadable` | the record carries a cheque's MICR band, shaped like one, but none of its digits could be read; set on every value that depends on the band's identity (routing, account). An identity slot left empty is flagged in `flagged_fields` instead, and `validation.micr_band_unreadable` is True. Distinct from `checksum_failed` (digits read, and wrong) and `possible_multiple_documents` (the count of cheques is unknown) | none — it requires review |
 | `totals_mismatch` | invoice family: the line items do not sum to the subtotal (within one cent per line), or subtotal + charges + tax - discount does not equal the total (within one cent); set on every value in the failed sum (subtotal and each line row, or subtotal, charges, tax, discount and total) | all exactly `low` |
 | `totals_unreadable` | invoice family: a value the totals check needs is present but not a plain amount (`TBD`, `8.88%`, `1.234,56`); set on every value of that sum | none — it requires review |
+| `balance_mismatch` | bank-statement family: opening balance + total credits - total debits does not equal the closing balance (within one cent), set on all four; or a transaction row's balance is not the previous balance + its credit - its debit (within one cent), set on the rows either side of the step (the opening balance before the first row, the closing balance after the last) | all exactly `low` |
+| `balance_unreadable` | bank-statement family: a value one of those checks needs is present but not a plain amount (`TBD`, `12.00 CR`, `1.234,56`); set on every value of that sum or step | none — it requires review |
+| `payslip_mismatch` | payslip family: gross pay - total deductions does not equal net pay (within one cent), set on all three; or the listed deductions do not sum to the total deductions (within one cent per line), set on the total and every listed deduction row | all exactly `low` |
+| `payslip_unreadable` | payslip family: a value one of those checks needs is present but not a plain amount; set on every value of that sum | none — it requires review |
 | `possible_multiple_documents` | the record may hold more than one document (cheque) and the engine could not establish how many with confidence, so it kept ONE record rather than guess a split; set on every value of that record | none — it requires review |
 
 Document-level facts that have no single value to sit on are reported in
@@ -712,11 +716,22 @@ routing number withheld for failing the checksum
 (`validation.selected_pages_ignored`), zero-word OCR pages
 (`validation.ocr_zero_word_pages`), dropped, empty or unbound table rows.
 
-Which family a check belongs to is declared in `engine/validators.py` (the registry): cheque — `amount_*`, `micr_band_unreadable`; invoice — `totals_*`; every family — `checksum_failed`.
+Which family a check belongs to is declared in `engine/validators.py` (the registry): cheque — `amount_*`, `micr_band_unreadable`; invoice — `totals_*`; bank statement — `balance_*`; payslip — `payslip_*`; every family — `checksum_failed`.
 
 Per-value evidence that is NOT a reason: `amount_cross_check`
-(`match` / `mismatch` / `unreadable` — a match never raises a level) and
-`aba_checksum` (`pass` / `fail`) in a field's provenance.
+(`match` / `mismatch` / `unreadable` — a match never raises a level),
+`aba_checksum` (`pass` / `fail`), and the family checks' `lines_check`,
+`totals_check`, `balance_check`, `running_balance_check`, `net_pay_check` and
+`deductions_check` (`pass` / `fail` / `unreadable`) in a field's provenance.
+
+None of the four sum checks runs when a value it needs is missing, when a role
+is ambiguous (two labels read as the closing balance), when a qualified label
+names a different quantity (`YTD Gross Earnings`, `Total Pre-Tax Deductions`),
+or — for a sum or chain over table rows — when a gate dropped rows from that
+table (another region, a duplicate, an empty or malformed row;
+`CheckContext.incomplete`). A row whose text says it is a total is not summed.
+A running balance consistent in neither printed nor reversed order follows a
+convention the check does not know, and is not checked.
 
 ### 12.1 Known limitations (cheques)
 
