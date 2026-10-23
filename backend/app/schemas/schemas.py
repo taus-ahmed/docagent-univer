@@ -93,6 +93,7 @@ class DocumentResultResponse(BaseModel):
     id: int
     job_id: int
     filename: str
+    original_filename: str
     document_type: Optional[str]
     overall_confidence: Optional[str]
     extracted_data: Optional[dict]

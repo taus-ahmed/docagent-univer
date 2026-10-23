@@ -4354,6 +4354,23 @@ def _flag_summary(flagged) -> str:
     return "; ".join(out)
 
 
+_MULTI_RECORD_SUFFIX_RE = re.compile(r"\s+\[\d+\s+of\s+\d+\]$")
+
+
+def _result_display_name(engine_name: str, original_name: str) -> str:
+    """Put an engine record suffix onto the safe, user-facing upload name."""
+    match = _MULTI_RECORD_SUFFIX_RE.search(str(engine_name or ""))
+    return original_name + (match.group(0) if match else "")
+
+
+def _document_index(document: DocumentResult) -> int:
+    """Stable sort key for one-file/many-record route responses."""
+    try:
+        return int(document.get_extracted_data().get("document_index", 1))
+    except (AttributeError, TypeError, ValueError):
+        return 1
+
+
 def _value_requires_review(value) -> bool:
     """Whether any extracted field or row carries the engine review gate.
 
@@ -4548,10 +4565,16 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                     )
 
                 for result in results:
-                    result.filename = display_filename
+                    result.filename = _result_display_name(
+                        getattr(result, "filename", ""), display_filename)
                     try:
                         validation_data = (result.extracted_data or {}).get("validation", {})
-                        has_flags      = validation_data.get("flagged_count", 0) > 0
+                        flagged_fields = validation_data.get("flagged_fields", []) or []
+                        # The list is the evidence. Keep the count as a
+                        # backwards-compatible escalation signal, but never
+                        # let a stale zero suppress real flagged fields.
+                        has_flags = bool(flagged_fields) or (
+                            validation_data.get("flagged_count", 0) > 0)
                         error_msg      = result.error if hasattr(result, 'error') and result.error else ""
 
                         # H1: for financial doc types, any low-confidence numeric field
@@ -4625,13 +4648,14 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                         doc = DocumentResult(
                             job_id=job_id,
                             filename=result.filename,
+                            original_filename=display_filename,
                             document_type=result.document_type if result.success else "unknown",
                             overall_confidence=extracted.get("overall_confidence"),
                             extraction_json=json.dumps(extracted, default=str) if extracted else None,
                             raw_llm_response=_raw_llm or None,
                             validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
                             validation_warnings=(
-                                _flag_summary(validation_data.get("flagged_fields", []))
+                                _flag_summary(flagged_fields)
                                 if has_flags else ""
                             ),
                             needs_review=(
@@ -7029,9 +7053,15 @@ def get_job_results(job_id: int, doc_type: Optional[str]=None, needs_review: Opt
     q = db.query(DocumentResult).filter(DocumentResult.job_id==job_id)
     if doc_type: q = q.filter(DocumentResult.document_type==doc_type)
     if needs_review is not None: q = q.filter(DocumentResult.needs_review==needs_review)
-    docs = q.order_by(DocumentResult.id).all()
+    docs = q.all()
+    docs.sort(key=lambda d: (
+        (d.original_filename or d.filename or "").casefold(),
+        _document_index(d),
+        d.id,
+    ))
     return [DocumentResultResponse(
         id=d.id, job_id=d.job_id, filename=d.filename,
+        original_filename=d.original_filename or d.filename,
         document_type=d.document_type, overall_confidence=d.overall_confidence,
         extracted_data=d.get_extracted_data(),
         validation_errors=d.validation_errors, validation_warnings=d.validation_warnings,

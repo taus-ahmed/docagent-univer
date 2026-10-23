@@ -109,6 +109,8 @@ class DocumentResult(Base):
                     nullable=False, index=True)
 
     filename = Column(String(500), nullable=False)
+    # Upload name without the engine's per-record "[k of N]" display suffix.
+    original_filename = Column(String(500), nullable=True)
     document_type = Column(String(100), nullable=True, index=True)
     overall_confidence = Column(String(20), nullable=True)  # high | medium | low
 
