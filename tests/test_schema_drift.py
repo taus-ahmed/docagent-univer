@@ -9,14 +9,17 @@ the ORM declared `Text` and production held 15,873-character grids: every real
 template save failed with StringDataRightTruncation — a 500 with no clue in the
 UI, and no template ever stored.
 
-These tests run against whatever DATABASE_URL is configured. If it is not
-reachable they FAIL, because a run that checked nothing must not look like a
-run that checked everything — see `_engine` below. Set DOCAGENT_DB_OPTIONAL=1
-to skip on purpose.
+The tests never inspect or write the configured application database. They
+start a private PostgreSQL cluster under pytest's temporary directory, create
+a uniquely named throwaway database, build the legacy schema there, run the
+startup migrations, assert against it, and stop and remove it at teardown.
 """
 import json
-import os
-import warnings
+import shutil
+import socket
+import subprocess
+import uuid
+from pathlib import Path
 
 import pytest
 
@@ -24,49 +27,92 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
-# Opting out of the drift check must be a decision someone made, not a
-# side effect of not having Postgres running.
-_OPT_OUT = "DOCAGENT_DB_OPTIONAL"
-
-
-def _engine():
-    """The configured database, or a FAILURE saying the check did not run.
-
-    This used to `pytest.skip` when no database was reachable, which made a
-    run that verified nothing indistinguishable from a run that verified
-    everything: five green skips in a 300-test suite, scrolling past. In CI
-    without Postgres the drift check has never run at all and the build is
-    still green — which is the same shape of problem as the migrations that
-    logged their failures at DEBUG.
-
-    A skip is still available, but it has to be asked for:
-
-        DOCAGENT_DB_OPTIONAL=1 pytest
-
-    and it is reported at every level pytest offers.
-    """
+@pytest.fixture(scope="module")
+def drift_database(tmp_path_factory):
+    """A legacy database owned by this test, migrated and always dropped."""
     import sqlalchemy as sa
-    from app.config import settings
+    from sqlalchemy.engine import make_url
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import NullPool
+    from app.models.models import Base
+
+    install_bins = sorted(
+        Path("C:/Program Files/PostgreSQL").glob("*/bin"), reverse=True)
+    initdb = shutil.which("initdb") or next(
+        (str(p / "initdb.exe") for p in install_bins
+         if (p / "initdb.exe").is_file()), None)
+    pg_ctl = shutil.which("pg_ctl") or next(
+        (str(p / "pg_ctl.exe") for p in install_bins
+         if (p / "pg_ctl.exe").is_file()), None)
+    if not initdb or not pg_ctl:
+        pytest.fail("schema drift isolation requires local PostgreSQL binaries")
+
+    cluster = tmp_path_factory.mktemp("schema_drift_postgres")
+    data_dir = cluster / "data"
+    log_path = cluster / "postgres.log"
+    subprocess.run(
+        [initdb, "-D", str(data_dir), "--auth=trust", "--encoding=UTF8",
+         "--no-locale", "--username=postgres"],
+        check=True, capture_output=True, text=True)
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    subprocess.run(
+        [pg_ctl, "-D", str(data_dir), "-l", str(log_path), "-o",
+         f"-F -p {port} -h 127.0.0.1", "-w", "start"],
+        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    database_name = f"docagent_drift_{uuid.uuid4().hex}"
+    admin_url = make_url(
+        f"postgresql+psycopg2://postgres@127.0.0.1:{port}/postgres")
+    test_url = admin_url.set(database=database_name)
+    admin = sa.create_engine(admin_url, isolation_level="AUTOCOMMIT",
+                             poolclass=NullPool)
+    engine = None
+    patch = pytest.MonkeyPatch()
+    created = False
     try:
-        e = sa.create_engine(settings.DATABASE_URL, pool_pre_ping=True)
-        with e.connect():
-            pass
-        return e
+        with admin.connect() as connection:
+            connection.execute(sa.text(f'CREATE DATABASE "{database_name}"'))
+        created = True
+        engine = sa.create_engine(test_url, pool_pre_ping=True, poolclass=NullPool)
+        Base.metadata.create_all(engine)
+
+        # Reproduce the two known legacy states. create_all() cannot repair
+        # either one; the production startup migrations must do that.
+        with engine.begin() as connection:
+            connection.execute(sa.text(
+                "ALTER TABLE column_templates "
+                "ALTER COLUMN description TYPE VARCHAR(500)"))
+            connection.execute(sa.text(
+                "ALTER TABLE document_results DROP COLUMN original_filename"))
+
+        isolated_session = sessionmaker(autocommit=False, autoflush=False,
+                                        bind=engine)
+        import app.models as models
+        patch.setattr(models, "SessionLocal", isolated_session)
+        from app.main import _run_migrations
+        outcome = _run_migrations()
+        assert outcome["failed"] == 0, outcome
+        yield engine, isolated_session
     except Exception as exc:
-        reason = (f"schema drift NOT CHECKED: no reachable database "
-                  f"({type(exc).__name__}: {str(exc)[:120]})")
-        if os.getenv(_OPT_OUT) == "1":
-            warnings.warn(reason, stacklevel=2)
-            print(f"\n!! {reason}", flush=True)
-            pytest.skip(reason)
-        pytest.fail(
-            reason + "\n\nThe ORM-vs-database check cannot run without a "
-            "database, and a run that checked nothing must not report "
-            "success — that is how column_templates.description stayed "
-            "VARCHAR(500) for months.\n"
-            "Either start the database (docker-compose up -d), point "
-            "DATABASE_URL at one, or opt out on purpose with "
-            f"{_OPT_OUT}=1.")
+        pytest.fail("isolated schema drift database failed: "
+                    f"{type(exc).__name__}")
+    finally:
+        patch.undo()
+        if engine is not None:
+            engine.dispose()
+        if created:
+            with admin.connect() as connection:
+                connection.execute(sa.text(
+                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    "WHERE datname = :name AND pid <> pg_backend_pid()"),
+                    {"name": database_name})
+                connection.execute(sa.text(f'DROP DATABASE "{database_name}"'))
+        admin.dispose()
+        subprocess.run(
+            [pg_ctl, "-D", str(data_dir), "-m", "fast", "-w", "stop"],
+            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def _norm(t):
@@ -84,13 +130,14 @@ def _len(t):
 
 
 class TestOrmMatchesDatabase:
-    def test_no_column_is_narrower_in_the_database_than_the_orm_declares(self):
+    def test_no_column_is_narrower_in_the_database_than_the_orm_declares(
+            self, drift_database):
         """The truncation class. A DB column shorter than the ORM's type
         accepts short values and rejects real ones, so it passes every smoke
         test and fails on the first genuine template."""
         import sqlalchemy as sa
         from app.models.models import Base
-        e = _engine()
+        e, _session = drift_database
         insp = sa.inspect(e)
         bad = []
         for table in Base.metadata.sorted_tables:
@@ -111,10 +158,11 @@ class TestOrmMatchesDatabase:
             "Database columns narrower than the ORM declares — every value "
             "longer than the DB limit will fail to save:\n  " + "\n  ".join(bad))
 
-    def test_no_declared_column_is_missing_from_the_database(self):
+    def test_no_declared_column_is_missing_from_the_database(
+            self, drift_database):
         import sqlalchemy as sa
         from app.models.models import Base
-        e = _engine()
+        e, _session = drift_database
         insp = sa.inspect(e)
         missing = []
         for table in Base.metadata.sorted_tables:
@@ -126,10 +174,10 @@ class TestOrmMatchesDatabase:
                     missing.append(f"{table.name}.{col.name}")
         assert not missing, f"declared but absent from the DB: {missing}"
 
-    def test_nullability_matches(self):
+    def test_nullability_matches(self, drift_database):
         import sqlalchemy as sa
         from app.models.models import Base
-        e = _engine()
+        e, _session = drift_database
         insp = sa.inspect(e)
         bad = []
         for table in Base.metadata.sorted_tables:
@@ -147,14 +195,14 @@ class TestOrmMatchesDatabase:
 
 
 class TestTemplateGridFits:
-    def test_a_realistic_grid_round_trips_through_the_database(self):
+    def test_a_realistic_grid_round_trips_through_the_database(
+            self, drift_database):
         """The actual failure: a template grid is JSON of the whole sheet and
         runs to thousands of characters. A 500-char column takes the smoke test
         and rejects every real template."""
         import sqlalchemy as sa
-        from app.models import SessionLocal
         from app.models.models import ColumnTemplate
-        _engine()
+        _engine, isolated_session = drift_database
 
         cells = {}
         for r in range(40):
@@ -165,7 +213,7 @@ class TestTemplateGridFits:
                            "merges": {}, "repeatRows": []})
         assert len(grid) > 2000, "the probe grid must be bigger than 500 chars"
 
-        db = SessionLocal()
+        db = isolated_session()
         tpl = ColumnTemplate(name="__drift_probe__", document_type="other",
                              description=grid, columns_json="[]")
         try:
