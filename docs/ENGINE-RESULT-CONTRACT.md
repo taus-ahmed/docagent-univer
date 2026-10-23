@@ -34,17 +34,39 @@ being absent or empty; the route stores and shows `error`.
 
 | engine field | route field | rule |
 |---|---|---|
-| `filename` | `filename` | kept as the engine sets it, including `"<name> [k of N]"` |
+| `filename` | `filename` | only the engine's `" [k of N]"` suffix is kept: the route puts it on the UPLOADED name (`_result_display_name`), so the stored name is `"<original_filename> [k of N]"`, or the bare `original_filename` for a single-record file. The engine's own base name (a storage key or temp file) never reaches the user |
 | — | `original_filename` | the bare upload name, the same on every record of one file |
-| `extracted_data` | `extracted_data` | verbatim |
-| `error` | `validation_errors` | a failure shows here, in the job's failed count, and as `document_type: "unknown"` |
+| `extracted_data` | `extracted_data` | verbatim, EXCEPT the optional post-processing below |
+| `error` | `validation_errors` | `error`, else the result's `validation.errors` joined with `"; "`; a balance sheet / income statement whose section totals disagree (route gate H2) has that warning appended. A failure also shows in the job's failed count and as `document_type: "unknown"` |
+| `validation.flagged_fields` | `validation_warnings` | a one-line summary of the flags (`_flag_summary`), when a route gate says the record needs review; the full list stays in `extracted_data` |
 | `processing_time_ms` | `latency_ms` | |
 | `success` | — | not returned per file; see `validation_errors` |
 | `extracted_data["needs_review"]` | stored `needs_review` | the engine's value OR any route gate; a route can raise it, never clear it |
 
-Results are returned sorted by `(original_filename, document_index, id)`; a
-record without `document_index` (a single-record file) sorts as its file's only
-entry.
+Results are returned sorted by `(original_filename, document_index, id)`, the
+name compared case-folded (and `filename` used where an older row has no
+`original_filename`); a record without `document_index` (a single-record file)
+sorts as index 1.
+
+**Optional post-processing (`options`).** Only when the upload asks for it and
+the record succeeded, the job thread adds keys to `extracted_data` before
+storing it — each is one extra model call, and none touches a value, a level or
+a reason:
+
+| option | key added | when |
+|---|---|---|
+| `categorize` | `Category` on each row of `table_rows` (`_post_categorize`) | only when `table_rows` is non-empty and its first row has no `Category`; a band named anything else (`<name>_rows`) is not categorized |
+| `summary` | `summary` (str) (`_post_summarize`) | when `extracted_data` has no `summary` yet |
+| `anomaly` | `anomalies` ([str], at most 5) (`_post_anomaly`) | when `extracted_data` has no `anomalies` yet |
+
+`graphs` is filtered out by the frontend and never reaches the route. A
+post-processing call that fails is logged and leaves the record as it was.
+
+**Route review gates** that can raise the stored `needs_review`: any flagged
+field; H1 — a `low` value on a `balance_sheet`, `income_statement`, `payslip`
+or `sales_invoice`; misaligned rows (`validation.alignment_misaligned`); H2
+above; any `review_required` / `_review_required` anywhere in the stored
+payload (`_value_requires_review`); the result's own `validation.needs_review`.
 
 ## 2. Per document record — `extracted_data`
 
@@ -214,8 +236,12 @@ If the page cannot be cut with confidence it is ONE record instead, with
   document_index, id)` (§1.1).
 - Return `extracted_data` verbatim. The stored `needs_review` for the row and
   the job counts is `extracted_data["needs_review"]` OR the route's own gates.
-- Send images (JPG/PNG) to `run_extraction` like PDFs, not to the vision-only
-  path, so they get this contract (`_run_extraction_sync`, `_is_image_file`).
+- Send images (JPG/PNG) to `run_extraction` like PDFs, so they get this
+  contract (`_run_extraction_sync`, `_is_image_file`). ⚠ Only when EVERY record
+  the engine returns for an image failed does the route fall back to the
+  vision-only path (`_extract_image_with_template`); that record does not
+  follow this contract (no `field_provenance`, no per-value review metadata,
+  every value `unverified`, `needs_review` True).
 - Exports include each value's confidence and review status alongside its
   provenance (route decision, round 7).
 
