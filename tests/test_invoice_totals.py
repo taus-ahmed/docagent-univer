@@ -218,3 +218,36 @@ def test_an_unknown_amount_inside_the_sum_stops_the_total_check(tmp_path):
                        _template(summary=[lab for lab, _v in summ]))
     assert "totals_check" not in ed["field_provenance"][refs["Total Due"]]
     assert _lvl(ed, refs["Total Due"]) == HIGH
+
+
+def test_line_items_continuing_on_page_2_are_not_marked_low(tmp_path):
+    """The table continues onto page 2. One region per band keeps page 1's
+    rows and leaves page 2's out (flagged, `regions`), so the lines that are
+    left cannot sum to the subtotal — a lines check over them would call a
+    correct subtotal and correct lines wrong. A table a gate dropped rows from
+    is not summed (CheckContext.incomplete); the total check still runs."""
+    spec = importlib.util.spec_from_file_location("make_scan_variants", GENERATOR)
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    head = [(72, 690, "Description"), (300, 690, "Qty"), (360, 690, "Unit Price"),
+            (470, 690, "Amount")]
+    (d1, q1, u1, a1), (d2, q2, u2, a2) = LINES
+    p1 = [(72, 720, "Invoice Number INV-2024-0099"), *head,
+          (72, 670, d1), (300, 670, q1), (360, 670, u1), (470, 670, a1)]
+    p2 = [*head, (72, 670, d2), (300, 670, q2), (360, 670, u2), (470, 670, a2)]
+    y = 630
+    for lab, val in GOOD:
+        p2 += [(300, y, lab), (470, y, val)]
+        y -= 20
+    path = tmp_path / "invoice2.pdf"
+    path.write_bytes(gen.build_pdf([
+        {"w_pt": 612.0, "h_pt": 792.0,
+         "ops": gen._text_ops([(x, yy, 10, t) for x, yy, t in pg], 0)}
+        for pg in (p1, p2)]))
+    ed, refs, rows = _run(path, GOOD, _template())
+    assert ed["validation"]["unbound_row_count"] == 1, ed["validation"].get("regions")
+    assert len(rows) == 1 and rows[0]["_confidence"] == HIGH, rows
+    assert "totals_mismatch" not in rows[0]["_review_reasons"]
+    p = ed["field_provenance"][refs["Subtotal"]]
+    assert "lines_check" not in p and _lvl(ed, refs["Subtotal"]) == HIGH, p
+    assert p["totals_check"] == "pass"                 # the total check still runs

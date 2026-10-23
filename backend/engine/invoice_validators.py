@@ -9,7 +9,8 @@ A check runs only when every value it needs was extracted; a document that
 lacks them is untouched. A value present but not a plain amount (`TBD`,
 `1.234,56`) makes the check UNREADABLE — never a guessed number. Roles are
 read from the template's labels; when a role is ambiguous (two `Total`s) the
-check does not run.
+check does not run, and the lines check skips a table some gate dropped rows
+from (`CheckContext.incomplete`).
 
 Reason codes: totals_mismatch, totals_unreadable (OCR-READER-SEAM-DESIGN §12).
 """
@@ -101,7 +102,12 @@ def invoice_totals(ctx):
 
     # ── lines -> subtotal ──
     lined = [(t, _line_column(t)) for t in (ctx.tables or [])]
-    lined = [(t, k) for t, k in lined if k]
+    # A table a gate dropped rows from (another region, a duplicate, an empty
+    # or malformed row) is not summed: the rows left cannot reach the subtotal,
+    # the loss is already flagged, and the check would call correct values
+    # wrong. The total check below does not read rows and still runs.
+    lined = [(t, k) for t, k in lined
+             if k and t["name"] not in (ctx.incomplete or ())]
     if sub and sub["ref"] in ctx.values and len(lined) == 1:
         t, key = lined[0]
         rows = [(i, r) for i, r in enumerate(ctx.rows.get(t["name"]) or [])

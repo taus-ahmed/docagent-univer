@@ -171,8 +171,8 @@ nothing registered gets none of these keys.
 
 A sum or chain over table rows does not run on a table a gate dropped rows
 from (`CheckContext.incomplete`): the drop is already flagged, and a check over
-what is left would call correct values wrong. The invoice lines check predates
-this and does not yet consult it.
+what is left would call correct values wrong. The invoice lines check, the
+bank running balance and the payslip deductions sum all consult it.
 
 ## 4. Examples (abridged: only the keys discussed)
 
