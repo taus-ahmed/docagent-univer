@@ -732,5 +732,7 @@ Per-value evidence that is NOT a reason: `amount_cross_check`
 - **Handwriting is not read.** A value the model saw only in the image (a
   handwritten payee, amount or signature) cannot be grounded against OCR text:
   it is exactly `low` with `grounding_failed`, flagged, and never `high`.
+- **A native cheque with no MICR line gets no MICR reason** and its native
+  values may be `high`: there is no band for any MICR check to read.
 - **Two or more band-shaped lines, none readable,** are one record flagged
   `possible_multiple_documents`: the cheque count cannot be established.

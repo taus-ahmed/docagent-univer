@@ -30,6 +30,22 @@ list.
 A failed record (`success: False`) has no `extracted_data` contract beyond
 being absent or empty; the route stores and shows `error`.
 
+### 1.1 How the routes return it (agreed with Codex)
+
+| engine field | route field | rule |
+|---|---|---|
+| `filename` | `filename` | kept as the engine sets it, including `"<name> [k of N]"` |
+| — | `original_filename` | the bare upload name, the same on every record of one file |
+| `extracted_data` | `extracted_data` | verbatim |
+| `error` | `validation_errors` | a failure shows here, in the job's failed count, and as `document_type: "unknown"` |
+| `processing_time_ms` | `latency_ms` | |
+| `success` | — | not returned per file; see `validation_errors` |
+| `extracted_data["needs_review"]` | stored `needs_review` | the engine's value OR any route gate; a route can raise it, never clear it |
+
+Results are returned sorted by `(original_filename, document_index, id)`; a
+record without `document_index` (a single-record file) sorts as its file's only
+entry.
+
 ## 2. Per document record — `extracted_data`
 
 | field | type | allowed / meaning |
@@ -180,10 +196,21 @@ If the page cannot be cut with confidence it is ONE record instead, with
 ## 5. What the route must do
 
 - Store each record as its own `DocumentResult` row: several rows can share one
-  file and one page; order by `document_index`.
-- Return `extracted_data` verbatim. `needs_review` for the row and the job
-  counts is `extracted_data["needs_review"]` (already persisted that way).
+  file and one page; return them sorted by `(original_filename,
+  document_index, id)` (§1.1).
+- Return `extracted_data` verbatim. The stored `needs_review` for the row and
+  the job counts is `extracted_data["needs_review"]` OR the route's own gates.
 - Send images (JPG/PNG) to `run_extraction` like PDFs, not to the vision-only
   path, so they get this contract (`_run_extraction_sync`, `_is_image_file`).
-- Never show confidence or reason codes in the exported spreadsheet; the export
-  carries provenance only (CLAUDE.md, "The slot writer carries provenance").
+- Exports include each value's confidence and review status alongside its
+  provenance (route decision, round 7).
+
+## 6. Known limitations
+
+- **A native cheque with no MICR line gets no MICR reason.** Every MICR check
+  needs a band to look at; a digital cheque whose band is absent from the text
+  layer (an image, or not printed) carries neither `micr_band_unreadable` nor
+  `checksum_failed`, and its native values may be `high` with
+  `review_required: false`. Its routing and account then come only from the
+  model's reading of printed labels, checked by grounding alone.
+- The cheque limitations in `docs/OCR-READER-SEAM-DESIGN.md` §12.1 apply.
