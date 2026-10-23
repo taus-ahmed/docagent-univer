@@ -445,7 +445,10 @@ class TestJobAccounting:
 
 # ── 4. what a failure looks like from outside ────────────────────────────────
 
-GARBAGE = b"%PDF-1.4\nthis is not a pdf\n"
+# Route validation now rejects malformed bytes before a worker exists. These
+# tests are about failures *inside* the worker, so use a structurally valid PDF
+# and make the resolver fail deterministically for the `broken-*` filenames.
+GARBAGE = (bs.PDF_DIR / "STMT-2024-01.pdf").read_bytes()
 
 
 def _upload_raw(client, auth, parts, template_id=None):
@@ -470,6 +473,19 @@ class TestAFailedDocumentIsVisible:
     The status now names what the batch produced, and every failure carries its
     own message.
     """
+
+    @pytest.fixture(autouse=True)
+    def _broken_names_fail_inside_worker(self, monkeypatch):
+        from app.api.routes import extract as ex
+
+        original = ex._resolve_source
+
+        def resolve(storage, ref):
+            if "broken" in str(ref):
+                raise RuntimeError("deliberate worker failure")
+            return original(storage, ref)
+
+        monkeypatch.setattr(ex, "_resolve_source", resolve)
 
     def test_a_batch_where_everything_fails_reports_failed(self, client, auth,
                                                            bank_template):

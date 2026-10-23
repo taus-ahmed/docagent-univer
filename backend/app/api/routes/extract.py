@@ -62,6 +62,7 @@ import time
 import json
 import threading
 import traceback
+import warnings
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -94,6 +95,157 @@ _IMAGE_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp",
     ".heic", ".heif", ".gif", ".avif",
 })
+
+_UPLOAD_IMAGE_FORMATS = {
+    "PNG": ".png",
+    "JPEG": ".jpg",
+    "TIFF": ".tiff",
+}
+
+
+def _safe_upload_name(filename: str, canonical_suffix: str) -> str:
+    """A single safe stored name whose suffix matches the file's content."""
+    raw = str(filename or "")
+    portable = raw.replace("\\", "/")
+    if not raw or portable != Path(portable).name or portable in (".", ".."):
+        raise HTTPException(status_code=400, detail="Unsafe upload filename.")
+    cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", portable).strip("._-")
+    stem = re.sub(r"[^A-Za-z0-9_-]", "_", Path(cleaned).stem).strip("_-")
+    if not stem:
+        stem = "document"
+    return f"{stem[:100]}{canonical_suffix}"
+
+
+def _unique_upload_name(filename: str, used_names: set[str]) -> str:
+    """Return a case-insensitively unique stored name within one batch."""
+    candidate = filename
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix
+    sequence = 2
+    while candidate.casefold() in used_names:
+        candidate = f"{stem}-{sequence}{suffix}"
+        sequence += 1
+    used_names.add(candidate.casefold())
+    return candidate
+
+
+def _parse_selected_pages(
+    value: Optional[str], page_counts: list[tuple[str, int]],
+) -> Optional[list[int]]:
+    """Validate a 1-based page list against every document in the batch."""
+    if value is None or value == "":
+        return None
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=400,
+            detail="selected_pages must be a valid JSON array of integers.")
+    if not isinstance(parsed, list):
+        raise HTTPException(
+            status_code=400,
+            detail="selected_pages must be a JSON array of integers.")
+    if not parsed:
+        raise HTTPException(
+            status_code=400, detail="selected_pages cannot be empty.")
+    if any(type(page) is not int for page in parsed):
+        raise HTTPException(
+            status_code=400,
+            detail="Every selected page must be an integer.")
+    if any(page <= 0 for page in parsed):
+        raise HTTPException(
+            status_code=400,
+            detail="Every selected page must be a positive 1-based number.")
+
+    normalized = list(dict.fromkeys(parsed))
+    for filename, page_count in page_counts:
+        too_high = next(
+            (page for page in normalized if page > page_count), None)
+        if too_high is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"Selected page {too_high} is out of range for "
+                        f"{filename}; the document has {page_count} page(s)."))
+    return normalized
+
+
+def _validate_upload_content(filename: str, content: bytes) -> tuple[str, str, int]:
+    """Validate content before any job, storage write, or worker exists."""
+    if not content:
+        raise HTTPException(status_code=400, detail="File is empty.")
+
+    if content.startswith(b"%PDF-"):
+        from pypdf import PdfReader
+        try:
+            reader = PdfReader(io.BytesIO(content), strict=False)
+            if reader.is_encrypted:
+                try:
+                    decrypted = reader.decrypt("")
+                except Exception:
+                    decrypted = 0
+                if not decrypted:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=("Encrypted or password-protected PDFs are not "
+                                "supported."))
+            page_count = len(reader.pages)
+            for page in reader.pages:
+                _ = page.mediabox
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400,
+                                detail="PDF is malformed or truncated.")
+        if page_count > settings.MAX_PDF_PAGES:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"PDF has {page_count} pages; maximum is "
+                        f"{settings.MAX_PDF_PAGES} pages."))
+        return _safe_upload_name(filename, ".pdf"), "pdf", page_count
+
+    image_magic = (
+        content.startswith(b"\x89PNG\r\n\x1a\n")
+        or content.startswith(b"\xff\xd8\xff")
+        or content.startswith((b"II*\x00", b"MM\x00*"))
+    )
+    if not image_magic:
+        raise HTTPException(
+            status_code=400,
+            detail="File content type is not supported. Allowed: PDF, PNG, JPEG, TIFF.")
+
+    from PIL import Image
+    previous_limit = Image.MAX_IMAGE_PIXELS
+    Image.MAX_IMAGE_PIXELS = settings.MAX_IMAGE_PIXELS
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(content)) as image:
+                image_format = image.format
+                width, height = image.size
+                if image_format not in _UPLOAD_IMAGE_FORMATS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="File content type is not supported. Allowed: PDF, PNG, JPEG, TIFF.")
+                if width * height > settings.MAX_IMAGE_PIXELS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(f"Image has {width * height} pixels; maximum is "
+                                f"{settings.MAX_IMAGE_PIXELS} pixels."))
+                image.verify()
+    except HTTPException:
+        raise
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Image exceeds the {settings.MAX_IMAGE_PIXELS} pixel limit.")
+    except Exception:
+        raise HTTPException(status_code=400,
+                            detail="Image is malformed or truncated.")
+    finally:
+        Image.MAX_IMAGE_PIXELS = previous_limit
+
+    return (_safe_upload_name(filename, _UPLOAD_IMAGE_FORMATS[image_format]),
+            "image", 1)
 
 
 def _is_image_file(file_path: Path) -> bool:
@@ -149,19 +301,12 @@ async def get_pdf_page_count(
 ):
     """Return page count for each uploaded file (PDFs only). Used by frontend
     to decide whether to show the page-selection modal before extraction."""
-    import io
     results = []
     for f in files:
         content = await f.read()
-        if f.filename and f.filename.lower().endswith(".pdf"):
-            try:
-                import pdfplumber
-                with pdfplumber.open(io.BytesIO(content)) as pdf:
-                    results.append({"filename": f.filename, "page_count": len(pdf.pages)})
-            except Exception:
-                results.append({"filename": f.filename, "page_count": 1})
-        else:
-            results.append({"filename": f.filename, "page_count": 1})
+        safe_name, _kind, page_count = _validate_upload_content(
+            f.filename, content)
+        results.append({"filename": safe_name, "page_count": page_count})
     return results
 
 
@@ -255,10 +400,11 @@ class _IncomingUpload:
     batch size — 100 files is an allowed batch here, and 50MB an allowed file.
     """
 
-    __slots__ = ("filename", "_upload", "_path", "_bytes")
+    __slots__ = ("filename", "original_filename", "_upload", "_path", "_bytes")
 
     def __init__(self, filename, upload=None, path=None, content=None):
         self.filename = filename
+        self.original_filename = filename
         self._upload = upload
         self._path = path
         self._bytes = content
@@ -323,6 +469,8 @@ async def _start_extraction_job(
     # an explanation instead of being OCR'd). Both run BEFORE the job row
     # exists, so a refused upload leaves nothing behind and costs no model call.
     sizes: list[tuple[str, int]] = []
+    page_counts: list[tuple[str, int]] = []
+    used_names: set[str] = set()
     refused_name: Optional[str] = None
     try:
         for src in sources:
@@ -331,8 +479,20 @@ async def _start_extraction_job(
             error = storage.validate_upload(src.filename, len(content))
             if error:
                 raise HTTPException(status_code=400, detail=f"{src.filename}: {error}")
+            # YAML used to be a product-supported extension but the demo's
+            # PDF-only policy refused it with a demo notice. Preserve that
+            # established demo response; arbitrary unsupported content (for
+            # example .exe) remains a product refusal and is not demo-audited.
+            if (is_demo_user(current_user)
+                    and Path(src.filename or "").suffix.lower()
+                    in (".yaml", ".yml")):
+                check_upload_file(current_user, src.filename, content)
+            safe_name, _kind, page_count = _validate_upload_content(
+                src.filename, content)
+            src.filename = _unique_upload_name(safe_name, used_names)
             check_upload_file(current_user, src.filename, content)
-            sizes.append((src.filename, len(content)))
+            sizes.append((src.original_filename, len(content)))
+            page_counts.append((src.original_filename, page_count))
     except HTTPException as exc:
         # Only a DEMO refusal goes in the trail, and `demo_reason` is what says
         # it is one — the product's own "file type not supported" is not a demo
@@ -342,13 +502,21 @@ async def _start_extraction_job(
                               detail=demo_audit.refusal_detail(exc, refused_name))
         raise
 
+    selected_pages_list = _parse_selected_pages(selected_pages, page_counts)
+
     # The tenant and the template both come from the token's authority, never
     # from the multipart body.
     client_id = resolve_client_id(current_user, requested_client_id)
 
-    schema_path = storage.get_schema_path(client_id) or storage.get_schema_path("demo_001")
+    # A configured demo account intentionally uses the bundled demo schema.
+    # Every other tenant must have its own schema; borrowing demo_001 here
+    # silently extracts real customer documents against another field set.
+    schema_client_id = "demo_001" if is_demo_user(current_user) else client_id
+    schema_path = storage.get_schema_path(schema_client_id)
     if schema_path is None:
-        raise HTTPException(status_code=404, detail="No schema found.")
+        raise HTTPException(
+            status_code=404,
+            detail="No extraction schema is configured for this client.")
 
     tpl = load_template_for_user(db, template_id, current_user)
     template_data = _parse_template(tpl) if tpl else None
@@ -365,16 +533,6 @@ async def _start_extraction_job(
     # Forced off here rather than at the two doors, so the sample-document
     # route cannot be the one that forgets. A no-op for everyone else.
     selected_options = filter_options(current_user, selected_options)
-
-    # Parse selected_pages (1-based list of page numbers to process)
-    selected_pages_list: Optional[list] = None
-    if selected_pages:
-        try:
-            parsed = json.loads(selected_pages)
-            if isinstance(parsed, list) and parsed:
-                selected_pages_list = [int(p) for p in parsed]
-        except Exception:
-            pass
 
     job = ExtractionJob(
         user_id=current_user.id,
@@ -404,7 +562,9 @@ async def _start_extraction_job(
         target=_run_extraction_sync,
         args=(job_id, saved_keys, str(schema_path), settings.DATABASE_URL,
               template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
-        kwargs={"options": selected_options, "selected_pages": selected_pages_list},
+        kwargs={"options": selected_options,
+                "selected_pages": selected_pages_list,
+                "original_filenames": [src.original_filename for src in sources]},
         daemon=True,
     )
     thread.start()
@@ -429,7 +589,7 @@ async def _start_extraction_job(
 @router.post("/extract/upload", response_model=ExtractUploadResponse, status_code=202)
 async def upload_and_extract(
     files: list[UploadFile] = File(...),
-    client_id: str = Form(...),
+    client_id: Optional[str] = Form(None),
     template_id: Optional[int] = Form(None),
     options: Optional[str] = Form(None),  # JSON array: ["categorize","summary","anomaly","graphs"]
     selected_pages: Optional[str] = Form(None),  # JSON array of 1-based page numbers e.g. "[1,2,5]"
@@ -4194,6 +4354,41 @@ def _flag_summary(flagged) -> str:
     return "; ".join(out)
 
 
+_MULTI_RECORD_SUFFIX_RE = re.compile(r"\s+\[\d+\s+of\s+\d+\]$")
+
+
+def _result_display_name(engine_name: str, original_name: str) -> str:
+    """Put an engine record suffix onto the safe, user-facing upload name."""
+    match = _MULTI_RECORD_SUFFIX_RE.search(str(engine_name or ""))
+    return original_name + (match.group(0) if match else "")
+
+
+def _document_index(document: DocumentResult) -> int:
+    """Stable sort key for one-file/many-record route responses."""
+    try:
+        return int(document.get_extracted_data().get("document_index", 1))
+    except (AttributeError, TypeError, ValueError):
+        return 1
+
+
+def _value_requires_review(value) -> bool:
+    """Whether any extracted field or row carries the engine review gate.
+
+    Field metadata uses ``review_required``; table-row metadata historically
+    used ``_review_required``. Walk the saved payload so either representation
+    enforces the same document-level invariant without projecting away any of
+    the engine's metadata.
+    """
+    if isinstance(value, dict):
+        if (value.get("review_required") is True
+                or value.get("_review_required") is True):
+            return True
+        return any(_value_requires_review(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_value_requires_review(item) for item in value)
+    return False
+
+
 def _persist_failure(session_factory, job_id, ref, error) -> None:
     """Record a document that failed BEFORE it could produce a result.
 
@@ -4240,7 +4435,7 @@ def _persist_failure(session_factory, job_id, ref, error) -> None:
 
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
-                          selected_pages=None):
+                          selected_pages=None, original_filenames=None):
     import os
     os.environ["PYTHONUTF8"] = "1"
     for p in [engine_dir, backend_dir, project_dir]:
@@ -4298,6 +4493,11 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
         batch_schemas: dict = {}
 
         for i, fp in enumerate(file_keys):
+            display_filename = (
+                original_filenames[i]
+                if original_filenames and i < len(original_filenames)
+                else Path(str(fp)).name or str(fp)
+            )
             print(f"[THREAD] processing file {i+1}/{len(file_keys)}: {fp}", flush=True)
 
             # Issue 2: update job progress so the UI can poll live status
@@ -4323,12 +4523,30 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                     # result travels the same persistence path as any other, so
                     # the job still completes and still reports.
                     print(f"[THREAD] source missing: {fp}", flush=True)
-                    results = [_fail(Path(fp).name,
+                    results = [_fail(display_filename,
                                      "Source document is no longer in storage "
                                      "— upload it again to re-run this job.")]
-                elif _is_image_file(file_path):        # Issue 3: route image files
-                    results = _extract_image_with_template(
-                        orchestrator, file_path, template_data)
+                elif _is_image_file(file_path):
+                    # Images now enter the same engine seam as PDFs. That path
+                    # preprocesses them with OCR, retains geometry/origin, and
+                    # applies the same grounding and review rules. The direct
+                    # vision path remains only as a compatibility fallback for
+                    # an engine failure.
+                    if template_data:
+                        results = _extract_with_template(
+                            orchestrator, file_path, template_data,
+                            selected_pages=selected_pages,
+                        )
+                    else:
+                        results = _extract_with_template(
+                            orchestrator, file_path, None,
+                            selected_pages=selected_pages,
+                            batch_schemas=batch_schemas,
+                        )
+                    if not results or not any(
+                            getattr(r, "success", False) for r in results):
+                        results = _extract_image_with_template(
+                            orchestrator, file_path, template_data)
                 elif template_data:
                     results = _extract_with_template(
                         orchestrator, file_path, template_data,
@@ -4347,9 +4565,16 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                     )
 
                 for result in results:
+                    result.filename = _result_display_name(
+                        getattr(result, "filename", ""), display_filename)
                     try:
                         validation_data = (result.extracted_data or {}).get("validation", {})
-                        has_flags      = validation_data.get("flagged_count", 0) > 0
+                        flagged_fields = validation_data.get("flagged_fields", []) or []
+                        # The list is the evidence. Keep the count as a
+                        # backwards-compatible escalation signal, but never
+                        # let a stale zero suppress real flagged fields.
+                        has_flags = bool(flagged_fields) or (
+                            validation_data.get("flagged_count", 0) > 0)
                         error_msg      = result.error if hasattr(result, 'error') and result.error else ""
 
                         # H1: for financial doc types, any low-confidence numeric field
@@ -4423,16 +4648,23 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                         doc = DocumentResult(
                             job_id=job_id,
                             filename=result.filename,
+                            original_filename=display_filename,
                             document_type=result.document_type if result.success else "unknown",
                             overall_confidence=extracted.get("overall_confidence"),
                             extraction_json=json.dumps(extracted, default=str) if extracted else None,
                             raw_llm_response=_raw_llm or None,
                             validation_errors=error_msg or ("; ".join(result.validation.errors) if result.validation else ""),
                             validation_warnings=(
-                                _flag_summary(validation_data.get("flagged_fields", []))
+                                _flag_summary(flagged_fields)
                                 if has_flags else ""
                             ),
-                            needs_review=has_flags or (result.validation.needs_review if result.validation else False),
+                            needs_review=(
+                                has_flags
+                                or bool(extracted.get("needs_review"))
+                                or _value_requires_review(extracted)
+                                or (result.validation.needs_review
+                                    if result.validation else False)
+                            ),
                             model_used=(result.extraction_response.model_used
                                         if result.extraction_response else "vision_direct"),
                             tokens_used=(result.extraction_response.tokens_used
@@ -4471,7 +4703,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                 print(f"[THREAD] doc error: {doc_err}", flush=True)
                 traceback.print_exc()
                 failed += 1
-                _persist_failure(Session, job_id, fp, doc_err)
+                _persist_failure(Session, job_id, display_filename, doc_err)
 
             # Rate limit protection: delay between documents
             # Prevents Groq/Gemini 429 errors on batch uploads
@@ -6683,18 +6915,30 @@ def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True):
     first = 1
     if show_filename:
         c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
-        first = 2
+        c = ws.cell(row=1, column=2, value="Page"); c.font=hfont; c.fill=hf
+        first = 3
     for ci, key in enumerate(all_keys, first):
         c = ws.cell(row=1, column=ci, value=key); c.font=hfont; c.fill=hf
     for ri, dr in enumerate(doc_results, 2):
         if show_filename:
             ws.cell(row=ri, column=1, value=dr.filename)
+            pages = dr.get_extracted_data().get("source_pages") or []
+            if len(pages) >= 2 and pages[0] == pages[-1]:
+                shown_page = pages[0]
+            elif len(pages) >= 2:
+                shown_page = f"{pages[0]}-{pages[-1]}"
+            elif pages:
+                shown_page = pages[0]
+            else:
+                shown_page = None
+            ws.cell(row=ri, column=2, value=shown_page)
         inner = dr.get_extracted_data().get("extracted_data") or {}
         for ci, key in enumerate(all_keys, first):
             v = inner.get(key)
             ws.cell(row=ri, column=ci, value=(v.get("value","") if isinstance(v,dict) else (v or "")))
     if show_filename:
         ws.column_dimensions["A"].width = 30
+        ws.column_dimensions["B"].width = 12
     for ci in range(first, len(all_keys)+first):
         ws.column_dimensions[get_column_letter(ci)].width = 20
 
@@ -6809,9 +7053,15 @@ def get_job_results(job_id: int, doc_type: Optional[str]=None, needs_review: Opt
     q = db.query(DocumentResult).filter(DocumentResult.job_id==job_id)
     if doc_type: q = q.filter(DocumentResult.document_type==doc_type)
     if needs_review is not None: q = q.filter(DocumentResult.needs_review==needs_review)
-    docs = q.order_by(DocumentResult.id).all()
+    docs = q.all()
+    docs.sort(key=lambda d: (
+        (d.original_filename or d.filename or "").casefold(),
+        _document_index(d),
+        d.id,
+    ))
     return [DocumentResultResponse(
         id=d.id, job_id=d.job_id, filename=d.filename,
+        original_filename=d.original_filename or d.filename,
         document_type=d.document_type, overall_confidence=d.overall_confidence,
         extracted_data=d.get_extracted_data(),
         validation_errors=d.validation_errors, validation_warnings=d.validation_warnings,

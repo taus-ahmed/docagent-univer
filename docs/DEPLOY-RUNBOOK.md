@@ -147,6 +147,13 @@ name cannot ship the same way.
   token from `localStorage`, not a cookie.
 - **`MAX_FILE_SIZE_MB` is read**, aliased to `MAX_UPLOAD_SIZE_MB`. Both are 50,
   so no behaviour change today — but changing the Railway value now works.
+- Uploads are validated by content before a job or object is created. The
+  limits are `MAX_UPLOAD_SIZE_MB=50` per file, `MAX_PDF_PAGES=200`, and
+  `MAX_IMAGE_PIXELS=50000000`. Values must be positive integers; missing,
+  invalid, zero, or negative values safely use those defaults.
+- Allowed upload content is PDF, PNG, JPEG, or TIFF. Declared MIME types and
+  filename suffixes are not trusted. Encrypted, malformed, empty, oversized,
+  excessive-page, and decompression-bomb documents receive a 400 response.
 - **`validate_secret_key()` refuses to boot production on the shipped
   placeholder `SECRET_KEY`.** Production sets a real one; if boot fails on
   this, that is the reason.

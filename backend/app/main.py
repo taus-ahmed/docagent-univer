@@ -120,6 +120,11 @@ def _run_migrations():
             """ALTER TABLE document_results
                ADD COLUMN IF NOT EXISTS raw_llm_response TEXT""",
 
+            # Keep the upload name separately from the engine's per-record
+            # display name (for example "cheques.pdf [2 of 4]").
+            """ALTER TABLE document_results
+               ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500)""",
+
             # column_templates.description holds the full spreadsheet grid as
             # JSON and can run to tens of thousands of characters. An older
             # create_all() made it VARCHAR(500); the ORM has said Text for a

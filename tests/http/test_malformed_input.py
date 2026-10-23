@@ -42,13 +42,11 @@ class TestUploadedFilesThatAreNotDocuments:
         "html.pdf": b"<html><body><h1>hi</h1></body></html>",
     }
 
-    def test_they_are_accepted_for_processing_not_crashed_on(self, client, auth):
-        """Validation happens in the pipeline, not at the door: the upload is
-        accepted and the document fails inside the job. What must not happen
-        is a 500 at request time."""
+    def test_they_are_rejected_at_the_door(self, client, auth):
         for name, content in self.CASES.items():
             r = _upload(client, auth["acme"], name, content)
-            assert r.status_code == 202, f"{name} -> {r.status_code} {r.text[:100]}"
+            assert 400 <= r.status_code < 500, \
+                f"{name} -> {r.status_code} {r.text[:100]}"
 
     def test_a_disallowed_extension_is_refused(self, client, auth):
         r = _upload(client, auth["acme"], "payload.exe", b"MZ\x90\x00")
@@ -72,11 +70,10 @@ class TestUploadedFilesThatAreNotDocuments:
 
     def test_a_traversal_filename_cannot_escape_the_upload_directory(
             self, client, auth, _scratch_storage):
-        """The name is sanitised to its last component. Verified end to end:
-        nothing lands outside the job's own directory."""
+        """A traversal attempt is rejected rather than silently renamed."""
         r = _upload(client, auth["acme"], "../../../escaped.pdf",
                     b"%PDF-1.4\n%%EOF\n")
-        assert r.status_code == 202, r.text
+        assert r.status_code == 400, r.text
         assert not (_scratch_storage.parent / "escaped.pdf").exists()
         assert not (_scratch_storage / "escaped.pdf").exists()
 

@@ -34,6 +34,17 @@ def _ensure_paths():
             sys.path.insert(0, p)
 
 
+def _get_template_or_404(template_id: int, current_user: User,
+                         db: Session) -> ColumnTemplate:
+    query = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id)
+    if not (current_user.role == "admin" and not current_user.client_id):
+        query = query.filter(ColumnTemplate.client_id == current_user.client_id)
+    template = query.first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+
 @router.post("/combined")
 def export_combined(
     payload: ExportRequest,
@@ -67,8 +78,8 @@ def export_combined(
     # Load template if provided
     template_columns = None
     if payload.template_id:
-        tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == payload.template_id).first()
-        if tpl and tpl.columns_json:
+        tpl = _get_template_or_404(payload.template_id, current_user, db)
+        if tpl.columns_json:
             try:
                 raw = json.loads(tpl.columns_json)
                 template_columns = sorted(
@@ -115,8 +126,8 @@ def export_perfile(
 
     template_columns = None
     if payload.template_id:
-        tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == payload.template_id).first()
-        if tpl and tpl.columns_json:
+        tpl = _get_template_or_404(payload.template_id, current_user, db)
+        if tpl.columns_json:
             try:
                 raw = json.loads(tpl.columns_json)
                 template_columns = sorted(

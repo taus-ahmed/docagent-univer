@@ -23,6 +23,6 @@ pillow-heif==0.16.0
 pdf2image==1.17.0
 pytesseract==0.3.10
 
-pdfplumber>=0.10.0
-
-pypdf>=4.0.0
+pdfplumber==0.11.9
+pdfminer.six==20251230
+pypdf==6.21.1
