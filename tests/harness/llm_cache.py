@@ -62,13 +62,44 @@ def render_fingerprint() -> Optional[str]:
     return _img_sig(doc.page_images_b64[0])[0] if doc.page_images_b64 else None
 
 
+def _pinned_signature(cache_dir) -> str:
+    """The recorded page-image signature, or ReplayEnvironmentError. FAILS
+    CLOSED: a missing, empty, unparseable or incomplete file is no evidence
+    the cache can be reproduced, so it is never read as "nothing to check"."""
+    path = Path(cache_dir) / FINGERPRINT_FILE
+    try:
+        pinned = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ReplayEnvironmentError(
+            f"replay cannot check this machine: {path} is missing or not "
+            f"readable JSON ({type(exc).__name__}: {exc}). It pins how the "
+            "cache's page images were rendered; restore it from git.") from exc
+    sig = pinned.get("page_image_sig") if isinstance(pinned, dict) else None
+    if not isinstance(sig, str) or not sig:
+        raise ReplayEnvironmentError(
+            f"replay cannot check this machine: {path} carries no "
+            "page_image_sig. Restore it from git.")
+    return sig
+
+
+#: cache directories whose preflight passed in this process.
+_PREFLIGHT_PASSED: set = set()
+
+
+def ensure_replay_environment(cache_dir) -> None:
+    """check_replay_environment once per process per cache directory. A
+    failure is never remembered: it raises again on every entry."""
+    key = str(Path(cache_dir).resolve())
+    if key not in _PREFLIGHT_PASSED:
+        check_replay_environment(cache_dir)
+        _PREFLIGHT_PASSED.add(key)
+
+
 def check_replay_environment(cache_dir) -> None:
     """Raise ReplayEnvironmentError when replay cannot reproduce the recorded
-    requests on this machine; return quietly when it can."""
+    requests on this machine; return quietly only when it can."""
     import shutil
-    pinned_path = Path(cache_dir) / FINGERPRINT_FILE
-    pinned = (json.loads(pinned_path.read_text(encoding="utf-8"))
-              if pinned_path.exists() else None)
+    pinned = _pinned_signature(cache_dir)
     got = render_fingerprint()
     if got is None:
         raise ReplayEnvironmentError(
@@ -76,12 +107,12 @@ def check_replay_environment(cache_dir) -> None:
             f"is not on PATH (shutil.which -> {shutil.which('pdftoppm')!r}). "
             "Every cache key includes the page images, so every lookup would "
             "miss. Put Poppler's bin directory on PATH and re-run.")
-    if pinned and got != pinned.get("page_image_sig"):
+    if got != pinned:
         raise ReplayEnvironmentError(
             f"this machine renders {FINGERPRINT_PDF} page 1 as {got}, the cache "
-            f"was recorded with {pinned.get('page_image_sig')} "
-            f"({pinned.get('recorded_with')}). A different Poppler or Pillow "
-            "makes different page images, so every key would miss.")
+            f"was recorded with {pinned} (see {FINGERPRINT_FILE}). A different "
+            "Poppler or Pillow makes different page images, so every key would "
+            "miss.")
 
 
 def _img_sig(image_b64: Any) -> list:
@@ -120,12 +151,28 @@ def request_key(method: str, *, text: str = "", image_b64: Any = "",
 class LLMCache:
     def __init__(self, mode: str = "replay", cache_dir=None):
         assert mode in ("record", "replay", "live"), mode
-        self.mode = mode
         self.dir = cache_dir or CACHE_DIR
+        self._mode = mode
         self.context = ""  # e.g. current document id, stored in meta
         self.stats = {"hits": 0, "recorded": 0, "live": 0, "misses": 0}
         self.calls = []  # (method, key, source) in call order
         self._orig = {}
+
+    #: Entering replay runs the preflight (once per process per directory),
+    #: however it is entered: constructed in replay, installed in replay, or
+    #: switched into replay after being installed in another mode. `_dispatch`
+    #: checks again before any replay lookup, so no path reaches the cache
+    #: unchecked.
+    @property
+    def mode(self) -> str:
+        return self._mode
+
+    @mode.setter
+    def mode(self, value: str) -> None:
+        assert value in ("record", "replay", "live"), value
+        self._mode = value
+        if value == "replay" and self._orig:
+            ensure_replay_environment(self.dir)
 
     # ── persistence ──────────────────────────────────────────────────────────
 
@@ -191,6 +238,8 @@ class LLMCache:
         # 'live' deliberately does NOT consult the cache. Stability runs exist
         # to observe the model's nondeterminism; serving them a cached answer
         # would report every field as stable no matter how much it varies.
+        if self.mode == "replay":
+            ensure_replay_environment(self.dir)
         if self.mode != "live":
             cached = self._load(key)
             if cached is not None:
@@ -224,8 +273,8 @@ class LLMCache:
         bootstrap()
         from connectors.llm_router import LLMRouter
 
-        if self.mode == "replay" and not self._orig:
-            check_replay_environment(self.dir)
+        if self.mode == "replay":
+            ensure_replay_environment(self.dir)
 
         if self._orig:
             return
