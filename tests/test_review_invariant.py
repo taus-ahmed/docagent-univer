@@ -107,7 +107,21 @@ def variants(tmp_path_factory):
 
 
 @needs_tesseract
-def test_gate_1_and_2_fixtures(variants):
+def test_gate_1_and_2_fixtures(variants, monkeypatch):
+    """Each file is OCR'd ONCE: the stub model and the pipeline share one
+    preprocessing (it was run twice, ~45 pages of Tesseract each time, which
+    is what made this test take 6-9 minutes)."""
+    import core.preprocessor as pre
+    real, seen = pre.preprocess_file, {}
+
+    def once(path):
+        key = str(path)
+        if key not in seen:
+            seen[key] = real(path)
+        return seen[key]
+
+    monkeypatch.setattr(pre, "preprocess_file", once)     # the pipeline's call
+    monkeypatch.setitem(globals(), "preprocess_file", once)  # the stub's call
     out, manifest = variants
     checked = 0
     for v in manifest["variants"]:
@@ -118,6 +132,12 @@ def test_gate_1_and_2_fixtures(variants):
                 assert_review_invariant(r.extracted_data, v["file"])
                 checked += 1
     assert checked >= 10, checked
+    # NOT VACUOUS: the scans were really read. With no Poppler nothing renders,
+    # every OCR page is a named failure, and the invariant held over values
+    # nobody had read — the test passed in 4 seconds.
+    read = [v["file"] for v in manifest["variants"]
+            if any(e["words"] > 0 for e in seen[str(out / v["file"])].ocr_pages)]
+    assert len(read) >= 8, read
 
 
 WORDS = "Three Thousand Five Hundred Seventy-Two and 78/100 Dollars"

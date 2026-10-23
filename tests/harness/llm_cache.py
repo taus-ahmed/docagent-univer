@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from pathlib import Path
 from typing import Any, Optional
 
 from tests.harness.bootstrap import CACHE_DIR, bootstrap
@@ -32,6 +33,55 @@ from tests.harness.bootstrap import CACHE_DIR, bootstrap
 
 class CacheMiss(RuntimeError):
     pass
+
+
+class ReplayEnvironmentError(RuntimeError):
+    """This machine cannot reproduce the requests the cache was recorded with."""
+
+
+#: THE KEY INCLUDES EVERY PAGE IMAGE (`_img_sig`), and a page image is what
+#: pdf2image + Poppler (`pdftoppm`) + Pillow's JPEG encoder made of the PDF on
+#: the machine that recorded it. A machine with no `pdftoppm` on PATH renders
+#: NO images — the request differs, every lookup misses, and the harness used
+#: to report 0.0% as though the engine had failed (Codex, round 7: 0 hits / 30
+#: misses). A different Poppler or Pillow renders different bytes and misses
+#: the same way. Replay therefore checks first, and says which it is.
+FINGERPRINT_FILE = "_render_fingerprint.json"
+FINGERPRINT_PDF = "CHQ-001847.pdf"
+
+
+def render_fingerprint() -> Optional[str]:
+    """`_img_sig` of the pipeline's own page-1 image of FINGERPRINT_PDF, or
+    None when nothing renders (no Poppler)."""
+    bootstrap()
+    from tests.harness.bootstrap import PDF_DIR
+    from core.preprocessor import ProcessedDocument, _pdf_pages_to_images
+    doc = ProcessedDocument(source_path="", filename=FINGERPRINT_PDF,
+                            file_type="pdf", total_pages=1)
+    _pdf_pages_to_images(PDF_DIR / FINGERPRINT_PDF, doc)
+    return _img_sig(doc.page_images_b64[0])[0] if doc.page_images_b64 else None
+
+
+def check_replay_environment(cache_dir) -> None:
+    """Raise ReplayEnvironmentError when replay cannot reproduce the recorded
+    requests on this machine; return quietly when it can."""
+    import shutil
+    pinned_path = Path(cache_dir) / FINGERPRINT_FILE
+    pinned = (json.loads(pinned_path.read_text(encoding="utf-8"))
+              if pinned_path.exists() else None)
+    got = render_fingerprint()
+    if got is None:
+        raise ReplayEnvironmentError(
+            "replay needs page images and none render here: pdftoppm (Poppler) "
+            f"is not on PATH (shutil.which -> {shutil.which('pdftoppm')!r}). "
+            "Every cache key includes the page images, so every lookup would "
+            "miss. Put Poppler's bin directory on PATH and re-run.")
+    if pinned and got != pinned.get("page_image_sig"):
+        raise ReplayEnvironmentError(
+            f"this machine renders {FINGERPRINT_PDF} page 1 as {got}, the cache "
+            f"was recorded with {pinned.get('page_image_sig')} "
+            f"({pinned.get('recorded_with')}). A different Poppler or Pillow "
+            "makes different page images, so every key would miss.")
 
 
 def _img_sig(image_b64: Any) -> list:
@@ -173,6 +223,9 @@ class LLMCache:
     def install(self) -> None:
         bootstrap()
         from connectors.llm_router import LLMRouter
+
+        if self.mode == "replay" and not self._orig:
+            check_replay_environment(self.dir)
 
         if self._orig:
             return
