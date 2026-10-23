@@ -98,9 +98,10 @@ payload (`_value_requires_review`); the result's own `validation.needs_review`.
 | `flagged_fields` | [{ref, value, reason}] | one shape only; `ref` is the slot's LABEL, `reason` a sentence |
 | `flagged_count` | int | always `len(flagged_fields)` (set last, by the extractor) |
 | `page_origins` | {file page: `native` \| `ocr` \| `pre_ocr`} | pages this record was read from (keys are strings after JSON) |
-| `page_gates` | {file page: {origin, graded_cells, low_confidence_cells, low_confidence_ratio, review_gate, text_floor}} | per-page gate |
-| `ocr_pages` | [{page, words, rotated, deskewed, skew_detector, retry, dpi, reader, reader_version}] | every OCR'd page of this record. `skew_detector`: `dark` \| `none`; `retry`: `none` \| `crop_psm6` |
+| `page_gates` | {file page: {origin, graded_cells, low_confidence_cells, low_confidence_ratio, review_gate, text_floor, selective_ocr?, thin_text_layer?}} | per-page gate; `selective_ocr` / `thin_text_layer` as on `ocr_pages` / `thin_text_layer_pages` below, only on such a page |
+| `ocr_pages` | [{page, words, rotated, deskewed, skew_detector, retry, dpi, reader, reader_version, selective_ocr?}] | every OCR'd page of this record. `skew_detector`: `dark` \| `none`; `retry`: `none` \| `crop_psm6`. `selective_ocr` = {image_cover, native_words, ocr_words, ratio, cover_threshold, ratio_threshold}: a page WITH a text layer read by OCR because one image covers it (≥ 0.99) and its layer holds under half OCR's words (Gate 2c) |
 | `ocr_failed_pages`, `ocr_zero_word_pages` | [int] | named failures; non-empty ⇒ `needs_review` |
+| `thin_text_layer_pages` | [int] | Gate 2c pages that qualified for selective OCR where OCR failed or read nothing, so they stayed native; non-empty ⇒ `needs_review`, `thin_text_layer` on their values, a flag per page. Not listed in `ocr_failed_pages` (those pages HAVE a text layer) |
 | `routing_checksum` | `pass` \| `fail` \| null | the MICR band's transit field; null = no band read. Set by the `aba_checksum` validator, which runs for EVERY family |
 | `micr_band_unreadable` | true | optional, cheque family — a band is printed, no digit of it readable |
 | `possible_multiple_documents` | {micr_bands: int, readable: int} | optional — the record may hold several cheques; kept as one |

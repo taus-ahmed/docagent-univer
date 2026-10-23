@@ -490,6 +490,8 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     ocr_records = list(getattr(doc, "ocr_pages", []) or [])
     ocr_failed = list(getattr(doc, "ocr_failed_pages", []) or [])
     ocr_zero = list(getattr(doc, "ocr_zero_word_pages", []) or [])
+    thin_pages = {e["page"]: dict(e) for e in
+                  (getattr(doc, "thin_text_pages", []) or [])}
 
     def _note_ocr(results):
         """What OCR did, on the RESULT, in FILE pages (Gate 2).
@@ -503,7 +505,15 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         A page OCR read ZERO words from, or could not read at all, is a named
         failure and sends the document for review: a blank scan is not a
         successful reading.
+
+        GATE 2c. A page read by selective OCR carries `selective_ocr` (cover,
+        word counts, ratio) on its `ocr_pages` entry AND its page gate. A page
+        that qualified but OCR could not read stayed native — not silently:
+        `thin_text_layer` on every value read from it (and on a value nothing
+        places, as the page floor does), `validation.thin_text_layer_pages`,
+        its page gate, a flag, and review.
         """
+        from slot_extractor import THIN_TEXT_LAYER
         if not page_origins:
             return results
         for r in results or []:
@@ -515,6 +525,47 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             v["ocr_pages"] = [dict(e) for e in ocr_records if e["page"] in mine]
             v["ocr_failed_pages"] = [p for p in ocr_failed if p in mine]
             v["ocr_zero_word_pages"] = [p for p in ocr_zero if p in mine]
+            gates = v.get("page_gates") or {}
+            for e in v["ocr_pages"]:
+                if "selective_ocr" in e and e["page"] in gates:
+                    gates[e["page"]]["selective_ocr"] = dict(e["selective_ocr"])
+            thin = sorted(p for p in thin_pages if p in mine)
+            v["thin_text_layer_pages"] = thin
+            for n in thin:
+                if n in gates:
+                    gates[n]["thin_text_layer"] = dict(thin_pages[n])
+                e = thin_pages[n]
+                v.setdefault("flagged_fields", []).append({
+                    "ref": f"page {n}", "value": "",
+                    "reason": (f"thin_text_layer: an image covers page {n} "
+                               f"({e['image_cover']:.2f}) and its text layer "
+                               f"holds {e['native_words']} word(s); OCR "
+                               f"{'failed' if e['ocr'] == 'failed' else 'read zero words'}, "
+                               f"so how much of the page the text layer "
+                               f"carries is unknown")})
+            if thin:
+                def on_thin(page):
+                    return page in thin if page is not None else True
+                for p in (ed.get("field_provenance") or {}).values():
+                    if on_thin(p.get("page")):
+                        rs = p.setdefault("review_reasons", [])
+                        if THIN_TEXT_LAYER not in rs:
+                            rs.append(THIN_TEXT_LAYER)
+                        p["review_required"] = True
+                for key, rows in ed.items():
+                    if key.endswith("_rows") and isinstance(rows, list):
+                        for row in rows:
+                            if isinstance(row, dict) and on_thin(row.get("_page")):
+                                rs = row.setdefault("_review_reasons", [])
+                                if THIN_TEXT_LAYER not in rs:
+                                    rs.append(THIN_TEXT_LAYER)
+                                row["_review_required"] = True
+                ed.setdefault("validation_notes", []).append(
+                    f"page {', '.join(map(str, thin))}: an image covers the "
+                    f"page and OCR could not read it to compare with its text "
+                    f"layer — the text layer may carry only part of the page. "
+                    f"Check this page against the original.")
+                ed["needs_review"] = True
             for key, what in (("ocr_zero_word_pages",
                                "OCR read zero words from it — blank or "
                                "unreadable; nothing was extracted from it"),

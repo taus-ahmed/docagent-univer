@@ -740,6 +740,7 @@ GROUNDING_FAILED = "grounding_failed"          # the quoted span is not on the p
 PLACEMENT_FAILED = "placement_failed"          # under another column, or across a gutter
 CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / prose in a scalar
 POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one cheque?
+THIN_TEXT_LAYER = "thin_text_layer"            # Gate 2c: image-covered page, OCR could not check it
 # Family checks' codes (amount_mismatch, checksum_failed, ...) live with their
 # validators: cheque_validators.py, registered in validators.py.
 

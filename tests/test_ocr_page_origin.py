@@ -935,21 +935,24 @@ class TestItem8PreOcrScans:
         assert all(o in ORIGIN_OF["pre_ocr"] for o in doc.page_origins), \
             doc.page_origins
 
-    @pytest.mark.known_bug
-    @pytest.mark.xfail(strict=True, reason=(
-        "Gate 2c: a VISIBLE but thin text layer over a full-page image is "
-        "classified native; telling it from native needs the OCR-versus-text-"
-        "layer comparison, which needs a measurement phase first"))
     def test_the_real_preocr_bank_statement_is_ocr_origin(self):
         """Not a scanner's invisible layer — measured: Creator 'Adobe Photoshop
         CS5', 66 full-page images, 108 VISIBLE words in MyriadPro, 0 text
         operators in render mode 3. But OCR of the rendered page reads 485
         words and the whole transaction table (`B&Q`, `WESSEX WATER`,
         `GREGGS PLC`) is in pixels the text layer does not carry. Most of the
-        page is not in its text layer, so it is not native either."""
+        page is not in its text layer, so it is not native either. Gate 2c
+        (selective OCR) reads it through the OCR seam and says why."""
         doc = _preprocessed(BANK_STATEMENT_SAMPLE)
-        assert doc.page_origins and all(
-            o in ORIGIN_OF["pre_ocr"] for o in doc.page_origins), doc.page_origins
+        assert doc.page_origins == ["ocr"], doc.page_origins
+        (entry,) = doc.ocr_pages
+        sel = entry["selective_ocr"]
+        assert sel["image_cover"] >= preprocessor.SELECTIVE_OCR_COVER
+        assert sel["ratio"] < preprocessor.SELECTIVE_OCR_RATIO
+        assert sel["native_words"] == 108 and sel["ocr_words"] == entry["words"] > 400
+        assert sel["ratio"] == round(108 / entry["words"], 3)
+        assert doc.thin_text_pages == [] and doc.ocr_failed_pages == []
+        assert any("GREGGS" in ln for ln in doc.page_texts[0].split("\n"))
 
     #: VERIFIED-NATIVE CONTROLS — an explicit list, each with the evidence that
     #: it is native. A committed PDF NOT on this list is not claimed either way.
@@ -1137,3 +1140,97 @@ class TestItem10WhatTheSlotCallSends:
         _, provider = self._call(fail_vision=True)
         assert [("image_b64" in c, c.get("text")) for c in provider] == \
             [(True, None), (False, self.PAGE)]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GATE 2c — selective OCR for an image-covered, thin text layer
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestGate2cSelectiveOcr:
+    """A NATIVE-origin page with one image covering >= 0.99 of it AND a text
+    layer holding fewer than half the words OCR reads off the same page is
+    read through the OCR seam (origin "ocr", every Gate 2 rule). Every other
+    page is untouched — it is never even OCR'd. If OCR cannot read such a page
+    it stays native but is NOT silent: `thin_text_layer` on its values, the
+    document sent for review, the page gate naming it."""
+
+    #: every other image-bearing page in tests/test_pdfs (measured 2026-10-23:
+    #: largest-image cover 0.86 on the CFPB forms' page 1, <= 0.05 elsewhere).
+    CONTROLS = [*TestItem8PreOcrScans.NATIVE_CONTROLS,
+                bs.PDF_DIR / "201403_cfpb_closing-disclosure_cover-H25B.pdf",
+                bs.PDF_DIR / "round2" / "HTR-043235.pdf",
+                bs.PDF_DIR / "round2" / "HTR-043235 (1).pdf",
+                bs.PDF_DIR / "round2" / "SampleBill.pdf"]
+
+    def test_the_controls_stay_native_and_are_never_ocrd(self, monkeypatch):
+        def no_ocr(*a, **k):
+            raise AssertionError("a control page was sent to OCR")
+        monkeypatch.setattr(preprocessor, "_ocr_page", no_ocr)
+        wrong = {}
+        for p in self.CONTROLS:
+            doc = _REAL_PREPROCESS(p)
+            if (any(o != "native" for o in doc.page_origins) or doc.ocr_pages
+                    or doc.thin_text_pages):
+                wrong[p.name] = (doc.page_origins, doc.thin_text_pages)
+        assert wrong == {}, wrong
+
+    @staticmethod
+    def _sort_code_run(monkeypatch=None, doc=None):
+        template = {"layout": {**GRID, "cells": {"0,0": {"value": "Sort code",
+                                                         "style": {}}}},
+                    "doc_type": "bank_statement", "mode": "layout"}
+        d = doc or _preprocessed(BANK_STATEMENT_SAMPLE)
+        line = next(ln for ln in d.page_texts[0].split("\n") if "00-00-00" in ln)
+        with pytest.MonkeyPatch.context() as mp:
+            if doc is not None:
+                mp.setitem(_PREPROCESSED, str(BANK_STATEMENT_SAMPLE.resolve()), doc)
+            results, _ = _run(BANK_STATEMENT_SAMPLE,
+                              {"Sort code": (1, line.strip(), "00-00-00")},
+                              template=template)
+        ed = _ed(results)
+        return ed, _refs_by_label(ed)["Sort code"]
+
+    def test_the_bank_statement_follows_every_gate_2_rule(self):
+        ed, ref = self._sort_code_run()
+        prov = ed["field_provenance"][ref]
+        _review_schema(prov, ref)
+        assert ed["extracted_fields"][ref] == "00-00-00"
+        assert prov["grounded"] is True and prov["origin"] == "ocr"
+        assert ed["validation"]["confidence_map"][ref] == UNVERIFIED
+        assert prov["review_required"] is True and "ocr_origin" in prov["review_reasons"]
+        assert ed["needs_review"] is True
+        gate = ed["validation"]["page_gates"][1]
+        assert gate["origin"] == "ocr" and gate["selective_ocr"]["ratio"] < 0.5
+        assert ed["validation"]["thin_text_layer_pages"] == []
+
+    @pytest.mark.parametrize("how", ["failed", "zero_words"])
+    def test_ocr_failing_on_such_a_page_is_not_silent(self, monkeypatch, how):
+        def broken(file_path, page_number, doc, stats, image=None, dpi=None):
+            if how == "failed":
+                doc.ocr_failed_pages.append(page_number)
+            else:
+                doc.ocr_pages.append({"page": page_number, "words": 0})
+                doc.ocr_zero_word_pages.append(page_number)
+            return "", [], []
+        monkeypatch.setattr(preprocessor, "_ocr_page", broken)
+        doc = _REAL_PREPROCESS(BANK_STATEMENT_SAMPLE)
+        monkeypatch.undo()
+        assert doc.page_origins == ["native"]          # its own words, kept
+        (thin,) = doc.thin_text_pages
+        assert thin["page"] == 1 and thin["ocr"] == how
+        assert thin["image_cover"] >= 0.99 and thin["native_words"] == 108
+        # NOT reported as a page without a text layer: it has one
+        assert doc.ocr_pages == [] and doc.ocr_failed_pages == []
+        assert doc.ocr_zero_word_pages == []
+
+        ed, ref = self._sort_code_run(doc=doc)
+        prov = ed["field_provenance"][ref]
+        _review_schema(prov, ref)
+        assert prov["origin"] == "native"
+        assert "thin_text_layer" in prov["review_reasons"]
+        assert prov["review_required"] is True and ed["needs_review"] is True
+        v = ed["validation"]
+        assert v["thin_text_layer_pages"] == [1]
+        assert v["page_gates"][1]["thin_text_layer"]["ocr"] == how
+        assert any("thin_text_layer" in f.get("reason", "") or
+                   "text layer" in f.get("reason", "") for f in v["flagged_fields"])

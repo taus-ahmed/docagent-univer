@@ -92,13 +92,21 @@ class ProcessedDocument:
     #: Decided per page, so one scan in a file says nothing about its other
     #: pages. Only strong, explainable signals decide (`page_origin`); image
     #: coverage on its own never does — the CFPB forms carry an 86% image on
-    #: page 1 and are native.
+    #: page 1 and are native. Gate 2c adds one: a page one image covers whose
+    #: visible text layer holds under half the words OCR reads is "ocr"
+    #: (`_selective_ocr`); the cover only decides which pages are compared.
     page_origins: list[str] = field(default_factory=list)
     #: {file page: (straightened PIL image, dpi)} for every page OCR read —
     #: the image the reader SAW, in the frame its word boxes are in. Kept so
     #: a page holding several cheques can be cut into regions whose crops
     #: match their words (engine/cheque_regions.py). Never serialised.
     ocr_images: dict = field(default_factory=dict)
+    #: Gate 2c — pages that qualified for selective OCR (an image covering the
+    #: page, a native text layer) where OCR then failed or read nothing, so
+    #: the page had to stay native with no way to know how much of it the text
+    #: layer carries: [{page, image_cover, native_words, ocr_words, ocr}],
+    #: `ocr` = "failed" | "zero_words". Reported as `thin_text_layer`.
+    thin_text_pages: list[dict] = field(default_factory=list)
     processing_notes: str = ""
 
     @property
@@ -118,6 +126,19 @@ SUPPORTED_EXTENSIONS = {
 }
 
 MIN_TEXT_LENGTH = 50
+
+#: GATE 2c — SELECTIVE OCR. A page whose text layer is VISIBLE (so neither
+#: `page_needs_ocr` nor the invisible-text test fires) but that is a picture of
+#: the page with a few words laid over it. Measured on every image-bearing page
+#: in tests/test_pdfs (2026-10-23): bank-statement-sample is one image covering
+#: 1.00 of the page and its layer holds 108 words against OCR's 485 (0.22); the
+#: CFPB forms' largest image covers 0.86, everything else <= 0.05, and every
+#: native/OCR word ratio there is >= 0.94. BOTH conditions are required: the
+#: cover decides which pages pay for an OCR pass (1 of 114 corpus pages), the
+#: ratio decides the reading. An image alone never decides — a full-page form
+#: background under a complete text layer reads ~1.0 and stays native.
+SELECTIVE_OCR_COVER = 0.99
+SELECTIVE_OCR_RATIO = 0.5
 
 #: What joins page texts into `extracted_text`. `_fix_cross_page_decimals`
 #: looks for exactly this, so anything re-joining a subset of pages uses it.
@@ -378,6 +399,67 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
     return text, lines, repairs
 
 
+def largest_image_cover(page) -> float:
+    """The largest single image's share of the page area, clipped to the page."""
+    area = float(page.width * page.height) or 1.0
+    best = 0.0
+    for im in page.images or []:
+        w = max(0.0, min(float(im["x1"]), float(page.width)) - max(float(im["x0"]), 0.0))
+        h = max(0.0, min(float(im["bottom"]), float(page.height))
+                - max(float(im["top"]), 0.0))
+        best = max(best, w * h / area)
+    return best
+
+
+def _selective_ocr(file_path: Path, page_number: int, doc: "ProcessedDocument",
+                   lines, cover: float):
+    """Gate 2c for one native page whose largest image covers it: OCR it, and
+    return (text, lines, repairs, stats) when the text layer holds under
+    SELECTIVE_OCR_RATIO of OCR's words — the page is then read through the
+    OCR seam — else None, the page staying native.
+
+    OCR runs into a scratch record, so a page that stays native is never
+    reported as one with "no text layer" (`ocr_failed_pages`) or as a blank
+    scan; only the outcome is copied across. A failed or empty OCR is not a
+    pass: the page is listed in `thin_text_pages`, whose reason is
+    `thin_text_layer`.
+    """
+    scratch = ProcessedDocument(source_path=str(file_path), filename=doc.filename,
+                                file_type="pdf", total_pages=doc.total_pages)
+    stats: dict = {}
+    text, olines, repairs = _ocr_page(file_path, page_number, scratch, stats)
+    native = sum(len(ln) for ln in lines or [])
+    words = sum(len(ln) for ln in olines or [])
+    measured = {"image_cover": round(cover, 3), "native_words": native,
+                "ocr_words": words}
+    if scratch.ocr_failed_pages or not words:
+        doc.thin_text_pages.append({
+            "page": page_number, **measured,
+            "ocr": "failed" if scratch.ocr_failed_pages else "zero_words"})
+        doc.processing_notes += (
+            f"page {page_number}: an image covers the page and its text layer "
+            f"could not be compared with an OCR reading (OCR "
+            f"{'failed' if scratch.ocr_failed_pages else 'read zero words'}); "
+            f"the text layer may carry only part of what the page shows. ")
+        print(f"[OCR] page {page_number}: THIN TEXT LAYER UNCHECKED — image "
+              f"cover {cover:.2f}, {native} native word(s), OCR unavailable",
+              flush=True)
+        return None
+    ratio = round(native / words, 3)
+    if ratio >= SELECTIVE_OCR_RATIO:
+        return None
+    entry = dict(scratch.ocr_pages[-1])
+    entry["selective_ocr"] = {**measured, "ratio": ratio,
+                              "cover_threshold": SELECTIVE_OCR_COVER,
+                              "ratio_threshold": SELECTIVE_OCR_RATIO}
+    doc.ocr_pages.append(entry)
+    doc.ocr_images.update(scratch.ocr_images)
+    print(f"[OCR] page {page_number}: SELECTIVE OCR — image cover {cover:.2f}, "
+          f"text layer {native} word(s) against OCR's {words} ({ratio}); read "
+          f"through the OCR seam, origin ocr", flush=True)
+    return text, olines, repairs, stats
+
+
 def _process_pdf(file_path: Path) -> ProcessedDocument:
     """Process a PDF file: extract text from ALL pages and convert to images."""
     doc = ProcessedDocument(
@@ -426,6 +508,18 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                     doc.processing_notes += (
                         f"page {page_num + 1}: could not check for an embedded "
                         f"OCR layer ({type(exc).__name__}: {exc}). ")
+                # GATE 2c. Only a native page with an image covering it pays
+                # for the OCR pass; every other page is untouched.
+                if origin == "native" and page.images:
+                    cover = largest_image_cover(page)
+                    if cover >= SELECTIVE_OCR_COVER:
+                        read = _selective_ocr(file_path, page_num + 1, doc,
+                                              lines, cover)
+                        if read is not None:
+                            text, lines, repairs, ocr_stats = read
+                            stats.clear()
+                            stats.update(ocr_stats)
+                            origin = "ocr"
                 doc.page_origins.append(origin)
                 if origin == "native":
                     doc.native_text_chars += len((text or "").strip())
