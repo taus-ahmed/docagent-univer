@@ -31,13 +31,16 @@ _engine_dir  = _backend_dir / "engine"
 
 def _get_template_or_404(template_id: int, current_user: User,
                          db: Session) -> ColumnTemplate:
-    query = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id)
-    if not (current_user.role == "admin" and not current_user.client_id):
-        query = query.filter(ColumnTemplate.client_id == current_user.client_id)
-    template = query.first()
-    if not template:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return template
+    """The visibility upload applies (own, default, shared inside the caller's
+    tenant), answered as 404. Filtering by tenant alone let any member export
+    through a colleague's private template and refused the system defaults."""
+    from app.api.routes.extract import load_template_for_user
+    try:
+        return load_template_for_user(db, template_id, current_user)
+    except HTTPException as e:
+        if e.status_code == 403:
+            raise HTTPException(status_code=404, detail="Template not found")
+        raise
 
 
 @router.post("/combined")
