@@ -4,7 +4,7 @@
 `read_page` used to BE the pdfplumber reader — it called `extract_text()`,
 `extract_words(extra_attrs=…)`, `page.chars` and `page.page_number` directly, so
 there was no interface a second reader could implement
-(docs/OCR-CONTRACT-SCOPING.md). The seam below it is built to
+(docs/investigations/OCR-CONTRACT-SCOPING.md). The seam below it is built to
 docs/OCR-READER-SEAM-DESIGN.md.
 
 These tests pin what the design's §9 validation showed by hand. The distinction

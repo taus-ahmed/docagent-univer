@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The second-call verification EXPERIMENT (docs/SECOND-CALL-VERIFICATION.md).
+"""The second-call verification EXPERIMENT (docs/investigations/SECOND-CALL-VERIFICATION.md).
 
 NOT A PIPELINE COMPONENT. Nothing here is imported by the engine, and nothing
 here changes an extraction. It exists to answer one question with numbers

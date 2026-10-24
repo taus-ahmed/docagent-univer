@@ -907,7 +907,7 @@ SHARD_SHRED = 1.05
 # `read_page` used to BE the pdfplumber reader: it called `extract_text()`,
 # `extract_words(extra_attrs=…)`, `page.chars` and `page.page_number` directly,
 # so "the same word-list contract" had nothing to attach to — there was no
-# interface a second reader could implement. See docs/OCR-CONTRACT-SCOPING.md
+# interface a second reader could implement. See docs/investigations/OCR-CONTRACT-SCOPING.md
 # and docs/OCR-READER-SEAM-DESIGN.md.
 #
 # What is pluggable is OBTAINING a page's words and text. What is not is the

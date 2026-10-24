@@ -1,6 +1,6 @@
 """
 I1 — a band is bound to ONE region of the document, and says so when more
-than one matched (docs/DocAgent_round2_report.md, runs 1-6, 11).
+than one matched (docs/investigations/DocAgent_round2_report.md, runs 1-6, 11).
 
 The suite passed at 781 while eight of twelve manual runs merged regions, so
 the evidence here runs the round-2 documents themselves.

@@ -183,7 +183,7 @@ name cannot ship the same way.
 - Allowed upload content is PDF, PNG, JPEG, or TIFF. Declared MIME types and
   filename suffixes are not trusted. Encrypted, malformed, empty, oversized,
   excessive-page, and decompression-bomb documents receive a 400 response.
-- **`validate_secret_key()` refuses to boot production on the shipped
+- **`_refuse_to_run_production_on_a_known_key` refuses to boot production on the shipped
   placeholder `SECRET_KEY`.** Production sets a real one; if boot fails on
   this, that is the reason.
 - `USE_NEW_EXTRACTOR` is gone from `Settings`. The variable is still set on the

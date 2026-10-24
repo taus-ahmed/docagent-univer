@@ -1,6 +1,6 @@
 """
 I11 — a scalar-implying field holding a scalar WRAPPED IN PROSE is demoted and
-flagged (docs/DocAgent_round2_report.md run 9, DECISION-LOG §20).
+flagged (docs/investigations/DocAgent_round2_report.md run 9, DECISION-LOG §20).
 
 Round 2 answered `Contract End Date` with `the last day of October 2020` — a
 sentence fragment, and wrong besides: the bill says the agreement expires on the

@@ -1,6 +1,6 @@
 # Round-2 templates — RECONSTRUCTIONS
 
-The templates used in the round-2 manual runs (`docs/DocAgent_round2_report.md`)
+The templates used in the round-2 manual runs (`docs/investigations/DocAgent_round2_report.md`)
 were never saved. These were rebuilt on 2026-09-13 from the report's own
 descriptions so the I1 evidence could run the real documents. Each file's
 `_reconstruction` key says what the report stated and what was guessed.

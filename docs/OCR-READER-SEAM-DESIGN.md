@@ -4,7 +4,7 @@ Written 2026-09-17, against `46f778f`. **Proposal only.** No code was written,
 no dependency is added, and nothing in `text_layer.py` or `extract.py` has been
 touched. This document says what a seam would have to be; it does not build one.
 
-Its input is `docs/OCR-CONTRACT-SCOPING.md`, whose headline finding is that the
+Its input is `docs/investigations/OCR-CONTRACT-SCOPING.md`, whose headline finding is that the
 seam the design intent assumes **does not exist**: `read_page` takes a
 pdfplumber page and calls four pdfplumber-specific APIs on it.
 

@@ -1523,7 +1523,7 @@ proposal with a per-document cost, not a recommendation.
 
 ### 22a. The second call: Q-A measured live, and rejected on false positives
 
-Full scope, criteria and method in `docs/SECOND-CALL-VERIFICATION.md`; harness
+Full scope, criteria and method in `docs/investigations/SECOND-CALL-VERIFICATION.md`; harness
 `tests/harness/attribution.py`; every raw response committed to
 `tests/fixtures/attribution_raw/`. The criteria were fixed **before** the
 numbers, and a 0% catch rate was declared publishable in advance.

@@ -17,7 +17,7 @@ EXACT lookup over the band's column keys: a key the model returned that the
 template does not have is discarded on the floor, uncounted. That is the same
 loss one level down, and it is what makes the drop depend on template shape —
 same document, same answer, two templates, different row sets
-(docs/DocAgent_round2_report.md, I4).
+(docs/investigations/DocAgent_round2_report.md, I4).
 
 WHAT THE LIVE RUN FOUND (tests/harness/i4.py, 23 runs, 39 bands, 227 rows):
 zero off-schema keys and zero silent drops, in every variant including 17

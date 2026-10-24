@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `tests/README.md` — the accuracy harness: gold labels, scorer, runner, cache.
 - `docs/TEMPLATE-SHAPE-FUTURE-WORK.md` — the declared-shape migration, deliberately deferred.
 - `docs/DEPLOY-RUNBOOK.md` — deployment procedure.
+- `docs/ENGINE-RESULT-CONTRACT.md` — the result dict every engine record returns, key by key.
+- `docs/OCR-READER-SEAM-DESIGN.md` — scanned pages, the OCR reader seam, the review gates and the reason codes (§12).
 
 ---
 
@@ -148,15 +150,19 @@ The reasoning for each is in `docs/DECISION-LOG.md`.
 
 ### The files that matter
 
-| File | Lines | Role |
-|---|---|---|
-| `backend/engine/extractor.py` | 231 | the single entry point: preprocess → infer if no template → route → `run_slot_extraction` |
-| `backend/engine/template_shape.py` | 497 | grid → shape; declared regions; `choose_path` (the arithmetic router) |
-| `backend/engine/slot_extractor.py` | 474 | slot enumeration, the prompt, grounding, confidence, the result contract |
-| `backend/engine/shape_inference.py` | 253 | no-template: document → inferred template → grid → same path |
-| `backend/engine/text_layer.py` | 470 | positional evidence: words with x/y; wrapped-value repair; column bands; placement; record spans; AcroForm state |
-| `backend/engine/doc_boundaries.py` | 170 | one file → many documents, deterministically |
-| `backend/app/api/routes/extract.py` | 6064 | routes, the background job thread, template parsing, **all Excel writers** |
+| File | Role |
+|---|---|
+| `backend/engine/extractor.py` | the single entry point: preprocess → infer if no template → route → `run_slot_extraction`; per-page OCR gates |
+| `backend/engine/template_shape.py` | grid → shape; declared regions; `choose_path` (the arithmetic router) |
+| `backend/engine/slot_extractor.py` | slot enumeration, the prompt, grounding, confidence, the result contract |
+| `backend/engine/shape_inference.py` | no-template: document → inferred template → grid → same path |
+| `backend/engine/text_layer.py` | positional evidence: words with x/y; wrapped-value repair; column bands; placement; record spans; AcroForm state |
+| `backend/engine/doc_boundaries.py` | one file → many documents, deterministically |
+| `backend/engine/core/preprocessor.py` | PDF/image → page texts, word lines and per-page origin (native / OCR); selective OCR |
+| `backend/engine/ocr_source.py` | the OCR reader seam (Tesseract today) behind the same word-list contract |
+| `backend/engine/validators.py` | per-family check registry; `cheque_`, `invoice_`, `bank_`, `payslip_validators.py` register into it |
+| `backend/engine/micr.py`, `cheque_regions.py`, `cheque_amounts.py` | cheque-specific MICR parsing, region crops and amount-in-words checks |
+| `backend/app/api/routes/extract.py` | routes, the background job thread, template parsing, **all Excel writers** |
 
 `extract.py` is **no longer an extraction engine**. It is routes + the job
 thread + the writers. `_extract_with_template_inner` is a three-line delegation
@@ -947,17 +953,19 @@ fields to 1 — but Gemini gives no reproducibility guarantee even at 0 (no seed
 parameter in this REST API). The residual is structural: "what should this
 column be called" has several correct answers. See "Measured limits" below.
 
-### Images bypass the slot pipeline
+### Images go through the same engine, with one fallback
 
-`_is_image_file` (JPG/PNG/WEBP/TIFF/BMP) routes to
-`_extract_image_with_template`, which still uses the older
-`_build_vision_prompt` → `_process_vision_result` path with
-`prompt_registry.py`, marks every value `unverified` (an image has no text
-layer, so no span can be checked — it was reported as "medium", which implied a
-measurement that never happened), and always sets `needs_review=True`. PDFs — the overwhelming majority — go to
-`run_extraction`. This is the one surviving second path.
-`_analyse_template_regions`, `prompt_registry.py` and the form/mixed/table
-writers exist for it and for re-exporting legacy jobs.
+`_is_image_file` (JPG/PNG/WEBP/TIFF/BMP) routes to `run_extraction` like a PDF:
+the preprocessor OCRs the image through the reader seam, so it keeps word
+geometry and a page origin of `ocr`, and every value is at most `unverified`
+with review required (`docs/OCR-READER-SEAM-DESIGN.md`). **Only when every
+engine record fails** does the job fall back to `_extract_image_with_template`,
+the older `_build_vision_prompt` → `_process_vision_result` path with
+`prompt_registry.py`, which marks every value `unverified` and always sets
+`needs_review=True`; that result does not follow the engine result contract
+(`docs/ENGINE-RESULT-CONTRACT.md` §5). `_analyse_template_regions`,
+`prompt_registry.py` and the form/mixed/table writers exist for that fallback
+and for re-exporting legacy jobs.
 
 ### Export writers (all in `extract.py`)
 
@@ -1139,7 +1147,8 @@ liveness; anyone scaling past one worker must rework this in the same commit.
 - Demo schema seeded from `backend/engine/demo_accounting.yaml` as `client_id=demo_001` if `client_schemas` table is empty
 - Swagger/ReDoc disabled in production (`ENVIRONMENT=production`)
 - `_run_migrations()` runs idempotent PostgreSQL DDL on every boot, before Alembic. **It fails loudly**: any failed statement plus `ENVIRONMENT=production` raises and refuses to serve. On non-PostgreSQL dialects it logs a warning that it was SKIPPED rather than reporting success.
-- `settings.validate_secret_key()` refuses to boot production on a shipped placeholder `SECRET_KEY`.
+- `Settings._refuse_to_run_production_on_a_known_key` refuses to boot production on a shipped placeholder `SECRET_KEY`.
+- There is no default administrator: the first one is created from `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME` / `DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD` when none exists (`_bootstrap_admin`); known default passwords are refused.
 
 ### `backend/app/config.py`
 
@@ -1292,9 +1301,7 @@ above.
 ### Spreadsheet editor component stack
 
 The template editor is a **custom-built spreadsheet** in
-`DocAgentSpreadsheet.tsx` — it does not use FortuneSheet or Univer at runtime.
-`FortuneSheetEditor.tsx`, `FortuneSheetInner.tsx` and `UniverSheet.tsx` are
-legacy alternatives wired to no page.
+`DocAgentSpreadsheet.tsx`; it uses no spreadsheet library.
 
 - `DocAgentSpreadsheet.tsx` — the active implementation (50×26 canvas grid, custom renderer)
 - `TemplateEditor.tsx` — page wrapper: loads the spreadsheet dynamically (SSR-safe), manages name/doc type, calls `POST /api/templates/shape` to show the engine's own shape summary
@@ -1406,24 +1413,11 @@ files are auto-submitted.
 
 ## Deployment Workflow
 
-**When asked to deploy any change, always follow these steps in order:**
-
-1. **Make the change** — edit the relevant files
-2. **Run tests** — at minimum `npm run type-check` (frontend) and `python -m pytest` (backend); run the accuracy harness if extraction behaviour changed
-3. **Commit to git** — a clear message saying what changed and why
-4. **Push to GitHub** — `git push origin main`
-5. **Confirm the push succeeded** — report the commit SHA and confirm it is on GitHub
-
-Railway (backend) and Vercel (frontend) auto-deploy from `main`. See
+Railway (backend) and Vercel (frontend) auto-deploy from `main`, so a change
+reaches `main` only after the backend suite (`python -m pytest`), the frontend
+type-check and build, and — when extraction behaviour changed — both harness
+modes have been run. The procedure, checks and rollback are in
 `docs/DEPLOY-RUNBOOK.md`.
-
-**Local repo path**: `E:\docagent-univer`
-**Working branch**: `main`. Not `feat/accuracy-harness` — that branch is a
-fully-merged ancestor of `main`, last touched 2026-08-24, and carries nothing
-`main` does not have (`git merge-base --is-ancestor feat/accuracy-harness main`
-is true; `rev-list --left-right --count` gives `0 22`). Checking it out silently
-reverts R1–R6, the text layer, document boundaries and everything after.
-**Production URL**: `https://loving-grace-production.up.railway.app`
 
 ---
 
@@ -1477,6 +1471,5 @@ PostgreSQL (`postgres:14-alpine`) + backend with hot reload via
 - **`columns_json` format**: can be `["field1", ...]` (legacy) or `[{name, type, order}]` (current). `_parse_columns()` handles both.
 - **Alembic is manual**: startup migrations cover additive/idempotent DDL only. New tables and renames need `alembic revision --autogenerate` + `upgrade head`.
 - **`company_admin` role**: exists in the DB and RBAC logic, but `UserCreate` only allows `admin|client` — it must be set via `UserUpdate` or SQL.
-- **`FortuneSheetEditor` / `UniverSheet`**: present but wired to nothing. `DocAgentSpreadsheet.tsx` is the editor.
 - **Doc type naming**: the frontend uses `"invoice"` where the prompt registry expects `"sales_invoice"`. Map carefully when adding types.
 - **Gold labels are never regenerated from engine output.** If the engine's output shape changes, change `tests/harness/adapter.py` — never `tests/gold/labels/`.

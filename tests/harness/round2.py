@@ -5,7 +5,7 @@ pipeline.
     python -m tests.harness.round2 --run run1_berkshire_B1 --mode record   # live, costs money
     python -m tests.harness.round2 --run run1_berkshire_B1 --mode replay
 
-The suite could not see I1 (docs/DocAgent_round2_report.md): 781 tests passed
+The suite could not see I1 (docs/investigations/DocAgent_round2_report.md): 781 tests passed
 while eight of twelve manual runs merged regions. So the evidence for I1 runs
 the documents the defect was found on, not fixtures written to resemble them.
 
