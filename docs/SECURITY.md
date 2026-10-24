@@ -33,7 +33,8 @@ names the code that implements it.
   the **token, never the request body** (`extract.py::resolve_client_id`); a
   super-administrator (role `admin`, no `client_id`) must name the client.
 - Jobs: `_get_job_or_404` allows a super-administrator, an administrator or
-  `company_admin` of the job's tenant, or the job's own user.
+  `company_admin` of the job's tenant, or the job's own user; any other id —
+  another firm's included — answers 404 "Job not found", the same as a missing id.
 - Templates: `load_template_for_user` checks ownership before an upload uses a
   template id; an unknown id fails rather than silently extracting without one.
 - Watch folders (`drive._visible_watch_folders`): a super-administrator sees
@@ -115,4 +116,3 @@ template, or — with no template — field names the model chose from the page
 | A password change does not invalidate issued tokens | `auth.py` | needs a token version or deny list |
 | Rate limiter is per process | `routes/auth.py` | needs a shared store before running more than one instance |
 | `company_admin` exists in RBAC but `UserCreate` cannot assign it | `schemas.py` | the role matrix is not documented in one place |
-| Job access answers 403 for another tenant's job | `_get_job_or_404` | reveals that the id exists |

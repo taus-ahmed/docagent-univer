@@ -68,6 +68,15 @@ or `sales_invoice`; misaligned rows (`validation.alignment_misaligned`); H2
 above; any `review_required` / `_review_required` anywhere in the stored
 payload (`_value_requires_review`); the result's own `validation.needs_review`.
 
+### 1.2 Who may read a result
+
+Every job and result route (`/api/jobs/{id}…`, `/api/export/combined`,
+`/api/export/perfile`) answers **404 `{"detail": "Job not found"}`** for a job
+the caller may not see — another firm's job, or another user's job for a plain
+user — exactly as for an id that does not exist, so an id in another tenant
+cannot be told apart from a missing one. A super-admin (role `admin`, no
+`client_id`) sees every tenant's job.
+
 ## 2. Per document record — `extracted_data`
 
 | field | type | allowed / meaning |

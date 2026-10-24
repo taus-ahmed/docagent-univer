@@ -7120,4 +7120,6 @@ def _get_job_or_404(job_id, current_user, db):
     # Regular user sees only their own jobs
     if job.user_id == current_user.id:
         return job
-    raise HTTPException(status_code=403, detail="Access denied")
+    # The same answer as a missing id: 403 told a caller the id exists in
+    # another firm (roles.md item 4).
+    raise HTTPException(status_code=404, detail="Job not found")
