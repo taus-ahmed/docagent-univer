@@ -26,7 +26,6 @@ sample grows whenever a template is added.
 """
 import json
 
-import pytest
 
 from tests.harness import bootstrap as _bs
 

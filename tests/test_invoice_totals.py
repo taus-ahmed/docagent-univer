@@ -17,7 +17,6 @@ import json
 import re
 from types import SimpleNamespace
 
-import pytest
 
 from tests.harness import bootstrap as bs
 
@@ -76,8 +75,6 @@ class _Resp:
 
 
 def _run(path, summary, template, lines=LINES):
-    page_lines = {}
-
     def extract(**kw):
         prompt = kw.get("prompt") or ""
         text = [ln.strip() for ln in prompt.split("\n")]

@@ -9,7 +9,6 @@ rather than one sheet per document.
 """
 import json
 
-import pytest
 
 from tests.harness import bootstrap as bs
 

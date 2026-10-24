@@ -8,10 +8,8 @@ only ever scored the result object. A check that cannot detect that bug is
 worse than none, so the detection itself is tested here — with a sheet
 deliberately written the broken way.
 """
-import json
 
 import openpyxl
-import pytest
 
 from tests.harness import bootstrap as bs
 

@@ -77,7 +77,7 @@ from app.core.demo import (check_upload_file, check_upload_quota,
                            check_uploads_enabled, filter_demo_history,
                            filter_options, is_demo_user, job_hidden_by_cutoff)
 from app.core import demo_audit
-from app.core.confidence import CONFIDENT_LEVELS, UNVERIFIED
+from app.core.confidence import UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
 from app.schemas.schemas import (
@@ -252,19 +252,6 @@ def _is_image_file(file_path: Path) -> bool:
     return file_path.suffix.lower() in _IMAGE_EXTENSIONS
 
 
-def _is_text_pdf(file_path: Path, min_chars: int = 80) -> bool:
-    """Return True if the PDF has machine-readable text (not scanned/image-only).
-    Checks first 3 pages — if any yields >= min_chars the PDF is text-based."""
-    try:
-        import pdfplumber
-        with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages[:3]:
-                if len((page.extract_text() or "").strip()) >= min_chars:
-                    return True
-        return False
-    except Exception:
-        return False
-
 
 def _load_image_as_png_bytes(file_path: Path) -> bytes:
     """Load any supported image (including HEIC) as PNG bytes for vision LLM.
@@ -293,21 +280,6 @@ def _load_image_as_png_bytes(file_path: Path) -> bytes:
 # ==============================================================================
 # PAGE COUNT ENDPOINT
 # ==============================================================================
-
-@router.post("/extract/page-count")
-async def get_pdf_page_count(
-    files: list[UploadFile] = File(...),
-    current_user: User = Depends(get_current_user),
-):
-    """Return page count for each uploaded file (PDFs only). Used by frontend
-    to decide whether to show the page-selection modal before extraction."""
-    results = []
-    for f in files:
-        content = await f.read()
-        safe_name, _kind, page_count = _validate_upload_content(
-            f.filename, content)
-        results.append({"filename": safe_name, "page_count": page_count})
-    return results
 
 
 # ==============================================================================
@@ -1017,7 +989,6 @@ def _analyse_template_regions(layout: dict) -> dict:
         table_regions.sort(key=lambda t: (t["header_row"], t["start_col"]))
 
         # Group tables that share the same header_row
-        from itertools import groupby
         same_row_groups = {}
         for tbl in table_regions:
             same_row_groups.setdefault(tbl["header_row"], []).append(tbl)
@@ -1307,7 +1278,6 @@ def _get_system_prompt(doc_type): r=_load_registry(); return r.get_system_prompt
 def _get_unguided_prompt(): r=_load_registry(); return r.get_unguided_prompt() if r else "You are an expert document data extraction AI. Extract all visible fields as JSON."
 def _get_table_rules(doc_type): r=_load_registry(); return (r.get_table_rules(doc_type) or "") if r else ""
 def _get_numeric_fields(doc_type): r=_load_registry(); return r.get_numeric_fields(doc_type) if r else []
-def _get_date_fields(doc_type): r=_load_registry(); return r.get_date_fields(doc_type) if r else []
 def _classify_by_hints(text): r=_load_registry(); return r.classify_by_hints(text) if r else None
 
 
@@ -1519,24 +1489,6 @@ def _detect_transposed_table(grid: dict, max_row: int, max_col: int) -> list:
     return transposed
 
 
-def _preserve_currency(value: str) -> tuple:
-    """
-    Extract currency symbol before stripping it.
-    Returns (normalized_number, currency_code).
-    Used when currency context is important.
-    """
-    symbols = {
-        '$': 'USD', '£': 'GBP', '€': 'EUR', '₹': 'INR',
-        '¥': 'JPY', '₩': 'KRW', 'A$': 'AUD', 'C$': 'CAD',
-        'HK$': 'HKD', 'S$': 'SGD', 'NZ$': 'NZD',
-    }
-    s = str(value).strip()
-    for symbol, code in sorted(symbols.items(), key=lambda x: -len(x[0])):
-        if s.startswith(symbol):
-            number = s[len(symbol):].replace(',', '').strip()
-            return number, code
-    return s, ""
-
 
 def _build_page_anchor_map(doc_text: str, table_regions: list) -> dict:
     """
@@ -1631,12 +1583,6 @@ def _build_page_anchor_map(doc_text: str, table_regions: list) -> dict:
 # NEIGHBOR-MATRIX BINDING MAP  (layout-based extraction for unlabeled templates)
 # ==============================================================================
 
-def _slug(s: str) -> str:
-    """Lowercase, underscore-joined slug for section keys."""
-    return re.sub(r'[^a-z0-9]+', '_', (s or "").lower()).strip('_')
-
-
-
 
 # ==============================================================================
 # GEMINI-BASED TEMPLATE UNDERSTANDING (computed once at SAVE time)
@@ -1648,50 +1594,6 @@ _TEMPLATE_UNDERSTANDING_SYSTEM = (
     "section headers, column headers, and which blank cells are meant to receive "
     "extracted values."
 )
-
-
-def _grid_to_cells_json(grid: dict) -> str:
-    """Serialize the template grid to a compact cell-ref -> descriptor JSON for the
-    understanding prompt. Emits EVERY cell in the bounding box (including blanks) so
-    Gemini can tell which cells are empty (extract candidates) vs typed labels."""
-    cells  = grid.get("cells", {})  if isinstance(grid, dict) else {}
-    merges = grid.get("merges", {}) if isinstance(grid, dict) else {}
-    parsed, max_r, max_c = {}, 0, 0
-    for k, cell in cells.items():
-        if not isinstance(cell, dict):
-            continue
-        try:
-            r, c = map(int, str(k).split(","))
-        except (ValueError, AttributeError):
-            continue
-        max_r = max(max_r, r); max_c = max(max_c, c)
-        parsed[(r, c)] = cell
-    out = {}
-    for r in range(max_r + 1):
-        for c in range(max_c + 1):
-            cell = parsed.get((r, c))
-            v = str((cell or {}).get("value", "") or "").strip()
-            entry = {"text": v} if v else {"empty": True}
-            if cell and cell.get("extractTarget"):
-                entry["marked_extract"] = True
-            span = (cell or {}).get("mergeSpan")
-            if isinstance(span, dict) and (int(span.get("rows", 1) or 1) > 1
-                                           or int(span.get("cols", 1) or 1) > 1):
-                entry["merge"] = {"rows": int(span.get("rows", 1) or 1),
-                                  "cols": int(span.get("cols", 1) or 1)}
-            out[_cell_ref(r, c)] = entry
-    # honour standalone merges dict too
-    for pkey, span in (merges or {}).items():
-        try:
-            pr, pc = map(int, str(pkey).split(","))
-        except (ValueError, AttributeError):
-            continue
-        ref = _cell_ref(pr, pc)
-        if ref in out and "merge" not in out[ref]:
-            out[ref]["merge"] = {"rows": int((span or {}).get("rows", 1) or 1),
-                                 "cols": int((span or {}).get("cols", 1) or 1)}
-    return json.dumps(out, ensure_ascii=False)
-
 
 
 
@@ -1711,19 +1613,6 @@ _CBM_FIELD_ALIASES = (
      "label_kw": (r"\binvoice\b", r"\binv\b", r"\bbill\s*no\b"),
      "note": "May appear as: Invoice #, Inv No, Invoice Number, Reference, Bill Number"},
 )
-
-
-def _field_alias_note(label: str, data_type: str) -> str:
-    """Return the alias note for a field, or "" when none applies."""
-    lab = (label or "").lower()
-    dt = (data_type or "").lower()
-    for entry in _CBM_FIELD_ALIASES:
-        if dt and any(d in dt for d in entry["data_types"]):
-            return entry["note"]
-        if any(re.search(kw, lab) for kw in entry["label_kw"]):
-            return entry["note"]
-    return ""
-
 
 
 
@@ -1873,76 +1762,6 @@ def _build_layout_prompt_parts(binding_map: dict, layout: dict, doc_text: str,
           f"{len(fixed)} fixed cell(s)", flush=True)
     return si, user_prompt
 
-
-def _convert_extracted_fields_to_layout(extracted_fields: dict, binding_map: dict) -> dict:
-    """
-    ISSUE 1 fallback — when a weaker model returns extracted_fields instead of the
-    required layout_sections format, reconstruct layout_sections from the flat cell
-    map using the binding map's column groups (pairing each value-column cell with
-    the label-column cell on the same row).
-    """
-    import re as _re
-    if (not isinstance(extracted_fields, dict) or not extracted_fields
-            or not isinstance(binding_map, dict)):
-        return {}
-    col_headers = binding_map.get("_meta", {}).get("column_headers", {})
-
-    def hdr(c):
-        return str(col_headers.get(c, col_headers.get(str(c), "")) or "")
-
-    VALUE_KW = {"amount", "amt", "value", "total", "balance", "price", "cost",
-                "qty", "quantity", "debit", "credit", "$", "net", "gross", "sum"}
-    td_cols = sorted({b["col_index"] for b in binding_map.values()
-                      if isinstance(b, dict) and b.get("role") == "table_data"
-                      and isinstance(b.get("col_index"), int)})
-
-    def is_val(c):
-        return any(kw in hdr(c).lower() for kw in VALUE_KW)
-
-    used, groups = set(), []
-    for c in td_cols:
-        if c in used or not is_val(c):
-            continue
-        lc = next((x for x in range(c - 1, -1, -1) if x in td_cols and x not in used), None)
-        groups.append((lc, c)); used.add(c)
-        if lc is not None:
-            used.add(lc)
-    for c in td_cols:
-        if c in used:
-            continue
-        rc = next((x for x in td_cols if x > c and x not in used), None)
-        if rc is not None:
-            groups.append((c, rc)); used.add(c); used.add(rc)
-
-    def _v(x):
-        return str((x.get("value", "") if isinstance(x, dict) else x) or "").strip()
-
-    parsed = {}
-    for ref, raw_v in extracted_fields.items():
-        m = _re.match(r'^([A-Za-z]+)(\d+)$', str(ref).strip())
-        if not m:
-            continue
-        col = 0
-        for ch in m.group(1).upper():
-            col = col * 26 + (ord(ch) - 64)
-        parsed[(int(m.group(2)) - 1, col - 1)] = _v(raw_v)
-
-    out = {}
-    for lc, vc in groups:
-        if vc is None:
-            continue
-        slug = _re.sub(r'[^a-z0-9]+', '_', (hdr(lc) or hdr(vc) or "section").lower()).strip('_') or "section"
-        rows = []
-        for (row0, col0), v in sorted(parsed.items()):
-            if col0 != vc or not v:
-                continue
-            label = parsed.get((row0, lc), "") if lc is not None else ""
-            rows.append({"label_col": _col_letter(lc) if lc is not None else "",
-                         "value_col": _col_letter(vc), "row": row0 + 1,
-                         "label": label, "value": v})
-        if rows:
-            out[slug] = {"rows": rows}
-    return out
 
 
 def _build_vision_prompt(template_data: dict, doc_text: str = "",
@@ -2577,7 +2396,6 @@ def _build_output_format(regions: dict, primary_mode: str) -> str:
     """
     table_regions = regions.get("table_regions", [])
     n_tables = len(table_regions)
-    has_form = primary_mode != "table"
 
     # Build example extracted_fields
     field_example = '"B3": {"value": "extracted value", "confidence": "high"}'
@@ -2652,9 +2470,6 @@ RULES:
         # Multiple tables — use ONE table_rows array with a "Table" column
         # Show a SEPARATE example row for each table with its OWN columns
         # This prevents the AI from merging columns across tables
-        section_names = [tr.get("section_label", f"Table {i+1}")
-                        for i, tr in enumerate(table_regions)]
-
         # Build separate array key and example for each table
         # Using SEPARATE arrays per table is the ONLY reliable way to prevent
         # the AI from merging columns across tables into one row structure
@@ -2767,10 +2582,8 @@ def _validate_with_pdfplumber(extracted_fields: dict, doc_text: str,
     for ref, field_data in extracted_fields.items():
         if isinstance(field_data, dict):
             value = str(field_data.get("value", "")).strip()
-            ai_confidence = field_data.get("confidence", "medium")
         else:
             value = str(field_data).strip()
-            ai_confidence = "medium"
 
         if not value or value == "":
             validated[ref] = {"value": "", "confidence": "high", "validated": True}
@@ -2889,93 +2702,6 @@ def _check_value_variants(value: str, doc_text: str) -> bool:
 # PDFPLUMBER DIRECT TABLE EXTRACTION
 # ==============================================================================
 
-def _extract_pdf_table_direct(file_path: Path, template_data: dict) -> Optional[list]:
-    """
-    Extract table rows directly from PDF using pdfplumber.
-    Handles tables at ANY position on the page (not just top-left).
-    Returns list of row dicts or None if no matching table found.
-    """
-    try:
-        import pdfplumber
-
-        regions = template_data.get("regions", {})
-        table_regions = regions.get("table_regions", [])
-
-        if not table_regions:
-            return None
-
-        col_names = []
-        for tr in table_regions:
-            col_names.extend(tr.get("column_names", []))
-        col_names = list(dict.fromkeys(col_names))
-
-        if not col_names:
-            return None
-
-        skip_kw = {"subtotal", "grand total", "shipping", "discount",
-                   "charges", "refund", "paid", "free", "balance due"}
-        all_rows = []
-
-        with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages:
-                # Strategy 1: line-based (visible borders)
-                tables = page.extract_tables({
-                    "vertical_strategy": "lines",
-                    "horizontal_strategy": "lines",
-                    "snap_tolerance": 4,
-                    "join_tolerance": 4,
-                })
-                # Strategy 2: text-based (no visible borders)
-                if not tables:
-                    tables = page.extract_tables({
-                        "vertical_strategy": "text",
-                        "horizontal_strategy": "text",
-                        "snap_tolerance": 6,
-                        "join_tolerance": 6,
-                    })
-
-                for table in tables:
-                    if not table or len(table) < 2:
-                        continue
-                    header_row_idx = _find_header_row(table, col_names)
-                    if header_row_idx is None:
-                        continue
-                    pdf_headers = [_clean_cell(c) for c in table[header_row_idx]]
-                    col_map = _match_columns(col_names, pdf_headers)
-                    if not col_map:
-                        continue
-
-                    for row in table[header_row_idx + 1:]:
-                        if not row or all(not _clean_cell(c) for c in row):
-                            continue
-                        first_val = _clean_cell(row[0]) if row else ""
-                        if not first_val:
-                            continue
-                        if any(kw in first_val.lower() for kw in skip_kw):
-                            continue
-                        if re.match(r'^\d{1,4}$', first_val):
-                            continue
-
-                        row_dict = {}
-                        for col_name in col_names:
-                            pdf_idx = col_map.get(col_name)
-                            if pdf_idx is not None and pdf_idx < len(row):
-                                val = _clean_cell(row[pdf_idx])
-                                val = re.sub(r'^\$', '', val).replace(',', '')
-                            else:
-                                val = ""
-                            row_dict[col_name] = val
-
-                        if any(v for v in row_dict.values()):
-                            all_rows.append(row_dict)
-
-        print(f"[DIRECT] {file_path.name}: {len(all_rows)} rows", flush=True)
-        return all_rows if all_rows else None
-
-    except Exception as e:
-        print(f"[DIRECT] Failed {file_path.name}: {e}", flush=True)
-        return None
-
 
 def _clean_cell(val) -> str:
     if val is None: return ""
@@ -3010,12 +2736,6 @@ def _match_columns(col_names, pdf_headers):
                 mapping[col] = pdf_lower.index(matches[0])
     return mapping
 
-def _clean_text_for_table(text: str) -> str:
-    text = re.sub(r'(\d{8,})\n(\d{1,3})\n', lambda m: m.group(1)+m.group(2)+'\n', text)
-    text = re.sub(r'(\d{8,})\n(\d{1,3})$', lambda m: m.group(1)+m.group(2), text)
-    text = re.sub(r'(-\s*)\n(#\d+)', r'\1 \2', text)
-    return text
-
 
 # ==============================================================================
 # VALUE NORMALISATION
@@ -3035,161 +2755,10 @@ def _normalise_values(row: dict, doc_type: str) -> dict:
         cleaned[k] = s
     return cleaned
 
-def _filter_ghost_rows(rows: list, col_names: list) -> list:
-    if not rows or not col_names: return rows
-    first_col = col_names[0]
-    # Only skip clear summary rows — never skip "tax" as it's a valid row type
-    skip_exact = {"subtotal", "grand total", "shipping", "discount",
-                  "charges", "refund", "balance due", "amount due"}
-    clean = []
-    for row in rows:
-        first_val = str(row.get(first_col, "")).strip()
-        if not first_val: continue
-        if re.match(r'^[\d,.\-\s]{1,6}$', first_val) and not re.search(r'[a-zA-Z]', first_val): continue
-        if first_val.lower() in skip_exact: continue
-        clean.append(row)
-    return clean
-
 
 # ==============================================================================
 # MULTI-DOCUMENT DETECTION
 # ==============================================================================
-
-def _detect_document_boundaries_vision(doc_images_b64: list, orchestrator,
-                                        filename: str, doc_type: str) -> list:
-    """
-    Detect if a PDF contains multiple separate documents using vision.
-    Returns list of {index, page_indices, hint} for each detected document.
-
-    This is used for PDFs like "100 cheques in one file" where each page
-    or each half-page is a separate document.
-    """
-    if not doc_images_b64:
-        return [{"index": 0, "page_indices": list(range(1)), "hint": "full document"}]
-
-    total_pages = len(doc_images_b64)
-
-    if total_pages == 1:
-        # Single page - could still contain multiple documents side by side
-        detection_prompt = f"""Look at this document image carefully.
-
-Does this page contain MULTIPLE SEPARATE {doc_type} documents on it?
-(For example: two cheques on one page, two receipts, multiple invoices)
-
-Return ONLY this JSON:
-{{
-  "document_count": <integer>,
-  "layout": "single|side_by_side|stacked|grid",
-  "documents": [
-    {{"index": 0, "hint": "brief description, e.g. cheque to Pacific Steel"}}
-  ]
-}}
-
-If there is only ONE document: document_count = 1."""
-
-        try:
-            detection = orchestrator.llm.extract(
-                image_b64=doc_images_b64[0],
-                prompt=detection_prompt
-            )
-            if detection.success and detection.parsed_json:
-                raw = detection.parsed_json
-                count = raw.get("document_count", 1)
-                if count > 1:
-                    print(f"[DETECT] {filename}: {count} docs on single page", flush=True)
-                    return [
-                        {"index": d["index"], "page_indices": [0],
-                         "hint": d.get("hint", f"doc {d['index']+1}"),
-                         "sub_index": d["index"],
-                         "total_on_page": count}
-                        for d in raw.get("documents", [{"index": 0}])
-                    ]
-        except Exception as e:
-            print(f"[DETECT] single page detection error: {e}", flush=True)
-
-        return [{"index": 0, "page_indices": [0], "hint": "full document"}]
-
-    else:
-        # Multi-page: ask vision model whether this is ONE multi-page document
-        # or MULTIPLE separate documents merged into one PDF.
-        doc_type_label = doc_type if doc_type and doc_type != "other" else "document"
-        boundary_prompt = f"""You are analyzing page 1 of a {total_pages}-page PDF.
-
-Your task: decide if this PDF is ONE document that spans multiple pages,
-OR multiple SEPARATE {doc_type_label} documents merged into a single file.
-
-KEY DISTINCTION:
-- ONE multi-page document: contract, report, multi-page invoice, bank statement
-  with months on separate pages, financial report — all clearly one document.
-- MULTIPLE separate documents: 40 individual invoices in one PDF, 12 separate
-  receipts scanned together, batch of cheques, individual monthly statements
-  combined into one file — each is a complete, independent document.
-
-If you see page numbers like "Page 1 of 5" or "Page 2/10", this is ONE document.
-If you see each page has its own header/footer/date/number, it may be MULTIPLE docs.
-
-Return ONLY this JSON (no markdown, no explanation):
-{{
-  "is_multi_document": true_or_false,
-  "document_count": <integer, 1 if single>,
-  "reasoning": "one sentence why",
-  "documents": [
-    {{"doc_number": 1, "start_page": 1, "end_page": 2, "hint": "brief description"}},
-    {{"doc_number": 2, "start_page": 3, "end_page": 3, "hint": "brief description"}}
-  ]
-}}
-
-Total pages in this PDF: {total_pages}
-If is_multi_document is false, set document_count to 1 and documents to
-[{{"doc_number": 1, "start_page": 1, "end_page": {total_pages}, "hint": "full document"}}]"""
-
-        try:
-            detection = orchestrator.llm.extract(
-                image_b64=doc_images_b64[0],
-                prompt=boundary_prompt,
-            )
-            if detection.success and detection.parsed_json:
-                raw = detection.parsed_json
-                is_multi = raw.get("is_multi_document", False)
-                count    = raw.get("document_count", 1)
-                docs     = raw.get("documents", [])
-                reasoning = raw.get("reasoning", "")
-
-                if is_multi and count > 1 and docs:
-                    result_segs = []
-                    for d in docs:
-                        sp = max(0, int(d.get("start_page", 1)) - 1)       # 0-indexed
-                        ep = min(total_pages - 1, int(d.get("end_page", sp + 1)) - 1)
-                        result_segs.append({
-                            "index":        int(d.get("doc_number", len(result_segs) + 1)) - 1,
-                            "page_indices": list(range(sp, ep + 1)),
-                            "hint":         d.get("hint", f"document {len(result_segs)+1}"),
-                        })
-                    print(
-                        f"[DETECT] {filename}: {len(result_segs)} documents detected "
-                        f"across {total_pages} pages — {reasoning}",
-                        flush=True,
-                    )
-                    return result_segs
-                else:
-                    # Single multi-page document
-                    print(
-                        f"[DETECT] {filename}: {total_pages} pages -> single document — {reasoning}",
-                        flush=True,
-                    )
-                    return [{"index": 0,
-                             "page_indices": list(range(total_pages)),
-                             "hint": "full document"}]
-
-        except Exception as e:
-            print(f"[DETECT] multi-page boundary detection error: {e}", flush=True)
-
-        # Safe fallback: treat as single document (not one-per-page, which fragments long docs)
-        print(
-            f"[DETECT] {filename}: {total_pages} pages -> single-document fallback (detection unavailable)",
-            flush=True,
-        )
-        return [{"index": 0, "page_indices": list(range(total_pages)), "hint": "full document"}]
 
 
 # ==============================================================================
@@ -3854,45 +3423,6 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     return r
 
 
-def _make_table_result(rows, template_data, filename, doc_type, elapsed, method, extraction=None, confidence="high"):
-    from orchestrator import DocumentExtractionResult
-    regions = template_data.get("regions", {})
-    col_names = []
-    for tr in regions.get("table_regions", []):
-        col_names.extend(tr.get("column_names", []))
-    col_names = list(dict.fromkeys(col_names))
-    if not col_names:
-        # Fallback: read from layout directly
-        layout = template_data.get("layout", {})
-        cells = layout.get("cells", {})
-        headers = []
-        for key, cell in cells.items():
-            if not isinstance(cell, dict): continue
-            val = cell.get("value","").strip()
-            if not val: continue
-            parts = key.split(",")
-            if len(parts) == 2 and int(parts[0]) == 0:
-                c = int(parts[1])
-                headers.append((c, val))
-        col_names = [v for _, v in sorted(headers)]
-    normalised = [_normalise_values(row, doc_type) for row in rows]
-    r = DocumentExtractionResult(filename=filename)
-    r.document_type = doc_type
-    r.extracted_data = {
-        "document_type": doc_type, "overall_confidence": confidence,
-        "table_mode": True, "extraction_method": method,
-        "table_rows": normalised, "column_headers": col_names,
-        "row_count": len(normalised),
-        "extracted_data": {
-            **({col: {"value": normalised[0].get(col,""),"confidence":"high"} for col in col_names} if normalised else {}),
-            "_table_row_count": {"value": str(len(normalised)),"confidence":"high"},
-        },
-    }
-    r.extraction_response = extraction
-    r.processing_time_ms = elapsed
-    r.success = True
-    print(f"[EXTRACT] {method}: {filename} -> {len(normalised)} rows @ {confidence}", flush=True)
-    return r
 
 def _job_error_message(session, job_id, failed, produced):
     """The DOCUMENTS' own reasons, not a count of them.
@@ -6169,7 +5699,6 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
     Multi-doc: 3 blank rows + grey divider between documents.
     """
     from openpyxl.styles import Font, PatternFill
-    from openpyxl.utils import get_column_letter
     from openpyxl.cell import MergedCell
     merges_tpl   = sheet_data.get("merges", {})
     # Extra rows per block for separator (only applied from block 2 onwards)
@@ -6305,13 +5834,6 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 lc.value = f"Document {block_idx + 1}  ·  {doc_result.filename}"
                 lc.font = Font(bold=True, color="FF374151", size=10)
 
-        # Document separator between blocks — placed AFTER writing this block
-        # Use a separate counter so we don't corrupt row_offset for current block
-        separator_row = row_offset + max_r + 2
-        if block_idx > 0:
-            # This separator was written at the start — skip (handled below)
-            pass
-
         # ── Dynamic cells pass ────────────────────────────────────────────────────
         # Write any extracted_fields cells NOT already covered by cells_tpl entries.
         # This handles dynamic fill rows (e.g. balance sheet rows 1-8) where the
@@ -6383,17 +5905,6 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 nc.font = Font(color="FFDC2626", size=9, italic=True)
 
     print(f"[EXPORT] form: {len(doc_results)} blocks written", flush=True)
-
-
-def _col_to_index(letter: str) -> int:
-    """Spreadsheet column letter -> 0-based index ('A'->0, 'E'->4, 'AA'->26)."""
-    n = 0
-    for ch in str(letter or "").strip().upper():
-        if not ("A" <= ch <= "Z"):
-            continue
-        n = n * 26 + (ord(ch) - 64)
-    return n - 1
-
 
 
 
@@ -6499,7 +6010,6 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
     4. Blank separator between document blocks
     """
     from openpyxl.styles import Font, PatternFill
-    from openpyxl.utils import get_column_letter
     from openpyxl.cell import MergedCell
 
     merges_tpl   = sheet_data.get("merges", {})
@@ -7003,19 +6513,6 @@ def _find_template_dimensions(cells):
             continue
         max_r = max(max_r, r); max_c = max(max_c, c)
     return max_r, max_c
-
-def _get_table_headers(layout):
-    cells = layout.get("cells", {})
-    headers = []
-    for key, cell in cells.items():
-        if not isinstance(cell, dict): continue
-        val = cell.get("value","").strip()
-        if not val: continue
-        parts = key.split(",")
-        if len(parts)==2 and int(parts[0])==0:
-            c = int(parts[1])
-            headers.append({"col":c,"label":val,"ref":_cell_ref(0,c),"style":cell.get("style",{})})
-    return sorted(headers, key=lambda x: x["col"])
 
 
 # ==============================================================================

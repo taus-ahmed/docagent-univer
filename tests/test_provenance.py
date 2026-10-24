@@ -189,7 +189,6 @@ class TestTheSheetShowsWhereEachValueCameFrom:
                 for row in val:
                     values |= {str(x).strip() for k, x in row.items()
                                if not k.startswith("_") and str(x).strip()}
-        without = []
         commented = 0
         for row in ws.iter_rows():
             for c in row:
@@ -222,7 +221,6 @@ class TestTheSheetShowsWhereEachValueCameFrom:
     def test_a_merged_file_names_each_document_and_its_file_page(self, merged):
         """The I2 case itself: three stacked blocks, each row saying which
         document and page it is."""
-        import openpyxl
         from tests.harness import scenarios as S
 
         class _R:

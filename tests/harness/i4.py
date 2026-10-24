@@ -46,9 +46,7 @@ EVERY LIVE RUN STORES ITS RAW RESPONSE, twice — the same rule as round2.py:
 from __future__ import annotations
 
 import argparse
-import contextlib
 import copy
-import io
 import json
 import re
 import subprocess

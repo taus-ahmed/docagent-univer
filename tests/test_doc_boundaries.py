@@ -30,7 +30,6 @@ empty — ugly, obvious, fixable in one look. NOT splitting produces one plausib
 result and silently discards the rest. So the false-positive test is the strict
 one, and it runs over every document in the corpus.
 """
-import tempfile
 
 import pytest
 

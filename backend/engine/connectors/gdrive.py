@@ -15,15 +15,12 @@ Setup:
   6. Add your email as a test user in OAuth consent screen
 """
 
-import io
 import os
-import json
-import tempfile
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
 
-from config import settings, BASE_DIR  # BASE_DIR is module-level, NOT on settings
+from config import BASE_DIR  # BASE_DIR is module-level, NOT on settings
 
 
 @dataclass
@@ -256,17 +253,6 @@ class GoogleDriveConnector:
             print(f"[Drive Error] Download {filename}: {e}")
             return None
 
-    def download_folder_files(self, folder_id: str, dest_dir: str | Path, progress_callback=None) -> list[Path]:
-        """Download all supported files from a Drive folder."""
-        files = self.list_files(folder_id)
-        downloaded = []
-        for i, f in enumerate(files):
-            if progress_callback:
-                progress_callback(i, len(files), f.name)
-            path = self.download_file(f.id, f.name, dest_dir)
-            if path:
-                downloaded.append(path)
-        return downloaded
 
     def upload_file(self, local_path: str | Path, folder_id: str = "root", mime_type: str = None) -> Optional[str]:
         """Upload a file to a Drive folder. Returns the file ID."""

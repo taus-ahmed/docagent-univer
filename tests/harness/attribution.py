@@ -35,7 +35,6 @@ import json
 import random
 import re
 import time
-from pathlib import Path
 
 from tests.harness import bootstrap as bs
 

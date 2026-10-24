@@ -11,7 +11,6 @@ import io
 import re
 import base64
 from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass, field
 
 from PIL import Image
@@ -189,10 +188,6 @@ def text_layer_pages(file_path: str | Path) -> tuple[list[int], int]:
                 missing.append(page_num + 1)
     return missing, total
 
-
-def pages_without_text_layer(file_path: str | Path) -> list[int]:
-    """The 1-based pages of this PDF that `_process_pdf` would send to OCR."""
-    return text_layer_pages(file_path)[0]
 
 
 #: Text show operators, and the operator that changes the text render mode.

@@ -8,7 +8,6 @@ accuracy number.
 """
 import json
 
-import pytest
 
 from tests.harness import bootstrap as bs
 

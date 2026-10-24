@@ -3,7 +3,7 @@ DocAgent v2 — Pydantic Schemas
 """
 
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 

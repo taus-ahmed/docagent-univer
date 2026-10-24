@@ -4,7 +4,6 @@ Validates extracted data against the client schema.
 Flags missing required fields, type mismatches, and low-confidence values.
 """
 
-from typing import Optional
 from dataclasses import dataclass, field
 
 

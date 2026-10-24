@@ -33,7 +33,6 @@ at load and persisted then, so the inference happens once, not per extraction.
     }
 """
 
-import re
 
 SHAPE_VERSION = 1
 

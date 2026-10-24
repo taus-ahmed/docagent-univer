@@ -311,8 +311,6 @@ class StorageService:
         """Delete a job's SOURCE documents, leaving its outputs alone."""
         return self.delete_prefix(f"{self.job_prefix(client_id, job_id)}/source")
 
-    def cleanup_job(self, job_id, client_id=None) -> int:
-        return self.delete_job_sources(client_id, job_id)
 
     # ─── Validation ──────────────────────────────────────────────────────────
 
@@ -365,7 +363,3 @@ def get_storage() -> StorageService:
     return _storage
 
 
-def reset_storage():
-    """Drop the singleton — for tests that switch backend or root."""
-    global _storage
-    _storage = None

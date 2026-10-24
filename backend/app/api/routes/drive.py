@@ -16,7 +16,6 @@ import tempfile
 import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -91,7 +90,7 @@ def drive_auth_status(_: User = Depends(get_current_user)):
             is_configured=drive.is_configured,
             is_authenticated=drive.is_authenticated,
         )
-    except Exception as e:
+    except Exception:
         return DriveAuthStatus(is_configured=False, is_authenticated=False)
 
 
@@ -227,10 +226,9 @@ def extract_from_drive(
 
 def _run_drive_extraction(job_id, folder_id, drive_files, schema_path, db_url):
     """Background task: download Drive files then run extraction."""
-    import json, time
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from app.models.models import ExtractionJob, DocumentResult, Base
+    from app.models.models import ExtractionJob
 
     engine = create_engine(db_url, connect_args={"check_same_thread": False} if "sqlite" in db_url else {})
     Session = sessionmaker(bind=engine)

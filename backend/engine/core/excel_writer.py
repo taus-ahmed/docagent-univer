@@ -10,7 +10,6 @@ Features:
 
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -172,7 +171,7 @@ class ExcelWriter:
 
             self._write_cell(ws, row, 1, label)
             vc = self._write_cell(ws, row, 2, val)
-            cc = self._write_cell(ws, row, 3, conf)
+            self._write_cell(ws, row, 3, conf)
 
             if conf == "low":
                 vc.fill = LOW_CONF_FILL

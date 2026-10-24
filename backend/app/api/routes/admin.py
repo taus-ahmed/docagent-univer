@@ -11,9 +11,8 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from app.core.auth import get_current_user, require_admin, hash_password
+from app.core.auth import require_admin, hash_password
 from app.core.demo import is_demo_user
 from app.core.confidence import CONFIDENT_LEVELS
 from app.models import get_db, User, ExtractionJob, DocumentResult

@@ -20,7 +20,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeEl
 from rich.panel import Panel
 
 from core.preprocessor import preprocess_file, get_supported_files, ProcessedDocument
-from core.prompt_builder import PromptBuilder, ClientSchema, load_client_schema
+from core.prompt_builder import PromptBuilder, load_client_schema
 from core.validator import validate_extraction, ValidationResult
 from core.excel_writer import ExcelWriter
 from connectors.llm_router import LLMRouter

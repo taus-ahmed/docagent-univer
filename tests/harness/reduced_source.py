@@ -24,7 +24,7 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
-from text_layer import (Capability, CoordinateSpace,  # noqa: E402
+from text_layer import (CoordinateSpace,  # noqa: E402
                         PageSource)
 
 

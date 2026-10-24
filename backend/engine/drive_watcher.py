@@ -16,7 +16,7 @@ _ENGINE_DIR = Path(__file__).resolve().parent
 if str(_ENGINE_DIR) not in sys.path:
     sys.path.insert(0, str(_ENGINE_DIR))
 
-from config import settings, BASE_DIR
+from config import settings
 from storage.database import Database
 
 

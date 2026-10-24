@@ -18,7 +18,7 @@ from app.core.auth import get_current_user
 from app.core.demo import is_demo_user
 from app.core import demo_audit
 from app.core.confidence import display as confidence_display
-from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
+from app.models import get_db, User, DocumentResult, ColumnTemplate
 from app.schemas.schemas import ExportRequest, ExportPerFileRequest
 
 router = APIRouter(prefix="/api/export", tags=["export"])
@@ -27,11 +27,6 @@ router = APIRouter(prefix="/api/export", tags=["export"])
 _backend_dir = Path(__file__).resolve().parent.parent.parent.parent
 _project_dir = _backend_dir.parent
 _engine_dir  = _backend_dir / "engine"
-
-def _ensure_paths():
-    for p in [str(_engine_dir), str(_backend_dir), str(_project_dir)]:
-        if p not in sys.path:
-            sys.path.insert(0, p)
 
 
 def _get_template_or_404(template_id: int, current_user: User,

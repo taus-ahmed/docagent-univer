@@ -9,10 +9,9 @@ DELETE /api/schemas/{id}      — delete schema
 
 import json
 from datetime import datetime
-from pathlib import Path
 
 import yaml
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, require_admin

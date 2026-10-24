@@ -21,7 +21,6 @@ marker cannot go stale — the day the fix lands, the unexpected pass is reporte
 as a FAILURE and forces the marker off. That is exactly how `multi_document`
 came off this list.
 """
-import json
 import tempfile
 
 import pytest

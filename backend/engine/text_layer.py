@@ -91,7 +91,6 @@ genuinely need repair are rebuilt.
 """
 
 import re
-from collections import Counter
 
 # Currency marks a number may carry. Stripped only to inspect the digits; the
 # value keeps its notation everywhere else.
@@ -395,17 +394,6 @@ _MIN_GAPS_FOR_MEDIAN = 3
 GUTTER = 24.0
 
 
-def gutter_for(line):
-    """The gap width that separates COLUMNS on this particular line."""
-    xs = sorted(line, key=lambda w: float(w["x0"]))
-    gaps = [float(b["x0"]) - float(a["x1"]) for a, b in zip(xs, xs[1:])]
-    gaps = [g for g in gaps if g >= 0]
-    if len(gaps) < _MIN_GAPS_FOR_MEDIAN:
-        return GUTTER
-    gaps.sort()
-    mid = len(gaps) // 2
-    median = gaps[mid] if len(gaps) % 2 else (gaps[mid - 1] + gaps[mid]) / 2.0
-    return max(GUTTER_FLOOR, median * GUTTER_MULTIPLE)
 
 #: How far a value may run. A field value is a phrase, not a page.
 MAX_VALUE_WORDS = 60
@@ -484,11 +472,6 @@ def _walk(flat, target, cross_gutters, gutter):
                 gutter_here = (x0 - prev_x1) > gutter
                 if gutter_here and not cross_gutters:
                     continue
-            if taken:
-                acc_sep = _joiner(taken[-1]["text"], w["text"],
-                                  same_line=(li == prev_line))
-            else:
-                acc_sep = ""
             acc += re.sub(r"\s+", "", str(w["text"])).casefold()
             taken.append(w)
             crossed = crossed or gutter_here

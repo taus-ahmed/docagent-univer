@@ -1511,9 +1511,6 @@ def get_table_rules(doc_type: str) -> Optional[str]:
     entry = PROMPT_REGISTRY.get(_norm(doc_type)) or PROMPT_REGISTRY["other"]
     return entry.get("table_rules")
 
-def get_required_fields(doc_type: str) -> list:
-    entry = PROMPT_REGISTRY.get(_norm(doc_type)) or PROMPT_REGISTRY["other"]
-    return entry.get("required_fields", [])
 
 def get_numeric_fields(doc_type: str) -> list:
     entry = PROMPT_REGISTRY.get(_norm(doc_type)) or PROMPT_REGISTRY["other"]

@@ -213,9 +213,7 @@ def update_template(
         tpl.name = payload.name
     if payload.document_type is not None:
         tpl.document_type = payload.document_type
-    description_changed = False
     if payload.description is not None:
-        description_changed = payload.description != tpl.description
         tpl.description = payload.description
     if payload.columns is not None:
         columns_with_order = [

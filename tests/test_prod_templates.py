@@ -25,7 +25,6 @@ template editor, selecting each section (heading row included) and clicking
 """
 import json
 
-import pytest
 
 from tests.harness import bootstrap as bs
 

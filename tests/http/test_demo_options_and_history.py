@@ -17,7 +17,7 @@ The quota counts the same jobs the user can see — otherwise an allowance
 already spent by our own test runs would refuse their first upload.
 """
 import io
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 

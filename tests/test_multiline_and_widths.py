@@ -154,7 +154,6 @@ class TestTwoColumnsMergedIntoOneValueIsReported:
 
 class TestEveryWrittenColumnGetsAWidth:
     def _sheet(self, col_widths):
-        import openpyxl
         from openpyxl import Workbook
         from app.api.routes.extract import _fit_columns
         ws = Workbook().active
@@ -188,7 +187,6 @@ class TestEveryWrittenColumnGetsAWidth:
         assert ws.column_dimensions["A"].width >= len("Item / Description")
 
     def test_one_long_note_cannot_push_the_sheet_off_screen(self):
-        import openpyxl
         from openpyxl import Workbook
         from app.api.routes.extract import _fit_columns
         ws = Workbook().active
