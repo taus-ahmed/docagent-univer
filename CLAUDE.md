@@ -969,15 +969,26 @@ and for re-exporting legacy jobs.
 
 ### Export writers (all in `extract.py`)
 
-**The slot writer carries provenance, not confidence (I2).** A `Source` column
+**The slot writer carries provenance (I2) and review marks.** A `Source` column
 one past the template's full extent says `<file> · p.N` on every row holding
 extracted values, and every extracted value carries a cell comment quoting the
 words it was read from, with its file and page. A quote that grounding did not
-find opens with "Not verified". Confidence levels, flag reasons and review state
-never reach the file (`test_confidence.py::TestExportCarriesNoConfidence`). A
-transposed table's records have no row of their own, so their provenance
-travels in comments only. Jobs stored before I2 export exactly as before.
-`GET /api/jobs/{id}/export?provenance=false` (and `/export/zip`) leaves both out.
+find opens with "Not verified". A transposed table's records have no row of
+their own, so their provenance travels in comments only. Jobs stored before I2
+export without it. `GET /api/jobs/{id}/export?provenance=false` (and
+`/export/zip`) leaves provenance out.
+
+**An export never presents a value a person still owes a look as a clean
+final value.** The classification is `app/core/review.py`, the same one the
+review screen uses: a value is unresolved when it is `unverified`, `low`,
+empty and flagged, or carries `review_required`, and nobody has edited it or
+marked it reviewed. Such a cell gets a fill and a comment naming its status
+and reasons; an edited or reviewed value gets its own fill; a `Review status`
+column right of the sheet says per row whether anything needs review and its
+header counts the values that do; and EVERY export (any writer) gets a
+`Legend` sheet with the counts per document. There is no switch to turn the
+marks off from the API, and the export is never blocked — the UI asks for an
+explicit confirmation instead (`test_confidence.py::TestExportMarksWhatNeedsReview`).
 
 `_write_excel` routes on the `template_type` persisted in `extraction_json`:
 

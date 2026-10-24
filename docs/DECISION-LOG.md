@@ -1637,6 +1637,27 @@ reason, not because Q-A used it.
 So round 2 closes with **one** open problem, not two. I8 does not merge into the
 fabrication gap — it dissolves, and the fabrication gap is what is left standing.
 
+## 23. The export marks what needs review — §16's other half is reversed
+
+*Recorded 2026-10-23*
+
+§16 kept *no confidence in the file*: levels, flag reasons and review state
+belonged in the app. With scanned cheques that rule became the dangerous
+direction. Every value read from a scan is `unverified` and requires review,
+and an accountant who logs fifty cheques a day works in the spreadsheet, not
+the app; a file with no marks presents a misread amount exactly like a
+verified one. Review is the backstop, and a backstop the file hides is none.
+
+So the export now marks every value a person still owes a look — fill,
+comment with the status and the reasons, a `Review status` column whose header
+counts them, a `Legend` sheet on every export — computed by
+`app/core/review.py`, the same rule the review screen uses. Clean values carry
+provenance only, as before. Two things were considered and rejected: a hard
+block on exporting unresolved values (the accountant may need the data today;
+the UI asks for confirmation instead), and an API switch to export without
+marks (it would be the silent path back). `TestExportCarriesNoConfidence`
+became `TestExportMarksWhatNeedsReview`.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

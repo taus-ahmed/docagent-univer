@@ -243,10 +243,31 @@ If the page cannot be cut with confidence it is ONE record instead, with
   vision-only path (`_extract_image_with_template`); that record does not
   follow this contract (no `field_provenance`, no per-value review metadata,
   every value `unverified`, `needs_review` True).
-- Exports include each value's confidence and review status alongside its
-  provenance (route decision, round 7).
+- Exports mark every value a person still owes a look (fill, comment, a
+  `Review status` column) and every export carries a `Legend` sheet; the rule
+  is `app/core/review.py`, shared with the review screen (§6).
+- Record the source document's storage key on the row (`DocumentResult.s3_key`)
+  so the review screen can show the page the value was read from.
 
-## 6. Known limitations
+## 6. Review state — written by people, after extraction
+
+Review marks are stored INSIDE the record's `extraction_json`, so they need
+no schema change; the engine never writes them.
+
+| key | written by | meaning |
+|---|---|---|
+| `field_provenance[ref].reviewed` | `POST /api/jobs/{j}/docs/{d}/review` | `{by, at}` — a person looked at this value and accepted it |
+| `<table>_rows[i]._reviewed` | same | `{by, at}` for every value of that row |
+| `review` | same, `scope: "document"` | `{document_reviewed: true, by, at}` — the whole record accepted |
+| `field_provenance[ref].edited`, `.original_value`; `validation.confidence_map[ref] = "edited"` | `PATCH .../fields/{ref}` | a person typed the value; the machine's value is kept |
+| `<table>_rows[i]._edited`, `._original` | `PUT .../docs/{d}` | the same, per column of a row |
+
+A value's review status (`verified`, `grounded`, `unverified`, `low`,
+`edited`, `empty_flagged`, `empty`, `unknown`) and whether it is still
+unresolved are computed from these keys and the engine's own — never stored —
+by `app/core/review.py`, and served by `GET /api/jobs/{j}/review`.
+
+## 7. Known limitations
 
 - **A native cheque with no MICR line gets no MICR reason.** Every MICR check
   needs a band to look at; a digital cheque whose band is absent from the text
