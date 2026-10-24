@@ -3,8 +3,11 @@ DocAgent v2 — Auth Core
 JWT token creation/verification, password hashing, FastAPI dependencies.
 """
 
-import secrets
+import base64
 import hashlib
+import hmac
+import os
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -21,20 +24,70 @@ security = HTTPBearer()
 
 # ─── Password Hashing ─────────────────────────────────────────────────────────
 
+# New hashes: bcrypt over a SHA-256 pre-hash, stored as
+# "bcrypt-sha256$<bcrypt hash>". The pre-hash (base64, 44 bytes) keeps a
+# password over bcrypt's 72-byte limit from being truncated or rejected.
+# bcrypt is already installed with passlib[bcrypt]; it is called directly.
+#
+# Legacy hashes ("salt:sha256hex", one unsalted-cost round) still verify, in
+# constant time, and are replaced on the next successful login
+# (`needs_rehash`, routes/auth.py). Nothing is migrated in bulk: a hash is
+# only ever upgraded by someone who has just proved they know the password.
+_BCRYPT_PREFIX = "bcrypt-sha256$"
+
+
+def _bcrypt_rounds() -> int:
+    """Cost factor; BCRYPT_ROUNDS (4–16) exists so a test suite can run fast."""
+    try:
+        return max(4, min(16, int(os.environ.get("BCRYPT_ROUNDS", "12"))))
+    except ValueError:
+        return 12
+
+
+def _prehash(password: str) -> bytes:
+    return base64.b64encode(hashlib.sha256(password.encode("utf-8")).digest())
+
+
 def hash_password(password: str) -> str:
-    """Hash a password with a random salt using SHA-256."""
-    salt = secrets.token_hex(16)
-    h = hashlib.sha256((salt + password).encode()).hexdigest()
-    return f"{salt}:{h}"
+    """A bcrypt hash of `password` (see above)."""
+    import bcrypt
+    h = bcrypt.hashpw(_prehash(password), bcrypt.gensalt(_bcrypt_rounds()))
+    return _BCRYPT_PREFIX + h.decode("ascii")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    """Verify a password against a stored hash."""
+    """Verify a password against a stored hash of either scheme."""
     try:
+        if password_hash.startswith(_BCRYPT_PREFIX):
+            import bcrypt
+            return bcrypt.checkpw(_prehash(password),
+                                  password_hash[len(_BCRYPT_PREFIX):].encode("ascii"))
         salt, h = password_hash.split(":")
-        return hashlib.sha256((salt + password).encode()).hexdigest() == h
+        return hmac.compare_digest(
+            hashlib.sha256((salt + password).encode()).hexdigest(), h)
     except Exception:
         return False
+
+
+def needs_rehash(password_hash: str) -> bool:
+    """True for a legacy hash, or a bcrypt hash below the current cost."""
+    if not (password_hash or "").startswith(_BCRYPT_PREFIX):
+        return True
+    try:
+        return int(password_hash[len(_BCRYPT_PREFIX):].split("$")[2]) < _bcrypt_rounds()
+    except (IndexError, ValueError):
+        return True
+
+
+_DUMMY: list[str] = []
+
+
+def verify_unknown_user(password: str) -> None:
+    """Spend the time a real verify would, for a username that does not
+    exist, so the response time does not say which usernames are real."""
+    if not _DUMMY:
+        _DUMMY.append(hash_password(secrets.token_hex(16)))
+    verify_password(password, _DUMMY[0])
 
 
 # ─── JWT ──────────────────────────────────────────────────────────────────────

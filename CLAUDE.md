@@ -1185,7 +1185,7 @@ Phase-flagged (not yet active): Redis/Celery (Phase 4), S3/R2 (Phase 3).
 
 6 tables, SQLAlchemy 2.0 style with `DeclarativeBase`:
 
-- **`users`** — `id`, `username`, `password_hash` (salt:sha256), `role`, `client_id`, `is_active`, `last_login`
+- **`users`** — `id`, `username`, `password_hash` (`bcrypt-sha256$…`; legacy `salt:sha256` upgraded on login), `role`, `client_id`, `is_active`, `last_login`
 - **`extraction_jobs`** — `client_id`, `status` (pending/processing/**completed/partial/failed**/cancelled), `total_docs/successful/failed/needs_review`, `input_source` (upload/drive/folder), `schema_id`, `total_tokens`, `total_cost`, `progress_message`. A terminal status states what the batch **produced**: `completed` = every document returned a result, `partial` = some did, `failed` = none did. A job where every document failed used to report `completed`, which made a total failure indistinguishable from an empty batch
 - **`document_results`** — `extraction_json` TEXT (JSON string, not `Column(JSON)`), accessed via `get_extracted_data()` / `set_extracted_data()`; `raw_llm_response`; `overall_confidence` (high/medium/low); `needs_review`, `reviewed`; `latency_ms`, `tokens_used`
 - **`column_templates`** — `columns_json` (column list), `description` (full grid JSON), `is_default`, `is_shared`, `client_id`. **Stores no derived structure** — see the comment in the model
@@ -1205,7 +1205,7 @@ SQLite dev config: WAL journal mode, foreign keys ON. PostgreSQL prod config: po
 
 ### `backend/app/core/auth.py`
 
-- `hash_password(pwd)` → `"salt:sha256(salt+pwd)"` (colon-separated, NOT bcrypt)
+- `hash_password(pwd)` → `"bcrypt-sha256$<bcrypt(base64(sha256(pwd)))>"`, cost `BCRYPT_ROUNDS` (default 12; tests set 4). A legacy `"salt:sha256(salt+pwd)"` hash still verifies (constant-time compare) and is replaced on the next successful login (`needs_rehash`, `routes/auth.py`); an unknown username spends a dummy verify
 - `verify_password(plain, stored)` → splits on `:`, recomputes hash
 - JWT payload: `{"sub": str(user.id), "role": user.role, "client_id": user.client_id}`
 - `get_current_user` dependency decodes the JWT and loads the user; `get_optional_user` returns None instead of raising; `require_admin` checks `role != "admin"`

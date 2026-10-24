@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.auth import (
-    verify_password, create_access_token,
+    verify_password, needs_rehash, verify_unknown_user, create_access_token,
     get_current_user, hash_password,
 )
 from app.core.demo import is_demo_user
@@ -93,6 +93,8 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         User.is_active == True,
     ).first()
 
+    if not user:
+        verify_unknown_user(payload.password)
     if not user or not verify_password(payload.password, user.password_hash):
         _record_failure(ip)
         # The activity trail, for a demo tenant only. A wrong password on a
@@ -111,6 +113,16 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
 
     # Successful login — clear failure count
     _record_success(ip)
+
+    # A legacy (salted SHA-256) hash is replaced now, while the password is in
+    # hand, in the same commit as the login. A failure to rehash never fails
+    # the login: the old hash still verifies and is upgraded next time.
+    if needs_rehash(user.password_hash):
+        try:
+            user.password_hash = hash_password(payload.password)
+        except Exception as exc:
+            print(f"[AUTH] password rehash skipped for user {user.id}: "
+                  f"{type(exc).__name__}", flush=True)
 
     # Update last login timestamp
     user.last_login = datetime.utcnow()

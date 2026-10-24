@@ -19,6 +19,10 @@ item is in the linked document; each open item says what blocks it.
 | Marked exports: fill, comment, Review status column, Legend sheet; confirmation before exporting open values | contract §6, DECISION-LOG §23 |
 | Named failures for unreadable, password-protected, empty and zero-page files and for provider errors | `extractor._unreadable` |
 | Safety invariants under generated input (no OCR value is high, a failed check is low, nothing dropped silently, validators never raise) | `tests/test_safety_properties.py` |
+| Passwords hashed with bcrypt; legacy salted SHA-256 hashes upgraded on the next successful login (no migration) | `app/core/auth.py` |
+| Parallel OCR (process pool, `OCR_WORKERS`), byte-identical to serial | `core/preprocessor.py`, docs/proposals/throughput.md |
+| Every export path marks values needing review | docs/investigations/EXPORT-PATHS.md |
+| Reload and deep links keep the session | `frontend/lib/session-gate.ts` |
 | One provider seam; Gemini the only provider (Groq removed) | `connectors/llm_router.py` |
 
 ## Open
@@ -27,13 +31,11 @@ item is in the linked document; each open item says what blocks it.
 |---|---|
 | **Handwriting** | A handwritten payee, amount or signature is not read by Tesseract; such a value is `low` with `grounding_failed`, never `high`. Needs a handwriting-capable reader and real samples |
 | **Hard scans (a second OCR reader)** | On the synthetic hard tier RapidOCR reads 97 of 155 fields against Tesseract's 35, but 31 of its 97 are wrong; Tesseract is far better on clean and moderate scans. Using both needs an arbitration rule, measured on real client scans. Deferred until real samples exist |
-| **Password storage** | One round of salted SHA-256. Needs a KDF (bcrypt / scrypt / argon2) with rehash-on-login — a migration of the `users` table |
 | **Role matrix** | `admin`, `company_admin`, `client` are enforced in several places and documented in none; `company_admin` cannot be assigned through the API |
 | **Access-control cleanup** | Job routes answer 403 for another tenant's job (the review routes answer 404); token revocation on password change |
 | **Durable jobs and cancellation** | Extraction runs on a daemon thread: a restart fails the job at next boot, and cancel does not stop work in progress. Needs a queue (Celery + Redis, Phase 4) |
 | **Alembic baseline** | Startup DDL covers additive changes only; there is no baseline revision for the current schema |
 | **Staging environment** | Changes reach production from `main` directly; a staging service on Railway with its own database |
-| **Reload logs the user out** | `AppLayout` checks the session before reading it from storage, so a page refresh or a pasted link lands on the login page |
 | **Review history** | Review marks live inside each result (no migration); who changed a mark, and when, is overwritten |
 | **Throughput** | See docs/proposals/throughput.md |
 | **Cleanup follow-ups** | `extract.py` (6.9k lines) split; the legacy CLI modules the API still imports for `Orchestrator.llm`; `print` logging to `logging`; per-cell marks in the legacy writers |

@@ -16,6 +16,13 @@ names the code that implements it.
   only from `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME` / `_PASSWORD` when no
   administrator exists; known default passwords are refused
   (`main.py::_bootstrap_admin`). Remove the password variable after the first boot.
+- **Passwords**: bcrypt (cost 12, `BCRYPT_ROUNDS`) over a SHA-256 pre-hash, so
+  long passwords are not truncated (`auth.py::hash_password`). Hashes from the
+  old scheme (one round of salted SHA-256) still verify, compared in constant
+  time, and are replaced with bcrypt on the user's next successful login; no
+  bulk migration. A user who never logs in again keeps the old hash. An
+  unknown username spends one dummy bcrypt verify, so response time does not
+  reveal which usernames exist.
 - **Login rate limit**: 5 failed attempts per IP locks that IP out for 15
   minutes (`routes/auth.py`). It is in memory, so it resets on restart and does
   not span instances. `X-Forwarded-For` is trusted (Railway's proxy).
@@ -55,7 +62,6 @@ names the code that implements it.
 
 | Gap | Where | Note |
 |---|---|---|
-| Passwords are one round of salted SHA-256 | `auth.py::hash_password` | needs a KDF (bcrypt / scrypt / argon2) and a rehash-on-login migration |
 | A password change does not invalidate issued tokens | `auth.py` | needs a token version or deny list |
 | Rate limiter is per process | `routes/auth.py` | needs a shared store before running more than one instance |
 | `company_admin` exists in RBAC but `UserCreate` cannot assign it | `schemas.py` | the role matrix is not documented in one place |

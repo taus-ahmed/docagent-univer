@@ -4,7 +4,13 @@ Pytest configuration for the accuracy harness.
 The bootstrap runs at collection time (before any test module imports
 app/engine code) so every test sees production-parity extraction config.
 """
+import os
+
 import pytest
+
+# bcrypt at its minimum cost in tests: the scheme is the same, only slower
+# to compute in production (app/core/auth.py, BCRYPT_ROUNDS).
+os.environ.setdefault("BCRYPT_ROUNDS", "4")
 
 from tests.harness import bootstrap as _bs
 
