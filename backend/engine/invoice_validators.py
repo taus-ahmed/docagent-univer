@@ -83,17 +83,33 @@ def _line_column(table):
     return hits[0]["key"] if len(hits) == 1 else None
 
 
-def _roles(fields):
+def _row(f):
+    """A field's template row, or -1 when it has none."""
+    r = f.get("row")
+    return r if isinstance(r, int) else -1
+
+
+def _roles(fields, role_of=None):
+    role_of = role_of or role
     out = {}
     for f in fields:
-        r = role(f["row_label"])
+        r = role_of(f["row_label"])
         if r:
             out.setdefault(r, []).append(f)
     return out
 
 
 def invoice_totals(ctx):
-    roles = _roles(ctx.fields)
+    return sum_checks(ctx, kind="invoice", role_of=role,
+                      mismatch=TOTALS_MISMATCH, unreadable=TOTALS_UNREADABLE)
+
+
+def sum_checks(ctx, *, kind, role_of, mismatch, unreadable):
+    """The two sum checks for a family whose document lists lines, a
+    subtotal, additions, a discount and a total: invoices, and receipts
+    (receipt_validators.py) with their own roles and reason codes."""
+    role = role_of
+    roles = _roles(ctx.fields, role_of)
     if any(len(roles.get(r, [])) > 1 for r in ("subtotal", "tax", "discount", "total")):
         return []                                   # ambiguous: do not guess
     out = []
@@ -111,38 +127,38 @@ def invoice_totals(ctx):
     if sub and sub["ref"] in ctx.values and len(lined) == 1:
         t, key = lined[0]
         rows = [(i, r) for i, r in enumerate(ctx.rows.get(t["name"]) or [])
-                if str(r.get(key) or "").strip()]
+                if isinstance(r, dict) and str(r.get(key) or "").strip()]
         if rows:
             ids = [sub["ref"]] + [f'{t["name"]}_rows[{i}]' for i, _r in rows]
             amounts = [money(r[key]) for _i, r in rows]
             s = money(ctx.values[sub["ref"]])
             if s is None or None in amounts:
                 out.append(CheckResult(
-                    "invoice_lines_total", UNREADABLE, ids, TOTALS_UNREADABLE,
+                    f"{kind}_lines_total", UNREADABLE, ids, unreadable,
                     evidence={sub["ref"]: {"lines_check": "unreadable"}},
-                    notes=["invoice line-items check could not be completed — "
+                    notes=[f"{kind} line-items check could not be completed — "
                            "a line amount or the subtotal is not a plain amount"]))
             else:
                 got = sum(amounts)
                 ok = abs(got - s) <= CENT * len(amounts)
                 out.append(CheckResult(
-                    "invoice_lines_total", PASS if ok else FAIL, ids,
-                    "" if ok else TOTALS_MISMATCH,
+                    f"{kind}_lines_total", PASS if ok else FAIL, ids,
+                    "" if ok else mismatch,
                     evidence={sub["ref"]: {"lines_check": "pass" if ok else "fail"}},
                     flags=[] if ok else [(
                         sub["row_label"], ctx.values[sub["ref"]],
                         f"the {len(amounts)} line item(s) sum to {got}, not the "
                         f"subtotal {s} — a line or the subtotal is wrong")],
                     notes=[] if ok else [
-                        f"invoice line items sum to {got}; subtotal reads {s} — "
+                        f"{kind} line items sum to {got}; subtotal reads {s} — "
                         f"MISMATCH, the subtotal and every line marked low"]))
 
     # ── subtotal + charges + tax - discount -> total ──
     # An amount the roles do not know, printed between Subtotal and Total
     # (`Bottle deposit`), may be part of the sum: do not guess, do not run.
     unknown = [f for f in ctx.fields
-               if sub and total and f.get("row") is not None
-               and sub.get("row", -1) < f["row"] < total.get("row", -1)
+               if sub and total and isinstance(f.get("row"), int)
+               and _row(sub) < f["row"] < _row(total)
                and not role(f["row_label"]) and money(ctx.values.get(f["ref"])) is not None]
     if sub and total and sub["ref"] in ctx.values and total["ref"] in ctx.values             and not unknown:
         parts = [f for r in ("charge", "tax", "discount") for f in roles.get(r, [])
@@ -154,8 +170,8 @@ def invoice_totals(ctx):
             for e in evidence.values():
                 e["totals_check"] = "unreadable"
             out.append(CheckResult(
-                "invoice_grand_total", UNREADABLE, ids, TOTALS_UNREADABLE, evidence,
-                notes=["invoice total check could not be completed — "
+                f"{kind}_grand_total", UNREADABLE, ids, unreadable, evidence,
+                notes=[f"{kind} total check could not be completed — "
                        + ", ".join(f["row_label"] for f in [sub, total] + parts
                                    if vals[f["ref"]] is None)
                        + " is not a plain amount"]))
@@ -168,14 +184,14 @@ def invoice_totals(ctx):
             for e in evidence.values():
                 e["totals_check"] = "pass" if ok else "fail"
             out.append(CheckResult(
-                "invoice_grand_total", PASS if ok else FAIL, ids,
-                "" if ok else TOTALS_MISMATCH, evidence,
+                f"{kind}_grand_total", PASS if ok else FAIL, ids,
+                "" if ok else mismatch, evidence,
                 flags=[] if ok else [(
                     total["row_label"], ctx.values[total["ref"]],
                     f"subtotal, charges, tax and discount come to {want}, not "
                     f"the total {vals[total['ref']]} — one of them is wrong")],
                 notes=[] if ok else [
-                    f"invoice total: computed {want}, printed "
+                    f"{kind} total: computed {want}, printed "
                     f"{vals[total['ref']]} — MISMATCH, every value in the sum "
                     f"marked low"]))
     return out

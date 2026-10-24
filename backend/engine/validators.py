@@ -74,6 +74,8 @@ FAMILY_ALIASES = {
     "bank_statement": {"bank_statement", "bank_statements", "account_statement"},
     "payslip": {"payslip", "pay_slip", "payslips", "pay_stub", "paystub",
                 "pay_stubs", "salary_slip"},
+    "receipt": {"receipt", "receipts", "till_receipt", "expense_receipt",
+                "sales_receipt", "cash_receipt"},
 }
 
 
@@ -94,7 +96,16 @@ def run_checks(doc_type, ctx):
     fam = family_of(doc_type)
     out = []
     for v in REGISTRY.get(ANY, []) + (REGISTRY.get(fam, []) if fam != ANY else []):
-        out.extend(v(ctx) or [])
+        try:
+            out.extend(v(ctx) or [])
+        except Exception as exc:
+            # A check that cannot run is not a check that passed: say so on
+            # the record and send it for review, never take the record down.
+            name = getattr(v, "__name__", "check")
+            said = (f"the {name} check could not run ({type(exc).__name__}: "
+                    f"{exc}); this record was not checked by it")
+            out.append(CheckResult(name, UNREADABLE, [], "", needs_review=True,
+                                   flags=[(name, "", said)], notes=[said]))
     return out
 
 
