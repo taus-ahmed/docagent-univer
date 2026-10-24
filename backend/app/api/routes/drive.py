@@ -264,15 +264,29 @@ def _run_drive_extraction(job_id, folder_id, drive_files, schema_path, db_url):
 
 # ─── Watch Folders ────────────────────────────────────────────────────────────
 
+def _visible_watch_folders(db: Session, current_user: User):
+    """The watch folders a user may list or act on.
+
+    A super-admin (role=admin with no client_id) sees every tenant's; a tenant
+    admin sees its own tenant's; anyone else sees the folders they created.
+    "Any role == admin" used to see and stop every tenant's folders, which put
+    tenant B's Drive folder ids in front of tenant A's admin.
+    """
+    q = db.query(WatchFolder)
+    if current_user.role == "admin" and not current_user.client_id:
+        return q
+    if current_user.role == "admin":
+        return q.filter(WatchFolder.client_id == current_user.client_id)
+    return q.filter(WatchFolder.user_id == current_user.id)
+
+
 @router.get("/watch", response_model=list[WatchFolderResponse])
 def list_watch_folders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List watch folders for current user."""
-    q = db.query(WatchFolder).filter(WatchFolder.is_active == True)
-    if current_user.role != "admin":
-        q = q.filter(WatchFolder.user_id == current_user.id)
+    """List the watch folders this user may see (`_visible_watch_folders`)."""
+    q = _visible_watch_folders(db, current_user).filter(WatchFolder.is_active == True)
     return q.order_by(WatchFolder.created_at.desc()).all()
 
 
@@ -325,11 +339,11 @@ def remove_watch_folder(
     current_user: User = Depends(get_current_user),
 ):
     """Stop watching a folder."""
-    wf = db.query(WatchFolder).filter(WatchFolder.id == watch_id).first()
+    wf = _visible_watch_folders(db, current_user).filter(WatchFolder.id == watch_id).first()
     if not wf:
+        # Another tenant's folder answers exactly like a missing one, so the id
+        # does not leak.
         raise HTTPException(status_code=404, detail="Watch folder not found")
-    if wf.user_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Access denied")
 
     wf.is_active = False
     db.commit()
