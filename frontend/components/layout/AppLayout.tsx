@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { gateDecision, loginUrl } from "@/lib/session-gate";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -34,17 +35,23 @@ function Icon({ type }: { type: string }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, initializeFromStorage } = useAuthStore();
+  const { user, isAuthenticated, initialized, logout, initializeFromStorage } = useAuthStore();
 
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
   const dragStartX    = useRef<number | null>(null);
   const dragStartW    = useRef(SIDEBAR_DEFAULT);
   const isDragging    = useRef(false);
 
+  // AUTH-ADJACENT (lib/session-gate.ts): read the stored session FIRST, and
+  // decide only once it has been read. Deciding on the store's initial state
+  // sent every reload and pasted link to /login.
   useEffect(() => {
-    if (!isAuthenticated) { router.replace("/login"); return; }
-    initializeFromStorage();
-  }, [isAuthenticated]);
+    if (!initialized) initializeFromStorage();
+  }, [initialized]);
+  const gate = gateDecision(initialized, isAuthenticated);
+  useEffect(() => {
+    if (gate === "redirect") router.replace(loginUrl(pathname, window.location.search));
+  }, [gate, pathname]);
 
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
@@ -67,7 +74,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  if (!isAuthenticated) return null;
+  if (gate !== "allow") return null;
 
   const initials = user?.display_name?.split(" ").map((w:string)=>w[0]).slice(0,2).join("").toUpperCase() ?? "U";
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { gateDecision, loginUrl } from "@/lib/session-gate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { templatesApi, type TemplateColumn, type ColumnTemplate,
          type ShapePreview } from "@/lib/api";
@@ -24,7 +25,7 @@ interface Props { templateId?: number }
 export default function TemplateEditor({ templateId }: Props) {
   const router = useRouter();
   const qc = useQueryClient();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, initialized, logout, initializeFromStorage } = useAuthStore();
   const [name, setName] = useState("");
   const [docType, setDocType] = useState("invoice");
   const [customDocType, setCustomDocType] = useState("");
@@ -54,13 +55,23 @@ export default function TemplateEditor({ templateId }: Props) {
   useEffect(() => { setMounted(true); }, []);
 
   // Load the spreadsheet component dynamically (only on client)
+  // AUTH-ADJACENT (lib/session-gate.ts): decide only once the stored
+  // session has been read, so a reload stays on the editor.
+  useEffect(() => {
+    if (!initialized) initializeFromStorage();
+  }, [initialized]);
+  const gate = gateDecision(initialized, isAuthenticated);
   useEffect(() => {
     if (!mounted) return;
-    if (!isAuthenticated) { router.replace("/login"); return; }
+    if (gate === "wait") return;
+    if (gate === "redirect") {
+      router.replace(loginUrl(window.location.pathname, window.location.search));
+      return;
+    }
     import("@/components/templates/DocAgentSpreadsheet")
       .then(m => setSheetComp(() => m.default))
       .catch(console.error);
-  }, [mounted, isAuthenticated]);
+  }, [mounted, gate]);
 
   // Fetch all templates to generate auto-name for new templates
   const { data: allTemplates } = useQuery({

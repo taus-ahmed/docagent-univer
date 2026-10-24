@@ -1,3 +1,4 @@
+import { tokenValid } from "./session-gate";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import type { JobReview, ReasonMap, ReviewSummary, ReviewValue } from "./review";
 
@@ -23,11 +24,7 @@ function removeToken(): void {
 }
 function isTokenValid(): boolean {
   if (typeof window === "undefined") return false;
-  const token = getToken();
-  if (!token) return false;
-  const exp = localStorage.getItem(TOKEN_KEY + "_exp");
-  if (!exp) return true;
-  return Date.now() < parseInt(exp);
+  return tokenValid(getToken(), localStorage.getItem(TOKEN_KEY + "_exp"), Date.now());
 }
 
 // --- Types ---

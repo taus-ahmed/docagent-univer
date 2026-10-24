@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
+import { safeNext } from "@/lib/session-gate";
 import toast from "react-hot-toast";
 import BirdAnimation from "@/components/BirdAnimation";
 
@@ -14,6 +15,11 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [showBird, setShowBird] = useState(false);
 
+  // The page a reload or deep link was sent here from (?next=), same-site only.
+  function nextPage(): string {
+    return safeNext(new URLSearchParams(window.location.search).get("next"));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -22,7 +28,7 @@ export default function LoginPage() {
       if (loggedInUser?.role === "admin") {
         setShowBird(true);
       } else {
-        router.replace("/extract");
+        router.replace(nextPage());
       }
     } catch {
       toast.error("Invalid username or password");
@@ -117,7 +123,7 @@ export default function LoginPage() {
         </form>
         <p className="login-hint">DocAgent v2.0</p>
       </div>
-      {showBird && <BirdAnimation onDone={() => router.replace("/extract")} />}
+      {showBird && <BirdAnimation onDone={() => router.replace(nextPage())} />}
     </div>
   );
 }
