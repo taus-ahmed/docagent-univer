@@ -48,3 +48,82 @@ def replay_cache():
     cache.install()
     yield cache
     cache.uninstall()
+
+
+# ── replay portability (docs/proposals/replay-portability.md) ────────────────
+#
+# Every recorded model answer is keyed by the page images the request carried,
+# and those depend on the exact pdftoppm and Pillow that rendered them. On a
+# machine that renders differently the replay preflight raises
+# ReplayEnvironmentError rather than let every lookup miss.
+#
+# DOCAGENT_REPLAY_ENV decides what that means for a test run:
+#   require (default) — the error stands: the test errors. Locally, a wrong
+#                       Poppler is a setup mistake to fix, not to skip.
+#   skip              — the test is SKIPPED, with the reason naming the
+#                       mismatch, and the run ends with a count of them. CI
+#                       sets this: an environment difference is never a
+#                       failure there, and never a silent pass.
+# Tests that use the replay cache carry the `replay` marker (applied below),
+# so `-m replay` / `-m "not replay"` selects them explicitly.
+
+_REPLAY_MODULES = {"test_batch_end_to_end.py", "test_batch_isolation.py",
+                   "test_transposed_case.py"}
+_REPLAY_SKIPS: list = []
+
+
+def _replay_policy() -> str:
+    return (os.environ.get("DOCAGENT_REPLAY_ENV") or "require").strip().lower()
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "replay: replays recorded model answers; needs the pdftoppm "
+                   "and Pillow that recorded tests/llm_cache "
+                   "(DOCAGENT_REPLAY_ENV=skip skips them, named, on a mismatch)")
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if ("replay_cache" in getattr(item, "fixturenames", ())
+                or item.path.name in _REPLAY_MODULES):
+            item.add_marker(pytest.mark.replay)
+
+
+def _as_replay_skip(item, exc):
+    from tests.harness.llm_cache import ReplayEnvironmentError
+    if isinstance(exc, ReplayEnvironmentError) and _replay_policy() == "skip":
+        marked = item.get_closest_marker("replay") is not None
+        _REPLAY_SKIPS.append((item.nodeid, marked))
+        pytest.skip("REPLAY ENVIRONMENT MISMATCH (not a test failure): "
+                    + str(exc).split(". ")[0])
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_setup(item):
+    try:
+        return (yield)
+    except Exception as exc:
+        _as_replay_skip(item, exc)
+        raise
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_call(item):
+    try:
+        return (yield)
+    except Exception as exc:
+        _as_replay_skip(item, exc)
+        raise
+
+
+def pytest_terminal_summary(terminalreporter):
+    if not _REPLAY_SKIPS:
+        return
+    unmarked = [n for n, m in _REPLAY_SKIPS if not m]
+    terminalreporter.write_sep(
+        "=", f"{len(_REPLAY_SKIPS)} replay-dependent test(s) SKIPPED: this "
+             f"machine renders page images differently from the one that "
+             f"recorded tests/llm_cache", yellow=True)
+    for n in unmarked:
+        terminalreporter.write_line(f"  not marked `replay` (add it): {n}")

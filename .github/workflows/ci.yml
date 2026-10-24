@@ -1,0 +1,101 @@
+# CI. Not active until this branch is pushed; nothing here deploys.
+#
+# Replay portability: the recorded model answers in tests/llm_cache are keyed
+# by page images, which depend on the exact pdftoppm and Pillow that rendered
+# them (docs/proposals/replay-portability.md). Ubuntu's Poppler is not the one
+# that recorded the cache, so:
+#   * the suite runs with DOCAGENT_REPLAY_ENV=skip — replay-dependent tests
+#     (marker `replay`) are SKIPPED with a named reason and counted at the end
+#     of the run; they never pass silently and never fail for that reason;
+#   * the accuracy harness runs only when the replay preflight passes, and the
+#     job summary says which happened.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PYTHONIOENCODING: utf-8
+      DOCAGENT_REQUIRE_PG: "1"          # the PostgreSQL drift tests may not skip
+      DOCAGENT_REPLAY_ENV: skip         # see the header
+      OCR_WORKERS: "2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+            backend/constraints.txt
+
+      - name: System packages (Tesseract eng+osd, Poppler, PostgreSQL binaries)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr tesseract-ocr-eng tesseract-ocr-osd poppler-utils postgresql
+          # initdb / pg_ctl live outside PATH on Debian/Ubuntu
+          ls -d /usr/lib/postgresql/*/bin | tail -1 >> "$GITHUB_PATH"
+          tesseract --version | head -1
+          pdftoppm -v 2>&1 | head -1
+
+      - name: Python dependencies (pinned by constraints.txt)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt -r backend/requirements-dev.txt \
+                      -c backend/constraints.txt
+
+      - name: Replay preflight
+        id: replay
+        run: |
+          if python -c "from tests.harness.llm_cache import CACHE_DIR, check_replay_environment as c; c(CACHE_DIR)"; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "Replay preflight PASSED: this runner renders like the recording machine." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "Replay preflight FAILED: replay-dependent tests are skipped (named) and the accuracy harness is not run. See docs/proposals/replay-portability.md." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Backend tests
+        run: python -m pytest -q -p no:cacheprovider
+
+      - name: Accuracy harness (replay)
+        if: steps.replay.outputs.ok == 'true'
+        run: |
+          python -m tests.harness.runner --mode replay
+          python -m tests.harness.runner --mode replay --no-template
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # production builds on node:20 (Dockerfile.frontend); the unit tests
+          # use node --test with type stripping, which needs Node >= 22.18
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.18"
+      - run: npm test
