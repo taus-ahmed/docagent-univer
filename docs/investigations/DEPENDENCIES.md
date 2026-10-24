@@ -9,6 +9,7 @@
 | `google-generativeai` | **removed**, with `google-ai-generativelanguage`, `grpcio`, `grpcio-status`, `tqdm` | no import; the client is pure `urllib` (`gemini_client.py:10`). A fresh install without it no longer pulls those four; `google-api-core`, `protobuf`, `proto-plus` stay (needed by `google-api-python-client`) |
 | `aiofiles` | **removed** | no import |
 | `rich==15.0.0` | **now named** | `engine/orchestrator.py` imports it at module level and the API imports `Orchestrator`; same version as the old constraint |
+| `Pillow` | **10.4.0 → 13.0.0** (48 advisories) | page images and OCR text byte-identical on the corpus, 0 cache misses, suite and harness unchanged (`proposals/replay-portability.md`); `Image.getdata` deprecated, `engine/ocr_source.py:179` |
 
 `constraints.txt`: the seven packages a fresh install no longer pulls were
 removed; nothing else moved. Verified with a fresh virtualenv on this machine
