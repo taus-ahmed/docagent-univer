@@ -27,7 +27,7 @@ security = HTTPBearer()
 # New hashes: bcrypt over a SHA-256 pre-hash, stored as
 # "bcrypt-sha256$<bcrypt hash>". The pre-hash (base64, 44 bytes) keeps a
 # password over bcrypt's 72-byte limit from being truncated or rejected.
-# bcrypt is already installed with passlib[bcrypt]; it is called directly.
+# bcrypt is pinned directly in requirements.txt (passlib is not used).
 #
 # Legacy hashes ("salt:sha256hex", one unsalted-cost round) still verify, in
 # constant time, and are replaced on the next successful login

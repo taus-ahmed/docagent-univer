@@ -5,7 +5,13 @@
 # dependencies. Platform-conditional packages are pinned explicitly. Verified
 # for Linux x86-64 / CPython 3.11 by a real production-image build, not only by
 # the Windows resolution.
-aiofiles==23.2.1
+#
+# 2026-10-23: aiofiles, google-generativeai, google-ai-generativelanguage,
+# grpcio, grpcio-status, passlib and tqdm removed (unused; nothing else needs
+# them), bcrypt and rich now named in requirements.txt at the versions already
+# pinned here. Checked by a fresh Windows virtualenv (install, pip check, import
+# smoke test, full suite); the Linux production image has NOT been rebuilt
+# since and needs its own build check.
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
@@ -26,17 +32,13 @@ email-validator==2.3.0
 et_xmlfile==2.0.0
 fastapi==0.111.0
 fastapi-cli==0.0.32
-google-ai-generativelanguage==0.6.6
 google-api-core==2.30.3
 google-api-python-client==2.136.0
 google-auth==2.32.0
 google-auth-httplib2==0.4.4
 google-auth-oauthlib==1.2.1
-google-generativeai==0.7.2
 googleapis-common-protos==1.75.0
 greenlet==3.5.6
-grpcio==1.84.0
-grpcio-status==1.62.3
 h11==0.16.0
 httpcore==1.0.9
 httplib2==0.32.0
@@ -53,7 +55,6 @@ oauthlib==4.0.0
 openpyxl==3.1.5
 orjson==3.13.0
 packaging==26.3
-passlib==1.7.4
 pdf2image==1.17.0
 pdfminer.six==20251230
 pdfplumber==0.11.9
@@ -92,7 +93,6 @@ six==1.17.0
 sniffio==1.3.1
 SQLAlchemy==2.0.31
 starlette==0.37.2
-tqdm==4.70.1
 typer==0.27.3
 typing_extensions==4.16.0
 ujson==6.0.0

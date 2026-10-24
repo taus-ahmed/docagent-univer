@@ -1,8 +1,32 @@
-# Dependency hygiene (2026-10-23) — report only
+# Dependency hygiene (2026-10-23)
 
-Nothing was changed. Every item that touches `backend/requirements.txt`
-changes what production installs, so each is a proposal for a reviewed commit
-with a production image build (`Dockerfile.backend`) and the full gate.
+## Round 12: what changed
+
+| Package | Change | Evidence |
+|---|---|---|
+| `bcrypt==5.0.0` | **now named** in `requirements.txt` (it arrived through `passlib[bcrypt]`) | `app/core/auth.py` imports `bcrypt` directly; same version as the old constraint |
+| `passlib[bcrypt]` | **removed** | no import in `backend/`, `tests/` or any script; only a comment named it |
+| `google-generativeai` | **removed**, with `google-ai-generativelanguage`, `grpcio`, `grpcio-status`, `tqdm` | no import; the client is pure `urllib` (`gemini_client.py:10`). A fresh install without it no longer pulls those four; `google-api-core`, `protobuf`, `proto-plus` stay (needed by `google-api-python-client`) |
+| `aiofiles` | **removed** | no import |
+| `rich==15.0.0` | **now named** | `engine/orchestrator.py` imports it at module level and the API imports `Orchestrator`; same version as the old constraint |
+
+`constraints.txt`: the seven packages a fresh install no longer pulls were
+removed; nothing else moved. Verified with a fresh virtualenv on this machine
+(Windows, CPython 3.11.16): `pip install -r requirements.txt -r
+requirements-dev.txt -c constraints.txt`, `pip check` clean, every module
+under `backend/app` and `backend/engine` imports (65/65, same as the S1
+venv), and the full suite plus both harness modes from that venv (Round 12
+log in PROGRESS). **The Linux production image (`Dockerfile.backend`) was not
+built here (no Docker); it needs its own build and smoke check before deploy.**
+
+`httpx` stays in `requirements.txt` (test-only, moving it is a separate,
+behaviour-free change).
+
+## Round 11 report (unchanged below)
+
+Every item that touches `backend/requirements.txt` changes what production
+installs, so each is a proposal for a reviewed commit with a production image
+build (`Dockerfile.backend`) and the full gate.
 
 ## Unused or indirect dependencies (backend)
 
