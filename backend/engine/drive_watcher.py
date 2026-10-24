@@ -65,6 +65,7 @@ def check_watched_folders(db: Database, verbose: bool = True):
 
         temp_dir = Path(tempfile.mkdtemp(prefix="docagent_watch_"))
         downloaded = []
+        storage = schema_path = None      # an object-store copy is released below
 
         try:
             for f in new_files:
@@ -124,6 +125,8 @@ def check_watched_folders(db: Database, verbose: bool = True):
                 traceback.print_exc()
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+            if storage is not None and schema_path is not None:
+                storage.release(schema_path)
 
     return total_new
 

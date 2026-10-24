@@ -151,6 +151,7 @@ class TestAFileSurvivesARestart:
         path = worker.get_local_path(key)
         assert path is not None and path.exists()
         assert path.read_bytes() == b"%PDF-1.7"
+        worker.release(path)           # the caller owns the copy
 
 
 class TestPathTraversalStaysDefeated:

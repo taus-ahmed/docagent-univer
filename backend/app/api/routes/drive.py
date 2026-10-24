@@ -193,11 +193,15 @@ def extract_from_drive(
     if not schema_path:
         raise HTTPException(status_code=404, detail=f"Schema not found for client '{client_id}'")
 
-    files = drive.list_files(folder_id)
-    supported = [f for f in files if f.is_supported]
-
-    if not supported:
-        raise HTTPException(status_code=400, detail="No supported files in folder")
+    try:
+        files = drive.list_files(folder_id)
+        supported = [f for f in files if f.is_supported]
+        if not supported:
+            raise HTTPException(status_code=400, detail="No supported files in folder")
+    except BaseException:
+        # Until the background task owns it, the schema copy is this request's.
+        storage.release(schema_path)
+        raise
 
     job = ExtractionJob(
         user_id=current_user.id,
@@ -260,6 +264,7 @@ def _run_drive_extraction(job_id, folder_id, drive_files, schema_path, db_url):
     finally:
         session.close()
         shutil.rmtree(temp_dir, ignore_errors=True)
+        get_storage().release(schema_path)
 
 
 # ─── Watch Folders ────────────────────────────────────────────────────────────
@@ -303,10 +308,11 @@ def add_watch_folder(
     from app.api.routes.extract import resolve_client_id
     client_id = resolve_client_id(current_user, payload.client_id)
 
-    # Verify schema exists
-    schema_path = storage.get_schema_path(client_id)
-    if not schema_path:
-        raise HTTPException(status_code=404, detail=f"Schema not found for client '{client_id}'")
+    # Verify schema exists. Only the existence is needed, so an object-store
+    # temp copy is handed straight back.
+    with storage.local_copy(storage.schema_key(client_id)) as schema_path:
+        if not schema_path:
+            raise HTTPException(status_code=404, detail=f"Schema not found for client '{client_id}'")
 
     # Check not already watching
     existing = db.query(WatchFolder).filter(

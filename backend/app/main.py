@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
     # Ensure storage directories exist
     settings.ensure_storage_dirs()
     logger.info("Storage directories ready")
+    _sweep_temp_copies()
 
     # Provision the first administrator only when explicitly configured.
     _bootstrap_admin()
@@ -186,6 +187,20 @@ def _run_migrations():
 
     finally:
         db.close()
+
+
+def _sweep_temp_copies():
+    """Delete object-store temp copies a dead worker left behind: client
+    documents on this container's disk. Only files older than a day, only in
+    the app's own temp directory (`storage.sweep_temp_copies`). A sweep that
+    fails is logged and never stops boot."""
+    try:
+        from app.core.storage import get_storage
+        removed = get_storage().sweep_temp_copies()
+        if removed:
+            logger.info("Removed %d stale temp cop%s", removed, "y" if removed == 1 else "ies")
+    except Exception as e:
+        logger.warning("Temp copy sweep skipped (%s)", type(e).__name__)
 
 
 def _release_stranded_jobs():

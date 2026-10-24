@@ -30,13 +30,18 @@ that has been deleted (Phase 11 retention) or lost to an ephemeral disk is an
 ordinary state, and callers are expected to handle it.
 """
 
+import logging
 import re
 import shutil
 import tempfile
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import BinaryIO, Optional
 
 from app.config import settings
+
+log = logging.getLogger("docagent.storage")
 
 ALLOWED_EXTENSIONS = {
     "pdf",
@@ -81,6 +86,14 @@ def _safe_key(key: str) -> str:
     return "/".join(segments)
 
 
+#: Where object-store temp copies live. The app's OWN directory: the startup
+#: sweep deletes stale files here and nowhere else.
+TEMP_COPY_DIR = Path(tempfile.gettempdir()) / "docagent-storage-copies"
+_TEMP_COPY_PREFIX = "copy-"
+#: A temp copy older than this is a leak (a crashed worker), not a file in use.
+STALE_COPY_AGE_SEC = 24 * 3600
+
+
 class StorageService:
     """Unified file storage — local filesystem or S3-compatible object store."""
 
@@ -88,6 +101,7 @@ class StorageService:
         settings.ensure_storage_dirs()
         self._backend = settings.STORAGE_BACKEND
         self._client = None
+        self.temp_dir = TEMP_COPY_DIR
 
     @property
     def backend(self) -> str:
@@ -202,10 +216,12 @@ class StorageService:
     def get_local_path(self, key: str) -> Optional[Path]:
         """A real filesystem path for `key`, or None if the file is gone.
 
-        With the object store the file is fetched to a temp file, because
-        pdfplumber and pdf2image want a path. The caller owns the temp file;
-        it is small and short-lived, and losing one leaks a temp file rather
-        than corrupting anything.
+        With the object store the file is fetched to a temp copy in
+        `temp_dir`, because pdfplumber and pdf2image want a path. The caller
+        OWNS that copy and must hand it back with `release()` (or use
+        `local_copy()`): it is a client's document on the server's disk, and
+        nothing else ever deleted it. On the local backend the path is the
+        stored file itself, and `release()` leaves it alone.
         """
         try:
             key = _safe_key(key)
@@ -215,13 +231,75 @@ class StorageService:
             data = self.get_bytes(key)
             if data is None:
                 return None
-            tmp = tempfile.NamedTemporaryFile(delete=False,
+            self.temp_dir.mkdir(parents=True, exist_ok=True)
+            tmp = tempfile.NamedTemporaryFile(delete=False, dir=self.temp_dir,
+                                              prefix=_TEMP_COPY_PREFIX,
                                               suffix=Path(key).suffix)
-            tmp.write(data)
-            tmp.close()
+            try:
+                tmp.write(data)
+            finally:
+                tmp.close()
             return Path(tmp.name)
         path = self._local_path(key)
         return path if path.exists() else None
+
+    def is_temp_copy(self, path) -> bool:
+        """True only for a file `get_local_path` made in `temp_dir`."""
+        if not path:
+            return False
+        try:
+            p = Path(path)
+            return (p.name.startswith(_TEMP_COPY_PREFIX)
+                    and p.resolve().parent == Path(self.temp_dir).resolve())
+        except (OSError, ValueError):
+            return False
+
+    def release(self, path) -> None:
+        """Delete a temp copy `get_local_path` handed out. Anything else — the
+        local store's own file, an uploaded path from an old job, None — is
+        left exactly where it is. Never raises."""
+        if not self.is_temp_copy(path):
+            return
+        try:
+            Path(path).unlink(missing_ok=True)
+        except OSError as e:
+            log.warning("temp copy could not be removed (%s)", type(e).__name__)
+
+    @contextmanager
+    def local_copy(self, key: str):
+        """`get_local_path` with the cleanup guaranteed: the copy is released
+        on success, on an exception and on a cancelled job alike."""
+        path = self.get_local_path(key)
+        try:
+            yield path
+        finally:
+            self.release(path)
+
+    def sweep_temp_copies(self, max_age_sec: float = STALE_COPY_AGE_SEC,
+                          now: Optional[float] = None) -> int:
+        """Delete temp copies older than `max_age_sec`; returns how many.
+
+        Restricted to `temp_dir`, to regular files carrying the copy prefix:
+        no recursion, no symlinks followed, nothing outside the directory.
+        Run at boot, when a copy that old can only have been leaked by a
+        worker that died with the process."""
+        d = Path(self.temp_dir)
+        if not d.is_dir():
+            return 0
+        now = time.time() if now is None else now
+        removed = 0
+        for entry in d.iterdir():
+            try:
+                if (not entry.name.startswith(_TEMP_COPY_PREFIX)
+                        or entry.is_symlink() or not entry.is_file()):
+                    continue
+                if now - entry.stat().st_mtime < max_age_sec:
+                    continue
+                entry.unlink()
+                removed += 1
+            except OSError:
+                continue
+        return removed
 
     def get_output_bytes(self, key: str) -> Optional[bytes]:
         return self.get_bytes(key)

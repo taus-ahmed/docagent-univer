@@ -490,56 +490,63 @@ async def _start_extraction_job(
             status_code=404,
             detail="No extraction schema is configured for this client.")
 
-    tpl = load_template_for_user(db, template_id, current_user)
-    template_data = _parse_template(tpl) if tpl else None
+    # The thread owns the schema copy once it has started; until then a
+    # refused or failed request must hand it back itself (an object-store temp
+    # copy of the client's schema).
+    try:
+        tpl = load_template_for_user(db, template_id, current_user)
+        template_data = _parse_template(tpl) if tpl else None
 
-    # Parse options
-    selected_options: list = []
-    if options:
-        try:
-            selected_options = json.loads(options)
-        except Exception:
-            selected_options = [o.strip() for o in options.split(",") if o.strip()]
+        # Parse options
+        selected_options: list = []
+        if options:
+            try:
+                selected_options = json.loads(options)
+            except Exception:
+                selected_options = [o.strip() for o in options.split(",") if o.strip()]
 
-    # Categorisation, charts, summary and anomalies are not part of the demo.
-    # Forced off here rather than at the two doors, so the sample-document
-    # route cannot be the one that forgets. A no-op for everyone else.
-    selected_options = filter_options(current_user, selected_options)
+        # Categorisation, charts, summary and anomalies are not part of the demo.
+        # Forced off here rather than at the two doors, so the sample-document
+        # route cannot be the one that forgets. A no-op for everyone else.
+        selected_options = filter_options(current_user, selected_options)
 
-    job = ExtractionJob(
-        user_id=current_user.id,
-        client_id=client_id,
-        status="pending",
-        total_docs=len(sources),
-        input_source="upload",
-        started_at=datetime.utcnow(),
-        schema_id=str(template_id) if template_id else None,
-    )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-    job_id = job.id
+        job = ExtractionJob(
+            user_id=current_user.id,
+            client_id=client_id,
+            status="pending",
+            total_docs=len(sources),
+            input_source="upload",
+            started_at=datetime.utcnow(),
+            schema_id=str(template_id) if template_id else None,
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        job_id = job.id
 
-    # The worker is handed KEYS, not paths. A local absolute path is
-    # meaningless to a separate worker process or an object store, and passing
-    # one is what tied extraction to this container's own disk.
-    saved_keys = []
-    for src in sources:
-        content = await src.read()
-        key, _ = storage.save_upload(content, src.filename, job_id,
-                                     client_id=client_id)
-        saved_keys.append(key)
+        # The worker is handed KEYS, not paths. A local absolute path is
+        # meaningless to a separate worker process or an object store, and passing
+        # one is what tied extraction to this container's own disk.
+        saved_keys = []
+        for src in sources:
+            content = await src.read()
+            key, _ = storage.save_upload(content, src.filename, job_id,
+                                         client_id=client_id)
+            saved_keys.append(key)
 
-    thread = threading.Thread(
-        target=_run_extraction_sync,
-        args=(job_id, saved_keys, str(schema_path), settings.DATABASE_URL,
-              template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
-        kwargs={"options": selected_options,
-                "selected_pages": selected_pages_list,
-                "original_filenames": [src.original_filename for src in sources]},
-        daemon=True,
-    )
-    thread.start()
+        thread = threading.Thread(
+            target=_run_extraction_sync,
+            args=(job_id, saved_keys, str(schema_path), settings.DATABASE_URL,
+                  template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
+            kwargs={"options": selected_options,
+                    "selected_pages": selected_pages_list,
+                    "original_filenames": [src.original_filename for src in sources]},
+            daemon=True,
+        )
+        thread.start()
+    except BaseException:
+        _release_copy(storage, schema_path)
+        raise
 
     # The trail. Filenames, byte sizes and the template's NAME — never a
     # document's contents. Last, so it cannot affect the job it describes.
@@ -3991,9 +3998,37 @@ def _persist_failure(session_factory, job_id, ref, error) -> None:
         s.close()
 
 
+def _release_copy(storage, path):
+    """Hand a temp copy back to storage (`StorageService.release`). A no-op for
+    the local store's own files and for a storage without temp copies; never
+    raises, because cleanup must not be the reason a job is lost."""
+    release = getattr(storage, "release", None)
+    if release is None or not path:
+        return
+    try:
+        release(path)
+    except Exception as e:
+        print(f"[THREAD] temp copy release failed: {type(e).__name__}", flush=True)
+
+
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
                           selected_pages=None, original_filenames=None):
+    """The job thread. The schema copy the route fetched is released here,
+    whatever happens inside — success, a failed document, a cancelled job, or
+    a failure before the first document."""
+    try:
+        _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
+                            project_dir, backend_dir, engine_dir, options=options,
+                            selected_pages=selected_pages,
+                            original_filenames=original_filenames)
+    finally:
+        _release_copy(get_storage(), schema_path)
+
+
+def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
+                        project_dir, backend_dir, engine_dir, options=None,
+                        selected_pages=None, original_filenames=None):
     import os
     os.environ["PYTHONUTF8"] = "1"
     for p in [engine_dir, backend_dir, project_dir]:
@@ -4067,6 +4102,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
             except Exception:
                 pass
 
+            file_path = None
             try:
                 # `fp` is a storage KEY. Resolving it is what makes the worker
                 # independent of which machine received the upload: local
@@ -4265,6 +4301,9 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                 traceback.print_exc()
                 failed += 1
                 _persist_failure(Session, job_id, display_filename, doc_err)
+            finally:
+                # An object-store temp copy of this client's document.
+                _release_copy(storage, file_path)
 
             # Rate limit protection: delay between documents
             # Prevents provider 429 errors on batch uploads
