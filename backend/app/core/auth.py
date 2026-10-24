@@ -141,6 +141,13 @@ def get_current_user(
     return user
 
 
+def same_tenant(a, b) -> bool:
+    """True when both name the SAME tenant. `None` is "no tenant", never a
+    tenant shared by everyone who has none — a super-admin's templates carry
+    `client_id = None`, so `a == b` handed them to every tenant-less account."""
+    return bool(a) and a == b
+
+
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """Dependency: require admin role."""
     if current_user.role != "admin":

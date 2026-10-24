@@ -72,7 +72,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, same_tenant
 from app.core.demo import (check_upload_file, check_upload_quota,
                            check_uploads_enabled, filter_demo_history,
                            filter_options, is_demo_user, job_hidden_by_cutoff)
@@ -345,7 +345,7 @@ def load_template_for_user(db: Session, template_id: Optional[int], current_user
     if tpl.is_default and not is_demo_user(current_user):
         return tpl                                   # not offered to a demo
 
-    if tpl.is_shared and tpl.client_id == current_user.client_id:
+    if tpl.is_shared and same_tenant(tpl.client_id, current_user.client_id):
         return tpl                                   # shared inside own client
     raise HTTPException(status_code=403, detail="Not your template")
 

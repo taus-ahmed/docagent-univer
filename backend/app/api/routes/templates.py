@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, same_tenant
 from app.core.demo import is_demo_user
 from app.models import get_db, User, ColumnTemplate
 from app.schemas.schemas import TemplateCreate, TemplateUpdate, TemplateResponse, TemplateColumn
@@ -43,10 +43,12 @@ def list_templates(
         # so every template anyone ever marked default would otherwise turn up
         # in the demo's picker — our own test fixtures in an investor's screen
         # share. A default the demo client OWNS still shows, through (1).
-        visible = (ColumnTemplate.user_id == current_user.id) | (
-            (ColumnTemplate.is_shared == True)
-            & (ColumnTemplate.client_id == current_user.client_id)
-        )
+        visible = ColumnTemplate.user_id == current_user.id
+        if current_user.client_id:
+            # No tenant shares nothing: a None client_id would otherwise match
+            # every super-admin template, which also has none.
+            visible = visible | ((ColumnTemplate.is_shared == True)
+                                 & (ColumnTemplate.client_id == current_user.client_id))
         if not is_demo_user(current_user):
             visible = visible | (ColumnTemplate.is_default == True)
         query = db.query(ColumnTemplate).filter(visible)
@@ -77,7 +79,7 @@ def get_template(
         return _to_response(tpl)
 
     # Shared templates only visible within same company
-    if tpl.is_shared and tpl.client_id == current_user.client_id:
+    if tpl.is_shared and same_tenant(tpl.client_id, current_user.client_id):
         return _to_response(tpl)
 
     # Default templates visible to all — but not to a demo account, whose
@@ -274,7 +276,8 @@ def _get_template_or_403(template_id: int, current_user: User, db: Session) -> C
     if tpl.user_id == current_user.id:
         return tpl
     # Company admin can edit templates within their company
-    if current_user.role in ("admin", "company_admin") and tpl.client_id == current_user.client_id:
+    if (current_user.role in ("admin", "company_admin")
+            and same_tenant(tpl.client_id, current_user.client_id)):
         return tpl
     raise HTTPException(status_code=403, detail="Not your template")
 
