@@ -4623,9 +4623,15 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
                           provenance=provenance, marks=marks)
         _fit_columns(ws, col_widths)
         return
+    # Every other writer marks through one SheetMarks (app/core/export_marks):
+    # the same fills, comments and Review status column as the slot writer.
+    from app.core.export_marks import SheetMarks
+    sm = SheetMarks(ws, enabled=marks)
     if template_type == "structural":
         print("[EXPORT] routing: template_type=structural -> layout-mode writer", flush=True)
-        _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+        _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
+                            marks=sm)
+        sm.finish()
         _fit_columns(ws, col_widths)
         return
     if template_type in ("labeled", "mixed"):
@@ -4636,21 +4642,25 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
         # legacy (no template_type) — preserve prior layout-detection behaviour
         if any(_has_layout(d) for d in doc_results):
             print("[EXPORT] routing: layout-mode writer (legacy layout_sections)", flush=True)
-            _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod)
+            _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
+                                marks=sm)
+            sm.finish()
             _fit_columns(ws, col_widths)
             return
         print(f"[EXPORT] routing: legacy primary_mode={primary_mode}", flush=True)
 
     if primary_mode == "table":
-        _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod)
-        _fit_columns(ws, col_widths)
+        _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod,
+                           marks=sm)
     elif primary_mode == "mixed":
-        _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, template_regions, openpyxl_mod)
-        _fit_columns(ws, col_widths)
+        _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, template_regions, openpyxl_mod,
+                           marks=sm)
     else:
         # form_with_targets, form_kv, two_column — all use form writer
-        _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod)
-        _fit_columns(ws, col_widths)
+        _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod,
+                          marks=sm)
+    sm.finish()
+    _fit_columns(ws, col_widths)
 
 
 def _calculate_layout(sections):
@@ -5399,6 +5409,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
     return unresolved_total
 
 
+def _review_status_unknown(value):
+    """The status of a value the export computed itself (a template formula
+    evaluated by the legacy form writer): no level, so it owes a look."""
+    from app.core import review as _review
+    return _review.value_status(value, None)
+
+
 def _add_review_legend(wb, doc_results, demo=False):
     """A "Legend" sheet: how many values need review, what each mark means,
     and one line per document. Added to every export, whichever writer drew
@@ -5411,7 +5428,7 @@ def _add_review_legend(wb, doc_results, demo=False):
                           "unverified": 0, "empty_flagged": 0}
     for d in doc_results:
         ed = d.get_extracted_data()
-        s = _review.summarise(_review.document_values(ed if isinstance(ed, dict) else {}))
+        s = _review.summarise(_review.export_values(ed if isinstance(ed, dict) else {}))
         failed = not isinstance(ed, dict) or not ed
         per_doc.append((d, s, failed))
         for k in total:
@@ -5452,6 +5469,14 @@ def _add_review_legend(wb, doc_results, demo=False):
     return n
 
 
+def _marks_or_off(ws, marks):
+    """The writer's SheetMarks, or one that marks nothing (a direct caller)."""
+    if marks is not None:
+        return marks
+    from app.core.export_marks import SheetMarks
+    return SheetMarks(ws, enabled=False)
+
+
 def _ref_to_rowcol(ref):
     """'B12' -> (11, 1) 0-based, or None."""
     m = re.fullmatch(r"([A-Za-z]+)(\d+)", str(ref).strip())
@@ -5463,7 +5488,8 @@ def _ref_to_rowcol(ref):
     return int(m.group(2)) - 1, col - 1
 
 
-def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
+def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
+                        marks=None):
     """
     Layout-aware writer with dynamic row expansion + push-down. For each document it
     plans positions via _calculate_layout (sections derived from binding_column_groups
@@ -5473,6 +5499,12 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     groups are available.
     """
     from openpyxl.utils.cell import column_index_from_string, coordinate_from_string
+    sm = _marks_or_off(ws, marks)
+    ed = {}                   # the current block's result; set in the loop
+
+    def _row_mark(cell, row, value):
+        sm.row_cell(cell, ed, {"value": value,
+                               "_confidence": (row or {}).get("confidence")}, "value")
 
     def _set_num(cell, raw):
         # STEP 7 — normalize: strip currency symbols + thousands separators, convert
@@ -5741,6 +5773,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                         ws.cell(row=out_r, column=lci).value = str(lbl)
                     if vci and vval not in (None, ""):
                         _set_num(ws.cell(row=out_r, column=vci), vval)
+                        _row_mark(ws.cell(row=out_r, column=vci), row, vval)
             if any(p["overflow"] for p in plan):
                 _ov = sorted({(p["template_end_row"], p["overflow"]) for p in plan})
                 print(f"[EXPORT] layout: doc {block_idx+1} expanded — "
@@ -5763,6 +5796,8 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                         ws.cell(row=rnum + doc_offset, column=lci).value = str(row.get("label"))
                     if vci and row.get("value") not in (None, ""):
                         _set_num(ws.cell(row=rnum + doc_offset, column=vci), row.get("value"))
+                        _row_mark(ws.cell(row=rnum + doc_offset, column=vci), row,
+                                  row.get("value"))
 
         # ── 3. Fixed cells (totals) by reference, row-shifted ──
         for ref, v in (ed.get("extracted_fields", {}) or {}).items():
@@ -5789,6 +5824,8 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                       f"— never overwritten", flush=True)
                 continue
             _set_num(ws.cell(row=out_row(rownum - 1) + 1, column=ci), value)
+            sm.field(ws.cell(row=out_row(rownum - 1) + 1, column=ci), ed,
+                     ref=str(ref), value=value)
 
         # ── STEP 4: write any unmatched extracted sections (NO DATA DROPPED) in the
         #    A/B columns after the template block, separated by gap rows. ──
@@ -5808,6 +5845,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
                         ws.cell(row=cur + 1, column=1).value = str(lbl)
                     if vval not in (None, ""):
                         _set_num(ws.cell(row=cur + 1, column=2), vval)
+                        _row_mark(ws.cell(row=cur + 1, column=2), row, vval)
                     cur += 1
                 cur += 1                               # gap between overflow sections
             consumed = cur - doc_offset
@@ -5816,12 +5854,14 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod):
     print(f"[EXPORT] layout: wrote {len(doc_results)} document block(s)", flush=True)
 
 
-def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod):
+def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions, openpyxl_mod,
+                       marks=None):
     """
     Table mode: write header row with original styles, then one data row per line item.
     Handles tables at any position in the grid (not just row 0).
     """
     from openpyxl.cell import MergedCell
+    sm = _marks_or_off(ws, marks)
     table_regions = (template_regions or {}).get("table_regions", [])
     header_row_idx = table_regions[0]["header_row"] if table_regions else 0
     start_col_idx = table_regions[0]["start_col"] if table_regions else 0
@@ -5873,13 +5913,15 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
                     xl_cell.value = (float(val) if "." in str(val) else int(val)) if val else val
                 except (ValueError, TypeError):
                     xl_cell.value = val
+                sm.row_cell(xl_cell, extracted, row_data, col_name)
             current_row += 1
 
     print(f"[EXPORT] table: header at row {header_row_idx+1}, "
           f"{current_row - header_row_idx - 2} data rows", flush=True)
 
 
-def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod):
+def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, openpyxl_mod,
+                      marks=None):
     """
     Form mode: one filled template block per document result.
     Multi-doc: 3 blank rows + grey divider between documents.
@@ -5897,6 +5939,7 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
             return 0
         return block_idx * block_height + block_idx * SEPARATOR_HEIGHT
 
+    sm = _marks_or_off(ws, marks)
     for block_idx, doc_result in enumerate(doc_results):
         row_offset = get_row_offset(block_idx)
         extracted_data   = doc_result.get_extracted_data()
@@ -5949,15 +5992,11 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                         xl_cell.value = filled
                 except (ValueError, AttributeError):
                     xl_cell.value = filled
-
-                # Highlight low-confidence
-                confidence = confidence_map.get(ref, "high")
-                if confidence == "low":
-                    try:
-                        from openpyxl.styles import PatternFill
-                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
-                    except Exception:
-                        pass
+                # The review mark (it replaces the old low-confidence tint).
+                if extracted_fields.get(ref):
+                    sm.field(xl_cell, extracted_data, ref=ref, value=filled)
+                else:
+                    sm.field(xl_cell, extracted_data, label=tpl_value, value=filled)
 
             elif not tpl_value and ref in extracted_fields:
                 # kv_pair value cell: empty in template but AI extracted a value
@@ -5972,6 +6011,7 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                         cell_values[ref] = num_val
                 except (ValueError, AttributeError):
                     xl_cell.value = kv_filled
+                sm.field(xl_cell, extracted_data, ref=ref, value=kv_filled)
 
             elif tpl_value.startswith("="):
                 # It's a formula — calculate it if possible
@@ -5979,6 +6019,9 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 if calculated is not None:
                     # Write the calculated value (Excel will recalc on open anyway)
                     xl_cell.value = calculated
+                    # Computed by this writer from extracted values: no level
+                    # of its own, so it is marked as one owing a look.
+                    sm.mark(xl_cell, _review_status_unknown(calculated))
                     # Also store for downstream formula references
                     ref = f"{_col_letter(tc)}{tr+1}"
                     cell_values[ref] = calculated
@@ -6070,6 +6113,7 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                     _xl.value = _val or ""
             except (ValueError, AttributeError):
                 _xl.value = _val or ""
+            sm.field(_xl, extracted_data, ref=ef_ref, value=_val)
             _dyn_written += 1
 
         if _dyn_written:
@@ -6080,7 +6124,8 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
         # after the template block so table data is never silently dropped.
         if extracted_data.get("table_rows"):
             _write_table_rows_fallback(ws, extracted_data,
-                                       row_offset + max_r + 2, openpyxl_mod)
+                                       row_offset + max_r + 2, openpyxl_mod,
+                                       marks=sm)
 
         # Flag count indicator
         flag_count = validation.get("flagged_count", 0)
@@ -6094,7 +6139,8 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
 
 
 
-def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod):
+def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod,
+                               marks=None):
     """
     FIX 4 fallback — write table_rows when there is NO cell_binding_map table
     definition. Each row's values are placed sequentially into columns A, B, C, ...
@@ -6105,11 +6151,13 @@ def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod):
     rows = [r for r in (extracted_data.get("table_rows") or []) if isinstance(r, dict)]
     if not rows:
         return
+    sm = _marks_or_off(ws, marks)
     written = 0
     for i, row in enumerate(rows):
         out_row = start_row + i
-        vals = [v for k, v in row.items() if not str(k).startswith("_")]
-        for c_idx, val in enumerate(vals):
+        keys = [k for k in row if not str(k).startswith("_")]
+        for c_idx, key in enumerate(keys):
+            val = row[key]
             if isinstance(val, dict):
                 val = val.get("value", "")
             xl = ws.cell(row=out_row, column=c_idx + 1)
@@ -6122,6 +6170,7 @@ def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod):
                 xl.value = float(clean) if "." in clean else int(clean)
             elif sval:
                 xl.value = sval
+            sm.row_cell(xl, extracted_data, row, key)
         written += 1
     if written:
         print(f"[EXPORT] table_rows fallback: {written} rows written (A/B/C...)", flush=True)
@@ -6182,7 +6231,7 @@ def _adjust_formula_for_block(formula: str, row_offset: int) -> str:
 
 
 def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
-                        template_regions, openpyxl_mod):
+                        template_regions, openpyxl_mod, marks=None):
     """
     Mixed mode Excel writer.
     Handles: single table, multiple tables, tables anywhere in template.
@@ -6197,6 +6246,8 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
     """
     from openpyxl.styles import Font, PatternFill
     from openpyxl.cell import MergedCell
+    sm = _marks_or_off(ws, marks)
+    extracted_data = {}       # the current block's result; set in the main loop
 
     merges_tpl   = sheet_data.get("merges", {})
     table_regions = (template_regions or {}).get("table_regions", [])
@@ -6299,12 +6350,10 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                         xl_cell.value = filled or ""
                 except (ValueError, TypeError):
                     xl_cell.value = filled or ""
-                conf = confidence_map.get(ref, "high")
-                if conf == "low":
-                    try:
-                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
-                    except Exception:
-                        pass
+                if extracted_fields.get(ref):
+                    sm.field(xl_cell, extracted_data, ref=ref, value=filled)
+                else:
+                    sm.field(xl_cell, extracted_data, label=tpl_value, value=filled)
             elif not tpl_value and ref in extracted_fields:
                 # kv_pair value cell: empty in template but AI extracted a value
                 kv_filled = extracted_fields.get(ref)
@@ -6319,12 +6368,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                         xl_cell.value = kv_filled
                 except (ValueError, TypeError):
                     xl_cell.value = kv_filled
-                conf = confidence_map.get(ref, "high")
-                if conf == "low":
-                    try:
-                        xl_cell.fill = PatternFill(fill_type="solid", fgColor="FFFFF0AA")
-                    except Exception:
-                        pass
+                sm.field(xl_cell, extracted_data, ref=ref, value=kv_filled)
             elif tpl_value.startswith("="):
                 try:
                     xl_cell.value = tpl_value
@@ -6416,6 +6460,8 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                         xl_cell.value = val or ""
                 except (ValueError, TypeError):
                     xl_cell.value = val
+                if val:
+                    sm.row_cell(xl_cell, extracted_data, row_data, col_name)
             current_row += 1
             written += 1
 
@@ -6571,6 +6617,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                     _xl.value = _val or ""
             except (ValueError, AttributeError):
                 _xl.value = _val or ""
+            sm.field(_xl, extracted_data, ref=ef_ref, value=_val)
             _dyn_written_m += 1
 
         if _dyn_written_m:
@@ -6591,7 +6638,8 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
           f"{current_output_row} total rows written", flush=True)
 
 
-def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True):
+def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True,
+                      marks=True):
     """Fallback flat table when no template.
 
     `show_filename=False` drops the Filename column. It is what a demo export
@@ -6608,6 +6656,8 @@ def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True):
                 seen.add(k); all_keys.append(k)
     hf = PatternFill(fill_type="solid", fgColor="FF4F46E5")
     hfont = Font(bold=True, color="FFFFFFFF", size=11)
+    from app.core.export_marks import SheetMarks
+    sm = SheetMarks(ws, enabled=marks)
     first = 1
     if show_filename:
         c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
@@ -6628,15 +6678,20 @@ def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True):
             else:
                 shown_page = None
             ws.cell(row=ri, column=2, value=shown_page)
-        inner = dr.get_extracted_data().get("extracted_data") or {}
+        ed = dr.get_extracted_data()
+        inner = ed.get("extracted_data") or {}
         for ci, key in enumerate(all_keys, first):
             v = inner.get(key)
-            ws.cell(row=ri, column=ci, value=(v.get("value","") if isinstance(v,dict) else (v or "")))
+            c = ws.cell(row=ri, column=ci, value=(v.get("value","") if isinstance(v,dict) else (v or "")))
+            if key in inner:
+                sm.field(c, ed, ref=(v.get("ref") if isinstance(v, dict) else None),
+                         label=key)
     if show_filename:
         ws.column_dimensions["A"].width = 30
         ws.column_dimensions["B"].width = 12
     for ci in range(first, len(all_keys)+first):
         ws.column_dimensions[get_column_letter(ci)].width = 20
+    sm.finish()
 
 
 # ==============================================================================

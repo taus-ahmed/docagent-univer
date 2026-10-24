@@ -32,22 +32,38 @@ class SheetMarks:
     def __init__(self, ws, enabled: bool = True):
         self.ws = ws
         self.enabled = enabled
-        self.rows: dict[int, list[str]] = {}   # 1-based row -> status words
-        self.unresolved = 0
+        #: (row, col) -> (resolved, status word). Per CELL, so a writer that
+        #: writes one cell twice (the legacy layout writer does) is judged by
+        #: the value it left there, not by both.
+        self.cells: dict[tuple[int, int], tuple[bool, str]] = {}
+
+    @property
+    def unresolved(self) -> int:
+        return sum(1 for ok, _w in self.cells.values() if not ok)
+
+    @property
+    def rows(self) -> dict[int, list[str]]:
+        out: dict[int, list[str]] = {}
+        for (r, _c), (_ok, w) in sorted(self.cells.items()):
+            out.setdefault(r, []).append(w)
+        return out
 
     def mark(self, cell, st: dict) -> None:
         """Fill and comment one written cell by its status."""
         from openpyxl.cell import MergedCell
         if not self.enabled or cell is None or isinstance(cell, MergedCell):
             return
-        if not st["resolved"]:
-            self.unresolved += 1
-        m = R.export_mark(st)
-        self.rows.setdefault(cell.row, []).append(m[0] if m else "OK")
-        if m is None:
-            return
         from openpyxl.comments import Comment
         from openpyxl.styles import PatternFill
+        key = (cell.row, cell.column)
+        m = R.export_mark(st)
+        if key in self.cells:
+            # Overwritten: the earlier mark described a value no longer here.
+            cell.fill = PatternFill(fill_type=None)
+            cell.comment = None
+        self.cells[key] = (bool(st["resolved"]), m[0] if m else "OK")
+        if m is None:
+            return
         cell.fill = PatternFill(fill_type="solid", fgColor=m[1])
         text = m[2] + (f"\n\n{cell.comment.text}" if cell.comment else "")
         w, h = note_size(text)

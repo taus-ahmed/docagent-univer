@@ -229,7 +229,11 @@ class TestAnEditedValueDoesNotQuoteWhatItReplaced:
         assert conf == "Edited by hand", conf
 
     def test_the_combined_export_carries_no_provenance(self, client, auth, field_edit):
-        assert not any(c.comment for c in _cells(client, auth, field_edit["job"], "combined"))
+        """The only comments are review marks (export_marks), never a quote."""
+        notes = [c.comment.text for c in _cells(client, auth, field_edit["job"], "combined")
+                 if c.comment]
+        assert all(n.startswith(("EDITED BY HAND", "NEEDS REVIEW", "REVIEWED"))
+                   for n in notes), notes
 
 
 # ══════════════════════════════════════════════════════════════════════════

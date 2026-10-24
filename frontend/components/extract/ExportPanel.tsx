@@ -4,6 +4,7 @@ import { useState } from "react";
 import { exportApi, type DocumentResult } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Download, FileSpreadsheet, Loader2 } from "lucide-react";
+import { confirmExport } from "@/lib/confirm-export";
 
 interface Props {
   jobId: number;
@@ -14,6 +15,7 @@ export default function ExportPanel({ jobId, results }: Props) {
   const [loading, setLoading] = useState<"combined" | "perfile" | null>(null);
 
   async function exportCombined() {
+    if (!(await confirmExport(jobId))) return;
     setLoading("combined");
     try {
       // include_line_items was sent here and read by nothing: the combined
@@ -30,6 +32,7 @@ export default function ExportPanel({ jobId, results }: Props) {
   }
 
   async function exportPerFile() {
+    if (!(await confirmExport(jobId))) return;
     setLoading("perfile");
     try {
       const blob = await exportApi.perFile({ job_id: jobId });

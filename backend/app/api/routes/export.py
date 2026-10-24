@@ -202,6 +202,8 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
         bottom=Side(style="thin", color="E3E6EC"),
     )
 
+    from app.core.export_marks import SheetMarks
+
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -213,6 +215,8 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
             sheet_name = (Path(doc.filename).stem[:31] if show_filename
                           else f"Document {len(wb.sheetnames) + 1}")
             ws = wb.create_sheet(title=sheet_name)
+            # Review marks, the same as every other export (export_marks).
+            sm = SheetMarks(ws)
 
             # Determine columns
             if template_columns:
@@ -244,7 +248,8 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                     confidence = ""
 
                 ws.cell(row=i, column=1, value=col_name).font = Font(name="Calibri", bold=True, size=10)
-                ws.cell(row=i, column=2, value=str(value) if value else "").font = DATA_FONT
+                vcell = ws.cell(row=i, column=2, value=str(value) if value else "")
+                vcell.font = DATA_FONT
                 # The stored level is an identifier ("grounded"); the sheet
                 # shows the claim spelled out ("Verbatim from the document"),
                 # so a reader never has to know our vocabulary to know what we
@@ -258,6 +263,11 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                 for c in range(1, 4):
                     ws.cell(row=i, column=c).border = BORDER
 
+                if fd is not None:
+                    sm.field(vcell, ext, ref=(fd.get("ref") if isinstance(fd, dict) else None),
+                             label=col_name)
+
+            sm.finish()
             ws.column_dimensions["A"].width = 25
             ws.column_dimensions["B"].width = 40
             ws.column_dimensions["C"].width = 28   # fits "Verbatim from the document"
@@ -281,6 +291,7 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                                            column_order)
 
         ws = wb.create_sheet(title="Extracted Data")
+        sm = SheetMarks(ws)
         headers = (["File"] if show_filename else []) + \
                   ["Doc Type", "Confidence", "Status"] + col_names
         ws.append(headers)
@@ -294,8 +305,10 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
             cell.border = BORDER
         ws.row_dimensions[1].height = 22
 
+        first_value_col = len(headers) - len(col_names) + 1
         for row_idx, doc in enumerate(docs, 2):
-            ext = (doc.get_extracted_data() or {}).get("extracted_data", {})
+            full = doc.get_extracted_data() or {}
+            ext = full.get("extracted_data", {})
             fill = REVIEW_FILL if doc.needs_review else (ALT_FILL if row_idx % 2 == 0 else None)
 
             row_data = ([doc.filename] if show_filename else []) + [
@@ -321,6 +334,13 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                 cell.alignment = Alignment(vertical="center", wrap_text=False)
                 if fill:
                     cell.fill = fill
+            for k, col_name in enumerate(col_names):
+                fd = ext.get(col_name)
+                if fd is not None:
+                    sm.field(ws.cell(row=row_idx, column=first_value_col + k), full,
+                             ref=(fd.get("ref") if isinstance(fd, dict) else None),
+                             label=col_name)
+        sm.finish()
 
         # Auto-width
         for col_idx, header in enumerate(headers, 1):
@@ -348,6 +368,9 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
         ws2.append(["Exported At", datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
         ws2.column_dimensions["A"].width = 22
         ws2.column_dimensions["B"].width = 20
+
+    from app.api.routes.extract import _add_review_legend
+    _add_review_legend(wb, docs, demo=not show_filename)
 
     buf = io.BytesIO()
     wb.save(buf)

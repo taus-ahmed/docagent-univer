@@ -63,7 +63,9 @@ def _sheet(client, auth, **params):
 
 
 def _headers(ws):
-    return [c.value for c in ws[1]]
+    # The Review status column (export_marks) is not one of the data columns.
+    return [c.value for c in ws[1]
+            if not str(c.value or "").startswith("Review status")]
 
 
 def _files(ws):
@@ -189,7 +191,8 @@ class TestPerFileParameters:
         r = client.post("/api/export/perfile", headers=auth["acme"],
                         json={"job_id": job.id, "doc_ids": ids[:1]})
         assert r.status_code == 200, r.text
-        assert len(load_workbook(io.BytesIO(r.content)).sheetnames) == 1
+        names = load_workbook(io.BytesIO(r.content)).sheetnames
+        assert len([n for n in names if n != "Legend"]) == 1, names
 
     def test_selected_columns_filters_each_sheet(self, client, auth, job):
         r = client.post("/api/export/perfile", headers=auth["acme"],

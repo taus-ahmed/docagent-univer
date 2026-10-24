@@ -273,9 +273,9 @@ class TestTheFlatExports:
     def test_the_demo_per_file_sheet_is_not_named_after_the_temp_file(
             self, client, demo_auth, demo_on, demo_job):
         wb = self._perfile(client, demo_auth, demo_job.id)
-        assert wb.sheetnames == ["Document 1"], wb.sheetnames
+        assert wb.sheetnames == ["Document 1", "Legend"], wb.sheetnames
 
     def test_the_NON_demo_per_file_sheet_is_still_named_after_the_document(
             self, client, auth, plain_job):
         wb = self._perfile(client, auth["acme"], plain_job.id)
-        assert wb.sheetnames == ["tmphjtbr12o"], wb.sheetnames
+        assert wb.sheetnames == ["tmphjtbr12o", "Legend"], wb.sheetnames
