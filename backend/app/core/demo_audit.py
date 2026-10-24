@@ -122,7 +122,7 @@ def record(db, user, event: str, *, job_id: Optional[int] = None,
                user_id=getattr(user, "id", None), job_id=job_id, detail=detail)
     except Exception as exc:                      # noqa: BLE001 — see rule 2
         print(f"[DEMO-AUDIT] could not record {event!r}: "
-              f"{type(exc).__name__}: {exc}", flush=True)
+              f"{type(exc).__name__}", flush=True)
 
 
 def record_for_client(db, client_id: Optional[str], event: str, *,
@@ -145,7 +145,7 @@ def record_for_client(db, client_id: Optional[str], event: str, *,
                user_id=user_id, job_id=None, detail=detail)
     except Exception as exc:                      # noqa: BLE001
         print(f"[DEMO-AUDIT] could not record {event!r}: "
-              f"{type(exc).__name__}: {exc}", flush=True)
+              f"{type(exc).__name__}", flush=True)
 
 
 def refusal_detail(exc, filename: Optional[str] = None) -> dict:

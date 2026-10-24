@@ -17,6 +17,7 @@ if str(_ENGINE_DIR) not in sys.path:
     sys.path.insert(0, str(_ENGINE_DIR))
 
 from config import settings
+from log_safety import doc_ref, exc_brief
 from storage.database import Database
 
 
@@ -46,7 +47,7 @@ def check_watched_folders(db: Database, verbose: bool = True):
 
     for wf in watch_folders:
         if verbose:
-            print(f"[Watcher] Checking: {wf['folder_name']}")
+            print(f"[Watcher] Checking: watch folder {wf['id']}")
 
         files = drive.list_files(wf["folder_id"])
         current_ids = {f.id for f in files}
@@ -70,7 +71,7 @@ def check_watched_folders(db: Database, verbose: bool = True):
         try:
             for f in new_files:
                 if verbose:
-                    print(f"    Downloading: {f.name}")
+                    print(f"    Downloading: {doc_ref(f.name)}")
                 path = drive.download_file(f.id, f.name, temp_dir)
                 if path:
                     downloaded.append((f.id, path))
@@ -111,7 +112,7 @@ def check_watched_folders(db: Database, verbose: bool = True):
                             print("  Uploaded results to Drive!")
                     except Exception as e:
                         if verbose:
-                            print(f"  Upload failed: {e}")
+                            print(f"  Upload failed: {exc_brief(e)}")
 
                 new_processed = processed_ids | {fid for fid, _ in downloaded}
                 db.update_watch_folder(wf["id"], list(new_processed & current_ids), len(files))
@@ -119,7 +120,7 @@ def check_watched_folders(db: Database, verbose: bool = True):
 
         except Exception as e:
             if verbose:
-                print(f"  ERROR: {e}")
+                print(f"  ERROR: {exc_brief(e)}")
             import traceback
             if verbose:
                 traceback.print_exc()
@@ -147,7 +148,7 @@ def run_loop(interval_minutes: int = 5):
             print("\n[Watcher] Stopped.")
             break
         except Exception as e:
-            print(f"[Watcher] Error: {e}")
+            print(f"[Watcher] Error: {exc_brief(e)}")
 
         time.sleep(interval_minutes * 60)
 

@@ -118,7 +118,7 @@ def preview_shape(payload: dict, current_user: User = Depends(get_current_user))
         shape = _compute_shape_for_grid(grid) or {}
         from template_shape import choose_path, is_usable
     except Exception as e:
-        print(f"[TEMPLATE] shape preview failed: {e}", flush=True)
+        print(f"[TEMPLATE] shape preview failed: {type(e).__name__}", flush=True)
         return {"field_cells": [], "band_cells": [], "field_count": 0,
                 "band_count": 0, "summary": "", "coverage": {},
                 "usable": False, "error": str(e)[:200]}
@@ -259,7 +259,7 @@ def template_shape_of(tpl: ColumnTemplate):
         from app.api.routes.extract import _compute_shape_for_grid
         return _compute_shape_for_grid(raw)
     except Exception as e:
-        print(f"[TEMPLATE] shape unavailable ({e})", flush=True)
+        print(f"[TEMPLATE] shape unavailable ({type(e).__name__})", flush=True)
         return None
 
 

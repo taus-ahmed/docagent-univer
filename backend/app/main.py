@@ -252,7 +252,7 @@ def _release_stranded_jobs():
     except Exception as e:
         db.rollback()
         # Never block boot on housekeeping.
-        logger.error("Could not release stranded jobs: %s", e)
+        logger.error("Could not release stranded jobs: %s", type(e).__name__)
     finally:
         db.close()
 
@@ -388,11 +388,11 @@ def _materialise_schemas():
                 restored += 1
             except Exception as e:
                 logger.error("Could not materialise schema for %s: %s",
-                             row.client_id, e)
+                             row.client_id, type(e).__name__)
         if restored:
             logger.info("Schemas materialised from database: %d", restored)
     except Exception as e:
-        logger.warning("Schema materialisation skipped: %s", e)
+        logger.warning("Schema materialisation skipped: %s", type(e).__name__)
     finally:
         db.close()
 
@@ -430,7 +430,7 @@ def _seed_demo_schema():
         db.commit()
         logger.info(f"Demo schema seeded: {parsed['client_name']}")
     except Exception as e:
-        logger.warning(f"Could not seed demo schema: {e}")
+        logger.warning(f"Could not seed demo schema: {type(e).__name__}")
     finally:
         db.close()
 
@@ -467,7 +467,11 @@ def create_app() -> FastAPI:
     # Global Exception Handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        logger.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
+        # Method and path only: a query string, the exception's message and a
+        # full traceback can all quote a request body or a document.
+        from log_safety import exc_brief, safe_traceback_text
+        logger.error("Unhandled exception on %s %s: %s\n%s", request.method,
+                     request.url.path, exc_brief(exc), safe_traceback_text(exc))
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Internal server error"},

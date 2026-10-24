@@ -13,6 +13,7 @@ from typing import Callable, Optional
 from connectors.base import LLMProvider, LLMResponse
 from connectors.gemini_client import GeminiClient
 from config import settings
+from log_safety import exc_brief
 
 logger = logging.getLogger("docagent.llm_router")
 
@@ -55,7 +56,7 @@ class LLMRouter:
             try:
                 provider = PROVIDERS[name]()
             except Exception as e:
-                logger.warning(f"{name} init failed: {e}")
+                logger.warning(f"{name} init failed: {exc_brief(e)}")
                 continue
             if provider is not None:
                 self.providers.append((name, provider))
@@ -85,7 +86,7 @@ class LLMRouter:
                     self._track(name)
                     return result
             except Exception as e:
-                logger.warning(f"Classification {name} failed: {e}")
+                logger.warning(f"Classification {name} failed: {exc_brief(e)}")
         self.stats["failures"] += 1
         return LLMResponse(raw_text="", success=False,
                            error="All providers failed for classification")
@@ -132,10 +133,10 @@ class LLMRouter:
                     self._track(name)
                     return result
 
-                logger.warning(f"Extraction {name} failed: {result.error[:100]}")
+                logger.warning(f"Extraction {name} failed (provider error, {len(result.error or '')} chars, not logged)")
 
             except Exception as e:
-                logger.warning(f"Extraction {name} exception: {e}")
+                logger.warning(f"Extraction {name} exception: {exc_brief(e)}")
 
         self.stats["failures"] += 1
         return LLMResponse(raw_text="", success=False,

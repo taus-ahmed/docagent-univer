@@ -19,6 +19,8 @@ import re
 import time
 from pathlib import Path
 
+from log_safety import doc_ref, exc_brief
+
 
 # ── small helpers ────────────────────────────────────────────────────────────
 
@@ -107,7 +109,7 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
             err_txt = str(getattr(resp, "error", "") or "")
         except Exception as e:
             err_txt = str(e)
-            _log("LLM", f"error attempt {attempt+1}: {e}")
+            _log("LLM", f"error attempt {attempt+1}: {exc_brief(e)}")
             # keep the cause: the caller names it in the failure it reports
             from connectors.base import LLMResponse
             resp = LLMResponse(raw_text="", success=False,
@@ -223,7 +225,7 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images,
         from text_layer import column_text_pages
         column_pages, marked = column_text_pages(page_lines, doc_text_pages)
         if marked:
-            _log("INFER", f"{file_path.name}: {marked} page(s) carry a column "
+            _log("INFER", f"{doc_ref(file_path)}: {marked} page(s) carry a column "
                           f"break; inference reads them with columns kept")
     inferred = infer_template(orchestrator, doc_text_pages, page_images,
                               file_path.name,
@@ -235,11 +237,11 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images,
     grid = build_grid(inferred)
     shape = compute_shape(grid, log=lambda m: _log("INFER", m))
     if not is_usable(shape):
-        _log("INFER", f"{file_path.name}: inferred template has no slots")
+        _log("INFER", f"{doc_ref(file_path)}: inferred template has no slots")
         return None
 
     sig = signature(inferred)
-    _log("INFER", f"{file_path.name}: shape {sig} — "
+    _log("INFER", f"{doc_ref(file_path)}: shape {sig} — "
                   f"{len(shape['field_slots'])} slots, "
                   f"{len(shape['repeat_bands'])} band(s), "
                   f"needs {shape['required_columns']} columns")
@@ -362,7 +364,7 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         # NOTHING TO READ: a named failure for this file, before any model
         # call. It used to reach the model with nothing and fail as "no usable
         # JSON" — the right outcome under the wrong reason.
-        _log("ROUTE", f"{file_path.name}: {unreadable}")
+        _log("ROUTE", f"{doc_ref(file_path)}: unreadable, failed before any model call")
         from app.api.routes.extract import _fail
         return [_fail(file_path.name, unreadable)]
     doc_text_pages = list(getattr(doc, "page_texts", []) or [])
@@ -407,7 +409,7 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         if not keep:
             from app.api.routes.extract import _fail
             shown = ", ".join(str(n) for n in selected_pages)
-            _log("ROUTE", f"{file_path.name}: selected pages [{shown}] name no "
+            _log("ROUTE", f"{doc_ref(file_path)}: selected pages [{shown}] name no "
                           f"page of this {total}-page file — nothing extracted")
             return [_fail(file_path.name,
                           (f"None of the selected pages ({shown}) exist in this "
@@ -440,7 +442,7 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
 
     ftype = (doc.file_type if getattr(doc, "file_type", "") == "image"
              else ("digital_pdf" if getattr(doc, "has_meaningful_text", False) else "scanned_pdf"))
-    _log("ROUTE", f"{file_path.name}: file_type={ftype} pages={len(page_images)} "
+    _log("ROUTE", f"{doc_ref(file_path)}: file_type={ftype} pages={len(page_images)} "
                   f"text_len={len(doc_text)}")
 
     # The binding map is gone with the paths that consumed it: routing is now
@@ -704,7 +706,7 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     slices, why = _split_documents(doc_text_pages, doc_page_lines, page_images,
                                    forced=forced)
     if len(slices) > 1:
-        _log("SPLIT", f"{file_path.name}: {len(slices)} documents in one file "
+        _log("SPLIT", f"{doc_ref(file_path)}: {len(slices)} documents in one file "
                       f"({why}) — extracting each separately")
         results = []
         for n, (texts, lines, images, first_page) in enumerate(slices, 1):
@@ -841,7 +843,7 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
         tpl_cells = (template_data.get("layout") or {}).get("cells") or {}
         if not any(isinstance(cd, dict) and str(cd.get("value") or "").strip()
                    for cd in tpl_cells.values()):
-            _log("ROUTE", f"{file_path.name}: EMPTY TEMPLATE (0 labelled cells) "
+            _log("ROUTE", f"{doc_ref(file_path)}: EMPTY TEMPLATE (0 labelled cells) "
                           f"-> treated as no template")
             template_data = None
             ctx["template_data"] = None
@@ -853,7 +855,7 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
         hint = _hint_type(doc_text) if batch_schemas is not None else ""
         if hint and hint in (batch_schemas or {}):
             reused = batch_schemas[hint]
-            _log("INFER", f"{file_path.name}: reusing the {hint} schema "
+            _log("INFER", f"{doc_ref(file_path)}: reusing the {hint} schema "
                           f"inferred earlier in this job "
                           f"(shape {reused.get('shape_signature')}) "
                           f"— no inference call")
@@ -865,14 +867,14 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
             results = run_slot_extraction(**trial)
             rate = _fill_rate(results)
             if rate >= _REUSE_MIN_FILL:
-                _log("INFER", f"{file_path.name}: reused schema fits "
+                _log("INFER", f"{doc_ref(file_path)}: reused schema fits "
                               f"({rate:.0%} of slots filled)")
                 return results
             # It did not fit — a different layout of the same document type.
             # Throw the result away and infer for this document. Nothing
             # partial is kept: a half-filled sheet from the wrong schema is
             # worse than the cost of one more call.
-            _log("INFER", f"{file_path.name}: reused schema does NOT fit "
+            _log("INFER", f"{doc_ref(file_path)}: reused schema does NOT fit "
                           f"({rate:.0%} of slots filled, need "
                           f"{_REUSE_MIN_FILL:.0%}) — inferring for this "
                           f"document instead")
@@ -897,7 +899,7 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
             key = template_data.get("doc_type") or hint
             if key and key not in batch_schemas:
                 batch_schemas[key] = template_data
-                _log("INFER", f"{file_path.name}: schema for '{key}' cached "
+                _log("INFER", f"{doc_ref(file_path)}: schema for '{key}' cached "
                               f"for the rest of this job")
 
     # ── PATH SELECTION BY ARITHMETIC (Phase 2b) ──
@@ -916,12 +918,12 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
     if decision.get("error"):
         # No path fits. Fail the document loudly with a message that says what
         # to change — never a blank or partial sheet with no explanation.
-        _log("ROUTE", f"{file_path.name}: CANNOT EXTRACT — {decision['error']}")
+        _log("ROUTE", f"{doc_ref(file_path)}: CANNOT EXTRACT — {decision['error']}")
         from app.api.routes.extract import _fail
         return [_fail(file_path.name, decision["error"])]
 
     path = decision["path"]
-    _log("ROUTE", f"{file_path.name}: needs {decision['required_columns']} column(s) "
+    _log("ROUTE", f"{doc_ref(file_path)}: needs {decision['required_columns']} column(s) "
                   f"-> {path} path ({decision['reason']})")
 
     from slot_extractor import run_slot_extraction

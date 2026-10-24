@@ -45,6 +45,7 @@ import time
 from pathlib import Path
 
 from extractor import _llm_json, _log
+from log_safety import doc_ref
 from micr import field_role, find_micr_line, parse_micr
 from validators import FAIL, UNREADABLE, CheckContext, run_checks
 from text_layer import (canonical_value, check_placement, column_bands,
@@ -848,9 +849,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     shape = (template_data or {}).get("shape")
     slots = enumerate_slots(grid, shape)
     if shape:
-        _log("SLOT", f"{file_path.name}: using STORED template shape")
+        _log("SLOT", f"{doc_ref(file_path)}: using STORED template shape")
     n_tbl_cols = sum(len(t["columns"]) for t in slots["tables"])
-    _log("SLOT", f"{file_path.name}: {len(slots['fields'])} field slots, "
+    _log("SLOT", f"{doc_ref(file_path)}: {len(slots['fields'])} field slots, "
                  f"{len(slots['tables'])} table(s), {n_tbl_cols} table columns")
 
     # Was this template designed by inference rather than by the user? If so no
@@ -858,7 +859,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     inferred = bool((template_data or {}).get("inferred"))
     confident = GROUNDED if inferred else HIGH
     if inferred:
-        _log("SLOT", f"{file_path.name}: inferred template — cells can be "
+        _log("SLOT", f"{doc_ref(file_path)}: inferred template — cells can be "
                      f"'{GROUNDED}' at best, never '{HIGH}'")
 
     pages = doc_text_pages or ([doc_text] if doc_text else [])
@@ -1103,8 +1104,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 failed(slot["ref"], GROUNDING_FAILED if not ok
                        else CONTENT_CHECK_FAILED)
         if parts:
-            _log("MICR", f"{file_path.name}: band decomposed -> "
-                         + ", ".join(sorted(parts)))
+            _log("MICR", f"{doc_ref(file_path)}: band decomposed into "
+                         f"{len(parts)} field(s)")
 
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:

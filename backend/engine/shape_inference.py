@@ -27,6 +27,7 @@ import json
 import re
 
 from extractor import _llm_json, _log
+from log_safety import doc_ref
 from vocabulary import split_other, vocabulary_block
 
 _SYSTEM = (
@@ -335,21 +336,21 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename="",
     parsed, resp = _llm_json(orchestrator, prompt, _SYSTEM,
                              images=page_images, text=text, temperature=0)
     if not isinstance(parsed, dict):
-        _log("INFER", f"{filename}: no usable template inferred")
+        _log("INFER", f"{doc_ref(filename)}: no usable template inferred")
         return None
 
     inferred = _clean(parsed)
     if not (inferred["fields"] or inferred["tables"] or inferred["totals"]):
-        _log("INFER", f"{filename}: inferred template is empty")
+        _log("INFER", f"{doc_ref(filename)}: inferred template is empty")
         return None
 
     n_named = (len(inferred["fields"]) + len(inferred["totals"])
                + sum(len(t["columns"]) for t in inferred["tables"]))
     n_novel = len(inferred.get("novel_fields") or [])
     if doc_type_hint:
-        _log("VOCAB", f"{filename}: {n_named - n_novel}/{n_named} labels from "
+        _log("VOCAB", f"{doc_ref(filename)}: {n_named - n_novel}/{n_named} labels from "
                       f"the {doc_type_hint} vocabulary, {n_novel} outside it")
-    _log("INFER", f"{filename}: {inferred['document_type']} — "
+    _log("INFER", f"{doc_ref(filename)}: {inferred['document_type']} — "
                   f"{len(inferred['fields'])} fields, "
                   f"{len(inferred['tables'])} table(s) "
                   f"({', '.join(str(len(t['columns'])) + 'col' for t in inferred['tables']) or 'none'}), "

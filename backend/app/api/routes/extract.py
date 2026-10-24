@@ -91,6 +91,13 @@ _backend_dir = Path(__file__).resolve().parent.parent.parent.parent
 _project_dir = _backend_dir.parent
 _engine_dir  = _backend_dir / "engine"
 
+# The log policy's helpers live with the engine, which logs the most. Appended,
+# not inserted: nothing on the path is shadowed before the routes insert the
+# engine directory themselves.
+if str(_engine_dir) not in sys.path:
+    sys.path.append(str(_engine_dir))
+from log_safety import doc_ref, exc_brief, print_safe_traceback  # noqa: E402
+
 _IMAGE_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp",
     ".heic", ".heif", ".gif", ".avif",
@@ -273,7 +280,7 @@ def _load_image_as_png_bytes(file_path: Path) -> bytes:
             img.save(buf, format="PNG")
             return buf.getvalue()
     except Exception as exc:
-        print(f"[IMAGE] Pillow failed ({exc}), reading raw bytes", flush=True)
+        print(f"[IMAGE] Pillow failed ({exc_brief(exc)}), reading raw bytes", flush=True)
         return file_path.read_bytes()
 
 
@@ -630,8 +637,8 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                     template_data["regions"] = _analyse_template_regions(raw)
                 except Exception as region_err:
                     import traceback
-                    print(f"[TEMPLATE] region analysis error: {region_err}", flush=True)
-                    print(f"[TEMPLATE] traceback: {traceback.format_exc()}", flush=True)
+                    print(f"[TEMPLATE] region analysis error: {exc_brief(region_err)}", flush=True)
+                    print_safe_traceback()
                     # Fall back to empty regions so extraction can still proceed
                     template_data["regions"] = {
                         "primary_mode": "form_kv",
@@ -663,7 +670,7 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                     if shape:
                         template_data["shape"] = shape
                 except Exception as shape_err:
-                    print(f"[TEMPLATE] shape unavailable ({shape_err})", flush=True)
+                    print(f"[TEMPLATE] shape unavailable ({exc_brief(shape_err)})", flush=True)
 
                 return template_data
             else:
@@ -706,8 +713,8 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                 }
         except Exception as e:
             import traceback
-            print(f"[TEMPLATE] description parse error: {e}", flush=True)
-            print(f"[TEMPLATE] traceback: {traceback.format_exc()}", flush=True)
+            print(f"[TEMPLATE] description parse error: {exc_brief(e)}", flush=True)
+            print_safe_traceback()
 
     if not tpl.columns_json:
         return None
@@ -740,7 +747,7 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
             "name": tpl.name,
         }
     except Exception as e:
-        print(f"[TEMPLATE] columns_json parse error: {e}", flush=True)
+        print(f"[TEMPLATE] columns_json parse error: {exc_brief(e)}", flush=True)
         return None
 
 
@@ -1276,7 +1283,7 @@ def _load_registry():
             else:
                 _load_registry._cache = None
         except Exception as e:
-            print(f"[REGISTRY] Load error: {e}", flush=True)
+            print(f"[REGISTRY] Load error: {exc_brief(e)}", flush=True)
             _load_registry._cache = None
     return _load_registry._cache
 
@@ -1866,7 +1873,7 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "",
             print("[PROMPT] layout-based extraction selected (table_data present)", flush=True)
             return _build_layout_prompt_parts(binding_map, layout, doc_text, system_instruction)
         except Exception as _lp_e:
-            print(f"[LAYOUT] prompt build failed ({_lp_e}) — using field-based prompt", flush=True)
+            print(f"[LAYOUT] prompt build failed ({exc_brief(_lp_e)}) — using field-based prompt", flush=True)
 
     # Smart text truncation
     doc_text_use = _smart_truncate(doc_text, primary_mode, regions)
@@ -3170,7 +3177,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     # We collect all into a single list, adding a "table_source" key to each row
     table_rows_raw = []
     all_doc_keys = list(raw_doc.keys())
-    print(f"[COLLECT] AI response keys: {all_doc_keys}", flush=True)
+    print(f"[COLLECT] AI response keys: {len(all_doc_keys)}", flush=True)
     if raw_doc.get("table_rows"):
         print(f"[COLLECT] table_rows: {len(raw_doc['table_rows'])} rows", flush=True)
         table_rows_raw.extend(raw_doc["table_rows"])
@@ -3193,7 +3200,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
         )
         if alignment_misaligned:
             print(
-                f"[BUG6] Alignment issue detected in {filename} — "
+                f"[BUG6] Alignment issue detected in {doc_ref(filename)} — "
                 f"document will be flagged for review",
                 flush=True,
             )
@@ -3235,7 +3242,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     # so a silently-unwritable AI response never passes as clean.
     if _schema_warn:
         flagged = list(flagged) + [{"ref": "_schema", "value": "", "reason": _schema_warn}]
-        print(f"[SCHEMA] {filename}: {_schema_warn}", flush=True)
+        print(f"[SCHEMA] {doc_ref(filename)}: schema warning recorded as a flag", flush=True)
 
     # -- Build human-readable extracted_data -----------------------------------
     ref_to_label = {}
@@ -3424,7 +3431,7 @@ def _process_vision_result(raw_doc: dict, template_data: dict, filename: str,
     r.success = True
 
     status = f"{len(flagged)} flags" if flagged else "clean"
-    print(f"[EXTRACT] vision: {filename} doc#{doc_index} -> "
+    print(f"[EXTRACT] vision: {doc_ref(filename)} doc#{doc_index} -> "
           f"{len(extracted_data)} fields, {len(normalised_rows)} rows, "
           f"{overall_confidence} confidence, {status}", flush=True)
     return r
@@ -3469,7 +3476,7 @@ def _job_error_message(session, job_id, failed, produced):
         return head + " " + " ".join(parts)
     except Exception as e:
         # A summary line must never be the reason a job's status is lost.
-        print(f"[THREAD] could not summarise document errors: {e}", flush=True)
+        print(f"[THREAD] could not summarise document errors: {exc_brief(e)}", flush=True)
         return head
 
 
@@ -3500,8 +3507,8 @@ def _extract_with_template(orchestrator, file_path: Path, template_data: dict,
                                             selected_pages=selected_pages,
                                             batch_schemas=batch_schemas)
     except Exception as e:
-        print(f"[EXTRACT] FATAL {file_path.name}: {e}", flush=True)
-        traceback.print_exc()
+        print(f"[EXTRACT] FATAL {doc_ref(file_path)}: {exc_brief(e)}", flush=True)
+        print_safe_traceback()
         r = _fail(file_path.name, f"Fatal extraction error: {str(e)[:200]}")
         r.processing_time_ms = 0
         return [r]
@@ -3612,15 +3619,15 @@ def _extract_image_with_template(orchestrator, file_path: Path,
             })
 
         print(
-            f"[IMAGE] {file_path.name}: extracted "
+            f"[IMAGE] {doc_ref(file_path)}: extracted "
             f"{len(result.extracted_data.get('extracted_data', {}))} fields",
             flush=True,
         )
         return [result]
 
     except Exception as e:
-        print(f"[IMAGE] Error {file_path.name}: {e}", flush=True)
-        traceback.print_exc()
+        print(f"[IMAGE] Error {doc_ref(file_path)}: {exc_brief(e)}", flush=True)
+        print_safe_traceback()
         r = _fail(file_path.name, str(e))
         r.processing_time_ms = (t.time() - start) * 1000
         return [r]
@@ -3701,7 +3708,7 @@ def _post_categorize(extracted: dict, orchestrator, doc_type: str) -> dict:
             extracted["table_rows"] = table_rows
             print(f"[OPTIONS] categorized {len(cats)} rows", flush=True)
     except Exception as e:
-        print(f"[OPTIONS] categorize failed: {e}", flush=True)
+        print(f"[OPTIONS] categorize failed: {exc_brief(e)}", flush=True)
     return extracted
 
 
@@ -3732,9 +3739,9 @@ def _post_summarize(extracted: dict, orchestrator, doc_type: str) -> dict:
             summary = result.parsed_json.get("summary", "")
             if summary:
                 extracted["summary"] = summary
-                print(f"[OPTIONS] summary generated: {summary[:80]}...", flush=True)
+                print(f"[OPTIONS] summary generated: {len(summary)} chars", flush=True)
     except Exception as e:
-        print(f"[OPTIONS] summary failed: {e}", flush=True)
+        print(f"[OPTIONS] summary failed: {exc_brief(e)}", flush=True)
     return extracted
 
 
@@ -3767,7 +3774,7 @@ def _post_anomaly(extracted: dict, orchestrator, doc_type: str) -> dict:
             extracted["anomalies"] = anomalies if isinstance(anomalies, list) else []
             print(f"[OPTIONS] anomalies: {len(extracted['anomalies'])} found", flush=True)
     except Exception as e:
-        print(f"[OPTIONS] anomaly failed: {e}", flush=True)
+        print(f"[OPTIONS] anomaly failed: {exc_brief(e)}", flush=True)
     return extracted
 
 
@@ -3993,7 +4000,7 @@ def _persist_failure(session_factory, job_id, ref, error) -> None:
         s.commit()
     except Exception as e:
         s.rollback()
-        print(f"[THREAD] could not record the failure of {ref}: {e}", flush=True)
+        print(f"[THREAD] could not record the failure of {doc_ref(ref)}: {exc_brief(e)}", flush=True)
     finally:
         s.close()
 
@@ -4040,7 +4047,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         from sqlalchemy.orm import sessionmaker
         from app.models.models import ExtractionJob, DocumentResult
     except Exception as e:
-        print(f"[THREAD] DB import failed: {e}", flush=True); return
+        print(f"[THREAD] DB import failed: {exc_brief(e)}", flush=True); return
 
     try:
         connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
@@ -4048,7 +4055,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         Session = sessionmaker(bind=_eng)
         session = Session()
     except Exception as e:
-        print(f"[THREAD] DB session failed: {e}", flush=True); return
+        print(f"[THREAD] DB session failed: {exc_brief(e)}", flush=True); return
 
     try:
         job = session.query(ExtractionJob).filter_by(id=job_id).first()
@@ -4091,7 +4098,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 if original_filenames and i < len(original_filenames)
                 else Path(str(fp)).name or str(fp)
             )
-            print(f"[THREAD] processing file {i+1}/{len(file_keys)}: {fp}", flush=True)
+            print(f"[THREAD] processing file {i+1}/{len(file_keys)}: {doc_ref(fp)}", flush=True)
 
             # Issue 2: update job progress so the UI can poll live status
             try:
@@ -4116,7 +4123,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                     # document with a message saying what happened, and the
                     # result travels the same persistence path as any other, so
                     # the job still completes and still reports.
-                    print(f"[THREAD] source missing: {fp}", flush=True)
+                    print(f"[THREAD] source missing: {doc_ref(fp)}", flush=True)
                     results = [_fail(display_filename,
                                      "Source document is no longer in storage "
                                      "— upload it again to re-run this job.")]
@@ -4179,7 +4186,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                             if "low" in conf_map.values():
                                 has_flags = True
                                 print(
-                                    f"[H1] {result.filename}: financial doc "
+                                    f"[H1] {doc_ref(result.filename)}: financial doc "
                                     f"({doc_type_str}) has low-confidence field "
                                     f"— needs_review escalated",
                                     flush=True,
@@ -4195,7 +4202,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                                 result.extracted_data or {}, doc_type_str
                             )
                             if section_warn:
-                                print(f"[H2] {result.filename}: {section_warn}", flush=True)
+                                print(f"[H2] {doc_ref(result.filename)}: section warning recorded as a flag", flush=True)
                                 has_flags = True
                                 error_msg = (error_msg + "; " if error_msg else "") + section_warn
 
@@ -4277,7 +4284,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         doc_cost = (doc_tokens / 1_000_000) * 0.15
                         total_cost_usd += doc_cost
 
-                        print(f"[THREAD] saved: {result.filename} "
+                        print(f"[THREAD] saved: {doc_ref(result.filename)} "
                               f"tokens={doc_tokens} cost=${doc_cost:.5f} "
                               f"| job_total={total_tokens_used} tokens "
                               f"${total_cost_usd:.4f}", flush=True)
@@ -4290,15 +4297,15 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                             failed += 1
 
                     except Exception as save_err:
-                        print(f"[THREAD] SAVE ERROR for {result.filename}: {save_err}", flush=True)
-                        traceback.print_exc()
+                        print(f"[THREAD] SAVE ERROR for {doc_ref(result.filename)}: {exc_brief(save_err)}", flush=True)
+                        print_safe_traceback()
                         failed += 1
                         _persist_failure(Session, job_id,
                                          getattr(result, "filename", fp), save_err)
 
             except Exception as doc_err:
-                print(f"[THREAD] doc error: {doc_err}", flush=True)
-                traceback.print_exc()
+                print(f"[THREAD] doc error: {exc_brief(doc_err)}", flush=True)
+                print_safe_traceback()
                 failed += 1
                 _persist_failure(Session, job_id, display_filename, doc_err)
             finally:
@@ -4321,7 +4328,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         try:
             needs_review += _flag_batch_duplicates(session, job_id)
         except Exception as dup_err:
-            print(f"[THREAD] duplicate check could not run: {dup_err}", flush=True)
+            print(f"[THREAD] duplicate check could not run: {exc_brief(dup_err)}", flush=True)
             job.progress_message = ("The duplicate-cheque check could not run "
                                     "for this batch.")
             session.commit()
@@ -4362,8 +4369,8 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
               f"TIME: {job.total_time_sec:.1f}s", flush=True)
 
     except Exception as e:
-        print(f"[THREAD] FAILED: {e}", flush=True)
-        traceback.print_exc()
+        print(f"[THREAD] FAILED: {exc_brief(e)}", flush=True)
+        print_safe_traceback()
         try:
             job = session.query(ExtractionJob).filter_by(id=job_id).first()
             if job:
@@ -4437,7 +4444,7 @@ def export_job_excel(
                     sheet_data = raw
                     template_regions = saved_regions or _analyse_template_regions(raw)
         except Exception as e:
-            print(f"[EXPORT] Template load error: {e}", flush=True)
+            print(f"[EXPORT] Template load error: {exc_brief(e)}", flush=True)
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -4519,7 +4526,7 @@ def export_job_zip(
                     sheet_data = raw
                     template_regions = saved_regions or _analyse_template_regions(raw)
         except Exception as e:
-            print(f"[EXPORT] Template load error: {e}", flush=True)
+            print(f"[EXPORT] Template load error: {exc_brief(e)}", flush=True)
 
     zip_buf = io.BytesIO()
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -6881,7 +6888,7 @@ def get_inferred_templates(job_id: int, db: Session = Depends(get_db),
             from shape_inference import saveable_template
             payload = saveable_template(inferred, grid)
         except Exception as e:
-            print(f"[TEMPLATE] could not build saveable template: {e}", flush=True)
+            print(f"[TEMPLATE] could not build saveable template: {exc_brief(e)}", flush=True)
             continue
         out[sig] = {"shape_signature": sig, "document_count": 1,
                     "documents": [d.filename], "template": payload,

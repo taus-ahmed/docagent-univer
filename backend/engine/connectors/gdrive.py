@@ -21,6 +21,7 @@ from typing import Optional
 from dataclasses import dataclass, field
 
 from config import BASE_DIR  # BASE_DIR is module-level, NOT on settings
+from log_safety import doc_ref, exc_brief
 
 
 @dataclass
@@ -156,7 +157,7 @@ class GoogleDriveConnector:
             return creds is not None and creds.valid
 
         except Exception as e:
-            print(f"[Drive Auth Error] {type(e).__name__}: {e}")
+            print(f"[Drive Auth Error] {exc_brief(e)}")
             import traceback
             traceback.print_exc()
             return False
@@ -185,7 +186,7 @@ class GoogleDriveConnector:
                     with open(self._token_path, "w") as f:
                         f.write(self._creds.to_json())
             except Exception as e:
-                print(f"[Drive] Token load/refresh failed: {e}")
+                print(f"[Drive] Token load/refresh failed: {exc_brief(e)}")
                 self._creds = None
                 # Delete corrupted token so next auth starts fresh
                 self._token_path.unlink(missing_ok=True)
@@ -203,7 +204,7 @@ class GoogleDriveConnector:
             ).execute()
             return [DriveFolder(id=f["id"], name=f["name"]) for f in results.get("files", [])]
         except Exception as e:
-            print(f"[Drive Error] List folders: {e}")
+            print(f"[Drive Error] List folders: {exc_brief(e)}")
             return []
 
     def list_files(self, folder_id: str = "root") -> list[DriveFile]:
@@ -231,7 +232,7 @@ class GoogleDriveConnector:
                     files.append(df)
             return files
         except Exception as e:
-            print(f"[Drive Error] List files: {e}")
+            print(f"[Drive Error] List files: {exc_brief(e)}")
             return []
 
     def download_file(self, file_id: str, filename: str, dest_dir: str | Path) -> Optional[Path]:
@@ -250,7 +251,7 @@ class GoogleDriveConnector:
                     _, done = downloader.next_chunk()
             return dest_path
         except Exception as e:
-            print(f"[Drive Error] Download {filename}: {e}")
+            print(f"[Drive Error] Download {doc_ref(filename)}: {exc_brief(e)}")
             return None
 
 
@@ -273,7 +274,7 @@ class GoogleDriveConnector:
             result = service.files().create(body=file_metadata, media_body=media, fields="id").execute()
             return result.get("id")
         except Exception as e:
-            print(f"[Drive Error] Upload {local_path}: {e}")
+            print(f"[Drive Error] Upload {doc_ref(local_path)}: {exc_brief(e)}")
             return None
 
 

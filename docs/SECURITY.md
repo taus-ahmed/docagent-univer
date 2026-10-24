@@ -36,6 +36,14 @@ names the code that implements it.
   `company_admin` of the job's tenant, or the job's own user.
 - Templates: `load_template_for_user` checks ownership before an upload uses a
   template id; an unknown id fails rather than silently extracting without one.
+- Watch folders (`drive._visible_watch_folders`): a super-administrator sees
+  all, a tenant administrator its own tenant's, a user its own; any other id is
+  a 404.
+- A tenant comparison needs a tenant: `auth.same_tenant` treats a missing
+  `client_id` as "no tenant", never as a tenant shared with every other account
+  that has none (super-administrators' templates carry `client_id = NULL`).
+- The flat exports (`/api/export/combined`, `/perfile`) accept only a template
+  the caller could extract with (`load_template_for_user`), answered as 404.
 
 ## Uploads and storage
 
@@ -47,6 +55,48 @@ names the code that implements it.
   local backend re-checks that the resolved path stays under the storage root.
   `client_id` leads every tenant-owned key.
 - Exports are rebuilt from the stored result on every download, never stored.
+- Object-store temp copies (`storage.get_local_path`, needed because the PDF
+  readers want a path) live in the app's own directory (`storage.TEMP_COPY_DIR`)
+  and are deleted by `release()` / `local_copy()` on success, failure and
+  cancel; boot deletes copies older than a day from that directory only.
+  `release()` never deletes the local store's own files.
+
+## Logging
+
+Logs leave the tenant boundary — the platform's log drain, whoever debugs a
+deploy, a screenshot in a chat — so they carry **identifiers, counts,
+durations and reason codes, never content**.
+
+| May be logged | Never logged |
+|---|---|
+| job, document, user and watch-folder ids; `client_id` | document text, OCR text, extracted values, summaries, anomalies |
+| `doc_ref(name)` — `doc-` + 10 hex of SHA-256 of the file's base name | the file name a client gave a document; Drive file and folder names |
+| counts, page numbers, sizes, token counts, costs, timings | prompts and model answers, including an answer that failed to parse |
+| `exc_brief(e)` — the exception's TYPE (and HTTP status) | exception messages and full tracebacks (they quote paths, names, parser input) |
+| frames-only tracebacks (`print_safe_traceback`, file:line:function) | request bodies, query strings, provider error bodies |
+| template structure: band and heading labels, cell refs | |
+| the client IP on a login lockout (needed to act on it) | |
+
+The helpers are in `backend/engine/log_safety.py`. `doc_ref` is stable, so one
+document is one reference throughout a run, and whoever holds the database
+(where the real name is stored) can recompute it to find the row.
+
+Libraries that read documents log what they read below WARNING — pdfminer's
+DEBUG lines are the page text verbatim — so `log_safety` caps `pdfminer`,
+`pdfplumber`, `PIL`, `pypdf`, `pytesseract`, `pdf2image`, `urllib3`,
+`botocore`, `boto3` and `s3transfer` at WARNING whatever the root level is.
+
+Enforced by `tests/http/test_logs_carry_no_content.py`: real extractions
+(templated with every option, no-template, a non-JSON model answer, an
+unreadable file, a missing source) with a sentinel in the document text, the
+file name, the model's answers and the option answers, and the sentinel must not
+appear in stdout, stderr or any logger at any level. The engine's command-line
+batch tool (`orchestrator.py`, `rich` console) prints to the operator's own
+terminal and is outside this policy.
+
+Not covered: template labels are logged as structure. They are the client's
+template, or — with no template — field names the model chose from the page
+(`Invoice Number`), not values.
 
 ## Secrets
 

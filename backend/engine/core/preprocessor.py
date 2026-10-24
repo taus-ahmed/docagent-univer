@@ -22,6 +22,7 @@ import pdfplumber
 from pypdf import PdfReader
 
 from text_layer import SHARD_SHRED, acroform_widgets, read_page
+from log_safety import doc_ref, exc_brief
 
 
 @dataclass
@@ -417,7 +418,7 @@ def _prefetch_ocr(file_path, pages) -> dict:
 
     def fallback(n, exc):
         why = f"{type(exc).__name__}: {exc}"
-        print(f"[OCR] page {n}: parallel OCR unavailable ({why}) — read "
+        print(f"[OCR] page {n}: parallel OCR unavailable ({exc_brief(exc)}) — read "
               f"serially instead", flush=True)
         read = _ocr_read(key, n)
         read["pool_fallback"] = why
@@ -714,8 +715,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                         print(
                             f"[TEXTLAYER] page {page_num+1}: reassembled "
                             f"{len(repairs)} value(s) the PDF wrapped inside a "
-                            f"cell: " + ", ".join(f"{a!r}+{b!r}->{f!r}"
-                                                  for a, b, f in repairs[:6]),
+                            f"cell",
                             flush=True
                         )
                     # Fix within-page decimal splits
@@ -767,7 +767,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
         doc.processing_notes += "WARNING: Neither text nor images could be extracted. "
 
     print(
-        f"[PREPROCESS] {file_path.name}: {doc.total_pages} pages, "
+        f"[PREPROCESS] {doc_ref(file_path)}: {doc.total_pages} pages, "
         f"{len(doc.extracted_text)} chars total, "
         f"{len(doc.page_images_b64)} images",
         flush=True

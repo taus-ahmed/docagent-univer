@@ -72,7 +72,7 @@ def _get_drive():
     try:
         from gdrive import get_drive_connector
     except ImportError as e:
-        logger.warning("Google Drive connector unavailable: %s", e)
+        logger.warning("Google Drive connector unavailable: %s", type(e).__name__)
         raise HTTPException(
             status_code=503,
             detail="Google Drive integration is not available on this server.")
@@ -117,7 +117,8 @@ def drive_auth(current_user: User = Depends(get_current_user)):
     except Exception as e:
         # Never echo the raw exception: it has carried module paths and
         # internal state to the client ("No module named 'gdrive'").
-        logger.exception("Google Drive request failed")
+        # No traceback: a Drive error message can quote file and folder names.
+        logger.error("Google Drive request failed: %s", type(e).__name__)
         raise HTTPException(status_code=502,
                             detail="Google Drive request failed.") from e
 
@@ -157,7 +158,8 @@ def list_drive_folder(
     except Exception as e:
         # Never echo the raw exception: it has carried module paths and
         # internal state to the client ("No module named 'gdrive'").
-        logger.exception("Google Drive request failed")
+        # No traceback: a Drive error message can quote file and folder names.
+        logger.error("Google Drive request failed: %s", type(e).__name__)
         raise HTTPException(status_code=502,
                             detail="Google Drive request failed.") from e
 
@@ -260,7 +262,7 @@ def _run_drive_extraction(job_id, folder_id, drive_files, schema_path, db_url):
                 session.commit()
         except Exception as inner_e:
             import logging
-            logging.getLogger("docagent.drive").error(f"[drive job {job_id}] DB error status write failed: {inner_e}")
+            logging.getLogger("docagent.drive").error(f"[drive job {job_id}] DB error status write failed: {type(inner_e).__name__}")
     finally:
         session.close()
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -399,6 +401,6 @@ def _do_watch_check(user_id, db_url):
         check_watched_folders(FakeDB(), verbose=False)
     except Exception as e:
         import logging
-        logging.getLogger("docagent.drive").error(f"Watch check error: {e}")
+        logging.getLogger("docagent.drive").error(f"Watch check error: {type(e).__name__}")
     finally:
         session.close()

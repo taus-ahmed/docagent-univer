@@ -24,6 +24,7 @@ import urllib.error
 from typing import Optional, Tuple
 from config import settings
 from connectors.base import LLMResponse
+from log_safety import exc_brief
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ def _parse_json_robust(raw: str) -> Optional[dict]:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    print(f"[GEMINI] JSON parse failed. Raw[:300]: {raw[:300]}", flush=True)
+    print(f"[GEMINI] JSON parse failed ({len(raw or '')} chars; not logged)", flush=True)
     return None
 
 
@@ -173,16 +174,15 @@ class GeminiClient:
             except urllib.error.HTTPError as e:
                 last_error = f"HTTP {e.code} {e.reason}"
                 body_bytes = e.read()
-                err_body   = body_bytes.decode('utf-8', errors='replace')[:200]
-                print(f"[GEMINI] {model} failed: {last_error} | {err_body}",
-                      flush=True)
+                print(f"[GEMINI] {model} failed: {last_error} "
+                      f"({len(body_bytes)}-byte error body not logged)", flush=True)
                 # Auth failure — no point trying other models
                 if e.code in (401, 403):
                     break
                 continue
             except Exception as e:
                 last_error = str(e)[:150]
-                print(f"[GEMINI] {model} error: {last_error}", flush=True)
+                print(f"[GEMINI] {model} error: {exc_brief(e)}", flush=True)
                 continue
 
         raise RuntimeError(f"All Gemini models failed. Last error: {last_error}")
@@ -227,14 +227,14 @@ class GeminiClient:
             except urllib.error.HTTPError as e:
                 last_error = f"HTTP {e.code}"
                 body_bytes = e.read()
-                print(f"[GEMINI] vision {model} failed: {last_error} | "
-                      f"{body_bytes.decode('utf-8','replace')[:150]}", flush=True)
+                print(f"[GEMINI] vision {model} failed: {last_error} "
+                      f"({len(body_bytes)}-byte error body not logged)", flush=True)
                 if e.code in (401, 403):
                     break
                 continue
             except Exception as e:
                 last_error = str(e)[:100]
-                print(f"[GEMINI] vision {model} error: {last_error}", flush=True)
+                print(f"[GEMINI] vision {model} error: {exc_brief(e)}", flush=True)
                 continue
 
         raise RuntimeError(f"All vision models failed: {last_error}")
