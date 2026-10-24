@@ -46,6 +46,35 @@ def _num(s):
         return None
 
 
+def _unreadable(file_path, doc):
+    """Why this file has nothing to read, or "" when it has something.
+
+    Only a file with NO page text and NO page image counts — a blank page or
+    a scan has something (it goes to OCR and is flagged there)."""
+    if list(getattr(doc, "page_texts", []) or []) or (doc.page_images_b64 or []):
+        return ""
+    name = Path(file_path).name
+    try:
+        if Path(file_path).stat().st_size == 0:
+            return f"{name} is empty (0 bytes)"
+    except OSError:
+        pass
+    if str(getattr(doc, "file_type", "")) == "pdf":
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(str(file_path))
+            if reader.is_encrypted:
+                return (f"{name} is password-protected and could not be opened; "
+                        f"remove the password and upload it again")
+            if len(reader.pages) == 0:
+                return f"{name} has no pages"
+        except Exception:
+            pass
+    why = str(getattr(doc, "processing_notes", "") or "").strip()
+    return (f"{name} could not be read" + (f": {why}" if why else "")
+            + " — check the file opens, and upload it again")
+
+
 def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
               temperature=0.1):
     """
@@ -79,6 +108,10 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
         except Exception as e:
             err_txt = str(e)
             _log("LLM", f"error attempt {attempt+1}: {e}")
+            # keep the cause: the caller names it in the failure it reports
+            from connectors.base import LLMResponse
+            resp = LLMResponse(raw_text="", success=False,
+                               error=f"{type(e).__name__}: {e}")
         if attempt < 2:
             # E5 — exponential backoff on rate limiting: 1s, 2s, 4s... capped at
             # 30s. Non-429 failures keep the original fixed 2s retry delay.
@@ -324,6 +357,14 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
 
     # ── Preprocess (shared by all paths) ──
     doc = preprocess_file(file_path)
+    unreadable = _unreadable(file_path, doc)
+    if unreadable:
+        # NOTHING TO READ: a named failure for this file, before any model
+        # call. It used to reach the model with nothing and fail as "no usable
+        # JSON" — the right outcome under the wrong reason.
+        _log("ROUTE", f"{file_path.name}: {unreadable}")
+        from app.api.routes.extract import _fail
+        return [_fail(file_path.name, unreadable)]
     doc_text_pages = list(getattr(doc, "page_texts", []) or [])
     # Positional evidence, one list of visual lines per page. Kept alongside
     # the text rather than replacing it: the model reads text, validation

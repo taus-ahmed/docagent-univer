@@ -868,7 +868,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     if not isinstance(parsed, dict):
         _log("SLOT", "no parseable response — failing the document")
         from app.api.routes.extract import _fail
-        return [_fail(file_path.name, "Slot extraction returned no usable JSON")]
+        err = str(getattr(resp, "error", "") or "") if resp is not None else ""
+        why = "Slot extraction returned no usable JSON"
+        if resp is not None and not getattr(resp, "success", False):
+            why += f" — the model call failed: {err or 'no error given'}"
+        return [_fail(file_path.name, why)]
 
     by_id = {f["slot_id"]: f for f in slots["fields"]}
     # I2 — where each field value was read from: {ref: {source, page, grounded}}.
