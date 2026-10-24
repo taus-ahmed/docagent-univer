@@ -8,8 +8,12 @@ Strategy:
 """
 
 import io
+import os
 import re
 import base64
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
+from contextvars import ContextVar
 from pathlib import Path
 from dataclasses import dataclass, field
 
@@ -337,6 +341,105 @@ def _fix_within_page_decimals(text: str) -> str:
     )
 
 
+# ── parallel OCR (docs/proposals/throughput.md, item 1) ─────────────────────
+#
+# A file's OCR pages are READ in a process pool and FOLDED serially, in page
+# order, by the same code that folds a serial read — so the pool decides only
+# when a page is read, never what is recorded about it. `_ocr_read` is the
+# reading half (no document is touched, so it can run in another process);
+# `_ocr_page` is the folding half and is unchanged in what it records. A pool
+# that cannot start, or breaks, is not a failure of the page: the page is read
+# again here, serially, and its OCR record says so (`pool_fallback`).
+
+#: (str(file), page) -> a prefetched `_ocr_read` result, for the file being
+#: folded on this thread. A ContextVar, because jobs run on threads.
+_PREFETCH: ContextVar[dict] = ContextVar("ocr_prefetch", default={})
+
+
+def ocr_workers() -> int:
+    """Pool size from `OCR_WORKERS`; default min(4, CPUs); 1 (or less) is serial.
+
+    Railway caps the container's CPU share below `os.cpu_count()`, so set it
+    there from a measurement, not from the host's core count."""
+    default = min(4, os.cpu_count() or 1)
+    raw = (os.environ.get("OCR_WORKERS") or "").strip()
+    try:
+        return max(1, int(raw)) if raw else default
+    except ValueError:
+        return default
+
+
+def _spawn_pool(max_workers):
+    # SPAWN on every platform: forking a process that runs request and job
+    # threads can copy a lock held by another thread and hang the child.
+    return ProcessPoolExecutor(max_workers=max_workers,
+                               mp_context=multiprocessing.get_context("spawn"))
+
+
+#: What `_prefetch_ocr` opens a pool with; tests inject executors here.
+_POOL_FACTORY = _spawn_pool
+
+
+def _ocr_read(file_path, page_number, dpi=None, image=None) -> dict:
+    """Render (unless `image` is given) and OCR one page; touches no document.
+
+    The page image is rendered, read and released inside this call, so a
+    worker holds one page at a time. Returns {text, lines, repairs, stats,
+    applied, image, dpi}, or {error, stats, dpi} when the page could not be
+    read — the error text exactly as the serial note prints it.
+    """
+    stats: dict = {}
+    try:
+        from ocr_source import OcrPageSource, OCR_DPI, render_pdf_page
+        dpi = dpi or OCR_DPI
+        if image is None:
+            image = render_pdf_page(file_path, page_number, dpi=dpi)
+        if image is None:
+            raise RuntimeError("the page could not be rendered")
+        source = OcrPageSource(image, page_number=page_number, dpi=dpi)
+        text, lines, repairs = read_page(source, stats=stats)
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}", "stats": stats,
+                "dpi": dpi}
+    return {"text": text, "lines": lines, "repairs": repairs, "stats": stats,
+            "applied": dict(source.applied),
+            "image": getattr(source, "_image", None), "dpi": dpi}
+
+
+def _prefetch_ocr(file_path, pages) -> dict:
+    """{(str(file), page): read} for `pages`, read in a pool; {} when a pool
+    would not help (fewer than two pages, or OCR_WORKERS=1)."""
+    workers = min(ocr_workers(), len(pages))
+    if workers < 2:
+        return {}
+    key = str(file_path)
+    reads: dict = {}
+
+    def fallback(n, exc):
+        why = f"{type(exc).__name__}: {exc}"
+        print(f"[OCR] page {n}: parallel OCR unavailable ({why}) — read "
+              f"serially instead", flush=True)
+        read = _ocr_read(key, n)
+        read["pool_fallback"] = why
+        return read
+
+    try:
+        with _POOL_FACTORY(max_workers=workers) as pool:
+            futures = {n: pool.submit(_ocr_read, key, n) for n in pages}
+            for n in pages:
+                try:
+                    reads[n] = futures[n].result()
+                except Exception as exc:
+                    reads[n] = fallback(n, exc)
+    except Exception as exc:
+        for n in pages:
+            if n not in reads:
+                reads[n] = fallback(n, exc)
+    print(f"[OCR] {len(pages)} page(s) read with {workers} worker(s)",
+          flush=True)
+    return {(key, n): r for n, r in reads.items()}
+
+
 def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
               stats: dict, image=None, dpi=None):
     """(text, lines, repairs) for a page with no text layer, read by OCR.
@@ -353,32 +456,38 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
 
     `image` (with its own `dpi`) is a page that is ALREADY a picture — an
     uploaded JPG/PNG — and is read exactly as a rendered page is.
+
+    A page the pool already read (`_prefetch_ocr`) is folded from that read;
+    any other page is read here.
     """
-    try:
-        from ocr_source import OcrPageSource, OCR_DPI, render_pdf_page
-        dpi = dpi or OCR_DPI
-        if image is None:
-            image = render_pdf_page(file_path, page_number, dpi=dpi)
-        if image is None:
-            raise RuntimeError("the page could not be rendered")
-        source = OcrPageSource(image, page_number=page_number, dpi=dpi)
-        text, lines, repairs = read_page(source, stats=stats)
-    except Exception as exc:
+    read = None
+    if image is None:
+        read = _PREFETCH.get().pop((str(file_path), page_number), None)
+    if read is None:
+        read = _ocr_read(file_path, page_number, dpi=dpi, image=image)
+    stats.update(read["stats"])
+    dpi = read["dpi"]
+    if "error" in read:
         doc.ocr_failed_pages.append(page_number)
         doc.processing_notes += (
             f"page {page_number} has no text layer and could not be OCR'd "
-            f"({type(exc).__name__}: {exc}). ")
+            f"({read['error']}). ")
         print(f"[OCR] page {page_number}: NO TEXT LAYER and OCR unavailable — "
-              f"{type(exc).__name__}: {exc}", flush=True)
+              f"{read['error']}", flush=True)
         return "", [], []
 
     from ocr_source import reader_identity
+    text, lines, repairs = read["text"], read["lines"], read["repairs"]
+    applied = read["applied"]
     words = sum(len(ln) for ln in lines)
-    straightened = getattr(source, "_image", None)
+    straightened = read["image"]
     if straightened is not None:
         doc.ocr_images[page_number] = (straightened, dpi)
-    doc.ocr_pages.append({"page": page_number, "words": words, **source.applied,
-                          "dpi": dpi, **reader_identity()})
+    entry = {"page": page_number, "words": words, **applied,
+             "dpi": dpi, **reader_identity()}
+    if "pool_fallback" in read:
+        entry["pool_fallback"] = read["pool_fallback"]
+    doc.ocr_pages.append(entry)
     if not words:
         doc.ocr_zero_word_pages.append(page_number)
         doc.processing_notes += (
@@ -386,9 +495,9 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
             f"from it — blank or unreadable; nothing was extracted from this "
             f"page. ")
     print(f"[OCR] page {page_number}: no text layer — read by Tesseract at "
-          f"{dpi}dpi, rotated {source.applied['rotated']}deg, deskewed "
-          f"{source.applied['deskewed']}deg ({source.applied.get('skew_detector', 'none')}), "
-          f"retry {source.applied.get('retry', 'none')}, {len(text)} chars, "
+          f"{dpi}dpi, rotated {applied['rotated']}deg, deskewed "
+          f"{applied['deskewed']}deg ({applied.get('skew_detector', 'none')}), "
+          f"retry {applied.get('retry', 'none')}, {len(text)} chars, "
           f"{sum(len(ln) for ln in lines)} words. These are a MACHINE's "
           f"reading, not the document's own text.", flush=True)
     return text, lines, repairs
@@ -476,38 +585,64 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                 print(f"[TEXTLAYER] {sum(len(v) for v in widgets.values())} "
                       f"form checkbox(es) found — writing their state into "
                       f"the text", flush=True)
-            for page_num, page in enumerate(pdf.pages):
-                # Read the page WITH its geometry. A page whose values the PDF
-                # wrapped inside a table cell comes back reassembled; a page
-                # that needed nothing comes back exactly as extract_text()
-                # produced it, so the prompt for an untouched document does
-                # not change.
-                stats = {}
-                text, lines, repairs = read_page(page, widgets.get(page_num) or [],
-                                                 stats=stats)
-                needed_ocr = page_needs_ocr(text)
-                # The pypdf reader is opened only for a page that could be a
-                # pre-OCR'd scan (a usable text layer AND an image), so a plain
-                # digital document pays nothing for the question.
-                if reader is None and not needed_ocr and page.images:
-                    reader = PdfReader(str(file_path))
-                try:
-                    origin = page_origin(
-                        page, reader.pages[page_num] if reader else None,
-                        needed_ocr)
-                except Exception as exc:
-                    # Said out loud. A page whose stream cannot be walked is
-                    # left native — calling it a scan on no evidence would put
-                    # a digital form under the OCR floor.
-                    origin = "native"
-                    doc.processing_notes += (
-                        f"page {page_num + 1}: could not check for an embedded "
-                        f"OCR layer ({type(exc).__name__}: {exc}). ")
-                # GATE 2c. Only a native page with an image covering it pays
-                # for the OCR pass; every other page is untouched.
-                if origin == "native" and page.images:
-                    cover = largest_image_cover(page)
-                    if cover >= SELECTIVE_OCR_COVER:
+            # PASS 1 — the text layer, every page. Nothing is recorded on
+            # `doc` yet: the fold below records each page in order, so the
+            # pages needing OCR can be read in between, all at once.
+            plans = []
+            unread = None
+            try:
+                for page_num, page in enumerate(pdf.pages):
+                    # Read the page WITH its geometry. A page whose values the
+                    # PDF wrapped inside a table cell comes back reassembled; a
+                    # page that needed nothing comes back exactly as
+                    # extract_text() produced it, so the prompt for an
+                    # untouched document does not change.
+                    stats = {}
+                    text, lines, repairs = read_page(
+                        page, widgets.get(page_num) or [], stats=stats)
+                    needed_ocr = page_needs_ocr(text)
+                    # The pypdf reader is opened only for a page that could be
+                    # a pre-OCR'd scan (a usable text layer AND an image), so a
+                    # plain digital document pays nothing for the question.
+                    if reader is None and not needed_ocr and page.images:
+                        reader = PdfReader(str(file_path))
+                    note = ""
+                    try:
+                        origin = page_origin(
+                            page, reader.pages[page_num] if reader else None,
+                            needed_ocr)
+                    except Exception as exc:
+                        # Said out loud. A page whose stream cannot be walked
+                        # is left native — calling it a scan on no evidence
+                        # would put a digital form under the OCR floor.
+                        origin = "native"
+                        note = (f"page {page_num + 1}: could not check for an "
+                                f"embedded OCR layer ({type(exc).__name__}: "
+                                f"{exc}). ")
+                    # GATE 2c. Only a native page with an image covering it
+                    # pays for the OCR pass; every other page is untouched.
+                    cover = None
+                    if origin == "native" and page.images:
+                        c = largest_image_cover(page)
+                        if c >= SELECTIVE_OCR_COVER:
+                            cover = c
+                    plans.append((text, lines, repairs, stats, needed_ocr,
+                                  origin, note, cover))
+            except Exception as exc:
+                # Raised after the pages before it are folded, which is
+                # exactly where a page-by-page loop would have stopped.
+                unread = exc
+
+            # PASS 2 — OCR every page that will ask for it, in a pool when
+            # there are several (`_prefetch_ocr`). PASS 3 folds in page order.
+            wanted = [n + 1 for n, p in enumerate(plans)
+                      if p[4] or p[7] is not None]
+            token = _PREFETCH.set(_prefetch_ocr(file_path, wanted))
+            try:
+                for page_num, (text, lines, repairs, stats, needed_ocr,
+                               origin, note, cover) in enumerate(plans):
+                    doc.processing_notes += note
+                    if cover is not None:
                         read = _selective_ocr(file_path, page_num + 1, doc,
                                               lines, cover)
                         if read is not None:
@@ -515,89 +650,94 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                             stats.clear()
                             stats.update(ocr_stats)
                             origin = "ocr"
-                doc.page_origins.append(origin)
-                if origin == "native":
-                    doc.native_text_chars += len((text or "").strip())
-                elif origin == "pre_ocr":
-                    print(f"[TEXTLAYER] page {page_num+1}: EMBEDDED OCR LAYER "
-                          f"— its text is drawn invisibly over a page image, "
-                          f"so it is a machine's reading of that image, not "
-                          f"the document's own words.", flush=True)
-                # A PAGE WITH NO TEXT LAYER IS NOT A PAGE WITH NOTHING ON IT.
-                # pdfplumber returns nothing for a scan, and everything
-                # downstream — the prompt, grounding, placement, row identity —
-                # then has nothing to work with and says so only by being
-                # empty. Render it and read it with OCR instead, through the
-                # SAME seam: `read_page` takes a PageSource, so nothing below
-                # this line learns that a different reader ran.
-                if needed_ocr:
-                    text, lines, repairs = _ocr_page(
-                        file_path, page_num + 1, doc, stats)
-                doc.page_lines.append(lines)
-                # I10 — SHREDDED TEXT LAYER, said BEFORE the model is asked.
-                # Several texts set at different sizes over one band of y have
-                # their characters interleaved in x, and a size-blind reading
-                # shatters all of them. `read_page` now separates them; this
-                # says that it had to, because a page that needed separating is
-                # a page worth checking by hand.
-                #
-                # ⚠ THIS DOES NOT DETECT A SCANNED DOCUMENT. A thin OCR text
-                # layer scores 1.00 here — `round2/bank-statement-sample.pdf` is
-                # 108 words over 66 images and looks perfectly clean by this
-                # measure. Two different failures, two different signals, and
-                # treating this one as the OCR canary would give false
-                # assurance.
-                #
-                # A reader that cannot perform the two-pass comparison at all
-                # is recorded as UNCHECKED rather than passing the test it was
-                # never able to sit. `stats` carries no `shard_ratio` in that
-                # case, and defaulting it to 1.0 here would read as a clean
-                # page.
-                if stats.get("shard_checked", True) is False:
-                    doc.unchecked_shred_pages.append(page_num + 1)
-                elif stats.get("shard_ratio", 1.0) >= SHARD_SHRED:
-                    doc.shredded_pages.append(page_num + 1)
-                    print(
-                        f"[TEXTLAYER] page {page_num+1}: SHREDDED TEXT LAYER — "
-                        f"{stats['shard_ratio']:.2f}x more words read without "
-                        f"font size than with it. Several texts are set at "
-                        f"different sizes over the same lines and their "
-                        f"characters interleave; they have been separated and "
-                        f"this page's text rebuilt. CHECK THIS PAGE BY HAND. "
-                        f"(This check does NOT detect scanned pages or thin "
-                        f"OCR text layers.)",
-                        flush=True
-                    )
-                # OVERPRINT DETECTION: performed, or recorded as not performed.
-                # Never silently absent — an absent per-word flag already means
-                # "this word is clean", so a reader that cannot look would
-                # otherwise report a clean document.
-                if stats.get("overprint_checked", True) is False:
-                    doc.unchecked_overprint_pages.append(page_num + 1)
-                if repairs:
-                    doc.text_repairs.extend(repairs)
-                    print(
-                        f"[TEXTLAYER] page {page_num+1}: reassembled "
-                        f"{len(repairs)} value(s) the PDF wrapped inside a "
-                        f"cell: " + ", ".join(f"{a!r}+{b!r}->{f!r}"
-                                              for a, b, f in repairs[:6]),
-                        flush=True
-                    )
-                # Fix within-page decimal splits
-                text = _fix_within_page_decimals(text)
-                doc.page_texts.append(text)
-                if text.strip():
-                    print(
-                        f"[PREPROCESS] page {page_num+1}/{doc.total_pages}: "
-                        f"{len(text)} chars extracted",
-                        flush=True
-                    )
-                else:
-                    print(
-                        f"[PREPROCESS] page {page_num+1}/{doc.total_pages}: "
-                        f"no text (scanned/image page)",
-                        flush=True
-                    )
+                    doc.page_origins.append(origin)
+                    if origin == "native":
+                        doc.native_text_chars += len((text or "").strip())
+                    elif origin == "pre_ocr":
+                        print(f"[TEXTLAYER] page {page_num+1}: EMBEDDED OCR LAYER "
+                              f"— its text is drawn invisibly over a page image, "
+                              f"so it is a machine's reading of that image, not "
+                              f"the document's own words.", flush=True)
+                    # A PAGE WITH NO TEXT LAYER IS NOT A PAGE WITH NOTHING ON IT.
+                    # pdfplumber returns nothing for a scan, and everything
+                    # downstream — the prompt, grounding, placement, row identity —
+                    # then has nothing to work with and says so only by being
+                    # empty. Render it and read it with OCR instead, through the
+                    # SAME seam: `read_page` takes a PageSource, so nothing below
+                    # this line learns that a different reader ran.
+                    if needed_ocr:
+                        text, lines, repairs = _ocr_page(
+                            file_path, page_num + 1, doc, stats)
+                    doc.page_lines.append(lines)
+                    # I10 — SHREDDED TEXT LAYER, said BEFORE the model is asked.
+                    # Several texts set at different sizes over one band of y have
+                    # their characters interleaved in x, and a size-blind reading
+                    # shatters all of them. `read_page` now separates them; this
+                    # says that it had to, because a page that needed separating is
+                    # a page worth checking by hand.
+                    #
+                    # ⚠ THIS DOES NOT DETECT A SCANNED DOCUMENT. A thin OCR text
+                    # layer scores 1.00 here — `round2/bank-statement-sample.pdf` is
+                    # 108 words over 66 images and looks perfectly clean by this
+                    # measure. Two different failures, two different signals, and
+                    # treating this one as the OCR canary would give false
+                    # assurance.
+                    #
+                    # A reader that cannot perform the two-pass comparison at all
+                    # is recorded as UNCHECKED rather than passing the test it was
+                    # never able to sit. `stats` carries no `shard_ratio` in that
+                    # case, and defaulting it to 1.0 here would read as a clean
+                    # page.
+                    if stats.get("shard_checked", True) is False:
+                        doc.unchecked_shred_pages.append(page_num + 1)
+                    elif stats.get("shard_ratio", 1.0) >= SHARD_SHRED:
+                        doc.shredded_pages.append(page_num + 1)
+                        print(
+                            f"[TEXTLAYER] page {page_num+1}: SHREDDED TEXT LAYER — "
+                            f"{stats['shard_ratio']:.2f}x more words read without "
+                            f"font size than with it. Several texts are set at "
+                            f"different sizes over the same lines and their "
+                            f"characters interleave; they have been separated and "
+                            f"this page's text rebuilt. CHECK THIS PAGE BY HAND. "
+                            f"(This check does NOT detect scanned pages or thin "
+                            f"OCR text layers.)",
+                            flush=True
+                        )
+                    # OVERPRINT DETECTION: performed, or recorded as not performed.
+                    # Never silently absent — an absent per-word flag already means
+                    # "this word is clean", so a reader that cannot look would
+                    # otherwise report a clean document.
+                    if stats.get("overprint_checked", True) is False:
+                        doc.unchecked_overprint_pages.append(page_num + 1)
+                    if repairs:
+                        doc.text_repairs.extend(repairs)
+                        print(
+                            f"[TEXTLAYER] page {page_num+1}: reassembled "
+                            f"{len(repairs)} value(s) the PDF wrapped inside a "
+                            f"cell: " + ", ".join(f"{a!r}+{b!r}->{f!r}"
+                                                  for a, b, f in repairs[:6]),
+                            flush=True
+                        )
+                    # Fix within-page decimal splits
+                    text = _fix_within_page_decimals(text)
+                    doc.page_texts.append(text)
+                    if text.strip():
+                        print(
+                            f"[PREPROCESS] page {page_num+1}/{doc.total_pages}: "
+                            f"{len(text)} chars extracted",
+                            flush=True
+                        )
+                    else:
+                        print(
+                            f"[PREPROCESS] page {page_num+1}/{doc.total_pages}: "
+                            f"no text (scanned/image page)",
+                            flush=True
+                        )
+
+            finally:
+                _PREFETCH.reset(token)
+            if unread is not None:
+                raise unread
 
             # Join all pages with clear separator
             doc.extracted_text = PAGE_BREAK.join(doc.page_texts)
