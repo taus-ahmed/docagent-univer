@@ -31,11 +31,14 @@ item is in the linked document; each open item says what blocks it.
 |---|---|
 | **Handwriting** | A handwritten payee, amount or signature is not read by Tesseract; such a value is `low` with `grounding_failed`, never `high`. Needs a handwriting-capable reader and real samples |
 | **Hard scans (a second OCR reader)** | On the synthetic hard tier RapidOCR reads 97 of 155 fields against Tesseract's 35, but 31 of its 97 are wrong; Tesseract is far better on clean and moderate scans. Using both needs an arbitration rule, measured on real client scans. Deferred until real samples exist |
-| **Role matrix** | `admin`, `company_admin`, `client` are enforced in several places and documented in none; `company_admin` cannot be assigned through the API |
+| **Role matrix** | Inventory and recommended matrix in docs/proposals/roles.md. First: watch folders are visible to and deletable by other tenants' admins (`drive.py:274, 331`) |
+| **Retention and deletion** | Nothing is ever deleted; design in docs/proposals/retention.md (needs a migration and a default period) |
+| **CI** | `.github/workflows/ci.yml` runs once pushed; replay-dependent tests skip by name on another renderer (docs/proposals/replay-portability.md) |
+| **Dependency upgrades** | docs/investigations/DEPENDENCIES.md: unused packages and 10 packages with advisories |
 | **Access-control cleanup** | Job routes answer 403 for another tenant's job (the review routes answer 404); token revocation on password change |
 | **Durable jobs and cancellation** | Extraction runs on a daemon thread: a restart fails the job at next boot, and cancel does not stop work in progress. Needs a queue (Celery + Redis, Phase 4) |
 | **Alembic baseline** | Startup DDL covers additive changes only; there is no baseline revision for the current schema |
 | **Staging environment** | Changes reach production from `main` directly; a staging service on Railway with its own database |
 | **Review history** | Review marks live inside each result (no migration); who changed a mark, and when, is overwritten |
-| **Throughput** | See docs/proposals/throughput.md |
-| **Cleanup follow-ups** | `extract.py` (6.9k lines) split; the legacy CLI modules the API still imports for `Orchestrator.llm`; `print` logging to `logging`; per-cell marks in the legacy writers |
+| **Throughput, further** | Parallel OCR is done (2.9× at 50 pages); render once per file and skipping OSD remain (docs/proposals/throughput.md) |
+| **Cleanup follow-ups** | `extract.py` (6.9k lines) split; the legacy CLI modules the API still imports for `Orchestrator.llm`; `print` logging to `logging` |
