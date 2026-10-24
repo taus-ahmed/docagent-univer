@@ -98,6 +98,7 @@ if str(_engine_dir) not in sys.path:
     sys.path.append(str(_engine_dir))
 from log_safety import doc_ref, exc_brief, print_safe_traceback  # noqa: E402
 from cancellation import Cancelled, watching  # noqa: E402
+# --split-reexports--
 
 _IMAGE_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp",
