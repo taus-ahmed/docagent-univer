@@ -206,7 +206,8 @@ def document_values(ed: dict) -> list[dict]:
             p = prov.get(ref) or {}
             label = labels.get(ref, ref)
             v = fields.get(ref, "")
-            st = value_status(v, cmap.get(ref), review_required=bool(p.get("review_required")),
+            st = value_status(v, _image_level(ed, cmap.get(ref)),
+                              review_required=bool(p.get("review_required")),
                               reasons=p.get("review_reasons") or [],
                               flagged=label in flagged or ref in flagged,
                               reviewed=doc_ok or bool(p.get("reviewed")))
@@ -231,8 +232,8 @@ def document_values(ed: dict) -> list[dict]:
             for col, v in row.items():
                 if str(col).startswith("_"):
                     continue
-                level = EDITED if col in edited else (
-                    LOW if col in ungrounded else row.get("_confidence"))
+                level = _image_level(ed, EDITED if col in edited else (
+                    LOW if col in ungrounded else row.get("_confidence")))
                 st = value_status(v, level, review_required=bool(row.get("_review_required")),
                                   reasons=row.get("_review_reasons") or [],
                                   reviewed=doc_ok or bool(row.get("_reviewed")))
@@ -243,6 +244,105 @@ def document_values(ed: dict) -> list[dict]:
                             "value": v, "level": level, "page": row.get("_page"),
                             "source": row.get("_source"), **st})
     return out
+
+
+# ── lookups for the export writers ───────────────────────────────────────────
+#: Writers that lay values out by template address (the legacy form, table,
+#: mixed and layout writers, the combined and per-file sheets) ask for ONE
+#: value's status at the moment they write it. These gather the inputs; the
+#: status itself is `value_status`, the function the screen uses.
+
+_MISSING = object()
+
+
+def _image_level(ed: dict, level):
+    """An image upload has no text layer: nothing in it was checked, whatever
+    level a legacy record carries. An edit is still an edit."""
+    if ed.get("image_upload") and level != EDITED:
+        return UNVERIFIED
+    return level
+
+
+def field_status(ed: Any, ref: Optional[str] = None, label: Optional[str] = None,
+                 value: Any = _MISSING) -> dict:
+    """The status of one field value, found by template ref and/or label."""
+    ed = ed if isinstance(ed, dict) else {}
+    cmap = (ed.get("validation") or {}).get("confidence_map") or {}
+    prov = ed.get("field_provenance") or {}
+    fields = ed.get("extracted_fields") or {}
+    inner = ed.get("extracted_data") or {}
+    entry = inner.get(label) if label is not None else None
+    if not isinstance(entry, dict):
+        entry = None
+        if ref is not None:
+            entry = next((e for e in inner.values() if isinstance(e, dict)
+                          and str(e.get("ref")) == str(ref)), None)
+    if ref is None and entry:
+        ref = entry.get("ref")
+    p = prov.get(ref) if ref is not None else None
+    p = p if isinstance(p, dict) else {}
+    level = cmap.get(ref) if ref is not None else None
+    if level is None and entry:
+        level = entry.get("confidence")
+    if p.get("edited"):
+        level = EDITED
+    level = _image_level(ed, level)
+    if value is _MISSING:
+        value = fields.get(ref) if ref in fields else (entry or {}).get("value", "")
+    if isinstance(value, dict):
+        value = value.get("value", "")
+    flagged = _flagged_labels(ed)
+    return value_status(value, level,
+                        review_required=bool(p.get("review_required")),
+                        reasons=p.get("review_reasons") or [],
+                        flagged=str(ref) in flagged or (label is not None and str(label) in flagged),
+                        reviewed=document_reviewed(ed) or bool(p.get("reviewed")))
+
+
+def row_cell_status(ed: Any, row: Any, col: str) -> dict:
+    """The status of one table cell, from the row dict it was written from.
+    A legacy row with no `_confidence` is `unknown`, which needs review."""
+    ed = ed if isinstance(ed, dict) else {}
+    row = row if isinstance(row, dict) else {}
+    v = row.get(col, "")
+    level = row.get("_confidence")
+    if isinstance(v, dict):
+        level = v.get("confidence") or level
+        v = v.get("value", "")
+    if col in set(row.get("_ungrounded") or []):
+        level = LOW
+    if col in set(row.get("_edited") or []):
+        level = EDITED
+    level = _image_level(ed, level)
+    return value_status(v, level, review_required=bool(row.get("_review_required")),
+                        reasons=row.get("_review_reasons") or [],
+                        reviewed=document_reviewed(ed) or bool(row.get("_reviewed")))
+
+
+def layout_values(ed: Any) -> list[dict]:
+    """The values of a LEGACY layout result (`layout_sections`), which the
+    layout writer exports and `document_values` does not list: no review
+    route can address them, but an export must still count and mark them."""
+    out = []
+    ls = ed.get("layout_sections") if isinstance(ed, dict) else None
+    for name, sec in (ls.items() if isinstance(ls, dict) else []):
+        for i, row in enumerate((sec or {}).get("rows") or [] if isinstance(sec, dict) else []):
+            if not isinstance(row, dict) or row.get("value") in (None, ""):
+                continue
+            st = row_cell_status(ed, {"value": row.get("value"),
+                                      "_confidence": row.get("confidence")}, "value")
+            out.append({"kind": "cell", "table": f"layout:{name}", "row": i,
+                        "column": "value", "ref": None,
+                        "label": f"{name} row {i + 1}", "value": row.get("value"),
+                        "level": row.get("confidence"), "page": None,
+                        "source": None, **st})
+    return out
+
+
+def export_values(ed: Any) -> list[dict]:
+    """Every value an export can write: `document_values` plus legacy layout
+    rows. What the Legend sheet counts."""
+    return document_values(ed) + layout_values(ed)
 
 
 def summarise(values: list[dict]) -> dict:
