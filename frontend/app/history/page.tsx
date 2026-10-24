@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
 import { extractApi, exportApi, templatesApi, type JobStatus, type DocumentResult, type ColumnTemplate } from "@/lib/api";
 import toast from "react-hot-toast";
+import { confirmExport } from "@/lib/confirm-export";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -180,7 +181,7 @@ function ErrorPanel({ doc }: { doc: DocumentResult }) {
       {!errorMsg && flagged.length === 0 && (
         <p style={{ fontSize: 11, color: "var(--text3)" }}>
           Document was processed but some fields may be missing or incorrect.
-          Download the Excel to review.
+          Open Review to check it against the page.
         </p>
       )}
     </div>
@@ -294,6 +295,7 @@ export default function HistoryPage() {
   const selectedJob    = jobs.find(j => j.id === selectedJobId);
 
   async function handleExport(jobId: number, mode: "template" | "combined" | "perfile" | "zip") {
+    if (!(await confirmExport(jobId))) return;
     try {
       let blob: Blob; let filename: string;
       if (mode === "template" || mode === "combined") {
@@ -488,6 +490,9 @@ export default function HistoryPage() {
                       claim everything worked. */}
                   {["completed", "partial"].includes(selectedJob.status) && (selectedJob.successful ?? 0) > 0 && (
                     <>
+                      <a className="btn btn-secondary btn-sm" href={`/extract?job=${selectedJob.id}`}>
+                        Review
+                      </a>
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => handleExport(selectedJob.id, "template")}

@@ -413,6 +413,13 @@ export default function ExtractPage() {
   } | null>(null);
   const prevStatus = useRef("");
 
+  // /extract?job=<id> reopens a finished job for review (the History page
+  // links here), so the review screen is reachable after the upload session.
+  useEffect(() => {
+    const j = new URLSearchParams(window.location.search).get("job");
+    if (j && /^\d+$/.test(j)) setActiveJobId(Number(j));
+  }, []);
+
   const { data: templates = [] } = useQuery<ColumnTemplate[]>({
     queryKey: ["templates"],
     queryFn: () => templatesApi.list(),
