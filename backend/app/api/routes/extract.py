@@ -4706,8 +4706,8 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                 _persist_failure(Session, job_id, display_filename, doc_err)
 
             # Rate limit protection: delay between documents
-            # Prevents Groq/Gemini 429 errors on batch uploads
-            # Default 3s — enough for Groq free tier (30 req/min = 2s min gap)
+            # Prevents provider 429 errors on batch uploads
+            # (RATE_LIMIT_DELAY; 3s when unset)
             if i < len(file_keys) - 1:
                 delay = float(getattr(settings, 'RATE_LIMIT_DELAY', 3.0))
                 print(f"[THREAD] rate limit delay {delay}s before next doc", flush=True)

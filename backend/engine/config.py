@@ -21,12 +21,11 @@ except ImportError:
     import os
     from types import SimpleNamespace
     settings = SimpleNamespace(
-        GROQ_API_KEY=os.environ.get("GROQ_API_KEY", ""),
         GEMINI_API_KEY=os.environ.get("GEMINI_API_KEY", ""),
+        PRIMARY_LLM=os.environ.get("PRIMARY_LLM", "gemini"),
+        LLM_FALLBACKS=os.environ.get("LLM_FALLBACKS", ""),
         DATABASE_URL=os.environ.get("DATABASE_URL", "sqlite:///./docagent.db"),
         STORAGE_BACKEND=os.environ.get("STORAGE_BACKEND", "local"),
-        LLM_PROVIDER=os.environ.get("LLM_PROVIDER", "groq"),
-        LLM_MODEL=os.environ.get("LLM_MODEL", "llama-3.2-90b-vision-preview"),
         MAX_FILES_PER_BATCH=int(os.environ.get("MAX_FILES_PER_BATCH", "20")),
         MAX_FILE_SIZE_MB=int(os.environ.get("MAX_FILE_SIZE_MB", "50")),
         SECRET_KEY=os.environ.get("SECRET_KEY", "change-me"),

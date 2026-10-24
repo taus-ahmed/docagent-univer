@@ -1,7 +1,7 @@
 """
 Record/replay cache for LLM calls, installed at the single provider-agnostic
 chokepoint: ``LLMRouter.extract`` / ``LLMRouter.classify`` (every extraction
-call, Gemini or Groq, template understanding included, returns through them).
+call, whichever provider, template understanding included, returns through them).
 
 Modes:
   record — serve from cache when present, else call the live provider and
@@ -215,7 +215,7 @@ class LLMCache:
             encoding="utf-8")
 
     def _to_response(self, data: dict):
-        from connectors.groq_client import LLMResponse
+        from connectors.base import LLMResponse
         r = data["response"]
         return LLMResponse(raw_text=r.get("raw_text", ""),
                           parsed_json=r.get("parsed_json"),

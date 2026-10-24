@@ -23,7 +23,7 @@ import urllib.request
 import urllib.error
 from typing import Optional, Tuple
 from config import settings
-from connectors.groq_client import LLMResponse
+from connectors.base import LLMResponse
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -300,7 +300,7 @@ class GeminiClient:
                      temperature: float = 0.1) -> LLMResponse:
         t0 = time.time()
         try:
-            # Fold the document text into the prompt — mirrors GroqClient.extract_data.
+            # Fold the document text into the prompt.
             # Without this, callers that pass the document via `text=` (e.g. the
             # no-template orchestrator path) send only instructions and no content,
             # and Gemini returns "No document content was provided".

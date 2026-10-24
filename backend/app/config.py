@@ -47,17 +47,13 @@ class Settings(BaseSettings):
     # DATABASE_URL: str = "sqlite:///./storage/docagent.db"
 
     # â”€â”€ LLM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    GROQ_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
-    # Gemini, not Groq: every Groq model this codebase configures is
-    # decommissioned and the account is offered no vision model at all, so
-    # "groq" is a default that cannot extract anything. Production already
-    # overrides it; this makes a fresh checkout work too.
+    # The provider tried first, then each name in LLM_FALLBACKS (comma-
+    # separated) in order. Names are the keys of `llm_router.PROVIDERS`;
+    # Gemini is the only provider implemented, so the fallback list is empty.
     PRIMARY_LLM: str = "gemini"
+    LLM_FALLBACKS: str = ""
 
-    GROQ_CLASSIFICATION_MODEL: str = "llama-3.2-11b-vision-preview"
-    GROQ_EXTRACTION_MODEL: str = "llama-3.3-70b-versatile"
-    GROQ_VISION_MODEL: str = "llama-3.2-90b-vision-preview"
     GEMINI_MODEL: str = "gemini-2.5-flash"  # 2.0-flash retired (404); use a live model
 
     BATCH_SIZE: int = 5

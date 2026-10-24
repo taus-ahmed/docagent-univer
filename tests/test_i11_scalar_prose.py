@@ -97,7 +97,7 @@ class _AnswerStub:
     def extract(self, text="", image_b64="", prompt="", **_kw):
         import re
 
-        from connectors.groq_client import LLMResponse
+        from connectors.base import LLMResponse
         fields = {}
         for sid, label in re.findall(r'^\s+(F\d+): .*"([^"]+)"$', prompt, re.M):
             ans = self.answers.get(label)

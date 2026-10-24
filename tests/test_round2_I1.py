@@ -152,7 +152,7 @@ class _ReportStub:
     CHARGES = ["Oncor Customer Charge $2.05", "Metering Charge $6.07"]
 
     def extract(self, text="", image_b64="", prompt="", **_kw):
-        from connectors.groq_client import LLMResponse
+        from connectors.base import LLMResponse
         fields = {}
         for sid, label in re.findall(r'^\s+(F\d+): .*"([^"]+)"$', prompt, re.M):
             if label != "Bill Account Number":

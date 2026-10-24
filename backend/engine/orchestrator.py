@@ -24,7 +24,7 @@ from core.prompt_builder import PromptBuilder, ClientSchema, load_client_schema
 from core.validator import validate_extraction, ValidationResult
 from core.excel_writer import ExcelWriter
 from connectors.llm_router import LLMRouter
-from connectors.groq_client import LLMResponse
+from connectors.base import LLMResponse
 from storage.database import Database
 from config import settings
 
@@ -385,6 +385,5 @@ class Orchestrator:
         console.print(f"\n📄 Output saved to: [bold green]{batch.output_file}[/]\n")
 
         # LLM usage stats
-        console.print(f"[dim]LLM calls — Groq: {self.llm.stats['groq_calls']} | "
-                       f"Gemini: {self.llm.stats['gemini_calls']} | "
+        console.print(f"[dim]LLM calls — Gemini: {self.llm.stats['gemini_calls']} | "
                        f"Failures: {self.llm.stats['failures']}[/]")

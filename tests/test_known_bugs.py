@@ -85,7 +85,7 @@ RESPONSE = {
 
 @pytest.fixture()
 def model_returns_a_phantom_row(monkeypatch):
-    from connectors.groq_client import LLMResponse
+    from connectors.base import LLMResponse
     from connectors.llm_router import LLMRouter
 
     def extract(self, text="", image_b64="", prompt="", system_instruction="",

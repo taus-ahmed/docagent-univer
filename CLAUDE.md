@@ -26,7 +26,7 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-# copy .env.example .env and fill in DATABASE_URL, GROQ_API_KEY, GEMINI_API_KEY, SECRET_KEY
+# copy .env.example .env and fill in DATABASE_URL, GEMINI_API_KEY, SECRET_KEY
 alembic upgrade head          # run DB migrations (only needed on first setup)
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -1150,12 +1150,9 @@ Pydantic `BaseSettings` reading from `.env`. Key settings:
 | `DATABASE_URL` | sqlite dev fallback | Use PostgreSQL in prod |
 | `SECRET_KEY` | placeholder | JWT signing (HS256); production boot fails on the placeholder |
 | `GEMINI_API_KEY` | required | The extraction model |
-| `GROQ_API_KEY` | optional | Fallback only |
-| `PRIMARY_LLM` | **`gemini`** | `gemini` or `groq` |
+| `PRIMARY_LLM` | **`gemini`** | the provider tried first; a key of `llm_router.PROVIDERS` |
+| `LLM_FALLBACKS` | empty | providers tried after it, comma-separated; none is implemented |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Railway production runs `gemini-2.5-flash-lite`; the harness mirrors that |
-| `GROQ_CLASSIFICATION_MODEL` | `llama-3.2-11b-vision-preview` | fallback path only |
-| `GROQ_EXTRACTION_MODEL` | `llama-3.3-70b-versatile` | fallback path only |
-| `GROQ_VISION_MODEL` | `llama-3.2-90b-vision-preview` | fallback path only |
 | `BATCH_SIZE` | 5 | docs per batch |
 | `RATE_LIMIT_DELAY` | 2.0s | delay between LLM calls |
 | `MAX_RETRIES` | 3 | per LLM call |
@@ -1270,11 +1267,13 @@ a `SimpleNamespace` built from env vars. The engine has no `.env` of its own.
 extraction returns through it, which is where the test harness installs its
 record/replay cache.
 
-- `PRIMARY_LLM=gemini` (default): Gemini first, Groq fallback.
-- Gemini gets `system_instruction` as a separate body field; Groq gets it
-  prepended to the user prompt.
+- Providers are tried in order: `PRIMARY_LLM`, then `LLM_FALLBACKS`. Gemini is
+  the only provider implemented, so **there is no fallback today**. A provider
+  implements `connectors/base.py::LLMProvider` and is registered in
+  `llm_router.PROVIDERS`; an unknown name is logged and ignored.
+- Gemini gets `system_instruction` as a separate body field.
 - `image_b64` accepts a **string or a list**; Gemini emits one `inlineData`
-  part per page image, Groq gets the first.
+  part per page image.
 
 `GeminiClient` is pure `urllib.request` — no Google SDK. Auto-discovers a
 working model from `CANDIDATES` and caches it in `_good_model`; a

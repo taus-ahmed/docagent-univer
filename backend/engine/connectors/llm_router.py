@@ -1,65 +1,80 @@
 """
 DocAgent - LLM Router
-Routes requests to the best available LLM provider.
-Primary: Gemini (when PRIMARY_LLM=gemini)
-Fallback: Groq
+Sends each request to the configured providers in order: PRIMARY_LLM first,
+then each name in LLM_FALLBACKS, until one succeeds.
+
+Gemini is the only provider implemented, and the fallback list is empty by
+default. A provider is a class implementing `connectors.base.LLMProvider`,
+registered in PROVIDERS under the name the settings use.
 """
 import logging
-from typing import Optional
-from connectors.groq_client import GroqClient, LLMResponse
+from typing import Callable, Optional
+
+from connectors.base import LLMProvider, LLMResponse
 from connectors.gemini_client import GeminiClient
 from config import settings
 
 logger = logging.getLogger("docagent.llm_router")
 
 
+def _gemini() -> Optional[LLMProvider]:
+    if not settings.GEMINI_API_KEY:
+        return None
+    return GeminiClient(api_key=settings.GEMINI_API_KEY)
+
+
+#: name → factory returning a ready provider, or None when it is not configured
+#: (no API key). The names are what PRIMARY_LLM and LLM_FALLBACKS hold.
+PROVIDERS: dict[str, Callable[[], Optional[LLMProvider]]] = {
+    "gemini": _gemini,
+}
+
+
+def provider_order() -> list[str]:
+    """PRIMARY_LLM, then LLM_FALLBACKS (comma-separated), without repeats."""
+    names = [getattr(settings, "PRIMARY_LLM", "gemini") or "gemini"]
+    names += str(getattr(settings, "LLM_FALLBACKS", "") or "").split(",")
+    order: list[str] = []
+    for n in (n.strip().lower() for n in names):
+        if n and n not in order:
+            order.append(n)
+    return order
+
 
 class LLMRouter:
-    """Intelligent routing between LLM providers with automatic fallback."""
+    """Routing between configured LLM providers with fallback in order."""
 
     def __init__(self):
-        self._groq: Optional[GroqClient] = None
-        self._gemini: Optional[GeminiClient] = None
-        self.stats = {"groq_calls": 0, "gemini_calls": 0, "failures": 0}
-
-        if settings.GROQ_API_KEY:
+        self.providers: list[tuple[str, LLMProvider]] = []
+        names = provider_order()
+        unknown = [n for n in names if n not in PROVIDERS]
+        if unknown:
+            logger.warning(f"Unknown LLM provider(s) ignored: {', '.join(unknown)}; "
+                           f"implemented: {', '.join(PROVIDERS)}")
+        for name in [n for n in names if n in PROVIDERS] or list(PROVIDERS):
             try:
-                self._groq = GroqClient(api_key=settings.GROQ_API_KEY)
+                provider = PROVIDERS[name]()
             except Exception as e:
-                logger.warning(f"Groq init failed: {e}")
+                logger.warning(f"{name} init failed: {e}")
+                continue
+            if provider is not None:
+                self.providers.append((name, provider))
+        self.stats = {f"{name}_calls": 0 for name in PROVIDERS}
+        self.stats["failures"] = 0
 
-        if settings.GEMINI_API_KEY:
-            try:
-                self._gemini = GeminiClient(api_key=settings.GEMINI_API_KEY)
-            except Exception as e:
-                logger.warning(f"Gemini init failed: {e}")
-
-        if not self._groq and not self._gemini:
-            raise ValueError(
-                "No LLM provider available. Set GROQ_API_KEY or GEMINI_API_KEY."
-            )
+        if not self.providers:
+            raise ValueError("No LLM provider available. Set GEMINI_API_KEY.")
 
     @property
-    def primary(self):
-        if settings.PRIMARY_LLM == "gemini" and self._gemini:
-            return self._gemini
-        return self._groq or self._gemini
-
-    @property
-    def fallback(self):
-        if settings.PRIMARY_LLM == "gemini":
-            return self._groq
-        return self._gemini
+    def primary(self) -> LLMProvider:
+        return self.providers[0][1]
 
     # ── Classification ────────────────────────────────────────────────────────
 
     def classify(self, text: str = "", image_b64: str = "",
                  prompt: str = "") -> LLMResponse:
         use_vision = bool(image_b64) and not text
-        for name, provider in [("primary", self.primary),
-                                ("fallback", self.fallback)]:
-            if provider is None:
-                continue
+        for name, provider in self.providers:
             try:
                 result = (
                     provider.classify_document_vision(image_b64, prompt)
@@ -67,7 +82,7 @@ class LLMRouter:
                     provider.classify_document(text, prompt)
                 )
                 if result.success:
-                    self._track(provider)
+                    self._track(name)
                     return result
             except Exception as e:
                 logger.warning(f"Classification {name} failed: {e}")
@@ -82,61 +97,39 @@ class LLMRouter:
                 system_instruction: str = "", model: str = None,
                 temperature: float = 0.1) -> LLMResponse:
         """
-        Route an extraction request with automatic fallback.
+        Route an extraction request, falling back in order.
 
         system_instruction: the registry expert persona (stable, doc-type specific).
           Passed to Gemini as system_instruction — billed at reduced rate and
           cached server-side. Same for all documents of the same type in a batch.
-          Groq receives it prepended to the prompt (Groq has no system role split).
 
         prompt: template fields + doc text (variable per document).
 
         model: optional Gemini model override tried FIRST (e.g. "gemini-2.5-flash"
           to pin accuracy-critical calls to a stronger tier than the default -lite).
-          Ignored by Groq (which selects its own models).
 
         temperature: sampling temperature. Extraction calls keep the 0.1 default;
           shape INFERENCE passes 0, because it decides what the columns are
           CALLED and a near-tie there ("Doc No" vs "Document Number") renames a
-          column between runs. Gemini-only — Groq is the fallback and selects
-          its own; if a run ever falls back mid-batch the naming can still move.
+          column between runs. A fallback provider may select its own; if a run
+          ever falls back mid-batch the naming can still move.
         """
         use_vision = bool(image_b64) and not text
 
-        for name, provider in [("primary", self.primary),
-                                ("fallback", self.fallback)]:
-            if provider is None:
-                continue
+        for name, provider in self.providers:
             try:
-                if isinstance(provider, GeminiClient):
-                    # Gemini: pass system_instruction separately for token savings
-                    result = (
-                        provider.extract_data_vision(
-                            image_b64, prompt, system_instruction, model=model,
-                            temperature=temperature)
-                        if use_vision else
-                        provider.extract_data(
-                            text, prompt, system_instruction, model=model,
-                            temperature=temperature)
-                    )
-                else:
-                    # Groq / other providers: prepend system_instruction to prompt
-                    # so they receive full context even without native si support.
-                    full_prompt = (
-                        f"{system_instruction}\n\n{prompt}"
-                        if system_instruction else prompt
-                    )
-                    # Groq vision takes a single image — use the first page if a
-                    # multi-image list was passed (Gemini handles the full list).
-                    groq_img = image_b64[0] if isinstance(image_b64, (list, tuple)) and image_b64 else image_b64
-                    result = (
-                        provider.extract_data_vision(groq_img, full_prompt)
-                        if use_vision else
-                        provider.extract_data(text, full_prompt)
-                    )
+                result = (
+                    provider.extract_data_vision(
+                        image_b64, prompt, system_instruction, model=model,
+                        temperature=temperature)
+                    if use_vision else
+                    provider.extract_data(
+                        text, prompt, system_instruction, model=model,
+                        temperature=temperature)
+                )
 
                 if result.success:
-                    self._track(provider)
+                    self._track(name)
                     return result
 
                 logger.warning(f"Extraction {name} failed: {result.error[:100]}")
@@ -148,8 +141,5 @@ class LLMRouter:
         return LLMResponse(raw_text="", success=False,
                            error="All providers failed for extraction")
 
-    def _track(self, provider):
-        if isinstance(provider, GroqClient):
-            self.stats["groq_calls"] += 1
-        else:
-            self.stats["gemini_calls"] += 1
+    def _track(self, name: str):
+        self.stats[f"{name}_calls"] = self.stats.get(f"{name}_calls", 0) + 1

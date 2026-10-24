@@ -80,7 +80,7 @@ class ExtractionJob(Base):
 
     # Job metadata
     schema_id = Column(String(100), nullable=True)       # which YAML schema was used
-    llm_provider = Column(String(20), nullable=True)     # groq | gemini
+    llm_provider = Column(String(20), nullable=True)     # provider name, e.g. gemini
     notes = Column(Text, default="")
     error_message = Column(Text, nullable=True)
     progress_message = Column(Text, nullable=True)       # live progress e.g. "Processing 3 of 40"

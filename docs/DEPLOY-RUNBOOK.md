@@ -612,25 +612,24 @@ Verified present in the code being deployed. None is introduced by it.
 | 8 | **`Bank-Statement-101` (id 29)** has four column headings and **no Credit or Balance column** | Those values have nowhere to go. Template-side, not engine |
 | 9 | **No source document is retained for the 222 historical results** (§3) | "Download original" cannot be offered for anything before this deploy |
 
-`PRIMARY_LLM` now defaults to `gemini` in code (it used to default to the
-non-functional `groq`), so a fresh checkout works. That item is resolved.
+`PRIMARY_LLM` defaults to `gemini` in code, so a fresh checkout works.
 
 ---
 
 ## 8. `PRIMARY_LLM`, and what a mid-batch rate limit does
 
-### It must be `gemini`
+### It is `gemini`, and there is no fallback
 
-Production sets it, and it must stay. All three configured Groq models are
-decommissioned and the account is offered no vision-capable model, so
-`PRIMARY_LLM=groq` is a completely non-functional configuration.
+Gemini is the only provider implemented. The Groq client was removed (its
+models were decommissioned and it could not extract anything), so
+`LLMRouter.extract` tries `PRIMARY_LLM` and then each name in `LLM_FALLBACKS`
+— empty by default — and returns `"All providers failed for extraction"` when
+Gemini fails. **Gemini is a single point of failure.** Worth knowing before you
+tell a client there is failover. An unknown provider name is logged and
+ignored, so a leftover `PRIMARY_LLM=groq` still runs on Gemini.
 
-The practical consequence: **there is no fallback provider.**
-`LLMRouter.extract` tries primary then fallback; with Gemini primary the
-fallback is Groq, which always fails, and the router returns `"All providers
-failed for extraction"`. The redundancy the code advertises does not exist —
-Gemini is an unacknowledged single point of failure. Worth knowing before you
-tell a client there is failover.
+`GROQ_API_KEY`, `GROQ_CLASSIFICATION_MODEL`, `GROQ_EXTRACTION_MODEL` and
+`GROQ_VISION_MODEL` are no longer read and can be removed from the service.
 
 ### If Gemini rate-limits mid-batch, today
 
