@@ -27,7 +27,7 @@ from pathlib import Path
 
 from tests.harness import bootstrap as bs
 from tests.harness.adapter import adapt, set_widenings
-from tests.harness.llm_cache import LLMCache
+from tests.harness.llm_cache import LLMCache, replay_misses_are_fatal
 from tests.harness.scoring import (normalize_string, score_content,
                                    score_document, score_structure,
                                    summarize, summarize_content,
@@ -603,6 +603,10 @@ def run(mode: str = "replay", only=None, repeat: int = 1,
                   flush=True)
     finally:
         cache.uninstall()
+
+    # A miss became a failed call inside the engine and was scored as wrong
+    # answers; a replay that missed measures nothing.
+    replay_misses_are_fatal(cache)
 
     report = {
         "run_id": time.strftime("%Y-%m-%d %H:%M:%S"),

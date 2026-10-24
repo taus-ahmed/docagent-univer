@@ -103,7 +103,7 @@ def _as_replay_skip(item, exc):
 def pytest_runtest_setup(item):
     try:
         return (yield)
-    except Exception as exc:
+    except BaseException as exc:      # ReplayAbort is a BaseException
         _as_replay_skip(item, exc)
         raise
 
@@ -112,7 +112,7 @@ def pytest_runtest_setup(item):
 def pytest_runtest_call(item):
     try:
         return (yield)
-    except Exception as exc:
+    except BaseException as exc:      # ReplayAbort is a BaseException
         _as_replay_skip(item, exc)
         raise
 
