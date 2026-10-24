@@ -73,7 +73,9 @@ def aba_is_valid(routing: str) -> bool:
     """The ABA routing check digit: 3·(d1+d4+d7) + 7·(d2+d5+d8) + (d3+d6+d9)
     must be a multiple of 10. Nine digits that fail it are not a routing
     number, whatever position they were printed in."""
-    d = [int(c) for c in str(routing or "") if c.isdigit()]
+    # isdecimal, not isdigit: '²' is a digit to Python and not a number to
+    # int(), and one superscript in an OCR reading used to raise here.
+    d = [int(c) for c in str(routing or "") if c.isdecimal()]
     if len(d) != 9:
         return False
     total = (3 * (d[0] + d[3] + d[6])

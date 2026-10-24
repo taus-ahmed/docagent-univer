@@ -112,8 +112,9 @@ def _summary(ctx, f):
 def _transactions(ctx, table, cols):
     """[(i, row)] in printed order, leaving out rows whose text is a total."""
     return [(i, r) for i, r in enumerate(ctx.rows.get(table["name"]) or [])
-            if not any(_w(v) & _TOTAL for k, v in r.items()
-                       if k not in cols and not str(k).startswith("_"))]
+            if isinstance(r, dict)
+            and not any(_w(v) & _TOTAL for k, v in r.items()
+                        if k not in cols and not str(k).startswith("_"))]
 
 
 def _chain(ctx, name, cols, ordered, opening, closing):
