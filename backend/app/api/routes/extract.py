@@ -97,6 +97,7 @@ _engine_dir  = _backend_dir / "engine"
 if str(_engine_dir) not in sys.path:
     sys.path.append(str(_engine_dir))
 from log_safety import doc_ref, exc_brief, print_safe_traceback  # noqa: E402
+from cancellation import Cancelled, watching  # noqa: E402
 
 _IMAGE_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp",
@@ -4002,6 +4003,88 @@ def _persist_failure(session_factory, job_id, ref, error) -> None:
         s.close()
 
 
+#: How often, at most, the job thread asks the database whether its job was
+#: cancelled while a document is being read (between pages).
+CANCEL_POLL_SEC = 1.0
+
+#: The text a cancelled file's row carries, and the job's reason prefix.
+CANCELLED_FILE_MSG = ("Cancelled: this document was not processed (the job was "
+                      "cancelled before it finished). Upload it again to extract it.")
+
+
+def _cancel_probe(session_factory, job_id):
+    """A callable answering "was this job cancelled?", read on its OWN short
+    session (the job thread's session holds uncommitted results). Between
+    pages it asks at most every CANCEL_POLL_SEC; `force=True` always asks."""
+    import time as _t
+    from app.models.models import ExtractionJob
+    state = {"at": 0.0, "answer": False}
+
+    def probe(force=False):
+        if state["answer"]:
+            return True
+        now = _t.monotonic()
+        if not force and now - state["at"] < CANCEL_POLL_SEC:
+            return False
+        state["at"] = now
+        s = session_factory()
+        try:
+            row = s.query(ExtractionJob.status).filter(ExtractionJob.id == job_id).first()
+            state["answer"] = bool(row) and row[0] == "cancelled"
+        except Exception as e:
+            print(f"[THREAD] cancel check failed: {exc_brief(e)}", flush=True)
+        finally:
+            s.close()
+        return state["answer"]
+    return probe
+
+
+def _persist_cancelled(session_factory, job_id, names) -> None:
+    """One row per file that did not finish, saying it was cancelled — never a
+    row that looks like a result (no extraction_json, needs_review)."""
+    from app.models.models import DocumentResult
+    if not names:
+        return
+    s = session_factory()
+    try:
+        for name in names:
+            s.add(DocumentResult(
+                job_id=job_id, filename=Path(str(name)).name or str(name),
+                original_filename=Path(str(name)).name or str(name),
+                document_type="cancelled", overall_confidence="low",
+                extraction_json=None, validation_errors=CANCELLED_FILE_MSG,
+                needs_review=True, latency_ms=0, tokens_used=0))
+        s.commit()
+    except Exception as e:
+        s.rollback()
+        print(f"[THREAD] could not record {len(names)} cancelled file(s): {exc_brief(e)}",
+              flush=True)
+    finally:
+        s.close()
+
+
+def _finish_cancelled(session, job, done, total, successful, failed,
+                      needs_review, elapsed=0.0) -> None:
+    """Close a cancelled job: status stays `cancelled`, counts are what
+    finished, and the message says how far it got."""
+    session.refresh(job)
+    job.status = "cancelled"
+    job.successful = successful
+    job.failed = failed
+    job.needs_review = needs_review
+    job.total_time_sec = elapsed
+    job.completed_at = job.completed_at or datetime.utcnow()
+    left = total - done
+    job.progress_message = (
+        f"Cancelled after {done} of {total} file(s); "
+        + (f"{left} not processed (listed as cancelled)." if left
+           else "every file had already finished, and its results are kept."))
+    if not job.status_reason:
+        job.set_mark("status_reason", "Cancelled")
+    session.commit()
+    print(f"[THREAD] CANCELLED job {job.id}: {done}/{total} files finished", flush=True)
+
+
 def _release_copy(storage, path):
     """Hand a temp copy back to storage (`StorageService.release`). A no-op for
     the local store's own files and for a storage without temp copies; never
@@ -4057,8 +4140,17 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
     try:
         job = session.query(ExtractionJob).filter_by(id=job_id).first()
         if not job: return
+        names = [(original_filenames[i] if original_filenames and i < len(original_filenames)
+                  else Path(str(fp)).name or str(fp)) for i, fp in enumerate(file_keys)]
+        if job.status == "cancelled":
+            # Cancelled while it was still pending: nothing ran, say so per file.
+            _persist_cancelled(Session, job_id, names)
+            _finish_cancelled(session, job, 0, len(names), 0, 0, 0)
+            return
         job.status = "processing"
         session.commit()
+        is_cancelled = _cancel_probe(Session, job_id)
+        cancelled_at = None
 
         from orchestrator import Orchestrator
         orchestrator = Orchestrator(client_schema_path=schema_path)
@@ -4090,6 +4182,9 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         batch_schemas: dict = {}
 
         for i, fp in enumerate(file_keys):
+            if is_cancelled(force=True):
+                cancelled_at = i
+                break
             display_filename = (
                 original_filenames[i]
                 if original_filenames and i < len(original_filenames)
@@ -4112,55 +4207,60 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 # independent of which machine received the upload: local
                 # returns the path under the storage root, the object store
                 # fetches to a temp file.
-                file_path = _resolve_source(storage, fp)
-                if file_path is None:
-                    # The source document is gone — an ephemeral disk lost it
-                    # between upload and processing, or retention deleted it.
-                    # That is an ordinary state, not a crash: it fails THIS
-                    # document with a message saying what happened, and the
-                    # result travels the same persistence path as any other, so
-                    # the job still completes and still reports.
-                    print(f"[THREAD] source missing: {doc_ref(fp)}", flush=True)
-                    results = [_fail(display_filename,
-                                     "Source document is no longer in storage "
-                                     "— upload it again to re-run this job.")]
-                elif _is_image_file(file_path):
-                    # Images now enter the same engine seam as PDFs. That path
-                    # preprocesses them with OCR, retains geometry/origin, and
-                    # applies the same grounding and review rules. The direct
-                    # vision path remains only as a compatibility fallback for
-                    # an engine failure.
-                    if template_data:
+                with watching(is_cancelled):
+                    file_path = _resolve_source(storage, fp)
+                    if file_path is None:
+                        # The source document is gone — an ephemeral disk lost it
+                        # between upload and processing, or retention deleted it.
+                        # That is an ordinary state, not a crash: it fails THIS
+                        # document with a message saying what happened, and the
+                        # result travels the same persistence path as any other, so
+                        # the job still completes and still reports.
+                        print(f"[THREAD] source missing: {doc_ref(fp)}", flush=True)
+                        results = [_fail(display_filename,
+                                         "Source document is no longer in storage "
+                                         "— upload it again to re-run this job.")]
+                    elif _is_image_file(file_path):
+                        # Images now enter the same engine seam as PDFs. That path
+                        # preprocesses them with OCR, retains geometry/origin, and
+                        # applies the same grounding and review rules. The direct
+                        # vision path remains only as a compatibility fallback for
+                        # an engine failure.
+                        if template_data:
+                            results = _extract_with_template(
+                                orchestrator, file_path, template_data,
+                                selected_pages=selected_pages,
+                            )
+                        else:
+                            results = _extract_with_template(
+                                orchestrator, file_path, None,
+                                selected_pages=selected_pages,
+                                batch_schemas=batch_schemas,
+                            )
+                        if not results or not any(
+                                getattr(r, "success", False) for r in results):
+                            results = _extract_image_with_template(
+                                orchestrator, file_path, template_data)
+                    elif template_data:
                         results = _extract_with_template(
                             orchestrator, file_path, template_data,
                             selected_pages=selected_pages,
                         )
                     else:
+                        # Phase 3 — no template: the engine infers one and runs the
+                        # same slot pipeline. Previously this went to the
+                        # orchestrator's schema path, which was bounded to the 6
+                        # document types in demo_accounting.yaml and dropped line
+                        # items entirely.
                         results = _extract_with_template(
                             orchestrator, file_path, None,
                             selected_pages=selected_pages,
                             batch_schemas=batch_schemas,
                         )
-                    if not results or not any(
-                            getattr(r, "success", False) for r in results):
-                        results = _extract_image_with_template(
-                            orchestrator, file_path, template_data)
-                elif template_data:
-                    results = _extract_with_template(
-                        orchestrator, file_path, template_data,
-                        selected_pages=selected_pages,
-                    )
-                else:
-                    # Phase 3 — no template: the engine infers one and runs the
-                    # same slot pipeline. Previously this went to the
-                    # orchestrator's schema path, which was bounded to the 6
-                    # document types in demo_accounting.yaml and dropped line
-                    # items entirely.
-                    results = _extract_with_template(
-                        orchestrator, file_path, None,
-                        selected_pages=selected_pages,
-                        batch_schemas=batch_schemas,
-                    )
+                # A cancel that landed while this document was being read:
+                # its results are discarded, never stored as if final.
+                if is_cancelled(force=True):
+                    raise Cancelled()
 
                 for result in results:
                     result.filename = _result_display_name(
@@ -4300,6 +4400,9 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         _persist_failure(Session, job_id,
                                          getattr(result, "filename", fp), save_err)
 
+            except Cancelled:
+                cancelled_at = i
+                break
             except Exception as doc_err:
                 print(f"[THREAD] doc error: {exc_brief(doc_err)}", flush=True)
                 print_safe_traceback()
@@ -4312,10 +4415,19 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
             # Rate limit protection: delay between documents
             # Prevents provider 429 errors on batch uploads
             # (RATE_LIMIT_DELAY; 3s when unset)
-            if i < len(file_keys) - 1:
+            if i < len(file_keys) - 1 and not is_cancelled(force=True):
                 delay = float(getattr(settings, 'RATE_LIMIT_DELAY', 3.0))
                 print(f"[THREAD] rate limit delay {delay}s before next doc", flush=True)
                 time.sleep(delay)
+
+        if cancelled_at is None and is_cancelled(force=True):
+            cancelled_at = len(file_keys)        # cancelled after the last file
+        if cancelled_at is not None:
+            session.commit()                     # the files that finished
+            _persist_cancelled(Session, job_id, names[cancelled_at:])
+            _finish_cancelled(session, job, cancelled_at, len(names), successful,
+                              failed, needs_review, time.time() - start_time)
+            return
 
         session.commit()
 
@@ -4370,7 +4482,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         print_safe_traceback()
         try:
             job = session.query(ExtractionJob).filter_by(id=job_id).first()
-            if job:
+            if job and job.status != "cancelled":
                 job.status = "failed"
                 job.error_message = str(e)
                 job.completed_at = datetime.utcnow()
@@ -7088,11 +7200,26 @@ def approve_document(job_id: int, doc_id: int,
 
 @router.delete("/jobs/{job_id}")
 def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+    """Cancel a pending or running job (owner, or an admin in scope). The job
+    thread stops at its next checkpoint — before the next file, between pages
+    of the file it is reading, before the next model call — discards the file
+    it was in the middle of, keeps the files that finished, and lists every
+    unfinished file as cancelled. A second cancel is a no-op that says so."""
     job = _get_job_or_404(job_id, current_user, db, "job.cancel")
+    if job.status == "cancelled":
+        return {"message": "Already cancelled", "job_id": job_id,
+                "already_cancelled": True, "status_reason": job.status_reason}
     if job.status not in ("pending","processing"):
         raise HTTPException(status_code=400, detail=f"Cannot cancel job with status '{job.status}'")
-    job.status="cancelled"; job.completed_at=datetime.utcnow(); db.commit()
-    return {"message": "Cancelled", "job_id": job_id}
+    who = "its owner" if job.user_id == current_user.id else "an administrator"
+    job.status = "cancelled"
+    job.completed_at = datetime.utcnow()
+    job.set_mark("status_reason", f"Cancelled by {who} (user {current_user.id})")
+    job.progress_message = "Cancelling: stopping before the next page or file."
+    db.commit()
+    print(f"[JOB] cancel requested for job {job_id} by user {current_user.id}", flush=True)
+    return {"message": "Cancelled", "job_id": job_id, "already_cancelled": False,
+            "status_reason": job.status_reason}
 
 @router.delete("/jobs/{job_id}/data")
 def delete_job_data(job_id: int, db: Session=Depends(get_db),

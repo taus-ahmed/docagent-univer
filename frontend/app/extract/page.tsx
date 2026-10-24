@@ -15,6 +15,7 @@ import {
   type ColumnTemplate, type JobStatus, type DocumentResult,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { mayCancel } from "@/lib/permissions";
 import { DEMO_OPTION_UNAVAILABLE, apiErrorText, jobErrorText } from "@/lib/demo-error";
 import Link from "next/link";
 
@@ -553,6 +554,15 @@ export default function ExtractPage() {
   const isDone = jobStatus?.status === "completed" || jobStatus?.status === "partial";
   const isPartial = jobStatus?.status === "partial";
   const isFailed = jobStatus?.status === "failed";
+  const isCancelled = jobStatus?.status === "cancelled";
+  const [cancelling, setCancelling] = useState(false);
+  const handleCancel = async () => {
+    if (!activeJobId || !confirm("Cancel this extraction? Files that already finished keep their results; the rest are listed as cancelled.")) return;
+    setCancelling(true);
+    try { await extractApi.cancelJob(activeJobId); toast.success("Cancelling…"); }
+    catch (e: any) { toast.error(e?.response?.data?.detail || "Cancel failed"); }
+    finally { setCancelling(false); }
+  };
   const hasResults = results.length > 0;
 
   const filteredTemplates = templateSearch.trim()
@@ -856,9 +866,21 @@ export default function ExtractPage() {
                   {isRunning ? "Extracting…"
                     : isPartial ? `${jobStatus?.failed} of ${jobStatus?.total_docs} documents failed`
                     : isDone ? "Extraction complete"
+                    : isCancelled ? "Extraction cancelled"
                     : "Extraction failed"}
                 </span>
+                {isRunning && jobStatus && mayCancel(user, jobStatus) && (
+                  <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }}
+                          disabled={cancelling} onClick={handleCancel}>
+                    {cancelling ? "Cancelling…" : "Cancel"}
+                  </button>
+                )}
               </div>
+              {(isCancelled || isFailed) && (jobStatus?.status_reason || jobStatus?.progress_message) && (
+                <p style={{ fontSize: 11, color: "var(--text2)", marginBottom: 6 }}>
+                  {[jobStatus?.status_reason, isCancelled ? jobStatus?.progress_message : null].filter(Boolean).join(" — ")}
+                </p>
+              )}
               <div className="progress-bar">
                 <div className={`progress-fill ${isRunning ? "running" : isPartial ? "partial" : isDone ? "done" : "failed"}`}/>
               </div>

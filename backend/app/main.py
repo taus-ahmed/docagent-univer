@@ -225,30 +225,30 @@ def _release_stranded_jobs():
     then the deploy is one instance and this is the honest cleanup. Anyone
     scaling past one worker must remove or rework this in the same commit.
     """
-    from sqlalchemy import text as _sql
-
     from app.models import SessionLocal
+    from app.models.models import ExtractionJob
 
     db = SessionLocal()
     try:
-        rows = db.execute(_sql(
-            "SELECT id FROM extraction_jobs WHERE status IN "
-            "('pending', 'processing')")).fetchall()
-        if not rows:
+        jobs = (db.query(ExtractionJob)
+                .filter(ExtractionJob.status.in_(("pending", "processing"))).all())
+        if not jobs:
             return
-        ids = [r[0] for r in rows]
-        db.execute(_sql(
-            "UPDATE extraction_jobs SET status = 'failed', "
-            "error_message = :msg, progress_message = :msg, "
-            "completed_at = :now "
-            "WHERE status IN ('pending', 'processing')"),
-            {"msg": "Interrupted by a server restart before it finished. "
-                    "Nothing was saved for this job — upload the files again.",
-             "now": datetime.utcnow()})
+        # Results are committed when a job FINISHES, so a job cut off mid-way
+        # has none; the message says so, and the reason travels as a mark.
+        msg = ("Interrupted by a server restart before it finished. "
+               "Nothing was saved for this job — upload the files again.")
+        now = datetime.utcnow()
+        for job in jobs:
+            job.status = "failed"
+            job.error_message = msg
+            job.progress_message = msg
+            job.completed_at = now
+            job.set_mark("status_reason", "Interrupted by restart")
         db.commit()
         logger.warning(
             "Released %d job(s) stranded by a previous restart: %s",
-            len(ids), ", ".join(str(i) for i in ids[:20]))
+            len(jobs), ", ".join(str(j.id) for j in jobs[:20]))
     except Exception as e:
         db.rollback()
         # Never block boot on housekeeping.

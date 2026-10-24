@@ -836,6 +836,8 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
     it once per document. Everything in here is exactly what a single-document
     file always did; the only thing that changed is how many times it happens.
     """
+    from cancellation import checkpoint
+    checkpoint()      # a cancelled job stops before the next document's model call
     # ── NO TEMPLATE (Phase 3) — infer one, then take the SAME path ──
     # An empty grid (no labels, no headers) gives extraction nothing to anchor
     # to and is treated exactly like no template at all.

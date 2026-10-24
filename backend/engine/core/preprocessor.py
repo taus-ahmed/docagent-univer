@@ -23,6 +23,7 @@ from pypdf import PdfReader
 
 from text_layer import SHARD_SHRED, acroform_widgets, read_page
 from log_safety import doc_ref, exc_brief
+from cancellation import Cancelled, checkpoint
 
 
 @dataclass
@@ -427,11 +428,17 @@ def _prefetch_ocr(file_path, pages) -> dict:
     try:
         with _POOL_FACTORY(max_workers=workers) as pool:
             futures = {n: pool.submit(_ocr_read, key, n) for n in pages}
-            for n in pages:
-                try:
-                    reads[n] = futures[n].result()
-                except Exception as exc:
-                    reads[n] = fallback(n, exc)
+            try:
+                for n in pages:
+                    checkpoint()
+                    try:
+                        reads[n] = futures[n].result()
+                    except Exception as exc:
+                        reads[n] = fallback(n, exc)
+            except Cancelled:
+                for f in futures.values():   # pages not started never start
+                    f.cancel()
+                raise
     except Exception as exc:
         for n in pages:
             if n not in reads:
@@ -593,6 +600,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
             unread = None
             try:
                 for page_num, page in enumerate(pdf.pages):
+                    checkpoint()          # a cancelled job stops between pages
                     # Read the page WITH its geometry. A page whose values the
                     # PDF wrapped inside a table cell comes back reassembled; a
                     # page that needed nothing comes back exactly as
@@ -642,6 +650,7 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
             try:
                 for page_num, (text, lines, repairs, stats, needed_ocr,
                                origin, note, cover) in enumerate(plans):
+                    checkpoint()
                     doc.processing_notes += note
                     if cover is not None:
                         read = _selective_ocr(file_path, page_num + 1, doc,

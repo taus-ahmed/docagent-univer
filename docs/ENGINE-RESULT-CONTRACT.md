@@ -77,6 +77,17 @@ user — exactly as for an id that does not exist, so an id in another tenant
 cannot be told apart from a missing one. A super-admin (role `admin`, no
 `client_id`) sees every tenant's job.
 
+**Cancel** (`DELETE /api/jobs/{id}`, owner or an admin in scope): the job
+thread stops at its next checkpoint (before a file, between pages, before a
+document's model call). Files that finished keep their records; the file in
+flight is discarded, never stored as if final; every unfinished file gets a
+record with `document_type: "cancelled"`, no `extracted_data`, `needs_review`,
+and `validation_errors` saying it was not processed. The job's status stays
+`cancelled`, with `status_reason` (who cancelled) and `progress_message` (how
+far it got). A job left running by a restart is `failed` with `status_reason`
+"Interrupted by restart" and no records (results are committed when a job
+finishes).
+
 After a hard delete (`DELETE /api/jobs/{id}/data`) the job answers with
 `deleted_at` set and `/results` returns `[]`: the result records described
 below no longer exist. The job's counts are kept so history adds up.

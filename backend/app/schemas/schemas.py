@@ -75,6 +75,8 @@ class JobStatus(BaseModel):
     total_time_sec: float
     output_file: Optional[str]
     error_message: Optional[str]
+    #: Live progress, and how far a cancelled job got.
+    progress_message: Optional[str] = None
     user_id: Optional[int] = None
     #: Set after a hard delete (`DELETE /api/jobs/{id}/data`): the record stays
     #: so history adds up, its files and results are gone.

@@ -8,7 +8,7 @@ import { extractApi, exportApi, templatesApi, type JobStatus, type DocumentResul
 import toast from "react-hot-toast";
 import { confirmExport } from "@/lib/confirm-export";
 import { useAuthStore } from "@/lib/auth-store";
-import { can } from "@/lib/permissions";
+import { can, mayCancel } from "@/lib/permissions";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -511,6 +511,22 @@ export default function HistoryPage() {
                   {selectedJob.deleted_at && (
                     <span className="badge badge-gray" title="Files and results were deleted; the record is kept for history">
                       Deleted {fmt(selectedJob.deleted_at)}
+                    </span>
+                  )}
+                  {running(selectedJob.status) && mayCancel(user, selectedJob) && (
+                    <button className="btn btn-ghost btn-sm"
+                            onClick={async () => {
+                              if (!confirm(`Cancel job #${selectedJob.id}? Finished files keep their results; the rest are listed as cancelled.`)) return;
+                              try { await extractApi.cancelJob(selectedJob.id); toast.success("Cancelling…"); }
+                              catch (e: any) { toast.error(e?.response?.data?.detail || "Cancel failed"); }
+                              qc.invalidateQueries({ queryKey: ["jobs"] });
+                            }}>
+                      Cancel
+                    </button>
+                  )}
+                  {(selectedJob.status === "cancelled" || selectedJob.status_reason) && (
+                    <span style={{ fontSize: 12, color: "var(--text2)" }}>
+                      {[selectedJob.status_reason, selectedJob.status === "cancelled" ? selectedJob.progress_message : null].filter(Boolean).join(" — ")}
                     </span>
                   )}
                   {can(user, "job.delete") && !selectedJob.deleted_at && !running(selectedJob.status) && (

@@ -115,6 +115,7 @@ export interface JobStatus {
   deleted_at?: string | null;
   /** Why the system ended the job (cancelled by whom, interrupted by restart). */
   status_reason?: string | null;
+  progress_message?: string | null;
   schema_id: string | null;
 }
 
