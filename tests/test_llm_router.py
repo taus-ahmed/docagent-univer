@@ -30,7 +30,12 @@ class Stub:
 
 
 @pytest.fixture
-def providers(monkeypatch):
+def providers(monkeypatch, replay_cache):
+    # The session's replay cache wraps LLMRouter.extract/classify; these tests
+    # exercise the router itself, so they run on its own methods.
+    monkeypatch.setattr(llm_router.LLMRouter, "extract", replay_cache._orig["extract"])
+    monkeypatch.setattr(llm_router.LLMRouter, "classify", replay_cache._orig["classify"])
+
     def install(primary, fallbacks="", **stubs):
         monkeypatch.setattr(llm_router.settings, "PRIMARY_LLM", primary)
         monkeypatch.setattr(llm_router.settings, "LLM_FALLBACKS", fallbacks,
