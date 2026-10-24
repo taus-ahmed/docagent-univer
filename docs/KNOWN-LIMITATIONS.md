@@ -226,11 +226,14 @@ Missing or refused. Visible, not dangerous.
 
 ## Scanned documents and photographs
 
-**ABSENT.** There is no OCR. A PDF that is a picture of a page — a scan, a photo
-— has no text to read, so nothing the model returns can be checked against the
-page: values come back blank or marked as unverified, and the document is
-flagged for review. A PDF produced by accounting
-software or exported from a system is fine; a scanned one is not.
+**Always needs review.** A page with no text layer — a scan, a photo, an
+uploaded image — is read by OCR (Tesseract) and every value from it is checked
+against that reading. A misread digit would still match the misreading, so no
+value from a scan is ever marked verified: each is "Unverified — read from a
+scan, please verify", and the document is sent for review. The review screen
+shows the straightened page the reader saw, with the value's box on it.
+Handwriting is not read, and hard scans (heavy noise, skew, low resolution)
+lose fields; see docs/ROADMAP.md.
 
 ## A merged file whose documents carry no reference number stays one document
 
@@ -430,12 +433,14 @@ been observed from this**, on any document in the test corpus.
 **What to do.** Nothing, on an invoice: the routing number reported is the one
 the page prints. On a cheque the band is read properly.
 
-## Confidence is worked out per cell but only shown per document
+## Review marks are kept inside each result, not in their own table
 
-**ABSENT (from the screen, not from the data).** Every value carries its own
-confidence, and low-confidence cells are listed for review. The results grid
-shows a document-level status rather than colouring each cell. The information
-exists; it is not all on screen yet.
+Every value now shows its own status on screen (Verified, Grounded,
+Unverified, Low, Edited, Empty and flagged) and in the downloaded file (a fill,
+a comment with the reason, a Review status column and a Legend sheet). The
+marks a person makes — "reviewed", "edited" — are stored inside the document's
+result, not in a table of their own, so there is no history of who changed a
+mark back. docs/ROADMAP.md lists it.
 
 ## Cancelling a running job does not stop it
 
