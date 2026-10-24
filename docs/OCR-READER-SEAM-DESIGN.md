@@ -707,7 +707,10 @@ everything carries `False` and `[]`.
 | `balance_unreadable` | bank-statement family: a value one of those checks needs is present but not a plain amount (`TBD`, `12.00 CR`, `1.234,56`); set on every value of that sum or step | none — it requires review |
 | `payslip_mismatch` | payslip family: gross pay - total deductions does not equal net pay (within one cent), set on all three; or the listed deductions do not sum to the total deductions (within one cent per line), set on the total and every listed deduction row | all exactly `low` |
 | `payslip_unreadable` | payslip family: a value one of those checks needs is present but not a plain amount; set on every value of that sum | none — it requires review |
+| `receipt_mismatch` | receipt family: the items do not sum to the subtotal (within one cent per line), or subtotal + tax + tip/fees - discount does not equal the total (within one cent); what was tendered (cash, card, change) is never part of the sum; set on every value in the failed sum | exactly `low` |
+| `receipt_unreadable` | receipt family: a value one of those checks needs is present but not a plain amount; set on every value of that sum | none — it requires review |
 | `thin_text_layer` | Gate 2c: a native page one image covers (≥ 0.99 of its area) qualified for the text-layer-vs-OCR comparison, and OCR failed or read zero words, so the page stayed native with nothing to say how much of the page its text layer carries; set on every value read from that page (and on a value nothing places), the page named in `validation.thin_text_layer_pages` and its page gate. When OCR does read the page and the layer holds under half OCR's words, the page is read through the OCR seam instead (origin `ocr`, reason `ocr_origin`, `selective_ocr` recorded) — this code is only for the case where that comparison could not be made | none — it requires review |
+| `possible_duplicate` | batch level (`engine/duplicates.py`, run by the job runner after every file): another record of the same job has the same routing, account and serial number, and the same amount and date wherever both carry one — the same cheque scanned twice. Set on BOTH records' identity values (routing, account, serial, amount, date); `validation.possible_duplicate = {of: [...]}`. Nothing is merged or dropped | none — it requires review |
 | `possible_multiple_documents` | the record may hold more than one document (cheque) and the engine could not establish how many with confidence, so it kept ONE record rather than guess a split; set on every value of that record | none — it requires review |
 
 Document-level facts that have no single value to sit on are reported in
@@ -717,7 +720,7 @@ routing number withheld for failing the checksum
 (`validation.selected_pages_ignored`), zero-word OCR pages
 (`validation.ocr_zero_word_pages`), dropped, empty or unbound table rows.
 
-Which family a check belongs to is declared in `engine/validators.py` (the registry): cheque — `amount_*`, `micr_band_unreadable`; invoice — `totals_*`; bank statement — `balance_*`; payslip — `payslip_*`; every family — `checksum_failed`.
+Which family a check belongs to is declared in `engine/validators.py` (the registry): cheque — `amount_*`, `micr_band_unreadable`; invoice — `totals_*`; bank statement — `balance_*`; payslip — `payslip_*`; receipt — `receipt_*`; every family — `checksum_failed`.
 
 Per-value evidence that is NOT a reason: `amount_cross_check`
 (`match` / `mismatch` / `unreadable` — a match never raises a level),
@@ -725,7 +728,7 @@ Per-value evidence that is NOT a reason: `amount_cross_check`
 `totals_check`, `balance_check`, `running_balance_check`, `net_pay_check` and
 `deductions_check` (`pass` / `fail` / `unreadable`) in a field's provenance.
 
-None of the four sum checks runs when a value it needs is missing, when a role
+None of the sum checks runs when a value it needs is missing, when a role
 is ambiguous (two labels read as the closing balance), when a qualified label
 names a different quantity (`YTD Gross Earnings`, `Total Pre-Tax Deductions`),
 or — for a sum or chain over table rows — when a gate dropped rows from that

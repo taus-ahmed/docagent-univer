@@ -105,6 +105,7 @@ payload (`_value_requires_review`); the result's own `validation.needs_review`.
 | `routing_checksum` | `pass` \| `fail` \| null | the MICR band's transit field; null = no band read. Set by the `aba_checksum` validator, which runs for EVERY family |
 | `micr_band_unreadable` | true | optional, cheque family — a band is printed, no digit of it readable |
 | `possible_multiple_documents` | {micr_bands: int, readable: int} | optional — the record may hold several cheques; kept as one |
+| `possible_duplicate` | {of: [filename]} | optional, set by the job runner across a batch — the same cheque (routing + account + serial, and amount and date where both have them) appears in the named records too; `possible_duplicate` on the identity values, `needs_review` |
 | `source_region` | {page, index, of, box_pt: [x0, top, x1, bottom], frame} | optional — this record is cheque `index` of `of` on `page`; box in points, top-left origin, in the frame of the STRAIGHTENED page image |
 | `selected_pages_ignored` | [any] | optional — requested pages this file does not have |
 | `shredded_pages`, `unchecked_overprint_pages`, `unchecked_shred_pages` | [int] | optional — text-layer checks found / not performed |
@@ -127,8 +128,8 @@ payload (`_value_requires_review`); the result's own `validation.needs_review`.
 | `review_reasons` | [code] | §12 codes: origin first, then each failed check. `[]` ⇔ nothing owed |
 | `amount_cross_check` | `match` \| `mismatch` \| `unreadable` | optional — only on Amount in Figures / Amount in Words. Evidence, never raises a level |
 | `aba_checksum` | `pass` \| `fail` | optional — only on a filled routing slot (any family) |
-| `lines_check` | `pass` \| `fail` \| `unreadable` | optional, invoice family — only on the Subtotal: do the line items sum to it |
-| `totals_check` | `pass` \| `fail` \| `unreadable` | optional, invoice family — on every value of subtotal + charges + tax - discount = total |
+| `lines_check` | `pass` \| `fail` \| `unreadable` | optional, invoice and receipt families — only on the Subtotal: do the line items sum to it |
+| `totals_check` | `pass` \| `fail` \| `unreadable` | optional, invoice and receipt families — on every value of subtotal + charges (a receipt's tip / fees) + tax - discount = total |
 | `balance_check` | `pass` \| `fail` \| `unreadable` | optional, bank-statement family — on opening, total credits, total debits and closing balance: opening + credits - debits = closing |
 | `running_balance_check` | `pass` \| `fail` \| `unreadable` | optional, bank-statement family — on the opening / closing balance, when the transaction rows' balance chain was checked against it |
 | `net_pay_check` | `pass` \| `fail` \| `unreadable` | optional, payslip family — on gross pay, total deductions and net pay: gross - deductions = net |
@@ -154,7 +155,8 @@ Cross-field checks are registered per document FAMILY in
 `engine/validators.py`; the family comes from the template's `doc_type`
 (`cheque`/`check`; `invoice`/`sales_invoice`/...; `bank_statement`/
 `bank_statements`/`account_statement`; `payslip`/`pay_slip`/`payslips`/
-`pay_stub`/`paystub`/`pay_stubs`/`salary_slip`). Every result is applied by
+`pay_stub`/`paystub`/`pay_stubs`/`salary_slip`; `receipt`/`receipts`/
+`till_receipt`/`expense_receipt`/`sales_receipt`/`cash_receipt`). Every result is applied by
 one rule: `fail` → each affected value exactly `low`, `review_required`, the
 check's reason; `unreadable` → the reason added, no level change; `pass` →
 evidence only (the provenance keys above), never a raised level. A family with
@@ -168,11 +170,12 @@ nothing registered gets none of these keys.
 | invoice | `invoice_totals` | `lines_check`, `totals_check` | `totals_mismatch`, `totals_unreadable` |
 | bank_statement | `bank_balances` | `balance_check`, `running_balance_check` | `balance_mismatch`, `balance_unreadable` |
 | payslip | `payslip_totals` | `net_pay_check`, `deductions_check` | `payslip_mismatch`, `payslip_unreadable` |
+| receipt | `receipt_totals` | `lines_check`, `totals_check` | `receipt_mismatch`, `receipt_unreadable` |
 
 A sum or chain over table rows does not run on a table a gate dropped rows
 from (`CheckContext.incomplete`): the drop is already flagged, and a check over
-what is left would call correct values wrong. The invoice lines check, the
-bank running balance and the payslip deductions sum all consult it.
+what is left would call correct values wrong. The invoice and receipt lines
+checks, the bank running balance and the payslip deductions sum all consult it.
 
 ## 4. Examples (abridged: only the keys discussed)
 
