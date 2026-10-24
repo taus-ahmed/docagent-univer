@@ -1,0 +1,19 @@
+{
+ "recorded": 116,
+ "identical": 116,
+ "lost": [],
+ "changed": [],
+ "duplicated": [],
+ "by_file": {
+  "uploads.py": 7,
+  "excel_cells.py": 16,
+  "excel_legacy.py": 8,
+  "template_parsing.py": 14,
+  "vision_prompts.py": 8,
+  "job_worker.py": 21,
+  "result_processing.py": 18,
+  "edits.py": 5,
+  "extract.py": 16,
+  "excel_slot.py": 3
+ }
+}

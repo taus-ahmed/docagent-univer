@@ -1,68 +1,33 @@
 """
-DocAgent v2 - Extract Routes (Vision-First Architecture)
-=========================================================
+Extraction routes: upload, jobs, results, edits, cancel, hard delete, export.
 
-ARCHITECTURE OVERVIEW
----------------------
-Previous approach: binary TABLE vs FORM decision based on template layout.
-Problem: fails on mixed layouts (Form 941, Balance Sheet header+table, etc.)
+This module is the router. The work it routes to lives in `app/services/`
+(split out of this file in round 13, moved verbatim — see
+`scripts/split_proof.py` and `tests/reports/extract_split_before.json`):
 
-New approach: Vision-First with pdfplumber validation layer.
+    uploads            upload names, page selection, content checks
+    template_parsing   template grid -> template_data, registry loader
+    vision_prompts     the image path's prompt builder
+    result_processing  pdfplumber validation, normalisation, result processors
+    excel_cells        cell values/formats, provenance comments, styles, widths
+    excel_legacy       legacy layout/table/form/mixed/flat writers
+    excel_slot         the slot writer, inferred sheets, `_write_excel`
+    job_worker         the background job thread (extraction, persistence, cancel)
+    edits              value edits addressed by slot
 
-EXTRACTION PIPELINE (per document):
-  1. TEMPLATE REGION ANALYSIS
-     Read the template grid and identify ALL regions:
-     - key_value pairs (label in col A, value in col B)
-     - two_column_form (labels+values on both left and right sides)
-     - table_header (column headers for repeating rows)
-     - free_form (labels anywhere, values anywhere nearby)
-     Region map is cached - computed once per template.
+Every moved name is re-exported below, so `from app.api.routes.extract import X`
+keeps working. Code that must steer the job thread (tests) patches
+`app.services.job_worker`, whose globals the thread reads.
 
-  2. PAGE IMAGE EXTRACTION (primary - Gemini Vision)
-     Convert every PDF page to a base64 image.
-     Send image + template region map + registry system prompt to Gemini.
-     Gemini sees the document visually - reads any layout correctly.
-     Returns JSON with every field value.
-
-  3. pdfplumber TEXT EXTRACTION (parallel - validation layer)
-     Extract all text from the PDF independently.
-     For each AI-returned value, check whether it appears in the pdfplumber text.
-     If yes -> HIGH confidence.
-     If no  -> LOW confidence, flag for review.
-     This catches AI hallucinations before they reach the Excel output.
-
-  4. MULTI-DOCUMENT HANDLING
-     One PDF may contain N separate documents (100 cheques, 50 invoices).
-     Vision pre-pass detects document boundaries from the page images.
-     Each detected document gets its own extraction pass.
-     Each produces its own result block in the Excel output.
-
-  5. TABLE DETECTION (for table-mode templates)
-     pdfplumber reads the physical table structure from the PDF.
-     Tables may start anywhere on the page (not just top-left).
-     If table found -> extract directly, validate with AI.
-     If not found   -> AI extracts from image, pdfplumber validates.
-
-  6. EXCEL EXPORT
-     Rebuilds the exact template grid per result.
-     For table mode: header row + one data row per extracted line item.
-     For form mode: one filled template block per document, stacked.
-     For 100 cheques: 100 filled blocks in one sheet, separated by filename rows.
-
-CONFIDENCE LEVELS:
-  high   = AI value confirmed by pdfplumber text
-  medium = AI value not confirmed but plausible (pdfplumber text was partial)
-  low    = AI value not found anywhere in pdfplumber text (flag for review)
+Kept here: tenancy (`resolve_client_id`, `load_template_for_user`), the upload
+route and `_start_extraction_job`, the export routes, the job and edit routes,
+and `_get_job_or_404` (access through `app/core/permissions.py`).
 """
 
 import io
-import re
 import sys
-import time
 import json
 import threading
-import traceback
-import warnings
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -77,7 +42,6 @@ from app.core.demo import (check_upload_file, check_upload_quota,
                            check_uploads_enabled, filter_demo_history,
                            filter_options, is_demo_user, job_hidden_by_cutoff)
 from app.core import demo_audit
-from app.core.confidence import UNVERIFIED
 from app.core.storage import get_storage
 from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTemplate
 from app.schemas.schemas import (
@@ -96,8 +60,7 @@ _engine_dir  = _backend_dir / "engine"
 # engine directory themselves.
 if str(_engine_dir) not in sys.path:
     sys.path.append(str(_engine_dir))
-from log_safety import doc_ref, exc_brief, print_safe_traceback  # noqa: E402
-from cancellation import Cancelled, watching  # noqa: E402
+from log_safety import exc_brief  # noqa: E402
 # --split-reexports--
 from app.services.edits import (  # noqa: E402,F401  moved, re-exported
     _edit_field,
