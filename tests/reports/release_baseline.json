@@ -1,0 +1,4 @@
+{
+ "_note": "Headline numbers a release must reproduce in replay (CLAUDE.md 'Measured limits'); compared by scripts/prepush_check.py. Native readings: native_hashes.json.",
+ "harness": {"templated_export": "97.2%", "no_template_export": "96.7%"}
+}
