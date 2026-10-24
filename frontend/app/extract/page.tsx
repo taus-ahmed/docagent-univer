@@ -795,7 +795,7 @@ export default function ExtractPage() {
 
               {activeTab === "folder" && (
                 <div>
-                  <input className="input" placeholder="C:\Users\Admin\Documents\invoices"
+                  <input className="input" placeholder="C:\Documents\invoices"
                     value={folderPath} onChange={e => setFolderPath(e.target.value)}/>
                   <p style={{ fontSize: 11, color: "var(--text4)", marginTop: 6 }}>Local folder — all PDFs and images inside will be uploaded</p>
                 </div>
