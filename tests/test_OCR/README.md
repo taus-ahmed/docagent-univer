@@ -1,7 +1,7 @@
 # Synthetic Check Corpus (v2)
 
 Generated programmatically for OCR/MICR pipeline testing. NOT real client
-documents. See OCR-HANDOFF.md Section 7 -- results here are informative,
+documents. See docs/OCR-READER-SEAM-DESIGN.md §10 -- results here are informative,
 not a substitute for real client data.
 
 - 18 checks, 5 distinct visual templates (A-E)

@@ -1,4 +1,4 @@
-"""`selected_pages` FAILS CLOSED — Gate 2 review (Codex), red first.
+"""`selected_pages` FAILS CLOSED — Gate 2 review, red first.
 
 A selection is a promise about what the model may see. `run_extraction`
 resolved it to the pages that exist and, when NONE did (`[999]`), skipped the
@@ -8,7 +8,7 @@ model call; a partly invalid one keeps its valid pages, in FILE order, once
 each, and says which numbers it ignored.
 
 Numbers are FILE page numbers (1-based). Route-level rejection of an
-out-of-range selection before any job exists is the API's job (Codex); this
+out-of-range selection before any job exists is the API's job; this
 is the engine's own guarantee underneath it.
 """
 from __future__ import annotations

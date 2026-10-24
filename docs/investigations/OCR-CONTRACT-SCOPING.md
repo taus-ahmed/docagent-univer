@@ -3,6 +3,10 @@
 Investigation only, 2026-09-16 at `d278139`. No code was written, stubbed or
 installed; no OCR or vision API was called. Nothing outside this file changed.
 
+> The handoff note this investigation tests (`docs/OCR-HANDOFF.md`, a session
+> handoff written the same day) has since been removed from the tree; it is in
+> git history. Its conclusions live on in `docs/OCR-READER-SEAM-DESIGN.md`.
+
 **The claim under test**, `docs/OCR-HANDOFF.md` §5:
 
 > OCR is another reader behind the same word-list contract. It returns the same

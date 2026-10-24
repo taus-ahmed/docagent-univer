@@ -30,7 +30,7 @@ list.
 A failed record (`success: False`) has no `extracted_data` contract beyond
 being absent or empty; the route stores and shows `error`.
 
-### 1.1 How the routes return it (agreed with Codex)
+### 1.1 How the routes return it
 
 | engine field | route field | rule |
 |---|---|---|

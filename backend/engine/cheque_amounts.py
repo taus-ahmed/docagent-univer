@@ -3,7 +3,7 @@
 Pure functions, standard library only (Decimal). No I/O, no engine imports, so it
 can be adopted anywhere in backend/engine.
 
-Principle (Tauseef): review is the backstop, not the quality mechanism. This
+Principle: review is the backstop, not the quality mechanism. This
 module never *raises* confidence on its own. It reports one of three statuses:
 
   "match"       numeric and written amounts parse and agree exactly

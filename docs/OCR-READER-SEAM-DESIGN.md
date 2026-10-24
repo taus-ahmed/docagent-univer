@@ -526,8 +526,8 @@ something *was found and repaired*, whereas this one is populated when
 something *was not looked at*. The note text has to carry that distinction,
 which is why it says "this does not mean the page is clean" in as many words.
 
-> **Superseded for machine-read pages (Gate 2, 2026-10-21; decided by
-> Tauseef — see §10.4).** A value read off an OCR'd or pre-OCR'd page is
+> **Superseded for machine-read pages (Gate 2, 2026-10-21; a product
+> decision — see §10.4).** A value read off an OCR'd or pre-OCR'd page is
 > UNVERIFIED at best, carries `review_reasons` naming its origin, and sets
 > `needs_review`. The note below is kept as the record of the open question
 > it was; for `unchecked_*` pages on their own it still describes the code.
@@ -563,7 +563,7 @@ constant `False` would delete that protection and report a clean document.
 document", the same way an image upload says `unverified` rather than claiming a
 middling confidence. **It does not say the document is clean.**
 
-**Open question, needs real documents** (`OCR-HANDOFF.md` §7; recorded at §10.4)**:** whether marking a whole class of
+**Open question, needs real documents** (recorded at §10.4)**:** whether marking a whole class of
 documents "not checked" produces a review volume anyone will actually work
 through, or whether it becomes noise people learn to dismiss. That is the same
 failure the rejected coverage indicator had — *a ratio reading 0.38 on a perfect
@@ -604,7 +604,7 @@ fit, an OCR source certainly will not.
 
 ## 10. Open questions, all gated on facts we do not have
 
-Per `OCR-HANDOFF.md` §7: there are no client documents in this repo, everything
+There are no client documents in this repo, everything
 is measured on 69 PDFs of which 61 are in-house, and first contact with real
 client documents will be live. The following cannot be decided here, and the
 design deliberately leaves each one open rather than choosing a default that
@@ -622,7 +622,7 @@ would look measured:
    Decides whether "not checked" is a rare annotation or the normal state, which
    decides whether §8's loud degradation is useful or is noise (§8.2).
 
-   **DECIDED for machine-read values (Gate 2, 2026-10-21, Tauseef): scans
+   **DECIDED for machine-read values (Gate 2, 2026-10-21, product decision): scans
    always need review.** Mandatory review is the backstop, not the quality
    mechanism, and a user who never reviews must not receive a silent wrong
    value — so a value is verified, visibly uncertain, or empty and flagged.

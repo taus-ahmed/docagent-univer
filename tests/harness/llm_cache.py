@@ -43,8 +43,8 @@ class ReplayEnvironmentError(RuntimeError):
 #: pdf2image + Poppler (`pdftoppm`) + Pillow's JPEG encoder made of the PDF on
 #: the machine that recorded it. A machine with no `pdftoppm` on PATH renders
 #: NO images — the request differs, every lookup misses, and the harness used
-#: to report 0.0% as though the engine had failed (Codex, round 7: 0 hits / 30
-#: misses). A different Poppler or Pillow renders different bytes and misses
+#: to report 0.0% as though the engine had failed (0 hits / 30 misses, seen in
+#: review). A different Poppler or Pillow renders different bytes and misses
 #: the same way. Replay therefore checks first, and says which it is.
 FINGERPRINT_FILE = "_render_fingerprint.json"
 FINGERPRINT_PDF = "CHQ-001847.pdf"

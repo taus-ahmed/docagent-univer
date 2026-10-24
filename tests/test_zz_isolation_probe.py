@@ -8,7 +8,7 @@ after every test module has imported what it imports.
 A project module is one whose top-level name is a module or package of this
 tree (`app`, `extractor`, `core`, `tests`, ...). The interpreter's standard
 library and site-packages are never project modules, wherever the interpreter
-happens to live — the S1 venv's own Python sits under `E:\\docagent-codex`.
+happens to live — a shared virtualenv may well sit inside another checkout.
 """
 import sys
 from pathlib import Path
