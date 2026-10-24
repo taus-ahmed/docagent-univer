@@ -32,7 +32,7 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
-from tests.harness.llm_cache import LLMCache  # noqa: E402
+from tests.harness.llm_cache import CacheMiss, LLMCache  # noqa: E402
 from tests.harness.runner import _schema_path  # noqa: E402
 
 # Each statement's own values, read from the PDFs independently of the engine.
@@ -445,7 +445,15 @@ class TestBatchSchemaReuse:
         cache = LLMCache(mode="replay")
         cache.install()
         try:
-            _r, log = _extract_batch(self.SIBS[:2], None, cache)
+            _r, log = _extract_batch(self.SIBS[:1], None, cache)
+            # The second sibling must ask for ITS OWN inference. No standalone
+            # answer was ever recorded for it (only the reuse path was), so the
+            # request it makes is a replay miss — which is the evidence: a
+            # reused schema would have made no inference request at all. This
+            # used to run both documents and pass on the first one alone,
+            # because the engine swallowed the miss (round 12 B1).
+            with pytest.raises(CacheMiss):
+                _extract_batch(self.SIBS[1:2], None, cache)
         finally:
             cache.uninstall()
         assert "no inference call" not in log, log
