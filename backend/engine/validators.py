@@ -121,3 +121,4 @@ def _load():
         import invoice_validators  # noqa: F401
         import bank_validators  # noqa: F401
         import payslip_validators  # noqa: F401
+        import receipt_validators  # noqa: F401
