@@ -12,6 +12,10 @@
 # pinned here. Checked by a fresh Windows virtualenv (install, pip check, import
 # smoke test, full suite); the Linux production image has NOT been rebuilt
 # since and needs its own build check.
+# 2026-10-23: pillow 10.4.0 -> 13.0.0 (48 advisories). Same resolution
+# otherwise (pip check clean); page images and OCR text byte-identical on
+# the corpus, full suite and both harness modes unchanged
+# (docs/proposals/replay-portability.md). Same Linux caveat.
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
@@ -58,7 +62,7 @@ packaging==26.3
 pdf2image==1.17.0
 pdfminer.six==20251230
 pdfplumber==0.11.9
-pillow==10.4.0
+pillow==13.0.0
 pillow_heif==0.16.0
 pluggy==1.7.0
 proto-plus==1.28.2
