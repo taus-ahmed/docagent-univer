@@ -187,16 +187,18 @@ class TestDocumentGate:
                    for n in r.extracted_data["validation_notes"])
 
 
-class TestExportCarriesNoConfidence:
-    """Confidence is surfaced in the app. The exported file carries no scores,
-    no review state and no colour that survives export.
+class TestExportMarksWhatNeedsReview:
+    """The exported file marks every value a person still owes a look.
 
-    It used to be values only, with no comments at all. Since I2 every value
-    carries a comment quoting the words it was read from and a Source cell
-    naming its document and page: that is provenance, not confidence, and it
-    must never become a back door for a confidence word."""
+    It used to carry no review state at all ("confidence belongs in the app"),
+    which meant a low value arrived in the client's spreadsheet looking exactly
+    like a verified one. An export must never present an unverified, low,
+    empty-and-flagged or unreviewed value as a clean final value: such a cell
+    gets a fill and a comment naming its status and reason, and a Review status
+    column says per row whether anything needs review. A clean value carries
+    its provenance only, with no fill and no review word."""
 
-    def test_the_sheet_carries_no_confidence(self):
+    def _sheet(self, extracted_data):
         import contextlib
         import io as _io
 
@@ -204,32 +206,71 @@ class TestExportCarriesNoConfidence:
         from app.api.routes.extract import _write_slot_excel
         from app.models.models import DocumentResult
 
-        r = _run(self._mixed())
         doc = DocumentResult(filename="D.pdf", document_type="other",
-                             extraction_json=json.dumps(r.extracted_data,
-                                                        default=str))
+                             extraction_json=json.dumps(extracted_data, default=str))
         wb = openpyxl.Workbook()
         ws = wb.active
         with contextlib.redirect_stdout(_io.StringIO()):
-            _write_slot_excel(ws, [doc], GRID, GRID["cells"], openpyxl)
+            n = _write_slot_excel(ws, [doc], GRID, GRID["cells"], openpyxl)
+        return ws, n
 
-        banned = ("confidence", "high", "low", "needs review", "unverified",
-                  "flag", "review")
-        comments = 0
+    def test_a_low_value_is_marked_and_a_verified_one_is_not(self):
+        r = _run(self._mixed())
+        cmap = r.extracted_data["validation"]["confidence_map"]
+        ws, n = self._sheet(r.extracted_data)
+        assert n == 1
+        marked, clean = [], []
         for row in ws.iter_rows():
             for c in row:
-                if c.comment is not None:
-                    comments += 1
-                    for word in banned:
-                        assert word not in c.comment.text.casefold(), (
-                            c.coordinate, c.comment.text)
-                if c.value is None:
+                if c.comment is None:
                     continue
-                text = str(c.value).casefold()
-                for word in banned:
-                    assert word not in text, (c.coordinate, c.value)
-                assert c.fill.fgColor.rgb in (None, "00000000")
-        assert comments == 2, "premise: both values carry their provenance"
+                (marked if c.fill.fgColor.rgb not in (None, "00000000") else clean).append(c)
+        assert len(marked) == 1 and len(clean) == 1, "premise: one low, one verified"
+        low = marked[0]
+        assert low.fill.fgColor.rgb == "FFFFC7CE"
+        assert low.comment.text.startswith("NEEDS REVIEW — Low:")
+        assert "More than one piece of information" in low.comment.text
+        assert "review" not in clean[0].comment.text.casefold()
+        assert sorted(cmap.values()) == ["high", "low"]
+
+    def test_the_status_column_counts_and_names_rows(self):
+        r = _run(self._mixed())
+        ws, n = self._sheet(r.extracted_data)
+        texts = [str(c.value) for row in ws.iter_rows() for c in row
+                 if isinstance(c.value, str)]
+        assert any(t.startswith("Review status — 1 value needs review") for t in texts)
+        statuses = [t for t in texts if t in ("Needs review", "OK")
+                    or t.startswith("Review status")]
+        assert "OK" in statuses and any("Needs review" in t for t in statuses)
+
+    def test_a_reviewed_value_is_marked_reviewed_not_clean(self):
+        r = _run(self._mixed())
+        ed = r.extracted_data
+        low_ref = next(k for k, v in ed["validation"]["confidence_map"].items()
+                       if v == "low")
+        ed["field_provenance"][low_ref]["reviewed"] = {"by": "x", "at": "t"}
+        ws, n = self._sheet(ed)
+        assert n == 0
+        fills = {c.fill.fgColor.rgb for row in ws.iter_rows() for c in row
+                 if c.comment is not None}
+        assert "FFE2EFDA" in fills and "FFFFC7CE" not in fills
+
+    def test_marks_can_be_turned_off_for_internal_callers(self):
+        import contextlib
+        import io as _io
+
+        import openpyxl
+        from app.api.routes.extract import _write_slot_excel
+        from app.models.models import DocumentResult
+        r = _run(self._mixed())
+        doc = DocumentResult(filename="D.pdf", document_type="other",
+                             extraction_json=json.dumps(r.extracted_data, default=str))
+        wb = openpyxl.Workbook()
+        with contextlib.redirect_stdout(_io.StringIO()):
+            _write_slot_excel(wb.active, [doc], GRID, GRID["cells"], openpyxl,
+                              marks=False)
+        assert all(c.fill.fgColor.rgb in (None, "00000000")
+                   for row in wb.active.iter_rows() for c in row)
 
     def _mixed(self):
         line = "Ms. Linda Zhao | (310) 555-0233"

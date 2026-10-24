@@ -156,7 +156,10 @@ class TestEveryValueKnowsWhereItCameFrom:
 # ══════════════════════════════════════════════════════════════════════════
 
 def _export(results, grid, **kw):
+    """The slot sheet as written; review marks off unless asked for, since
+    these tests are about provenance (the marks: test_confidence.py)."""
     import json
+    kw.setdefault("marks", False)
     import openpyxl
     from app.api.routes.extract import _analyse_template_regions, _write_excel
     from app.models.models import DocumentResult

@@ -4179,6 +4179,9 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                             job_id=job_id,
                             filename=result.filename,
                             original_filename=display_filename,
+                            # the source this record was read from — what
+                            # the review screen shows its pages from
+                            s3_key=str(fp) if _is_storage_key(fp) else None,
                             document_type=result.document_type if result.success else "unknown",
                             overall_confidence=extracted.get("overall_confidence"),
                             extraction_json=json.dumps(extracted, default=str) if extracted else None,
@@ -4372,6 +4375,7 @@ def export_job_excel(
         # Nothing to build a sheet from (e.g. an image with no text layer).
         _write_flat_table(ws, doc_results, openpyxl,
                           show_filename=not is_demo_user(current_user))
+    _add_review_legend(wb, doc_results, demo=is_demo_user(current_user))
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -4452,6 +4456,7 @@ def export_job_zip(
             else:
                 _write_flat_table(ws, [doc], openpyxl,
                                   show_filename=not demo)
+            _add_review_legend(wb, [doc], demo=demo)
 
             # Use the original filename without extension as the Excel filename
             # — except for a demo, where the stored name is a temp name and
@@ -4540,7 +4545,7 @@ def _fit_columns(ws, col_widths=()):
 
 
 def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
-                 provenance=True):
+                 provenance=True, marks=True):
     """Route to the correct writer based on template regions primary_mode.
     Always uses the template structure for routing — never relies on AI output
     flags which can be stale or wrong from a previous extraction run."""
@@ -4576,7 +4581,7 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
         print("[EXPORT] routing: template_type=slot -> slot writer "
               "(values written to the addresses they were requested for)", flush=True)
         _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
-                          provenance=provenance)
+                          provenance=provenance, marks=marks)
         _fit_columns(ws, col_widths)
         return
     if template_type == "structural":
@@ -4963,7 +4968,7 @@ def _apply_template_merges(ws, merges, addr, band_rows, openpyxl_mod):
 
 
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
-                      provenance=True):
+                      provenance=True, marks=True):
     """
     Writer for slot-directed extraction.
 
@@ -4972,8 +4977,16 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
     computed thing is the row shift when a document has more table rows than
     the template reserved blank rows for.
 
-    The sheet carries no confidence colouring: confidence belongs in the app.
-    It DOES carry provenance (I2), unless `provenance=False`: a Source column
+    REVIEW MARKS (`marks`, on by default). An export must never present a
+    value a person still owes a look — unverified, low, empty and flagged, or
+    carrying `review_required` — as a clean final value. Each such cell gets a
+    fill and a comment naming its status and reasons (app/core/review.py, the
+    same classification the review screen uses); an edited or reviewed value
+    gets its own fill. A "Review status" column right of the sheet says, per
+    row, whether anything in it needs review, and its header counts the
+    values that do. Returns that count.
+
+    It also carries provenance (I2), unless `provenance=False`: a Source column
     right of the template naming the document and file page of every row that
     holds extracted values, and a comment on every extracted value quoting the
     words it was read from. "Values only" meant a merged block, a wrong region
@@ -5030,6 +5043,12 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
     # I2 — the Source column sits one past the template's full extent, so it
     # can never land on a cell the template or a band owns.
     source_col = max_c + 1
+    # The Review status column comes after it (or takes its place when the
+    # export carries no provenance).
+    status_col = source_col + 1 if provenance else source_col
+    from app.core import review as _review
+    row_status = {}           # output row -> [status word, ...]
+    unresolved_total = 0
 
     def put(r, c, value, label=""):
         cell = ws.cell(row=r + 1, column=c + 1)
@@ -5060,6 +5079,35 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         field_prov = ed.get("field_provenance") or {}
         conf_map = (ed.get("validation") or {}).get("confidence_map") or {}
         source_rows = {}          # output row -> set of pages
+        doc_reviewed = _review.document_reviewed(ed)
+        flagged_refs = {str(f.get("ref")) for f in
+                        ((ed.get("validation") or {}).get("flagged_fields") or [])
+                        if isinstance(f, dict)}
+
+        def mark(cell, r, c, st):
+            """The review mark on one written value (see the docstring)."""
+            nonlocal unresolved_total
+            if not marks:
+                return
+            if not st["resolved"]:
+                unresolved_total += 1
+            m = _review.export_mark(st)
+            if r is not None:
+                row_status.setdefault(r, []).append(m[0] if m else "OK")
+            if m is None:
+                return
+            if cell is None:
+                cell = ws.cell(row=r + 1, column=c + 1) if r is not None else None
+                if cell is None or isinstance(cell, MergedCell):
+                    return
+            from openpyxl.comments import Comment
+            from openpyxl.styles import PatternFill
+            cell.fill = PatternFill(fill_type="solid", fgColor=m[1])
+            if st["status"] == "edited" and cell.comment:
+                return            # the edited note already says so, and what it replaced
+            text = m[2] + (f"\n\n{cell.comment.text}" if cell.comment else "")
+            w, h = provenance_note_size(text)
+            cell.comment = Comment(text, "DocAgent", width=w, height=h)
 
         def attach(cell, source, page, grounded, confidence, out_r,
                    edited=False, original=""):
@@ -5204,6 +5252,12 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                        prov.get("grounded"), conf_map.get(ref), out_r,
                        edited=bool(prov.get("edited")) or conf_map.get(ref) == "edited",
                        original=prov.get("original_value", ""))
+            p = prov or {}
+            mark(cell, out_r, tc, _review.value_status(
+                value, conf_map.get(ref), review_required=bool(p.get("review_required")),
+                reasons=p.get("review_reasons") or [],
+                flagged=slot_label.get(ref, "") in flagged_refs or ref in flagged_refs,
+                reviewed=doc_reviewed or bool(p.get("reviewed"))))
 
         # 3. table rows, in their band, by column header address
         for t in tables:
@@ -5223,6 +5277,15 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                                    rec.get("_confidence"), None,
                                    edited=f["header"] in (rec.get("_edited") or []),
                                    original=(rec.get("_original") or {}).get(f["header"], ""))
+                        if cell is not None:
+                            mark(cell, None, c, _review.value_status(
+                            rec.get(f["header"], ""),
+                            "edited" if f["header"] in (rec.get("_edited") or []) else (
+                                "low" if f["header"] in (rec.get("_ungrounded") or [])
+                                else rec.get("_confidence")),
+                            review_required=bool(rec.get("_review_required")),
+                            reasons=rec.get("_review_reasons") or [],
+                            reviewed=doc_reviewed or bool(rec.get("_reviewed"))))
                 continue
             header_row = t.get("header_row", t["start_row"])
             if provenance and rows and header_row < t["start_row"] and any(
@@ -5242,6 +5305,16 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                                row.get("_confidence"), r,
                                edited=key in (row.get("_edited") or []),
                                original=(row.get("_original") or {}).get(key, ""))
+                    st = _review.value_status(
+                            row.get(key, ""),
+                            "edited" if key in (row.get("_edited") or []) else (
+                                "low" if key in (row.get("_ungrounded") or [])
+                                else row.get("_confidence")),
+                            review_required=bool(row.get("_review_required")),
+                            reasons=row.get("_review_reasons") or [],
+                            reviewed=doc_reviewed or bool(row.get("_reviewed")))
+                    if cell is not None:
+                        mark(cell, r, col["col"], st)
 
         # 3b. one Source cell per row that received a value with provenance
         for out_r, pages in source_rows.items():
@@ -5264,6 +5337,80 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
 
         block_height = max_r + 1 + sum(ov for _, ov in shifts)
         doc_offset += block_height + GAP_BETWEEN_DOCS
+
+    # 5. the Review status column: a header counting what needs review, and
+    #    one word per row that received a value
+    if marks:
+        head = (f"Review status — {unresolved_total} value"
+                f"{'' if unresolved_total == 1 else 's'} need"
+                f"{'s' if unresolved_total == 1 else ''} review"
+                if unresolved_total else "Review status — nothing needs review")
+        for r, words in sorted(row_status.items()):
+            word = next((w for w in ("Needs review", "Edited", "Reviewed")
+                         if w in words), "OK")
+            if r == 0:
+                head += f" (row 1: {word})"
+                continue
+            sc = ws.cell(row=r + 1, column=status_col + 1)
+            if not isinstance(sc, MergedCell) and sc.value is None:
+                sc.value = word
+        hc = ws.cell(row=1, column=status_col + 1)
+        if not isinstance(hc, MergedCell):
+            hc.value = head
+    return unresolved_total
+
+
+def _add_review_legend(wb, doc_results, demo=False):
+    """A "Legend" sheet: how many values need review, what each mark means,
+    and one line per document. Added to every export, whichever writer drew
+    the results sheet, so even a sheet with no per-cell marks (a legacy job,
+    the image fallback) says how much of it is unchecked."""
+    from openpyxl.styles import Font, PatternFill
+    from app.core import review as _review
+    lg = wb.create_sheet("Legend")
+    per_doc, total = [], {"values": 0, "needs_review": 0, "low": 0,
+                          "unverified": 0, "empty_flagged": 0}
+    for d in doc_results:
+        ed = d.get_extracted_data()
+        s = _review.summarise(_review.document_values(ed if isinstance(ed, dict) else {}))
+        failed = not isinstance(ed, dict) or not ed
+        per_doc.append((d, s, failed))
+        for k in total:
+            total[k] += s[k]
+    n = total["needs_review"]
+    lg["A1"] = (f"{n} value{'' if n == 1 else 's'} need{'s' if n == 1 else ''} review"
+                if n else "Nothing needs review")
+    lg["A1"].font = Font(bold=True, size=13)
+    lg["A2"] = (f"{total['low']} low · {total['unverified']} unverified · "
+                f"{total['empty_flagged']} empty and flagged · "
+                f"{total['values']} values in all")
+    lg["A4"] = "Mark"
+    lg["B4"] = "Meaning"
+    lg["A4"].font = lg["B4"].font = Font(bold=True)
+    r = 5
+    for name, fill, meaning in _review.LEGEND:
+        lg.cell(row=r, column=1, value=name)
+        if fill:
+            lg.cell(row=r, column=1).fill = PatternFill(fill_type="solid", fgColor=fill)
+        lg.cell(row=r, column=2, value=meaning)
+        r += 1
+    lg.cell(row=r, column=2, value="Each marked cell carries a comment naming its "
+                                   "status and the reasons.")
+    r += 2
+    for col, head in enumerate(("Document", "Values", "Need review", "Low",
+                                "Unverified", "Empty, flagged"), 1):
+        lg.cell(row=r, column=col, value=head).font = Font(bold=True)
+    for i, (d, s, failed) in enumerate(per_doc, 1):
+        r += 1
+        name = (f"document {i}" if demo else (d.filename or f"document {i}"))
+        if failed:
+            name += " — FAILED, no values extracted"
+        for col, v in enumerate((name, s["values"], s["needs_review"], s["low"],
+                                 s["unverified"], s["empty_flagged"]), 1):
+            lg.cell(row=r, column=col, value=v)
+    lg.column_dimensions["A"].width = 40
+    lg.column_dimensions["B"].width = 90
+    return n
 
 
 def _ref_to_rowcol(ref):
