@@ -182,8 +182,12 @@ def _download(client, auth, job_id):
 
 
 def _sheet_text(ws):
+    """Every value on the sheet, leaving out the Review status column's own
+    words and count, which name no document's value."""
     return " | ".join(str(c.value) for row in ws.iter_rows()
-                      for c in row if c.value is not None)
+                      for c in row if c.value is not None
+                      and not str(c.value).startswith("Review status")
+                      and str(c.value) not in ("Needs review", "OK", "Edited", "Reviewed"))
 
 
 # ── 1. five documents, one template, one job ─────────────────────────────────
@@ -337,12 +341,16 @@ class TestMixedBatchWithNoTemplate:
         docs = _results_for(client, auth, mixed_job["id"], MIXED)
         sigs = {(d["extracted_data"] or {}).get("shape_signature") for d in docs}
         wb = _download(client, auth, mixed_job["id"])
-        assert len(wb.worksheets) > 1, (
+        # every export also carries a Legend sheet (review marks), which holds
+        # no document's values
+        sheets = [w for w in wb.worksheets if w.title != "Legend"]
+        assert "Legend" in wb.sheetnames
+        assert len(sheets) > 1, (
             "a mixed batch collapsed into a single sheet — the documents "
             "share headings they do not have")
-        assert len(wb.worksheets) == len(sigs), (
-            f"{len(sigs)} inferred shapes produced {len(wb.worksheets)} "
-            f"sheets: {[w.title for w in wb.worksheets]}")
+        assert len(sheets) == len(sigs), (
+            f"{len(sigs)} inferred shapes produced {len(sheets)} "
+            f"sheets: {[w.title for w in sheets]}")
 
     def test_no_value_crosses_between_sheets(self, mixed_job, client, auth,
                                              exclusive_numbers):
@@ -354,7 +362,8 @@ class TestMixedBatchWithNoTemplate:
         the mapping has to be checked in both directions at once.
         """
         wb = _download(client, auth, mixed_job["id"])
-        per_sheet = {w.title: _numbers(_sheet_text(w)) for w in wb.worksheets}
+        per_sheet = {w.title: _numbers(_sheet_text(w)) for w in wb.worksheets
+                     if w.title != "Legend"}
 
         claims = {t: sorted(s for s in MIXED if exclusive_numbers[s] & nums)
                   for t, nums in per_sheet.items()}
@@ -687,6 +696,10 @@ class TestTheDownloadSaysWhereEachValueCameFrom:
                        headers=auth["acme"])
         assert r.status_code == 200, r.text[:400]
         ws = openpyxl.load_workbook(io.BytesIO(r.content)).worksheets[0]
-        assert not any(c.comment for row in ws.iter_rows() for c in row)
+        # review marks stay (they are not provenance); no comment quotes a
+        # source or names the file
+        review = ("NEEDS REVIEW", "EDITED BY HAND", "REVIEWED")
+        comments = [c.comment.text for row in ws.iter_rows() for c in row if c.comment]
+        assert all(t.startswith(review) and ".pdf" not in t for t in comments), comments
         assert not any(isinstance(c.value, str) and " · p." in c.value
                        for row in ws.iter_rows() for c in row)
