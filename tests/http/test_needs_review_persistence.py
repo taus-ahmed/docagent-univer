@@ -59,10 +59,10 @@ def test_engine_review_flag_reaches_storage_job_list_results_and_export(
 
     monkeypatch.setattr(orchestrator, "Orchestrator",
                         lambda client_schema_path: SimpleNamespace())
-    monkeypatch.setattr(extract_mod, "get_storage", lambda: object())
-    monkeypatch.setattr(extract_mod, "_resolve_source",
+    monkeypatch.setattr("app.services.job_worker.get_storage", lambda: object())
+    monkeypatch.setattr("app.services.job_worker._resolve_source",
                         lambda _storage, _key: Path(tmp_path / "machine-read.pdf"))
-    monkeypatch.setattr(extract_mod, "_extract_with_template",
+    monkeypatch.setattr("app.services.job_worker._extract_with_template",
                         lambda *args, **kwargs: [result])
 
     extract_mod._run_extraction_sync(

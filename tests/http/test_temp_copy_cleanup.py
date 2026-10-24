@@ -173,8 +173,8 @@ class TestWorker:
             return [_ok(Path(path).name)]
 
         monkeypatch.setattr(orchestrator, "Orchestrator", lambda client_schema_path: SimpleNamespace())
-        monkeypatch.setattr(extract_mod, "get_storage", lambda: s3)
-        monkeypatch.setattr(extract_mod, "_extract_with_template", fake)
+        monkeypatch.setattr("app.services.job_worker.get_storage", lambda: s3)
+        monkeypatch.setattr("app.services.job_worker._extract_with_template", fake)
         monkeypatch.setattr(extract_mod.settings, "RATE_LIMIT_DELAY", 0)
         _run_worker(extract_mod, s3, job, keys, schema_path, _db_url)
 
@@ -194,7 +194,7 @@ class TestWorker:
             raise RuntimeError("schema unreadable")
 
         monkeypatch.setattr(orchestrator, "Orchestrator", broken)
-        monkeypatch.setattr(extract_mod, "get_storage", lambda: s3)
+        monkeypatch.setattr("app.services.job_worker.get_storage", lambda: s3)
         _run_worker(extract_mod, s3, job, [], schema_path, _db_url)
         assert _copies(s3) == []
 

@@ -53,7 +53,7 @@ def _run_worker(monkeypatch, tmp_path, db_url, job_id, engine_results,
 
     monkeypatch.setattr(orchestrator, "Orchestrator",
                         lambda **_kwargs: SimpleNamespace())
-    monkeypatch.setattr(ex, "_resolve_source", lambda _storage, _key: image)
+    monkeypatch.setattr("app.services.job_worker._resolve_source", lambda _storage, _key: image)
 
     def engine(_orchestrator, path, template, **kwargs):
         calls.append(("engine", path, template, kwargs))
@@ -63,8 +63,8 @@ def _run_worker(monkeypatch, tmp_path, db_url, job_id, engine_results,
         calls.append(("legacy", path, template, {}))
         return legacy_results or engine_results
 
-    monkeypatch.setattr(ex, "_extract_with_template", engine)
-    monkeypatch.setattr(ex, "_extract_image_with_template", legacy)
+    monkeypatch.setattr("app.services.job_worker._extract_with_template", engine)
+    monkeypatch.setattr("app.services.job_worker._extract_image_with_template", legacy)
     ex._run_extraction_sync(
         job_id,
         ["stored/key.png"],

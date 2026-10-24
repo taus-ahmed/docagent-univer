@@ -152,10 +152,10 @@ def test_the_batch_survives_a_failing_file(db, users, _db_url, monkeypatch, tmp_
         return o
 
     monkeypatch.setattr(orchestrator, "Orchestrator", lambda client_schema_path: SimpleNamespace())
-    monkeypatch.setattr(extract_mod, "get_storage", lambda: object())
-    monkeypatch.setattr(extract_mod, "_resolve_source",
+    monkeypatch.setattr("app.services.job_worker.get_storage", lambda: object())
+    monkeypatch.setattr("app.services.job_worker._resolve_source",
                         lambda _s, key: Path(tmp_path / Path(key).name))
-    monkeypatch.setattr(extract_mod, "_extract_with_template", fake)
+    monkeypatch.setattr("app.services.job_worker._extract_with_template", fake)
     monkeypatch.setattr(extract_mod.settings, "RATE_LIMIT_DELAY", 0)
     extract_mod._run_extraction_sync(
         job.id, ["u/crash.pdf", "u/bad.pdf", "u/good.pdf"], str(tmp_path / "s.yaml"),

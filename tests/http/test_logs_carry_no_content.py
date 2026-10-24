@@ -169,7 +169,7 @@ def _run(db, users, _db_url, monkeypatch, tmp_path, *, template, keys, options=N
             store[k] = p
     monkeypatch.setattr(orchestrator, "Orchestrator",
                         lambda client_schema_path: SimpleNamespace(llm=LLMRouter()))
-    monkeypatch.setattr(ex, "_resolve_source", lambda _s, k: store.get(k))
+    monkeypatch.setattr("app.services.job_worker._resolve_source", lambda _s, k: store.get(k))
     template_data = None
     if template:
         tpl = ColumnTemplate(name=f"{SENTINEL}TEMPLATE", document_type="sales_invoice",

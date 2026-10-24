@@ -34,10 +34,10 @@ def test_a_cheque_uploaded_twice_is_flagged_and_kept(db, users, _db_url, monkeyp
                   [_result("c.pdf", cheque(serial="001848", amount="$90.00"))]])
     monkeypatch.setattr(orchestrator, "Orchestrator",
                         lambda client_schema_path: SimpleNamespace())
-    monkeypatch.setattr(extract_mod, "get_storage", lambda: object())
-    monkeypatch.setattr(extract_mod, "_resolve_source",
+    monkeypatch.setattr("app.services.job_worker.get_storage", lambda: object())
+    monkeypatch.setattr("app.services.job_worker._resolve_source",
                         lambda _s, key: Path(tmp_path / Path(key).name))
-    monkeypatch.setattr(extract_mod, "_extract_with_template",
+    monkeypatch.setattr("app.services.job_worker._extract_with_template",
                         lambda *a, **k: next(batch))
     monkeypatch.setattr(extract_mod.settings, "RATE_LIMIT_DELAY", 0)
 

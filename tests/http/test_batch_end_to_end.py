@@ -494,7 +494,7 @@ class TestAFailedDocumentIsVisible:
                 raise RuntimeError("deliberate worker failure")
             return original(storage, ref)
 
-        monkeypatch.setattr(ex, "_resolve_source", resolve)
+        monkeypatch.setattr("app.services.job_worker._resolve_source", resolve)
 
     def test_a_batch_where_everything_fails_reports_failed(self, client, auth,
                                                            bank_template):
@@ -606,7 +606,7 @@ class TestAFailedDocumentIsVisible:
         def boom(storage, ref):
             raise RuntimeError("resolver exploded")
 
-        monkeypatch.setattr(ex, "_resolve_source", boom)
+        monkeypatch.setattr("app.services.job_worker._resolve_source", boom)
         good = "STMT-2024-01"
         up = _upload_raw(
             client, auth,

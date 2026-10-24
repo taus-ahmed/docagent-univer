@@ -59,13 +59,13 @@ def worker(monkeypatch, _db_url, tmp_path):
     svc = st.StorageService()
     monkeypatch.setattr(orchestrator, "Orchestrator",
                         lambda client_schema_path: SimpleNamespace())
-    monkeypatch.setattr(ex, "get_storage", lambda: svc)
+    monkeypatch.setattr("app.services.job_worker.get_storage", lambda: svc)
     monkeypatch.setattr(ex.settings, "RATE_LIMIT_DELAY", 0)
 
     def run(job, names, fake):
         keys = [svc.save_upload(b"%PDF-1.7", n, job.id, client_id=job.client_id)[0]
                 for n in names]
-        monkeypatch.setattr(ex, "_extract_with_template", fake)
+        monkeypatch.setattr("app.services.job_worker._extract_with_template", fake)
         ex._run_extraction_sync(job.id, keys, str(tmp_path / "s.yaml"), _db_url,
                                 {"layout": {"cells": {}}}, str(bs.REPO_DIR),
                                 str(bs.BACKEND_DIR), str(bs.ENGINE_DIR),
@@ -114,7 +114,7 @@ class TestCancelMidBatch:
 
         def fake(_o, path, *a, **k):
             _set_status(_db_url, job.id, "cancelled")
-            import app.api.routes.extract as ex
+            import app.services.job_worker as ex
             ex.CANCEL_POLL_SEC = 0
             try:
                 checkpoint()            # what the preprocessor does per page
