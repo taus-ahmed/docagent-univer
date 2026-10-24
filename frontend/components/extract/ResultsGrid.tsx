@@ -250,7 +250,7 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
       headerName: key,
       editable: true,
       flex: 1,
-      minWidth: 140,
+      minWidth: 190,
       cellStyle: { color: "var(--text1)" },
       valueFormatter: ({ value }: any) =>
         value === null || value === undefined ? "" : String(value),

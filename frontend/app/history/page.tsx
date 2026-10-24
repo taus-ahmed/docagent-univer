@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import { extractApi, exportApi, templatesApi, type JobStatus, type DocumentResult, type ColumnTemplate } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -490,9 +491,10 @@ export default function HistoryPage() {
                       claim everything worked. */}
                   {["completed", "partial"].includes(selectedJob.status) && (selectedJob.successful ?? 0) > 0 && (
                     <>
-                      <a className="btn btn-secondary btn-sm" href={`/extract?job=${selectedJob.id}`}>
+                      {/* client-side: a full page load re-runs AppLayout's auth gate */}
+                      <Link className="btn btn-secondary btn-sm" href={`/extract?job=${selectedJob.id}`}>
                         Review
-                      </a>
+                      </Link>
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => handleExport(selectedJob.id, "template")}

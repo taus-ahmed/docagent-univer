@@ -220,7 +220,11 @@ def _reading(job, doc) -> dict:
             _cache.move_to_end(key)
             return _cache[key]
     import contextlib
-    import app.api.routes.extract  # noqa: F401  (puts the engine on sys.path)
+    import sys
+    from app.api.routes.extract import _backend_dir, _engine_dir, _project_dir
+    for p in (str(_engine_dir), str(_backend_dir), str(_project_dir)):
+        if p not in sys.path:
+            sys.path.insert(0, p)
     from core.preprocessor import preprocess_file
     with contextlib.redirect_stdout(io.StringIO()):
         pd = preprocess_file(path)
