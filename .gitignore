@@ -19,3 +19,32 @@ login.json
 
 # Local debugging output
 backend/debug_output/
+
+# Environment files (examples are tracked)
+.env.*
+!.env.example
+frontend/.env.local
+
+# Python tooling caches and builds
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+htmlcov/
+.coverage
+
+# Harness history (the runner writes timestamped copies; latest*.json is tracked)
+tests/reports/history/
+
+# Frontend build output
+frontend/out/
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+*.log
