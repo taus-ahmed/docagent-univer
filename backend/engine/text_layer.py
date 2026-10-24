@@ -418,7 +418,7 @@ def _joiner(prev_word, next_word, same_line):
     always right. Across a line break it depends on the characters at the
     seam, and only these say "mid-token":
 
-        the fragment ends with @ / - \ _        joesmith@ + ficusbank.com
+        the fragment ends with @ / - \\ _       joesmith@ + ficusbank.com
         the next fragment starts with @          joesmith + @ficusbank.com
         it ends with "." and the next is lower   ficusbank. + com
 
