@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
+import type { JobReview, ReasonMap, ReviewSummary, ReviewValue } from "./review";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -471,6 +472,55 @@ export const extractApi = {
   cancelJob: async (jobId: number) => {
     const res = await api.delete(`/api/jobs/${jobId}`);
     return res.data;
+  },
+};
+
+// --- Review API ---
+// The review screen: the server classifies every value (backend/app/core/
+// review.py); these calls read that, page images, and write review marks.
+
+export interface PageMeta {
+  page: number;
+  origin: "native" | "ocr" | "pre_ocr" | string;
+  frame: string;
+  width_pt: number | null;
+  height_pt: number | null;
+  record_box_pt: number[] | null;
+  boxes: {
+    kind: "field" | "cell"; ref: string | null; table: string | null;
+    row: number | null; column: string | null;
+    box_pt: number[] | null; match: "value" | "line" | null;
+    no_box_reason: string | null;
+  }[];
+}
+
+export const reviewApi = {
+  reasons: async (): Promise<{ reasons: ReasonMap; statuses: ReasonMap }> => {
+    const res = await api.get("/api/review/reasons");
+    return res.data;
+  },
+  job: async (jobId: number): Promise<JobReview> => {
+    const res = await api.get<JobReview>(`/api/jobs/${jobId}/review`);
+    return res.data;
+  },
+  page: async (jobId: number, docId: number, page: number): Promise<PageMeta> => {
+    const res = await api.get<PageMeta>(`/api/jobs/${jobId}/docs/${docId}/pages/${page}`);
+    return res.data;
+  },
+  /** The page image as an object URL (the request needs the auth header, so
+   *  it cannot be a plain <img src>). The caller revokes it. */
+  pageImageUrl: async (jobId: number, docId: number, page: number): Promise<string> => {
+    const res = await api.get(`/api/jobs/${jobId}/docs/${docId}/pages/${page}/image`,
+                              { responseType: "blob" });
+    return URL.createObjectURL(res.data as Blob);
+  },
+  mark: async (jobId: number, docId: number, body: {
+    scope?: "values" | "document";
+    values?: ({ ref: string } | { table: string; row: number })[];
+    reviewed?: boolean;
+  }) => {
+    const res = await api.post(`/api/jobs/${jobId}/docs/${docId}/review`, body);
+    return res.data as { summary: ReviewSummary; values: ReviewValue[]; document_reviewed: boolean };
   },
 };
 

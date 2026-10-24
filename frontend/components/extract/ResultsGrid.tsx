@@ -1,12 +1,18 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AgGridReact } from "ag-grid-react";
 import type { ColDef, CellValueChangedEvent, ICellRendererParams } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
-import { extractApi, type DocumentResult, type ColumnTemplate } from "@/lib/api";
+import { extractApi, reviewApi, type DocumentResult, type ColumnTemplate } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import {
+  FILTERS, fieldsByLabel, matches, reasonText, recordLabel,
+  type Filter, type ReviewDoc, type ReviewValue,
+} from "@/lib/review";
+import ReviewPanel, { Badge } from "@/components/extract/ReviewPanel";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -17,13 +23,10 @@ interface Props {
 
 // ── Cell renderers (React components, no innerHTML) ───────────────────────────
 
-// The confidence vocabulary. Mirrors backend/app/core/confidence.py — read
-// that module's docstring before changing a word here. In short:
-//   high       grounded in the document AND the user authored the slot label
-//   grounded   grounded, but the MODEL named the slot, so nothing independent
-//              says the value belongs there (no-template extraction)
-//   unverified no text layer existed to check any span against (image upload)
-//   low        checked and failed
+// The DOCUMENT-level confidence vocabulary. Mirrors backend/app/core/
+// confidence.py — read that module's docstring before changing a word here.
+// Per-value review status comes from the server (app/core/review.py) and is
+// drawn by <Badge>.
 const CONFIDENCE_LABEL: Record<string, string> = {
   high:       "High",
   grounded:   "Verbatim from the document",
@@ -58,13 +61,15 @@ function ConfidenceCell({ value }: ICellRendererParams) {
   );
 }
 
-function StatusCell({ value }: ICellRendererParams) {
+function StatusCell({ value, data }: ICellRendererParams) {
+  const open = (data?._open as number) ?? 0;
+  const needs = Boolean(value) || open > 0;
   return (
     <span style={{
       fontSize: 11, fontWeight: 600,
-      color: value ? "var(--amber,#f59e0b)" : "var(--green,#22c55e)",
+      color: needs ? "var(--amber,#b45309)" : "var(--green,#15803d)",
     }}>
-      {value ? "Review" : "OK"}
+      {needs ? (open ? `Review (${open})` : "Review") : "OK"}
     </span>
   );
 }
@@ -73,7 +78,7 @@ function StatusCell({ value }: ICellRendererParams) {
 
 function TableRowsPanel({ rows }: { rows: Record<string, any>[] }) {
   if (!rows.length) return null;
-  const cols = Object.keys(rows[0]);
+  const cols = Object.keys(rows[0]).filter(c => !c.startsWith("_"));
   return (
     <div style={{ marginTop: 10, overflowX: "auto" }}>
       <p style={{ fontSize: 11, color: "var(--text3)", marginBottom: 6 }}>
@@ -118,10 +123,34 @@ function TableRowsPanel({ rows }: { rows: Record<string, any>[] }) {
 
 export default function ResultsGrid({ results, jobId, template }: Props) {
   const gridRef = useRef<AgGridReact>(null);
+  const qc = useQueryClient();
   // Presentation only, as everywhere else: the server decides who is a demo.
   const isDemo = useAuthStore(st => st.user?.is_demo === true);
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [reviewId, setReviewId] = useState<number | null>(null);
+
+  const review = useQuery({
+    queryKey: ["review", jobId],
+    queryFn: () => reviewApi.job(jobId),
+    enabled: Number.isFinite(jobId),
+  });
+  const reasonsQ = useQuery({
+    queryKey: ["review-reasons"],
+    queryFn: reviewApi.reasons,
+    staleTime: Infinity,
+  });
+  const reasons = reasonsQ.data?.reasons;
+  const reviewDocs = useMemo(() => {
+    const m = new Map<number, ReviewDoc>();
+    for (const d of review.data?.documents ?? []) m.set(d.doc_id, d);
+    return m;
+  }, [review.data]);
+
+  const refresh = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["review", jobId] });
+  }, [qc, jobId]);
 
   const { rowData, colDefs } = useMemo(() => {
     const templateCols = template?.columns ?? null;
@@ -138,16 +167,24 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
       fieldKeys = Array.from(keys);
     }
 
-    const rows = results.map(doc => {
+    const shown = results.filter(doc => {
+      const rd = reviewDocs.get(doc.id);
+      return !rd || matches(rd, filter);
+    });
+
+    const rows = shown.map(doc => {
       const ext = doc.extracted_data?.extracted_data ?? {};
       const tableRows = doc.extracted_data?.table_rows ?? [];
+      const rd = reviewDocs.get(doc.id);
       const row: Record<string, unknown> = {
         _id:           doc.id,
-        _filename:     doc.filename,
+        _filename:     rd ? recordLabel(rd) : doc.filename,
         _confidence:   doc.overall_confidence,
         _needs_review: doc.needs_review,
+        _open:         rd?.summary.needs_review ?? 0,
         _table_rows:   tableRows,
         _has_rows:     tableRows.length > 0,
+        _review:       rd ? fieldsByLabel(rd) : {},
       };
       for (const key of fieldKeys) {
         const fd = ext[key];
@@ -162,35 +199,32 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
       return row;
     });
 
-    // The File column shows the STORED filename, which for a document that
-    // went to the object store is a temp name (`tmphjtbr12o.pdf`, from
-    // storage.get_local_path) rather than what the user uploaded. A demo
-    // audience should not be reading that, and the demo's exports drop it for
-    // the same reason, so the on-screen column goes with them. Everyone else
-    // keeps it.
+    // The File column shows the record's name ("batch.pdf [2 of 3]") and its
+    // pages. A demo audience sees neither: for a document that went to the
+    // object store the stored name is a temp name, and the demo's exports
+    // drop it for the same reason.
     const fixed: ColDef[] = [
       ...(isDemo ? [] : [{
         field: "_filename",
-        headerName: "File",
+        headerName: "File · page",
         pinned: "left" as const,
-        width: 170,
+        width: 210,
         editable: false,
         cellStyle: { fontWeight: 500, color: "var(--text1)" },
       }]),
       {
+        field: "_needs_review",
+        headerName: "Status",
+        width: 105,
+        editable: false,
+        cellRenderer: StatusCell,
+      },
+      {
         field: "_confidence",
         headerName: "Confidence",
         width: 190,   // fits "Verbatim from the document" without truncating
-
         editable: false,
         cellRenderer: ConfidenceCell,
-      },
-      {
-        field: "_needs_review",
-        headerName: "Status",
-        width: 95,
-        editable: false,
-        cellRenderer: StatusCell,
       },
       {
         field: "_has_rows",
@@ -216,14 +250,27 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
       headerName: key,
       editable: true,
       flex: 1,
-      minWidth: 120,
+      minWidth: 140,
       cellStyle: { color: "var(--text1)" },
       valueFormatter: ({ value }: any) =>
         value === null || value === undefined ? "" : String(value),
+      cellRenderer: ({ value, data }: ICellRendererParams) => {
+        const rv = (data?._review as Record<string, ReviewValue> | undefined)?.[key];
+        const text = value === null || value === undefined ? "" : String(value);
+        if (!rv) return <span>{text}</span>;
+        const why = rv.reasons.map(c => reasonText(c, reasons).label).join(" · ");
+        return (
+          <span title={why || undefined}
+                style={{ display: "inline-flex", gap: 6, alignItems: "center", maxWidth: "100%" }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{text}</span>
+            <Badge v={rv}/>
+          </span>
+        );
+      },
     }));
 
     return { rowData: rows, colDefs: [...fixed, ...dynamic] };
-  }, [results, template, isDemo]);
+  }, [results, template, isDemo, reviewDocs, filter, reasons]);
 
   const onCellValueChanged = useCallback(async (e: CellValueChangedEvent) => {
     const row = e.data as Record<string, unknown>;
@@ -257,26 +304,37 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
       // grid was first given, so a second edit silently reverted the first.
       doc.extracted_data = saved.extracted_data as DocumentResult["extracted_data"];
       toast.success("Saved");
+      refresh();
     } catch (err: any) {
       toast.error(err?.response?.data?.detail ?? "Save failed");
     } finally {
       setSaving(false);
     }
-  }, [results, jobId]);
+  }, [results, jobId, refresh]);
 
   // Find expanded document's table rows
   const expandedDoc = expandedId != null
     ? results.find(r => r.id === expandedId)
     : null;
   const expandedRows = expandedDoc?.extracted_data?.table_rows ?? [];
+  const s = review.data?.summary;
+  const reviewDoc = reviewId != null ? reviewDocs.get(reviewId) : undefined;
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <div style={{ flex: 1 }}>
+      {/* Header: counts, then filters */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text1)" }}>
             {results.length} document{results.length !== 1 ? "s" : ""}
+            {s && (
+              <span style={{ fontSize: 12, marginLeft: 8, fontWeight: 400,
+                             color: s.needs_review ? "var(--amber,#b45309)" : "var(--green,#15803d)" }}>
+                · {s.needs_review
+                    ? `${s.needs_review} value${s.needs_review === 1 ? "" : "s"} need review, ${s.low} low`
+                    : "nothing needs review"}
+              </span>
+            )}
             {template && (
               <span style={{ fontSize: 12, color: "var(--text3)", marginLeft: 8, fontWeight: 400 }}>
                 · {template.name}
@@ -284,13 +342,30 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
             )}
           </div>
           <div style={{ fontSize: 11, color: "var(--text3)" }}>
-            Click any cell to edit · changes save automatically
+            Click a row to review it against the page · double-click a cell to edit
             {results.some(r => (r.extracted_data?.table_rows?.length ?? 0) > 0) && (
               <span style={{ marginLeft: 8, color: "var(--accent)" }}>
                 · Click row count to expand line items
               </span>
             )}
           </div>
+          {review.isLoading && (
+            <div style={{ fontSize: 11, color: "var(--text3)" }}>Loading review status…</div>
+          )}
+          {review.isError && (
+            <div role="alert" style={{ fontSize: 11, color: "var(--red)" }}>
+              Review status could not be loaded; values are shown without it.
+            </div>
+          )}
+        </div>
+        <div role="group" aria-label="Filter documents" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {FILTERS.map(f => (
+            <button key={f.id} type="button" aria-pressed={filter === f.id}
+                    className={`btn btn-sm ${filter === f.id ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => setFilter(f.id)}>
+              {f.label}
+            </button>
+          ))}
         </div>
         {saving && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text3)" }}>
@@ -303,16 +378,26 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
         )}
       </div>
 
-      {/* AG Grid */}
-      <div className="ag-theme-alpine" style={{ height: 380, width: "100%" }}>
+      {/* AG Grid — paginated, so a day's 50 cheques stay responsive */}
+      <div className="ag-theme-alpine" style={{ height: 460, width: "100%" }}>
         <AgGridReact
           ref={gridRef}
           rowData={rowData}
           columnDefs={colDefs}
           defaultColDef={{ sortable: true, resizable: true, filter: true }}
           onCellValueChanged={onCellValueChanged}
+          onRowClicked={e => {
+            const col = (e.event?.target as HTMLElement | null)?.closest?.("[col-id]")
+              ?.getAttribute("col-id");
+            if (col === "_has_rows") return;
+            setReviewId((e.data?._id as number | undefined) ?? null);
+          }}
+          pagination
+          paginationPageSize={25}
+          paginationPageSizeSelector={[25, 50, 100]}
           animateRows
           getRowId={p => String(p.data._id)}
+          overlayNoRowsTemplate={filter === "all" ? "No documents" : "No documents match this filter"}
         />
       </div>
 
@@ -325,6 +410,7 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
             </span>
             <button
               onClick={() => setExpandedId(null)}
+              aria-label="Close line items"
               style={{ background: "none", border: "none", cursor: "pointer",
                 color: "var(--text3)", fontSize: 18, lineHeight: 1 }}
             >
@@ -333,6 +419,18 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
           </div>
           <TableRowsPanel rows={expandedRows} />
         </div>
+      )}
+
+      {reviewDoc && (
+        <ReviewPanel
+          key={reviewDoc.doc_id}
+          jobId={jobId}
+          doc={reviewDoc}
+          result={results.find(r => r.id === reviewDoc.doc_id)}
+          reasons={reasons}
+          onClose={() => setReviewId(null)}
+          onChanged={refresh}
+        />
       )}
     </div>
   );

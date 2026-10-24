@@ -6,6 +6,7 @@ import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
+import { confirmExport } from "@/lib/confirm-export";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
 import SampleDocsPanel from "@/components/extract/SampleDocsPanel";
@@ -872,6 +873,7 @@ export default function ExtractPage() {
               {isDone && !isFailed && activeJobId && (
                 <div className="export-row">
                   <button className="btn btn-primary btn-sm" onClick={async () => {
+                    if (!(await confirmExport(activeJobId))) return;
                     try {
                       const blob = await exportApi.templateExport(activeJobId);
                       exportApi.downloadBlob(blob, `job_${activeJobId}_results.xlsx`);
@@ -887,6 +889,7 @@ export default function ExtractPage() {
                   </button>
                   {files.length > 1 && (
                     <button className="btn btn-secondary btn-sm" onClick={async () => {
+                      if (!(await confirmExport(activeJobId))) return;
                       try {
                         const blob = await exportApi.zipExport(activeJobId);
                         exportApi.downloadBlob(blob, `job_${activeJobId}_documents.zip`);
