@@ -85,7 +85,7 @@ least information to justify it.
 
 import re
 
-from micr import page_bands, same_band
+import segmenters
 
 #: A split must leave each document with at least this much text, or the
 #: "documents" are page furniture rather than records.
@@ -241,31 +241,32 @@ def find_starts(page_texts):
     # marked below where the document restarts its own page numbering.
     refs = [references(t) for t in page_texts]
     pages_of = [page_of(t) for t in page_texts]
-    # A CHEQUE'S REFERENCE IS ITS MICR BAND (Gate 4b). A scanned cheque has no
-    # title the next one repeats, no type change and no page numbering, so no
-    # candidate above ever fires between two of them, and ten cheques were
-    # one document. A band is the one thing every cheque prints and no two
-    # cheques share (routing + account + serial), so a band naming a
-    # DIFFERENT cheque from every band the document has carried so far is
-    # both the candidate and its corroboration — ranked exactly where a
-    # changed reference is: the numbering vetoes still outrank it, and a page
-    # with no band (a continuation, a remittance slip) never starts anything.
-    bands = [page_bands(t) for t in page_texts]
-    micr_starts = set()
+    # FAMILY SIGNALS (segmenters.py). A segmenter's page marks naming a
+    # document different from every mark carried so far are both the candidate
+    # and its corroboration — ranked exactly where a changed reference is: the
+    # numbering vetoes still outrank them. The cheque's MICR band is one
+    # (cheque_segmenter.py): a scanned cheque has no title the next one
+    # repeats, no type change and no page numbering, so without it ten cheques
+    # were one document.
+    segs = segmenters.for_family()
+    marks = [[s.page_marks(t) for t in page_texts] for s in segs]
+    seg_starts = [set() for _ in segs]
 
     starts, carried = [0], set(refs[0])
-    carried_bands = list(bands[0])
+    carried_marks = [list(m[0]) for m in marks]
     for i in range(1, n):
-        if (bands[i] and carried_bands
-                and _names_a_new_cheque(bands[i], carried_bands)
+        hit = next((k for k, s in enumerate(segs)
+                    if s.starts_new(marks[k][i], carried_marks[k])), None)
+        if (hit is not None
                 and not _continues_a_numbered_run(pages_of, i)
                 and not _states_its_own_position(page_texts[i],
                                                  i - starts[-1])):
             starts.append(i)
-            micr_starts.add(i)
-            carried, carried_bands = set(refs[i]), list(bands[i])
+            seg_starts[hit].add(i)
+            carried, carried_marks = set(refs[i]), [list(m[i]) for m in marks]
             continue
-        carried_bands += bands[i]
+        for k in range(len(segs)):
+            carried_marks[k] += marks[k][i]
         if _restarts_its_own_numbering(pages_of, i):
             # The document says so itself: a "page 1 of N" directly after a
             # later page of a numbered run. This is the one boundary allowed
@@ -273,7 +274,7 @@ def find_starts(page_texts):
             # concatenated share every reference and every heading, and
             # nothing else can see the seam between them.
             starts.append(i)
-            carried, carried_bands = set(refs[i]), list(bands[i])
+            carried, carried_marks = set(refs[i]), [list(m[i]) for m in marks]
             continue
         if i not in repeated and i not in changed:
             carried |= refs[i]
@@ -308,7 +309,7 @@ def find_starts(page_texts):
         # saying it belongs to what came before.
         if refs[i] and carried and not (refs[i] & carried):
             starts.append(i)
-            carried, carried_bands = set(refs[i]), list(bands[i])
+            carried, carried_marks = set(refs[i]), [list(m[i]) for m in marks]
         else:
             carried |= refs[i]
 
@@ -334,24 +335,17 @@ def find_starts(page_texts):
     if changed:
         why.append("the document type changes at page(s) "
                    + ", ".join(str(i + 1) for i in sorted(changed)))
-    if micr_starts & set(starts):
-        why.append("a new cheque's MICR band begins at page(s) "
-                   + ", ".join(str(i + 1) for i in sorted(micr_starts & set(starts))))
-    others = [i for i in starts[1:] if i not in micr_starts]
+    by_segmenter = set()
+    for s, hits in zip(segs, seg_starts):
+        if hits & set(starts):
+            why.append(s.start_reason
+                       + ", ".join(str(i + 1) for i in sorted(hits & set(starts))))
+        by_segmenter |= hits
+    others = [i for i in starts[1:] if i not in by_segmenter]
     if others:
         why.append("the reference changes at page(s) "
                    + ", ".join(str(i + 1) for i in others))
     return starts, "; ".join(why)
-
-
-def _names_a_new_cheque(page, carried):
-    """Every band on the page is a DIFFERENT cheque from every band carried.
-
-    "Cannot tell" (no part in common) is not different: a boundary needs
-    evidence, and under-splitting is the visible direction — the record keeps
-    both bands and is flagged `possible_multiple_documents` downstream.
-    """
-    return all(same_band(b, c) is False for b in page for c in carried)
 
 
 def _continues_a_numbered_run(pages_of, i):

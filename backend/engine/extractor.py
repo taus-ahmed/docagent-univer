@@ -587,13 +587,13 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         split on a guess and never dropped, and every value in it says why it
         needs review: `possible_multiple_documents`.
         """
-        from micr import band_count
+        import segmenters
         from slot_extractor import POSSIBLE_MULTIPLE
-        counts = [band_count(t) for t in texts]
-        readable = sum(c[0] for c in counts)
-        total = readable + sum(c[1] for c in counts)
-        if total < 2:
+        seen = next((s.multiple_in_record(texts) for s in segmenters.for_family()
+                     if s.multiple_in_record(texts)), None)
+        if not seen:
             return results
+        total, readable = seen["micr_bands"], seen["readable"]
         for r in results or []:
             ed = getattr(r, "extracted_data", None)
             if not isinstance(ed, dict):
@@ -733,8 +733,10 @@ def _cheque_units(doc, texts, lines, images, numbers, origins):
     from. Returns (texts, lines, images, page_numbers, forced unit indices,
     {unit index: region report}).
     """
-    from cheque_regions import cut_regions
+    import segmenters
     from core.preprocessor import _image_to_base64, _optimize_image
+    cutters = [s for s in segmenters.for_family()
+               if type(s).cut_page is not segmenters.Segmenter.cut_page]
     ocr_images = getattr(doc, "ocr_images", {}) or {}
     out_t, out_l, out_i, out_n, forced, report = [], [], [], [], [], {}
     cut_any = False
@@ -742,8 +744,9 @@ def _cheque_units(doc, texts, lines, images, numbers, origins):
         page_lines = lines[k] if k < len(lines) else []
         image = images[k] if k < len(images) else None
         regions, why = (None, "")
-        if (origins or {}).get(n) == "ocr" and n in ocr_images and page_lines:
-            regions, why = cut_regions(page_lines)
+        if (origins or {}).get(n) == "ocr" and n in ocr_images and page_lines \
+                and cutters:
+            regions, why = cutters[0].cut_page(page_lines)
             if regions is None and why and not why.startswith(("0 ", "1 ")):
                 _log("REGION", f"page {n}: NOT cut into cheques — {why}; "
                                f"kept as one record")
