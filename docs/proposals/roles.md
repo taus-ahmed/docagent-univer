@@ -1,8 +1,32 @@
 # Roles: what the routes allow today, and a recommended matrix
 
-**Status:** proposal, not implemented. Inventory taken 2026-10-23 at
-`integration/ocr-hardening` from `backend/app/api/routes/*.py` and
-`app/core/auth.py`. Line numbers are at that commit.
+**Status:** steps 1, 2, 4 and 5 below are IMPLEMENTED (round 12/13):
+`backend/app/core/permissions.py` holds the matrix as data and every route asks
+`can(user, action, resource)`; `role = "reviewer"` exists (the column is a plain
+`String(20)`, so no migration); another tenant's job answers 404. **Open:** step 3
+(explicit `platform_admin` role — a data migration; until then platform_admin is
+derived from "admin with no client_id" exactly as before). The inventory below
+is the one taken 2026-10-23 before the change; line numbers are at that commit.
+
+### As implemented
+
+| Capability | platform_admin | tenant_admin | company_admin (legacy) | reviewer | user |
+|---|---|---|---|---|---|
+| Upload documents | ✓ (names a tenant) | ✓ | ✓ | ✓ | ✓ |
+| View / review / edit / export results | all tenants | own tenant | own tenant | own tenant | own jobs |
+| Cancel a job | any | own tenant | own jobs | own jobs | own jobs |
+| Hard-delete a job | any | own tenant | — | — | — |
+| Templates: create / edit own | ✓ | ✓ | ✓ | — | ✓ |
+| Templates: share, edit the firm's | ✓ | ✓ | ✓ | — | — |
+| Schemas, users, system statistics | all tenants | own tenant | — | — | — |
+| Watch folders | all | own tenant | own | own | own |
+
+Decisions taken: `company_admin` keeps exactly its old powers (it is still
+assignable only through `PUT /api/admin/users`); cancelling someone else's job
+needs an admin (company_admin lost that); an unknown stored role string acts as
+`user`, as the inline checks did; `UserUpdate.role` is now validated against the
+known role values. The UI reads `permissions` from `/api/auth/me` to hide
+controls (`frontend/lib/permissions.ts`); the server checks every request.
 
 ## The roles that exist today
 

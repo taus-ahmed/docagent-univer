@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { templatesApi, type TemplateColumn, type ColumnTemplate,
          type ShapePreview } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { can, seesAdminArea } from "@/lib/permissions";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import type { SheetSaveData } from "@/components/templates/DocAgentSpreadsheet";
@@ -333,7 +334,7 @@ export default function TemplateEditor({ templateId }: Props) {
               {item.label}
             </Link>
           ))}
-          {user?.role === "admin" && (
+          {seesAdminArea(user) && (
             <>
               <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#555a7a", padding:"12px 10px 8px" }}>Admin</div>
               {[{ href:"/analytics", label:"Analytics" }, { href:"/admin", label:"Admin" }].map(item => (
@@ -398,7 +399,7 @@ export default function TemplateEditor({ templateId }: Props) {
               style={{ padding:"6px 14px", borderRadius:7, border:"1px solid #e5e7eb", background:"#fff", fontSize:13, fontWeight:500, cursor:"pointer", color:"#6b7280", fontFamily:"inherit" }}>
               Cancel
             </button>
-            <button
+            {can(user, "template.create") && <button
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
               style={{ padding:"7px 18px", borderRadius:7, border:"none", background:"#4f46e5", fontSize:13, fontWeight:600,
@@ -411,7 +412,7 @@ export default function TemplateEditor({ templateId }: Props) {
                 <polyline points="7 3 7 8 15 8"/>
               </svg>
               {saveMutation.isPending ? "Saving..." : "Save template"}
-            </button>
+            </button>}
           </div>
         </div>
 

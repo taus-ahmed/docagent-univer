@@ -149,8 +149,10 @@ def same_tenant(a, b) -> bool:
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Dependency: require admin role."""
-    if current_user.role != "admin":
+    """Dependency: require an admin (platform or tenant). Routes now name the
+    action they need (`permissions.require`); kept for callers outside them."""
+    from app.core.permissions import can
+    if not can(current_user, "user.manage"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",

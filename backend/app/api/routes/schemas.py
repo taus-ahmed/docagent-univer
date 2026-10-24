@@ -14,7 +14,8 @@ import yaml
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user, require_admin
+from app.core.auth import get_current_user
+from app.core.permissions import can, require
 from app.core.storage import get_storage
 from app.models import get_db, User, ClientSchema
 from app.schemas.schemas import SchemaResponse, SchemaDetailResponse
@@ -31,7 +32,7 @@ def _may_see_all_schemas(current_user: User) -> bool:
     a tenant, their own schema is the one they administer, and a schema is the
     one object in this app that carries another company's field vocabulary.
     """
-    return current_user.role == "admin" and not current_user.client_id
+    return can(current_user, "tenant.all")
 
 
 @router.get("", response_model=list[SchemaResponse])
@@ -64,7 +65,7 @@ def list_schemas(
 async def upload_schema(
     file: UploadFile = File(..., description="YAML schema file"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require("schema.manage")),
     storage=Depends(get_storage),
 ):
     """Upload a new client YAML schema. ADMIN ONLY.
@@ -172,7 +173,7 @@ def get_schema(
 def delete_schema(
     client_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require("schema.manage")),
 ):
     """Soft-delete a schema (admin only)."""
     query = db.query(ClientSchema).filter(ClientSchema.client_id == client_id)

@@ -34,9 +34,11 @@ export interface User {
   username: string;
   display_name: string;
   email: string | null;
-  role: "admin" | "client";
+  role: "admin" | "client" | "reviewer" | "company_admin";
   client_id: string | null;
   is_active: boolean;
+  /** What this role may do (server-computed); see lib/permissions.ts. */
+  permissions?: string[];
   /**
    * This account's client_id is configured as a demo tenant (backend
    * DEMO_CLIENT_IDS). Computed per response by the server, never stored, and

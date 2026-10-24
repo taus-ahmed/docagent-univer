@@ -28,6 +28,9 @@ class UserResponse(BaseModel):
     role: str
     client_id: Optional[str]
     is_active: bool
+    #: What this user's role may do (`permissions.permissions_of`), for the UI
+    #: to hide controls; the server checks every request regardless.
+    permissions: list[str] = []
     #: Is this user's tenant one of DEMO_CLIENT_IDS? Computed per response from
     #: the configured list, NEVER stored: the demo is a deployment setting, and
     #: a column would let a row disagree with the variable that actually gates
@@ -40,14 +43,16 @@ class UserCreate(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=200)
     email: Optional[str] = None
     password: str = Field(..., min_length=6)
-    role: str = Field(default="client", pattern="^(admin|client)$")
+    role: str = Field(default="client", pattern="^(admin|client|reviewer)$")
     client_id: Optional[str] = None
 
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
-    role: Optional[str] = None
+    #: company_admin stays assignable here only (legacy, SQL-era role).
+    role: Optional[str] = Field(default=None,
+                                pattern="^(admin|client|reviewer|company_admin)$")
     client_id: Optional[str] = None
     is_active: Optional[bool] = None
 

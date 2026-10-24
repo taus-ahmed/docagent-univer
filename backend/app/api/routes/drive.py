@@ -279,10 +279,11 @@ def _visible_watch_folders(db: Session, current_user: User):
     "Any role == admin" used to see and stop every tenant's folders, which put
     tenant B's Drive folder ids in front of tenant A's admin.
     """
+    from app.core.permissions import can
     q = db.query(WatchFolder)
-    if current_user.role == "admin" and not current_user.client_id:
+    if can(current_user, "tenant.all"):
         return q
-    if current_user.role == "admin":
+    if can(current_user, "drive.manage_tenant"):
         return q.filter(WatchFolder.client_id == current_user.client_id)
     return q.filter(WatchFolder.user_id == current_user.id)
 

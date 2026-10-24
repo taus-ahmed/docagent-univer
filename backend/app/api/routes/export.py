@@ -50,7 +50,7 @@ def export_combined(
     current_user: User = Depends(get_current_user),
 ):
     from app.api.routes.extract import _get_job_or_404
-    job = _get_job_or_404(payload.job_id, current_user, db)
+    job = _get_job_or_404(payload.job_id, current_user, db, "job.export")
     if job.status in ("pending", "processing"):
         raise HTTPException(status_code=400, detail="Job is still running — wait for it to finish before exporting")
     demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job.id,
@@ -109,7 +109,7 @@ def export_perfile(
     current_user: User = Depends(get_current_user),
 ):
     from app.api.routes.extract import _get_job_or_404
-    job = _get_job_or_404(payload.job_id, current_user, db)
+    job = _get_job_or_404(payload.job_id, current_user, db, "job.export")
     if job.status in ("pending", "processing"):
         raise HTTPException(status_code=400, detail="Job is still running — wait for it to finish before exporting")
     demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job.id,

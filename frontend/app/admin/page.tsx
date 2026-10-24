@@ -58,6 +58,7 @@ function RoleBadge({ role }: { role: string }) {
     admin: { background: "rgba(245,158,11,0.12)", color: "#f59e0b" },
     client: { background: "var(--accent-dim)", color: "var(--accent)" },
     company_admin: { background: "rgba(16,185,129,0.12)", color: "#10b981" },
+    reviewer: { background: "rgba(99,102,241,0.12)", color: "#6366f1" },
   };
   return (
     <span style={{
@@ -140,6 +141,7 @@ function UserFormModal({
             <label className="form-label">Role</label>
             <select className="input" value={form.role} onChange={set("role")} style={{ appearance: "none" }}>
               <option value="client">Client</option>
+              <option value="reviewer">Reviewer</option>
               <option value="company_admin">Company Admin</option>
               <option value="admin">Super Admin</option>
             </select>

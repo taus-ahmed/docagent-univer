@@ -14,8 +14,8 @@ Review routes — what the review screen reads and writes.
 * `POST /api/jobs/{job}/docs/{doc}/review` — mark values (or the whole
   document) reviewed. Stored inside `extraction_json`; no schema change.
 
-Access: the same `_get_job_or_404` as every job route, except that another
-tenant's job answers 404 rather than 403 here, so a page id reveals nothing.
+Access: the same `_get_job_or_404` as every job route (another tenant's job
+answers 404, like a missing id); reviewing needs `job.review`.
 """
 from __future__ import annotations
 
@@ -48,18 +48,13 @@ _cache: "OrderedDict[str, dict]" = OrderedDict()
 _cache_lock = threading.Lock()
 
 
-def _job_for(job_id, user, db):
+def _job_for(job_id, user, db, action="job.view"):
     from app.api.routes.extract import _get_job_or_404
-    try:
-        return _get_job_or_404(job_id, user, db)
-    except HTTPException as e:
-        if e.status_code == 403:
-            raise HTTPException(status_code=404, detail="Job not found")
-        raise
+    return _get_job_or_404(job_id, user, db, action)
 
 
-def _doc_for(job_id, doc_id, user, db):
-    job = _job_for(job_id, user, db)
+def _doc_for(job_id, doc_id, user, db, action="job.view"):
+    job = _job_for(job_id, user, db, action)
     doc = db.query(DocumentResult).filter(
         DocumentResult.id == doc_id, DocumentResult.job_id == job_id).first()
     if not doc:
@@ -142,7 +137,7 @@ def mark_reviewed(job_id: int, doc_id: int, payload: ReviewMark,
                   db: Session = Depends(get_db),
                   current_user: User = Depends(get_current_user)):
     import copy
-    _, doc = _doc_for(job_id, doc_id, current_user, db)
+    _, doc = _doc_for(job_id, doc_id, current_user, db, "job.review")
     stored = doc.get_extracted_data() or {}
     if not isinstance(stored, dict):
         raise HTTPException(status_code=422, detail="This document has no stored result")

@@ -5,6 +5,7 @@ import { gateDecision, loginUrl } from "@/lib/session-gate";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
+import { seesAdminArea } from "@/lib/permissions";
 import DemoBanner from "./DemoBanner";
 
 const NAV = [
@@ -92,7 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Icon type={icon}/>{label}
             </Link>
           ))}
-          {user?.role==="admin" && <>
+          {seesAdminArea(user) && <>
             <div className="sb-group" style={{marginTop:8}}>Admin</div>
             {ADMIN_NAV.map(({href,label,icon}) => (
               <Link key={href} href={href} className={`sb-item${pathname.startsWith(href)?" active":""}`}>

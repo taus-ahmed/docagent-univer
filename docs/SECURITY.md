@@ -32,6 +32,9 @@ names the code that implements it.
 - Every data table carries `client_id`. The tenant a request acts as comes from
   the **token, never the request body** (`extract.py::resolve_client_id`); a
   super-administrator (role `admin`, no `client_id`) must name the client.
+- Roles: one permission function, `app/core/permissions.py::can(user, action,
+  resource)`, with the matrix as data (`docs/proposals/roles.md`, "As
+  implemented"); routes never compare role strings themselves.
 - Jobs: `_get_job_or_404` allows a super-administrator, an administrator or
   `company_admin` of the job's tenant, or the job's own user; any other id —
   another firm's included — answers 404 "Job not found", the same as a missing id.
@@ -115,4 +118,4 @@ template, or — with no template — field names the model chose from the page
 |---|---|---|
 | A password change does not invalidate issued tokens | `auth.py` | needs a token version or deny list |
 | Rate limiter is per process | `routes/auth.py` | needs a shared store before running more than one instance |
-| `company_admin` exists in RBAC but `UserCreate` cannot assign it | `schemas.py` | the role matrix is not documented in one place |
+| Platform admin is derived (`admin` with no `client_id`), not stored | `permissions.role_of` | one `UPDATE … SET client_id = NULL` makes a tenant admin a platform admin; explicit role needs a migration (`proposals/roles.md` step 3) |

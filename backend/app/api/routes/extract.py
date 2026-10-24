@@ -72,7 +72,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core.auth import get_current_user, same_tenant
+from app.core.auth import get_current_user
 from app.core.demo import (check_upload_file, check_upload_quota,
                            check_uploads_enabled, filter_demo_history,
                            filter_options, is_demo_user, job_hidden_by_cutoff)
@@ -318,7 +318,8 @@ def resolve_client_id(current_user, requested: Optional[str]) -> str:
             print(f"[TENANCY] user {current_user.id} requested client_id="
                   f"{requested!r}; using own {own!r} from token", flush=True)
         return own
-    if getattr(current_user, "role", None) == "admin":
+    from app.core.permissions import PLATFORM_ADMIN, role_of
+    if role_of(current_user) == PLATFORM_ADMIN:
         if not requested:
             raise HTTPException(
                 status_code=400,
@@ -345,15 +346,11 @@ def load_template_for_user(db: Session, template_id: Optional[int], current_user
     tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id).first()
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
-    if current_user.role == "admin" and not current_user.client_id:
-        return tpl                                   # super-admin sees all
-    if tpl.user_id == current_user.id:
-        return tpl                                   # owner
-    if tpl.is_default and not is_demo_user(current_user):
-        return tpl                                   # not offered to a demo
-
-    if tpl.is_shared and same_tenant(tpl.client_id, current_user.client_id):
-        return tpl                                   # shared inside own client
+    from app.core.permissions import can
+    # super-admin, owner, a default (not offered to a demo), or shared inside
+    # the user's own client — permissions.can("template.view")
+    if can(current_user, "template.view", tpl):
+        return tpl
     raise HTTPException(status_code=403, detail="Not your template")
 
 
@@ -4401,7 +4398,7 @@ def export_job_excel(
     except ImportError:
         raise HTTPException(status_code=500, detail="openpyxl not installed.")
 
-    job = _get_job_or_404(job_id, current_user, db)
+    job = _get_job_or_404(job_id, current_user, db, "job.export")
     demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job_id,
                       detail={"kind": "template"})
 
@@ -4487,7 +4484,7 @@ def export_job_zip(
 
     import zipfile
 
-    job = _get_job_or_404(job_id, current_user, db)
+    job = _get_job_or_404(job_id, current_user, db, "job.export")
     demo_audit.record(db, current_user, demo_audit.EXPORT, job_id=job_id,
                       detail={"kind": "zip"})
 
@@ -6809,15 +6806,12 @@ def _find_template_dimensions(cells):
 @router.get("/jobs", response_model=list[JobListItem])
 def list_jobs(limit: int=50, offset: int=0, status_filter: Optional[str]=None,
               db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+    from app.core.permissions import job_scope
     q = db.query(ExtractionJob).order_by(ExtractionJob.created_at.desc())
-    # Super admin sees all jobs
-    if current_user.role == "admin" and not current_user.client_id:
-        pass
-    # Company admin sees all jobs within their company
-    elif current_user.role in ("admin", "company_admin") and current_user.client_id:
+    scope = job_scope(current_user)          # all | tenant | own
+    if scope == "tenant":
         q = q.filter(ExtractionJob.client_id == current_user.client_id)
-    # Regular user sees only their own jobs
-    else:
+    elif scope == "own":
         q = q.filter(ExtractionJob.user_id == current_user.id)
     # ...and a demo user sees only what happened after the history cutoff. This
     # is the History page's list and the only list of jobs the app has.
@@ -7055,7 +7049,7 @@ def _save_edit(doc, ed, current_user, db):
 @router.put("/jobs/{job_id}/docs/{doc_id}")
 def update_document(job_id: int, doc_id: int, payload: DocumentUpdateRequest,
                     db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
-    _get_job_or_404(job_id, current_user, db)
+    _get_job_or_404(job_id, current_user, db, "job.review")
     doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
     stored = doc.get_extracted_data() or {}
@@ -7070,7 +7064,7 @@ def edit_field(job_id: int, doc_id: int, ref: str, payload: FieldEditRequest,
                db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     """Edit ONE field slot, addressed by its cell reference."""
     import copy
-    _get_job_or_404(job_id, current_user, db)
+    _get_job_or_404(job_id, current_user, db, "job.review")
     doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
     stored = doc.get_extracted_data() or {}
@@ -7085,7 +7079,7 @@ def edit_field(job_id: int, doc_id: int, ref: str, payload: FieldEditRequest,
 @router.post("/jobs/{job_id}/docs/{doc_id}/approve")
 def approve_document(job_id: int, doc_id: int,
                      db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
-    _get_job_or_404(job_id, current_user, db)
+    _get_job_or_404(job_id, current_user, db, "job.review")
     doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
     doc.reviewed=True; doc.reviewed_by=current_user.username; doc.needs_review=False
@@ -7094,13 +7088,20 @@ def approve_document(job_id: int, doc_id: int,
 
 @router.delete("/jobs/{job_id}")
 def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
-    job = _get_job_or_404(job_id, current_user, db)
+    job = _get_job_or_404(job_id, current_user, db, "job.cancel")
     if job.status not in ("pending","processing"):
         raise HTTPException(status_code=400, detail=f"Cannot cancel job with status '{job.status}'")
     job.status="cancelled"; job.completed_at=datetime.utcnow(); db.commit()
     return {"message": "Cancelled", "job_id": job_id}
 
-def _get_job_or_404(job_id, current_user, db):
+def _get_job_or_404(job_id, current_user, db, action="job.view"):
+    """The job, if the caller may see it and do `action` to it.
+
+    A job outside the caller's scope (`permissions.sees_job`) answers 404 "Job
+    not found", the same as a missing id, so another firm's ids cannot be
+    probed; a job in scope whose action the role does not hold answers 403.
+    """
+    from app.core.permissions import can, sees_job
     job = db.query(ExtractionJob).filter(ExtractionJob.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -7110,16 +7111,8 @@ def _get_job_or_404(job_id, current_user, db):
     # stale poll, and its results and its export with it.
     if job_hidden_by_cutoff(current_user, job):
         raise HTTPException(status_code=404, detail="Job not found")
-    # Super admin (no client_id) sees everything
-    if current_user.role == "admin" and not current_user.client_id:
-        return job
-    # Company admin sees all jobs within their company
-    if current_user.role in ("admin", "company_admin") and current_user.client_id:
-        if job.client_id == current_user.client_id:
-            return job
-    # Regular user sees only their own jobs
-    if job.user_id == current_user.id:
-        return job
-    # The same answer as a missing id: 403 told a caller the id exists in
-    # another firm (roles.md item 4).
-    raise HTTPException(status_code=404, detail="Job not found")
+    if not sees_job(current_user, job):
+        raise HTTPException(status_code=404, detail="Job not found")
+    if not can(current_user, action, job):
+        raise HTTPException(status_code=403, detail="Not permitted for this role")
+    return job

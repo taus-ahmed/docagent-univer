@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "node --test lib/review.test.ts lib/session-gate.test.ts"
+    "test": "node --test lib/review.test.ts lib/session-gate.test.ts lib/permissions.test.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.51.0",

@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_admin, hash_password
+from app.core.auth import hash_password
+from app.core.permissions import PLATFORM_ADMIN, require, role_of
 from app.core.demo import is_demo_user
 from app.core.confidence import CONFIDENT_LEVELS
 from app.models import get_db, User, ExtractionJob, DocumentResult
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 @router.get("/users", response_model=list[UserResponse])
 def list_users(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_admin: User = Depends(require("user.manage")),
 ):
     """List users visible inside the caller's administrative boundary."""
     query = db.query(User)
@@ -40,7 +41,7 @@ def list_users(
 def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_admin: User = Depends(require("user.manage")),
 ):
     """Create a new user."""
     if (not _is_super_admin(current_admin)
@@ -78,7 +79,7 @@ def update_user(
     user_id: int,
     payload: UserUpdate,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_admin: User = Depends(require("user.manage")),
 ):
     """Update a user's details."""
     query = db.query(User).filter(User.id == user_id)
@@ -121,7 +122,7 @@ def update_user(
 def deactivate_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_admin: User = Depends(require("user.manage")),
 ):
     """Soft-delete (deactivate) a user."""
     if user_id == current_admin.id:
@@ -142,7 +143,7 @@ def deactivate_user(
 @router.get("/stats", response_model=SystemStats)
 def get_stats(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin),
+    current_admin: User = Depends(require("stats.view")),
 ):
     """Statistics inside the caller's administrative boundary."""
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
@@ -191,7 +192,7 @@ def get_stats(
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _is_super_admin(user: User) -> bool:
-    return user.role == "admin" and not user.client_id
+    return role_of(user) == PLATFORM_ADMIN
 
 
 def _user_to_response(u: User) -> UserResponse:

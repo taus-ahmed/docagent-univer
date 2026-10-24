@@ -6,6 +6,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import { templatesApi, type ColumnTemplate } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useAuthStore } from "@/lib/auth-store";
+import { can } from "@/lib/permissions";
 
 const DOC_TYPE_COLORS: Record<string, string> = {
   invoice:        "#6366f1",
@@ -20,6 +22,8 @@ export default function TemplatesPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const user = useAuthStore(s => s.user);
+  const mayEdit = can(user, "template.create");
 
   const { data: templates = [], isLoading } = useQuery<ColumnTemplate[]>({
     queryKey: ["templates"],
@@ -76,10 +80,10 @@ export default function TemplatesPage() {
           <h1 className="page-title">Templates</h1>
           <p className="page-sub">Define column layouts for document extraction</p>
         </div>
-        <button className="btn btn-primary" onClick={() => router.push("/templates/new")}>
+        {mayEdit && <button className="btn btn-primary" onClick={() => router.push("/templates/new")}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New template
-        </button>
+        </button>}
       </div>
 
       {templates.length > 0 && (
@@ -121,7 +125,7 @@ export default function TemplatesPage() {
           </div>
           <p style={{ fontWeight: 600, color: "var(--text1)", marginBottom: 6 }}>No templates yet</p>
           <p style={{ fontSize: 12, color: "var(--text3)", marginBottom: 16 }}>Templates define which columns appear in extraction results</p>
-          <button className="btn btn-primary" onClick={() => router.push("/templates/new")}>Create your first template</button>
+          {mayEdit && <button className="btn btn-primary" onClick={() => router.push("/templates/new")}>Create your first template</button>}
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ padding: "40px 0", textAlign: "center" }}>
@@ -145,14 +149,14 @@ export default function TemplatesPage() {
                     className="tpl-card"
                     onClick={() => router.push(`/templates/edit?id=${t.id}`)}
                   >
-                    <div className="tpl-card-actions">
+                    {mayEdit && <div className="tpl-card-actions">
                       <button
                         className="btn btn-ghost btn-sm btn-icon"
                         onClick={e => { e.stopPropagation(); if (confirm("Delete this template?")) deleteMutation.mutate(t.id); }}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
                       </button>
-                    </div>
+                    </div>}
                     <div className="tpl-card-top">
                       <div className="tpl-card-icon" style={{ background: `${color}15` }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>

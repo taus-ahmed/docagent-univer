@@ -14,8 +14,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user, same_tenant
+from app.core.auth import get_current_user
 from app.core.demo import is_demo_user
+from app.core.permissions import can, require
 from app.models import get_db, User, ColumnTemplate
 from app.schemas.schemas import TemplateCreate, TemplateUpdate, TemplateResponse, TemplateColumn
 
@@ -29,8 +30,8 @@ def list_templates(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Admin with no client_id sees everything
-    if current_user.role == "admin" and not current_user.client_id:
+    # A platform admin sees everything
+    if can(current_user, "tenant.all"):
         query = db.query(ColumnTemplate)
     else:
         # User sees:
@@ -70,21 +71,9 @@ def get_template(
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
 
-    # Admin with no client_id can see all
-    if current_user.role == "admin" and not current_user.client_id:
-        return _to_response(tpl)
-
-    # Owner can always see their own
-    if tpl.user_id == current_user.id:
-        return _to_response(tpl)
-
-    # Shared templates only visible within same company
-    if tpl.is_shared and same_tenant(tpl.client_id, current_user.client_id):
-        return _to_response(tpl)
-
-    # Default templates visible to all — but not to a demo account, whose
-    # picker is deliberately limited to its own and its client's templates.
-    if tpl.is_default and not is_demo_user(current_user):
+    # super-admin, owner, shared inside the same company, or a default (not
+    # to a demo account, whose picker is limited to its own and its client's)
+    if can(current_user, "template.view", tpl):
         return _to_response(tpl)
 
     raise HTTPException(status_code=403, detail="Access denied")
@@ -168,7 +157,7 @@ def preview_shape(payload: dict, current_user: User = Depends(get_current_user))
 def create_template(
     payload: TemplateCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require("template.create")),
 ):
     existing = db.query(ColumnTemplate).filter(
         ColumnTemplate.user_id == current_user.id,
@@ -194,7 +183,7 @@ def create_template(
         description=payload.description,
         columns_json=json.dumps(columns_with_order),
         column_order_json=None,
-        is_shared=payload.is_shared and current_user.role in ("admin", "company_admin"),
+        is_shared=payload.is_shared and can(current_user, "template.share"),
     )
     db.add(tpl)
     db.commit()
@@ -224,7 +213,7 @@ def update_template(
         ]
         tpl.columns_json = json.dumps(columns_with_order)
     if payload.is_shared is not None:
-        tpl.is_shared = payload.is_shared and current_user.role in ("admin", "company_admin")
+        tpl.is_shared = payload.is_shared and can(current_user, "template.share")
 
     tpl.updated_at = datetime.utcnow()
     db.commit()
@@ -269,15 +258,9 @@ def _get_template_or_403(template_id: int, current_user: User, db: Session) -> C
     tpl = db.query(ColumnTemplate).filter(ColumnTemplate.id == template_id).first()
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
-    # Super admin can edit anything
-    if current_user.role == "admin" and not current_user.client_id:
-        return tpl
-    # Owner can edit their own
-    if tpl.user_id == current_user.id:
-        return tpl
-    # Company admin can edit templates within their company
-    if (current_user.role in ("admin", "company_admin")
-            and same_tenant(tpl.client_id, current_user.client_id)):
+    # super-admin; the owner (if the role may make templates); an admin or
+    # company_admin within their company — permissions.can("template.edit")
+    if can(current_user, "template.edit", tpl):
         return tpl
     raise HTTPException(status_code=403, detail="Not your template")
 
