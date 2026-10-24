@@ -1,6 +1,6 @@
 # Throughput of the OCR path — measurement and proposal
 
-**Status:** measured, not implemented. Measured 2026-10-23 on the development
+**Status:** item 1 (parallel OCR) IMPLEMENTED 2026-10-23 — see "Implemented" at the end; items 2–4 remain proposals. Originally: Measured 2026-10-23 on the development
 machine (8 logical CPUs, Windows 11, Tesseract and Poppler on PATH), on
 synthetic cheque pages (`tests/test_OCR/chk_*_clean.png` and `_moderate.jpg`,
 cycled into PDFs of 1, 10 and 50 pages). No model call is included: this is
@@ -68,3 +68,41 @@ linearly with no parallelism today.
    the OCR harness (`tests/harness/ocr_checks.py`) before and after.
 4. Keep 300 dpi: the OCR accuracy work in DECISION-LOG / the seam design was
    measured at it; lowering it trades accuracy for speed without measurement.
+
+## Implemented: parallel OCR (item 1), 2026-10-23
+
+`core/preprocessor._process_pdf` now reads every page's text layer first,
+then OCRs every page that will ask for it (pages needing OCR, and Gate 2c
+selective-OCR candidates) in a **spawn** process pool, then records each page
+in page order through the unchanged `_ocr_page` / `_selective_ocr`. Workers:
+`OCR_WORKERS`, default `min(4, os.cpu_count())`; `1` disables. A file with
+fewer than two OCR pages, and every image upload, never starts a pool. A pool
+that cannot start or breaks reads the page serially and records
+`pool_fallback` on that page's OCR record. Spawn on every platform, because
+forking a process that runs request and job threads can copy a held lock.
+
+**Identity.** `python -m tests.harness.ocr_parallel_identity --workers 4`
+preprocessed 127 inputs twice (OCR_WORKERS=1 and 4) and compared every field
+of the result, including words with boxes, origins, OCR metadata, notes,
+failure lists and the straightened images by digest: all 69 PDFs under
+`tests/` (gold, round 2, OCR and scenario fixtures, generated fixtures), every
+source image under `tests/` read on its own (54 of them the synthetic cheques
+in `tests/test_OCR`), and those 54 bound into one 18-page PDF per tier.
+**127 of 127 identical; 109 OCR pages; 0 fallbacks.** The preprocessor records
+no timing field, so nothing was excluded from the comparison.
+
+**Speed** (same machine, 8 logical CPUs, synthetic cheque pages, no model call;
+`preprocess_file` wall time):
+
+| pages | serial | 2 workers | 4 workers | speed-up at 4 |
+|---|---|---|---|---|
+| 1 | 6.1 s | 5.7 s | 5.8 s | none (no pool for one page) |
+| 10 | 49.8 s | 28.6 s | 20.6 s | 2.4× |
+| 50 | 248.5 s | 136.9 s | 84.6 s | 2.9× |
+| 18 (corpus tiers, clean / moderate / hard) | 84 / 90 / 144 s | — | 34 / 37 / 58 s | 2.5× |
+
+A spawn pool costs a few seconds to start (each worker imports the engine),
+which is why ten pages gain less than fifty. 50 cheques a day now take about
+1.5 minutes of OCR instead of 4. On Railway set `OCR_WORKERS` from a
+measurement inside the container: its CPU share, not the host's core count,
+is the limit, and each worker holds one 300-dpi page (~25 MB) at a time.
