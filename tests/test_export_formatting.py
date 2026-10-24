@@ -15,6 +15,7 @@ so it is re-created only where the range still means the same thing.
 import json
 
 import pytest
+from pathlib import Path
 
 from tests.harness import bootstrap as _bs
 
@@ -150,8 +151,11 @@ class TestItReusesTheStyleHelperTheOtherWritersUse:
         keep in step with the editor's CellStyle."""
         import inspect
 
+        import app.services as S
         from app.api.routes import extract as E
-        src = inspect.getsource(E)
+        # extract.py and the modules split out of it (round 13)
+        src = inspect.getsource(E) + "".join(
+            p.read_text(encoding="utf-8") for p in Path(S.__file__).parent.glob("*.py"))
         assert src.count("def _apply_cell_style(") == 1
         assert src.count("def _parse_hex_color(") == 1
 
