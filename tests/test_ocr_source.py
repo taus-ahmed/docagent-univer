@@ -151,3 +151,26 @@ class TestAPageWithNoTextLayerIsRead(object):
         assert doc.ocr_pages == []
         assert doc.ocr_failed_pages == []
         assert doc.has_meaningful_text is True
+
+
+class TestProfileWithoutGetdata:
+    """`_profile_variance` reads the profile with tobytes(), not the deprecated
+    getdata(); on an "L" image they are the same integers."""
+
+    def test_same_variance_as_the_getdata_reading(self):
+        import warnings
+        from PIL import Image, ImageDraw
+        import ocr_source
+        im = Image.new("L", (300, 200), 0)
+        d = ImageDraw.Draw(im)
+        for y in range(20, 200, 30):
+            d.rectangle((10, y, 290, y + 6), fill=255)
+        for angle in (-3.0, 0.0, 1.7):
+            rot = im.rotate(angle, resample=Image.BILINEAR, expand=False, fillcolor=0)
+            col = rot.resize((1, rot.height), Image.BOX)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                rows = list(col.getdata())
+            mean = sum(rows) / len(rows)
+            want = sum((v - mean) ** 2 for v in rows) / len(rows)
+            assert ocr_source._profile_variance(im, angle) == want

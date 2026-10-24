@@ -176,7 +176,10 @@ def _profile_variance(image, angle):
     # the search band on EVERY page, skew or none.
     rot = image.rotate(angle, resample=Image.BILINEAR, expand=False,
                        fillcolor=0)
-    rows = rot.resize((1, rot.height), Image.BOX).getdata()
+    # One "L" byte per row. `getdata()` is deprecated (Pillow 12+, removed in
+    # 14) and gave the same integers; tests/harness/getdata_identity.py
+    # proved it on every profile the corpus and fixtures produce.
+    rows = rot.resize((1, rot.height), Image.BOX).tobytes()
     n = len(rows)
     if not n:
         return 0.0
