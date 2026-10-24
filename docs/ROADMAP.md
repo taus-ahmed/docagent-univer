@@ -41,4 +41,5 @@ item is in the linked document; each open item says what blocks it.
 | **Staging environment** | Changes reach production from `main` directly; a staging service on Railway with its own database |
 | **Review history** | Review marks live inside each result (no migration); who changed a mark, and when, is overwritten |
 | **Throughput, further** | Parallel OCR is done (2.9× at 50 pages); render once per file and skipping OSD remain (docs/proposals/throughput.md) |
-| **Cleanup follow-ups** | `extract.py` (6.9k lines) split; the legacy CLI modules the API still imports for `Orchestrator.llm`; `print` logging to `logging` |
+| Roles (`core/permissions.py`, reviewer), 404 across tenants, job cancel and hard delete, `extract.py` split into `app/services/` (round 13) | `docs/SECURITY.md`, `docs/proposals/roles.md` |
+| **Cleanup follow-ups** | the legacy CLI modules the API still imports for `Orchestrator.llm`; `print` logging to `logging` |

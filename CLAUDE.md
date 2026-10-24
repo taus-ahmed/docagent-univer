@@ -162,10 +162,13 @@ The reasoning for each is in `docs/DECISION-LOG.md`.
 | `backend/engine/ocr_source.py` | the OCR reader seam (Tesseract today) behind the same word-list contract |
 | `backend/engine/validators.py` | per-family check registry; `cheque_`, `invoice_`, `bank_`, `payslip_validators.py` register into it |
 | `backend/engine/micr.py`, `cheque_regions.py`, `cheque_amounts.py` | cheque-specific MICR parsing, region crops and amount-in-words checks |
-| `backend/app/api/routes/extract.py` | routes, the background job thread, template parsing, **all Excel writers** |
+| `backend/app/api/routes/extract.py` | the extraction routes (upload, jobs, results, edits, cancel, hard delete, export); re-exports everything below |
+| `backend/app/services/*.py` | split out of `extract.py` verbatim (round 13): `job_worker` (the job thread), `excel_slot` / `excel_legacy` / `excel_cells` (**all Excel writers**), `template_parsing`, `vision_prompts`, `result_processing`, `uploads`, `edits`, `prompt_registry` |
+| `backend/app/core/permissions.py` | `can(user, action, resource)`: the role matrix as data (platform_admin derived, tenant_admin, company_admin, reviewer, user) |
 
-`extract.py` is **no longer an extraction engine**. It is routes + the job
-thread + the writers. `_extract_with_template_inner` is a three-line delegation
+`extract.py` is **no longer an extraction engine**. It is the routes; the job
+thread and the writers live in `app/services/` and are re-exported from it.
+Tests that steer the job thread patch `app.services.job_worker`. `_extract_with_template_inner` is a three-line delegation
 to `extractor.run_extraction`.
 
 `backend/engine/orchestrator.py` is a CLI/batch controller; only its
@@ -967,7 +970,7 @@ the older `_build_vision_prompt` → `_process_vision_result` path with
 `prompt_registry.py` and the form/mixed/table writers exist for that fallback
 and for re-exporting legacy jobs.
 
-### Export writers (all in `extract.py`)
+### Export writers (all in `app/services/excel_*.py`, re-exported by `extract.py`)
 
 **The slot writer carries provenance (I2) and review marks.** A `Source` column
 one past the template's full extent says `<file> · p.N` on every row holding
@@ -1225,7 +1228,7 @@ store (Cloudflare R2 in production) — no route changes.
 
 - **The worker is handed keys, never paths.** A local absolute path is
   meaningless to a separate worker process or a bucket. `_resolve_source` in
-  `extract.py` accepts either, so jobs queued before Phase 8 still run.
+  `services/job_worker.py` accepts either, so jobs queued before Phase 8 still run.
 - **`client_id` leads every tenant-owned key**, so a scoped bucket credential
   or IAM prefix condition can later enforce what the code enforces now.
 - **Keys are built in one place** and validated by `_safe_key` (rejects `..`,

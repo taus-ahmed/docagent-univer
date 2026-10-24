@@ -1,6 +1,6 @@
 # Replay portability: running the recorded-answer tests on another machine
 
-**Status:** proposal. What is implemented is the safe half: CI skips
+**Status:** proposal, partly implemented (round 12: the image-free alias key, `llm_cache.alias_key`). Also implemented, the safe half: CI skips
 replay-dependent tests by name instead of failing or passing silently
 (`tests/conftest.py`, `DOCAGENT_REPLAY_ENV=skip`, marker `replay`;
 `.github/workflows/ci.yml`). Nothing here makes a live call.

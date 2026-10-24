@@ -372,7 +372,23 @@ server restart before it finished. Nothing was saved for this job — upload the
 files again."** rather than sitting at *processing* for ever.
 
 Nothing partial is kept, so there is no half-finished spreadsheet to mistake for
-a finished one.
+a finished one. The job says *Interrupted by restart*; it cannot list which
+files were in it, because the file list lives only in the running job.
+
+## Cancelling a job stops at the next page, not instantly
+
+**PARTIAL.** *Cancel* takes effect at the next checkpoint: before the next
+file, between pages of the file being read, or before the next document's
+model call. A model call already in flight finishes (a few seconds) and its
+answer is thrown away. Files that had finished keep their results; every other
+file is listed as *cancelled*, and the job says how far it got.
+
+## Deleting a job's data is per job, by an administrator
+
+**PARTIAL.** A firm's administrator can delete one job's files, page images and
+extracted values (*Delete data* on the History page); the job stays in the
+history, marked deleted. There is no automatic deletion after a retention
+period and no "delete everything for this firm" yet (docs/proposals/retention.md).
 
 ## Templates: a table with no column headings is refused
 

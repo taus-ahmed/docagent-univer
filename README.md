@@ -39,7 +39,7 @@ confidence + review gates ──► Excel export with provenance
 
 | Part | Where |
 |---|---|
-| API (FastAPI, JWT auth, multi-tenant by `client_id`) | `backend/app/` |
+| API (FastAPI, JWT auth, multi-tenant by `client_id`) | `backend/app/` — routers in `api/routes/`, extraction services (job thread, writers, template parsing) in `services/`, roles in `core/permissions.py` |
 | Extraction engine | `backend/engine/` |
 | Web app (Next.js 14) | `frontend/` |
 | Tests, accuracy harness, gold corpus, recorded model answers | `tests/` |
@@ -100,7 +100,9 @@ and after, storage on Cloudflare R2 and rollback are in
 | `docs/ROADMAP.md` | what is done and what remains |
 | `docs/proposals/` | measured proposals not yet built |
 | `docs/TEMPLATE-SHAPE-FUTURE-WORK.md` | the deferred declared-shape migration |
-| `docs/SECURITY.md` | authentication, tenancy, secrets and known gaps |
+| `docs/SECURITY.md` | authentication, roles, tenancy, deletion, logging, secrets and known gaps |
+| `docs/CHEQUE-TRIAL.md` | running real cheques under supervision; the trial report (`scripts/trial_report.py`) |
+| `docs/RELEASE-CHECKLIST.md` | `scripts/prepush_check.py` and the manual steps before the first push |
 | `docs/investigations/` | dated measurement records cited by code and tests |
 
 ## License

@@ -37,6 +37,12 @@ Amount in Figures, Amount in Words, Memo, Authorized By, Routing Number,
 Account Number. Do not add fields during the trial — a changed template makes
 the first and second half of the batch incomparable.
 
+**Accounts.** The accountant who uploads gets a normal user account; a second
+accountant who checks the firm's results gets the **Reviewer** role (views,
+reviews, edits and exports every job of the firm; cannot change templates,
+schemas or users). A batch started by mistake can be **cancelled**; a
+firm administrator can **delete a job's data** after the trial.
+
 ## 3. Running a batch (supervised)
 
 1. **Consent and selection.** The accountant chooses the cheques (aim for 50,
