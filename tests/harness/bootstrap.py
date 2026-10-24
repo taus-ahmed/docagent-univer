@@ -6,7 +6,7 @@ BEFORE importing any ``app.*`` or engine module, because:
 
 - ``app.config.settings`` is built once at import time from os.environ plus a
   CWD-relative ``.env`` file. We pre-load ``backend/.env`` into os.environ and
-  chdir to ``backend/`` so relative paths (``./storage``, ``debug_output/``)
+  chdir to ``backend/`` so relative paths (``./storage``)
   land where production's layout puts them.
 - Production runs ``PRIMARY_LLM=gemini`` and
   ``GEMINI_MODEL=gemini-2.5-flash-lite`` (audit 2026-08-17 §4). Local
@@ -43,7 +43,7 @@ _bootstrapped = False
 
 
 def chdir_backend() -> None:
-    """Make relative paths (./storage, debug_output/) resolve as they do in
+    """Make relative paths (./storage) resolve as they do in
     production, where the process runs from backend/.
 
     Deliberately NOT done inside bootstrap(): bootstrap runs at pytest

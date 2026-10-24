@@ -16,3 +16,6 @@ backend/storage/
 # Local admin credentials — never commit (rotate if this ever shipped)
 backend/login.json
 login.json
+
+# Local debugging output
+backend/debug_output/
