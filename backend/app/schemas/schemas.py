@@ -75,6 +75,12 @@ class JobStatus(BaseModel):
     total_time_sec: float
     output_file: Optional[str]
     error_message: Optional[str]
+    user_id: Optional[int] = None
+    #: Set after a hard delete (`DELETE /api/jobs/{id}/data`): the record stays
+    #: so history adds up, its files and results are gone.
+    deleted_at: Optional[str] = None
+    #: Why the system ended the job (cancelled by whom, interrupted by restart).
+    status_reason: Optional[str] = None
 
 class JobListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -89,6 +95,12 @@ class JobListItem(BaseModel):
     created_at: datetime
     completed_at: Optional[datetime]
     total_time_sec: float
+    user_id: Optional[int] = None
+    #: Set after a hard delete (`DELETE /api/jobs/{id}/data`): the record stays
+    #: so history adds up, its files and results are gone.
+    deleted_at: Optional[str] = None
+    #: Why the system ended the job (cancelled by whom, interrupted by restart).
+    status_reason: Optional[str] = None
 
 
 # ─── Documents ────────────────────────────────────────────────────────────────

@@ -78,6 +78,10 @@ class ExtractionJob(Base):
     # Job metadata
     schema_id = Column(String(100), nullable=True)       # which YAML schema was used
     llm_provider = Column(String(20), nullable=True)     # provider name, e.g. gemini
+    #: Job-level marks as a JSON object (`marks()` / `set_mark()`), kept in
+    #: this existing Text column so no migration is needed: `deleted`
+    #: ({at, by, files, results}) after a hard delete, `status_reason` (why a
+    #: job was cancelled or failed by the system). Empty string = no marks.
     notes = Column(Text, default="")
     error_message = Column(Text, nullable=True)
     progress_message = Column(Text, nullable=True)       # live progress e.g. "Processing 3 of 40"
@@ -92,6 +96,30 @@ class ExtractionJob(Base):
         if self.total_docs == 0:
             return 0.0
         return self.successful / self.total_docs
+
+    def marks(self) -> dict:
+        """The job's marks (see `notes`); {} for a job that has none or whose
+        notes predate them."""
+        try:
+            m = json.loads(self.notes) if self.notes else {}
+        except (TypeError, ValueError):
+            return {}
+        return m if isinstance(m, dict) else {}
+
+    def set_mark(self, key: str, value) -> None:
+        m = self.marks()
+        m[key] = value
+        self.notes = json.dumps(m, sort_keys=True)
+
+    @property
+    def deleted_at(self):
+        d = self.marks().get("deleted")
+        return d.get("at") if isinstance(d, dict) else None
+
+    @property
+    def status_reason(self):
+        r = self.marks().get("status_reason")
+        return r if isinstance(r, str) else None
 
 
 class DocumentResult(Base):

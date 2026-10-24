@@ -207,6 +207,24 @@ def _source_path(job, doc):
                         detail="The source document is not retained for this result")
 
 
+def forget_sources(keys) -> int:
+    """Drop the cached readings of these source keys — their page and OCR
+    images held in memory — and release the temp copy each one rendered from
+    (object store only; a local path is the stored file and is left alone).
+    Returns how many readings went. Used by a job's hard delete."""
+    from app.core.storage import get_storage
+    gone = []
+    with _cache_lock:
+        for k in set(keys):
+            r = _cache.pop(k, None)
+            if r is not None:
+                gone.append(r)
+    storage = get_storage()
+    for r in gone:
+        storage.release(r.get("path"))
+    return len(gone)
+
+
 def _reading(job, doc) -> dict:
     """The engine's own reading of the source file, cached per file."""
     key, path = _source_path(job, doc)

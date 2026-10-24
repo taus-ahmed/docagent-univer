@@ -385,6 +385,22 @@ class StorageService:
             return n
         return n
 
+    def count_prefix(self, prefix: str) -> int:
+        """How many objects are stored under a prefix — what a delete checks
+        afterwards, because `delete_prefix` reports what it attempted, and a
+        delete that half-failed must not be reported as done. Raises
+        StorageError when the store cannot be listed."""
+        prefix = _safe_key(prefix)
+        try:
+            if self._backend == "s3":
+                page = self._s3().list_objects_v2(Bucket=settings.S3_BUCKET,
+                                                  Prefix=prefix + "/", MaxKeys=1)
+                return len(page.get("Contents", []))
+            d = self._local_path(prefix)
+            return sum(1 for p in d.rglob("*") if p.is_file()) if d.is_dir() else 0
+        except Exception as e:
+            raise StorageError(f"cannot list storage ({type(e).__name__})")
+
     def delete_job_sources(self, client_id, job_id) -> int:
         """Delete a job's SOURCE documents, leaving its outputs alone."""
         return self.delete_prefix(f"{self.job_prefix(client_id, job_id)}/source")

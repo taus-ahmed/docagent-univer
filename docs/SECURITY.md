@@ -32,6 +32,12 @@ names the code that implements it.
 - Every data table carries `client_id`. The tenant a request acts as comes from
   the **token, never the request body** (`extract.py::resolve_client_id`); a
   super-administrator (role `admin`, no `client_id`) must name the client.
+- Hard delete: `DELETE /api/jobs/{id}/data` (tenant admin of the job's firm,
+  platform admin) removes the job's stored files (sources, outputs; local or
+  object store, verified gone before anything else changes), the review
+  screen's cached page/OCR images and temp copies, and every result row; the
+  job record stays with a `deleted` mark. Running jobs must be cancelled first
+  (409). Logged as job id and counts only.
 - Roles: one permission function, `app/core/permissions.py::can(user, action,
   resource)`, with the matrix as data (`docs/proposals/roles.md`, "As
   implemented"); routes never compare role strings themselves.

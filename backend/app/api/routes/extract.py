@@ -7094,6 +7094,24 @@ def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depe
     job.status="cancelled"; job.completed_at=datetime.utcnow(); db.commit()
     return {"message": "Cancelled", "job_id": job_id}
 
+@router.delete("/jobs/{job_id}/data")
+def delete_job_data(job_id: int, db: Session=Depends(get_db),
+                    current_user: User=Depends(get_current_user)):
+    """Hard delete: the job's files, page readings and results go; the job
+    record stays, marked deleted (`core/job_lifecycle.purge_job`). A tenant
+    admin of the job's firm or a platform admin; another firm's job is 404."""
+    from app.core.job_lifecycle import RUNNING, PurgeIncomplete, purge_job
+    job = _get_job_or_404(job_id, current_user, db, "job.delete")
+    if job.status in RUNNING:
+        raise HTTPException(status_code=409,
+                            detail="The job is still running: cancel it first, then delete.")
+    try:
+        return purge_job(db, job, current_user)
+    except PurgeIncomplete as e:
+        raise HTTPException(status_code=500,
+                            detail=f"{e.args[0]} stored files could not be deleted; "
+                                   "nothing was marked deleted — retry.")
+
 def _get_job_or_404(job_id, current_user, db, action="job.view"):
     """The job, if the caller may see it and do `action` to it.
 

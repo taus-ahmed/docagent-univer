@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import { extractApi, exportApi, templatesApi, type JobStatus, type DocumentResult, type ColumnTemplate } from "@/lib/api";
 import toast from "react-hot-toast";
 import { confirmExport } from "@/lib/confirm-export";
+import { useAuthStore } from "@/lib/auth-store";
+import { can } from "@/lib/permissions";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -294,6 +296,22 @@ export default function HistoryPage() {
   });
 
   const selectedJob    = jobs.find(j => j.id === selectedJobId);
+  const user = useAuthStore(s => s.user);
+  const qc = useQueryClient();
+  const running = (s?: string) => s === "pending" || s === "processing";
+
+  const handleDelete = async (jobId: number) => {
+    if (!confirm(`Delete job #${jobId}? Its uploaded files, page images and every extracted value are removed for good. The job stays in the history, marked deleted.`)) return;
+    try {
+      const r = await extractApi.deleteJobData(jobId);
+      toast.success(r.already_deleted ? "Already deleted"
+        : `Deleted: ${r.files_deleted} files, ${r.results_deleted} results`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Delete failed");
+    }
+    qc.invalidateQueries({ queryKey: ["jobs"] });
+    qc.invalidateQueries({ queryKey: ["job-results", jobId] });
+  };
 
   async function handleExport(jobId: number, mode: "template" | "combined" | "perfile" | "zip") {
     if (!(await confirmExport(jobId))) return;
@@ -454,6 +472,7 @@ export default function HistoryPage() {
                     <div className="job-id-row">
                       <span className="job-id">Job #{job.id}</span>
                       <StatusBadge status={job.status} />
+                      {job.deleted_at && <span className="badge badge-gray">deleted</span>}
                       {job.schema_id && (
                         <span style={{ fontSize: 9, padding: "1px 5px", background: "var(--accent-dim)", color: "var(--accent)", borderRadius: 3, fontWeight: 600 }}>TPL</span>
                       )}
@@ -489,7 +508,18 @@ export default function HistoryPage() {
                       A "partial" job has real output for the documents that
                       succeeded, so it downloads too; what it must not do is
                       claim everything worked. */}
-                  {["completed", "partial"].includes(selectedJob.status) && (selectedJob.successful ?? 0) > 0 && (
+                  {selectedJob.deleted_at && (
+                    <span className="badge badge-gray" title="Files and results were deleted; the record is kept for history">
+                      Deleted {fmt(selectedJob.deleted_at)}
+                    </span>
+                  )}
+                  {can(user, "job.delete") && !selectedJob.deleted_at && !running(selectedJob.status) && (
+                    <button className="btn btn-ghost btn-sm" style={{ color: "var(--red)" }}
+                            onClick={() => handleDelete(selectedJob.id)}>
+                      Delete data
+                    </button>
+                  )}
+                  {!selectedJob.deleted_at && ["completed", "partial"].includes(selectedJob.status) && (selectedJob.successful ?? 0) > 0 && (
                     <>
                       {/* client-side: a full page load re-runs AppLayout's auth gate */}
                       <Link className="btn btn-secondary btn-sm" href={`/extract?job=${selectedJob.id}`}>

@@ -1,6 +1,13 @@
 # Data retention and privacy
 
-**Status:** proposal, not implemented. Inventory taken 2026-10-23 from the code
+**Status:** partly implemented (round 13): the per-job hard delete exists —
+`DELETE /api/jobs/{id}/data`, `app/core/job_lifecycle.py::purge_job` — for a
+tenant admin of the job's firm or a platform admin (NOT the owner: decision
+pending, see "Tauseef decides"); the job record stays with a `deleted` mark in
+its existing `notes` column (no migration). Still open: per-tenant delete,
+retention periods and the daily sweep, the audit table (all need a migration).
+
+Inventory taken 2026-10-23 from the code
 at `integration/ocr-hardening`. Statements about Railway, Cloudflare and Google
 are what their published terms said as of my knowledge and **must be checked
 against the current terms and the account's actual settings** before they are

@@ -110,6 +110,11 @@ export interface JobStatus {
   total_time_sec: number;
   output_file: string | null;
   error_message: string | null;
+  user_id?: number | null;
+  /** Set after a hard delete: files and results are gone, the record stays. */
+  deleted_at?: string | null;
+  /** Why the system ended the job (cancelled by whom, interrupted by restart). */
+  status_reason?: string | null;
   schema_id: string | null;
 }
 
@@ -471,6 +476,14 @@ export const extractApi = {
   cancelJob: async (jobId: number) => {
     const res = await api.delete(`/api/jobs/${jobId}`);
     return res.data;
+  },
+
+  /** Hard delete (tenant or platform admin): files, page images and results
+   *  go; the job record stays, marked deleted. */
+  deleteJobData: async (jobId: number) => {
+    const res = await api.delete(`/api/jobs/${jobId}/data`);
+    return res.data as { job_id: number; deleted_at: string; already_deleted: boolean;
+                         files_deleted: number; results_deleted: number };
   },
 };
 

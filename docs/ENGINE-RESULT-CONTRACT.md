@@ -77,6 +77,10 @@ user — exactly as for an id that does not exist, so an id in another tenant
 cannot be told apart from a missing one. A super-admin (role `admin`, no
 `client_id`) sees every tenant's job.
 
+After a hard delete (`DELETE /api/jobs/{id}/data`) the job answers with
+`deleted_at` set and `/results` returns `[]`: the result records described
+below no longer exist. The job's counts are kept so history adds up.
+
 ## 2. Per document record — `extracted_data`
 
 | field | type | allowed / meaning |
