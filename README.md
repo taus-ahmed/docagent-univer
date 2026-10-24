@@ -97,6 +97,8 @@ and after, storage on Cloudflare R2 and rollback are in
 | `docs/OCR-READER-SEAM-DESIGN.md` | scanned pages, the OCR seam, review gates, reason codes (§12), validators |
 | `docs/DECISION-LOG.md` | why the engine is the way it is, and what was rejected |
 | `docs/KNOWN-LIMITATIONS.md` | what the system does not do yet, in plain language |
+| `docs/ROADMAP.md` | what is done and what remains |
+| `docs/proposals/` | measured proposals not yet built |
 | `docs/TEMPLATE-SHAPE-FUTURE-WORK.md` | the deferred declared-shape migration |
 | `docs/SECURITY.md` | authentication, tenancy, secrets and known gaps |
 | `docs/investigations/` | dated measurement records cited by code and tests |
