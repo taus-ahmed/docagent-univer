@@ -55,6 +55,16 @@ class TestScheme:
         assert calls
 
 
+@pytest.fixture(autouse=False)
+def fresh_rate_limit(monkeypatch):
+    """The login rate limiter is per IP and in memory, and the suite's other
+    login tests share the TestClient's IP; start these from a clean count."""
+    from app.api.routes import auth as R
+    monkeypatch.setattr(R, "_fail_counts", type(R._fail_counts)(int))
+    monkeypatch.setattr(R, "_lockout_until", {})
+
+
+@pytest.mark.usefixtures("fresh_rate_limit")
 class TestUpgradeOnLogin:
     def _user(self, db, pw_hash):
         from app.models.models import User
