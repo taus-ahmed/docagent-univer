@@ -1,0 +1,4 @@
+file,page,field,machine value,level,reasons,true value,correct yes/no
+chq-01,1,Amount in Figures,1250.00,verified,,1250.00,yes
+chq-01,1,Routing Number,021000022,low,checksum_failed,021000021,no
+chq-01,1,Memo,,empty,,MEMO-1,no
