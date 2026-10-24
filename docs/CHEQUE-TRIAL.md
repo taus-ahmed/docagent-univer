@@ -94,6 +94,34 @@ The numbers we take from it: wrong-and-`verified` (must be 0), wrong-and-
 `grounded`, wrong-and-`unverified`, right-and-`low` (noise that costs him
 time), empty-but-present, and accuracy per field.
 
+An optional `cheque` column gives the *k* of a record named `file [k of N]`
+(several cheques in one file); without it every row is cheque 1.
+
+### The report: `scripts/trial_report.py`
+
+```
+python scripts/trial_report.py --truth outcomes.csv --results results.json --out batch-1
+```
+
+* `--truth` — the outcomes CSV above.
+* `--results` — optional: the job's results saved from
+  `GET /api/jobs/{id}/results` (JSON). When given, the machine value, level
+  and reasons are taken from it and cheques found are counted from its
+  records; the accountant's *correct yes/no* is used only where his machine
+  value matches it, otherwise the value is re-judged against the true value
+  (notation-blind). Without it, the CSV's own machine columns are used. The
+  exported workbook is not read: it holds the same data less unambiguously.
+* Writes `batch-1.md` (explained in plain words at the top) and `batch-1.csv`.
+  Run it on the firm's machine; nothing is sent anywhere.
+
+It reports, per field and per level (high/verified, grounded, unverified, low,
+edited, empty-flagged, empty, failed): count, correct, wrong, accuracy; the
+**silent-wrong rate** (wrong ÷ values labelled high or grounded — must be 0);
+**wrong with no flag**; **false alarms** (correct but flagged); **cheques found
+vs truth** (dropped or merged / split or duplicated); and the **precision of
+each reason code** (how often the value it fired on was really wrong).
+Synthetic example data: `tests/fixtures/trial/`.
+
 ## 6. Turning his corrections into fixtures — without exposing real data
 
 **Real cheques are never committed, never attached to an issue, never pasted

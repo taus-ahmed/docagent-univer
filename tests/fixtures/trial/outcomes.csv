@@ -1,0 +1,13 @@
+file,page,cheque,field,machine value,level,reasons,true value,correct yes/no
+chq-a.pdf,1,1,Amount in Figures,1250.00,verified,,"$1,250.00",yes
+chq-a.pdf,1,1,Routing Number,021000022,low,checksum_failed,021000021,no
+chq-a.pdf,1,1,Payee,Acme Ltd,grounded,,ACME LTD,yes
+chq-a.pdf,1,2,Amount in Figures,99.00,verified,,990.00,no
+chq-a.pdf,1,2,Routing Number,021000021,verified,,021000021,yes
+chq-a.pdf,1,2,Payee,,empty,,Bob Smith,no
+chq-b.pdf,1,1,Amount in Figures,10.00,unverified,ocr_origin,10.00,yes
+chq-b.pdf,1,1,Routing Number,011000015,verified,,011000015,yes
+chq-b.pdf,1,1,Payee,Jane Roe,grounded,,Jane Roe,yes
+chq-b.pdf,2,2,Amount in Figures,,empty,,45.00,no
+chq-b.pdf,2,2,Routing Number,,empty,,011000015,no
+chq-b.pdf,2,2,Payee,,empty,,Jane Roe,no

@@ -1,0 +1,184 @@
+[
+ {
+  "id": 1,
+  "job_id": 1,
+  "filename": "chq-a.pdf [1 of 2]",
+  "original_filename": "chq-a.pdf",
+  "document_type": "cheque",
+  "extracted_data": {
+   "extraction_method": "slot_directed",
+   "template_type": "slot",
+   "slot_map": {
+    "fields": [
+     {
+      "ref": "B1",
+      "row_label": "Amount in Figures"
+     },
+     {
+      "ref": "B2",
+      "row_label": "Routing Number"
+     },
+     {
+      "ref": "B3",
+      "row_label": "Payee"
+     }
+    ],
+    "tables": []
+   },
+   "extracted_fields": {
+    "B1": "1250.00",
+    "B2": "021000022",
+    "B3": "Acme Ltd"
+   },
+   "field_provenance": {
+    "B1": {
+     "source": "1250.00",
+     "page": 1,
+     "review_reasons": []
+    },
+    "B2": {
+     "source": "021000022",
+     "page": 1,
+     "review_reasons": [
+      "checksum_failed"
+     ]
+    },
+    "B3": {
+     "source": "Acme Ltd",
+     "page": 1,
+     "review_reasons": []
+    }
+   },
+   "validation": {
+    "confidence_map": {
+     "B1": "high",
+     "B2": "low",
+     "B3": "grounded"
+    },
+    "flagged_fields": []
+   },
+   "document_index": 1,
+   "document_count": 2
+  }
+ },
+ {
+  "id": 2,
+  "job_id": 1,
+  "filename": "chq-a.pdf [2 of 2]",
+  "original_filename": "chq-a.pdf",
+  "document_type": "cheque",
+  "extracted_data": {
+   "extraction_method": "slot_directed",
+   "template_type": "slot",
+   "slot_map": {
+    "fields": [
+     {
+      "ref": "B1",
+      "row_label": "Amount in Figures"
+     },
+     {
+      "ref": "B2",
+      "row_label": "Routing Number"
+     },
+     {
+      "ref": "B3",
+      "row_label": "Payee"
+     }
+    ],
+    "tables": []
+   },
+   "extracted_fields": {
+    "B1": "99.00",
+    "B2": "021000021",
+    "B3": ""
+   },
+   "field_provenance": {
+    "B1": {
+     "source": "99.00",
+     "page": 1,
+     "review_reasons": []
+    },
+    "B2": {
+     "source": "021000021",
+     "page": 1,
+     "review_reasons": []
+    },
+    "B3": {
+     "source": "",
+     "page": 1,
+     "review_reasons": []
+    }
+   },
+   "validation": {
+    "confidence_map": {
+     "B1": "high",
+     "B2": "high",
+     "B3": "low"
+    },
+    "flagged_fields": []
+   },
+   "document_index": 2,
+   "document_count": 2
+  }
+ },
+ {
+  "id": 1,
+  "job_id": 1,
+  "filename": "chq-b.pdf",
+  "original_filename": "chq-b.pdf",
+  "document_type": "cheque",
+  "extracted_data": {
+   "extraction_method": "slot_directed",
+   "template_type": "slot",
+   "slot_map": {
+    "fields": [
+     {
+      "ref": "B1",
+      "row_label": "Amount in Figures"
+     },
+     {
+      "ref": "B2",
+      "row_label": "Routing Number"
+     },
+     {
+      "ref": "B3",
+      "row_label": "Payee"
+     }
+    ],
+    "tables": []
+   },
+   "extracted_fields": {
+    "B1": "10.00",
+    "B2": "011000015",
+    "B3": "Jane Roe"
+   },
+   "field_provenance": {
+    "B1": {
+     "source": "10.00",
+     "page": 1,
+     "review_reasons": [
+      "ocr_origin"
+     ]
+    },
+    "B2": {
+     "source": "011000015",
+     "page": 1,
+     "review_reasons": []
+    },
+    "B3": {
+     "source": "Jane Roe",
+     "page": 1,
+     "review_reasons": []
+    }
+   },
+   "validation": {
+    "confidence_map": {
+     "B1": "unverified",
+     "B2": "high",
+     "B3": "grounded"
+    },
+    "flagged_fields": []
+   }
+  }
+ }
+]
