@@ -3861,6 +3861,34 @@ def _resolve_source(storage, ref):
     return p if p.exists() else None
 
 
+def _flag_batch_duplicates(session, job_id) -> int:
+    """Flag possible duplicates among a job's stored records; returns how many
+    records newly need review. Records are compared as stored, so a record
+    split from a multi-cheque file is compared like any other."""
+    from duplicates import flag_possible_duplicates
+    docs = (session.query(DocumentResult)
+            .filter(DocumentResult.job_id == job_id)
+            .order_by(DocumentResult.id).all())
+    eds = [d.get_extracted_data() for d in docs]
+    usable = [(d, ed) for d, ed in zip(docs, eds) if isinstance(ed, dict) and ed]
+    hit = flag_possible_duplicates([ed for _d, ed in usable],
+                                   names=[d.filename for d, _ed in usable])
+    newly = 0
+    for k in hit:
+        d, ed = usable[k]
+        d.set_extracted_data(ed)
+        if not d.needs_review:
+            newly += 1
+        d.needs_review = True
+        d.validation_warnings = _flag_summary(
+            (ed.get("validation") or {}).get("flagged_fields") or [])
+    if hit:
+        print(f"[DUPLICATES] job {job_id}: {len(hit)} record(s) flagged as "
+              f"possible duplicates", flush=True)
+        session.commit()
+    return newly
+
+
 def _flag_summary(flagged) -> str:
     """`validation.flagged_fields` rendered as one line for the results row.
 
@@ -4247,6 +4275,17 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                 time.sleep(delay)
 
         session.commit()
+
+        # The same cheque scanned twice is FLAGGED on both records, never
+        # merged or dropped (engine/duplicates.py). A check that cannot run
+        # says so on the job rather than passing for a clean batch.
+        try:
+            needs_review += _flag_batch_duplicates(session, job_id)
+        except Exception as dup_err:
+            print(f"[THREAD] duplicate check could not run: {dup_err}", flush=True)
+            job.progress_message = ("The duplicate-cheque check could not run "
+                                    "for this batch.")
+            session.commit()
 
         # A job that produced nothing is not "completed". Saying it was is how
         # a total failure came to look like an empty result set: a green tick,
