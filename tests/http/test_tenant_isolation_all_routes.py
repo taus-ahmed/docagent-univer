@@ -370,6 +370,11 @@ def test_self_routes_touch_only_the_caller(client, firms, role):
                    json={"display_name": f"isoB_{role}"})
     assert r.status_code == 200 and r.json()["client_id"] == B
     assert not _scan_bytes(r.content)
+    # the profile route ignores tenant and role, whatever the body says
+    r = client.put("/api/auth/me", headers=firms[B].hdr[role],
+                   json={"client_id": A, "role": "admin"})
+    assert r.status_code == 200 and r.json()["client_id"] == B
+    assert r.json()["role"] == firms[B].users[role].role
 
 
 def test_a_new_template_lands_in_the_callers_firm(client, firms, db):

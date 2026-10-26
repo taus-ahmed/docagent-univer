@@ -47,8 +47,16 @@ names the code that implements it.
 - Jobs: `_get_job_or_404` allows a super-administrator, an administrator or
   `company_admin` of the job's tenant, or the job's own user; any other id —
   another firm's included — answers 404 "Job not found", the same as a missing id.
-- Templates: `load_template_for_user` checks ownership before an upload uses a
+- Templates: `load_template_for_user` checks visibility before an upload uses a
   template id; an unknown id fails rather than silently extracting without one.
+  A template the caller cannot see (another firm's, a colleague's private one)
+  answers 404 "Template not found" on every route, the same as a missing id; a
+  visible one the caller may not change answers 403.
+- Google Drive is ONE server-wide OAuth credential, so it belongs to one firm:
+  `DRIVE_TENANT` (empty = Drive closed to everyone). Every other firm gets 403
+  on browse, extract, watch and check, and "not configured" from the status
+  route; Drive jobs and watch folders are always `DRIVE_TENANT`'s, and the
+  watch check only ever hands the watcher that firm's folders.
 - Watch folders (`drive._visible_watch_folders`): a super-administrator sees
   all, a tenant administrator its own tenant's, a user its own; any other id is
   a 404.
@@ -57,6 +65,36 @@ names the code that implements it.
   that has none (super-administrators' templates carry `client_id = NULL`).
 - The flat exports (`/api/export/combined`, `/perfile`) accept only a template
   the caller could extract with (`load_template_for_user`), answered as 404.
+
+## Isolation between firms
+
+Proved by three suites; a route added without a case fails the first.
+
+- `tests/http/test_tenant_isolation_all_routes.py` enumerates `app.routes`;
+  every route is in `ROUTES` (how it is attacked) or `ALLOWLIST` (why it holds
+  no firm's data). Firm B's admin, reviewer and user call every id route with
+  firm A's ids and must get exactly the answer a missing id gets (status and
+  body); lists, exports and downloads are scanned for firm A's markers;
+  mutations are followed by a check that firm A's records are unchanged.
+- `tests/http/test_tenant_side_channels.py` — storage keys, caches, headers, logs.
+- `tests/http/test_tenant_concurrency.py` — two firms, 50 files each, uploaded
+  at the same instant through the real route and job threads.
+
+Audit (round 14), each with its evidence:
+
+| Channel | Finding |
+|---|---|
+| Storage keys | `clients/{client_id}/jobs/{job_id}/…` from one place. A firm id is used **verbatim or refused** (`storage._tenant_segment`): normalising it let `a b` and `a_b`, or `../acme` and `acme`, share one prefix and one schema file. The API refuses such ids at creation (`CLIENT_ID_PATTERN`, users and schema upload). File names are normalised and cannot leave their job's folder. Job ids are global, so two firms never share a job folder. |
+| Signed URLs | `signed_url` is capped at 1 hour, returns None on the local backend, and is not served by any route today. A key always names its firm. |
+| Temp copies | random names (`NamedTemporaryFile`, prefix `copy-`) in the app's own directory, released on success, failure and cancel; never keyed by file name. |
+| Page images | `Cache-Control: private, max-age=3600` — the viewer's own browser only. |
+| Every other `/api/` response | `Cache-Control: no-store` and `Vary: Authorization` (`main.py` middleware), so no proxy, CDN or edge can replay one firm's answer to another caller. |
+| Export file names | `job_{id}_results.xlsx`, `docagent_job{id}_….xlsx`, the firm's own file names inside its own zip — never a firm id. |
+| In-process caches | The review screen's reading cache is keyed by storage key (which leads with the firm); tested with two firms storing the same file name. No other cache holds firm data: the prompt registry is static, the batch schema cache lives for one job, `gemini_client._good_model` holds a model name, OCR identity a version string, cancellation is per thread, the LLM record/replay cache is test-only. |
+| Rate limiter | see "Authentication": keyed by client IP and username. |
+| Logs | ids and counts only ("Logging" below). The tenancy line no longer prints the client id a user asked for or their own. |
+| Error messages | identical for another firm's id and a missing id (tested route by route); a 404 may echo the id the caller sent, nothing else. |
+| Drive watcher | only `DRIVE_TENANT`'s folders are processed (above). The engine's CLI loop (`engine/drive_watcher.py::run_loop`) is not reachable from the API. |
 
 ## Uploads and storage
 
