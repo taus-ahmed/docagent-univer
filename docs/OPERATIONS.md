@@ -68,8 +68,16 @@ Not read any more and safe to delete: `GROQ_*`. Not active yet (Phase 4):
 - **What happens to the database on deploy:** at every boot the backend runs
   its own additive migrations (`main.py::_run_migrations`), creates missing
   tables, then serves. In production a failed migration stops the boot, and the
-  healthcheck (`/health`, 120 s) keeps the previous deployment serving.
+  healthcheck (`/ready`, 120 s — see [ENVIRONMENTS.md](ENVIRONMENTS.md))
+  keeps the previous deployment serving.
   Data is not rewritten. Alembic migrations are manual and none are pending.
+- **After every deploy, smoke-test it** (stdlib only; credentials from the
+  environment, never printed; it creates two tiny jobs in firm A, cancels one
+  and hard-deletes the other):
+  `SMOKE_USER=… SMOKE_PASSWORD=… SMOKE_USER_B=… SMOKE_PASSWORD_B=… python scripts/smoke_test.py --base-url <backend URL>`.
+  Steps: `/health`, `/ready`, sign in, upload, job finishes, results, export,
+  firm B gets 404, cancel, delete. Exit 0 only when every step passed. Use a
+  dedicated smoke-test user per firm, not a client's account.
 - **Uploaded files on `STORAGE_BACKEND=local` are lost at every deploy**; job
   rows and results survive (they are in Postgres). Use R2 in production.
 - **Rollback:** Railway → backend service → Deployments → pick the last good
