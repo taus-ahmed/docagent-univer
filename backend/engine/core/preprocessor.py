@@ -289,7 +289,13 @@ def preprocess_file(file_path: str | Path) -> ProcessedDocument:
         )
 
     file_type = SUPPORTED_EXTENSIONS[ext]
-    return _process_pdf(file_path) if file_type == "pdf" else _process_image(file_path)
+    # The memory guard measures what THIS document adds (Part 3.6): a
+    # long-lived server or test process is not a runaway because it is big.
+    token = _MEM_BASE.set(memory_mb())
+    try:
+        return _process_pdf(file_path) if file_type == "pdf" else _process_image(file_path)
+    finally:
+        _MEM_BASE.reset(token)
 
 
 def _fix_cross_page_decimals(text: str) -> str:
@@ -359,6 +365,8 @@ def _fix_within_page_decimals(text: str) -> str:
 #: (str(file), page) -> a prefetched `_ocr_read` result, for the file being
 #: folded on this thread. A ContextVar, because jobs run on threads.
 _PREFETCH: ContextVar[dict] = ContextVar("ocr_prefetch", default={})
+#: resident MB when the current document's preprocessing began (memory guard)
+_MEM_BASE: ContextVar = ContextVar("ocr_mem_base", default=None)
 
 
 def ocr_workers() -> int:
@@ -414,6 +422,48 @@ def _await(future, limit):
 _POOL_FACTORY = _spawn_pool
 
 
+class PackedImage:
+    """A page image held as LOSSLESS PNG bytes and decoded only when used
+    (Part 3.6). The straightened image of every OCR page is kept for the whole
+    document — cheque regions are cut from it, the review screen shows it —
+    and as a bitmap that cost ~30 MB a page: a 100-page scan peaked at 4 GB,
+    300 pages would not fit. PNG keeps every pixel, so a crop, a resize and
+    anything sent to a model are byte-identical to the bitmap's.
+
+    Offers what the readers use: `width`, `height`, `size`, `mode`, `crop`,
+    `resize`, `convert`, `tobytes`, and `image()` for the decoded picture."""
+
+    __slots__ = ("data", "width", "height", "mode")
+
+    def __init__(self, image):
+        buf = io.BytesIO()
+        image.save(buf, "PNG", compress_level=1)
+        self.data = buf.getvalue()
+        self.width, self.height = image.size
+        self.mode = image.mode
+
+    @property
+    def size(self):
+        return (self.width, self.height)
+
+    def image(self):
+        img = Image.open(io.BytesIO(self.data))
+        img.load()
+        return img
+
+    def crop(self, box):
+        return self.image().crop(box)
+
+    def resize(self, size, *a, **k):
+        return self.image().resize(size, *a, **k)
+
+    def convert(self, *a, **k):
+        return self.image().convert(*a, **k)
+
+    def tobytes(self, *a, **k):
+        return self.image().tobytes(*a, **k)
+
+
 def _ocr_read(file_path, page_number, dpi=None, image=None) -> dict:
     """Render (unless `image` is given) and OCR one page; touches no document.
 
@@ -435,9 +485,13 @@ def _ocr_read(file_path, page_number, dpi=None, image=None) -> dict:
     except Exception as exc:
         return {"error": f"{type(exc).__name__}: {exc}", "stats": stats,
                 "dpi": dpi}
+    straightened = getattr(source, "_image", None)
+    # Packed HERE, in the worker: the pool pickles a few hundred KB back to
+    # the parent instead of a bitmap, and the parent never holds one.
     return {"text": text, "lines": lines, "repairs": repairs, "stats": stats,
             "applied": dict(source.applied),
-            "image": getattr(source, "_image", None), "dpi": dpi}
+            "image": PackedImage(straightened) if straightened is not None else None,
+            "dpi": dpi}
 
 
 #: What a pool worker runs for one page; tests substitute a slow reader.
@@ -503,6 +557,77 @@ def _prefetch_ocr(file_path, pages) -> dict:
     return {(key, n): r for n, r in reads.items()}
 
 
+#: OCR_MEMORY_LIMIT_MB: past this much memory ADDED while one document is
+#: preprocessed, its remaining pages are not read (Part 3.6). Measured on THIS
+#: process; each OCR worker holds one page at a time. A 300-page scan peaked
+#: at ~1.5 GB for the process and four workers together (OPERATIONS §11).
+_MEMORY_DEFAULT_MB = 3072
+
+
+def memory_mb():
+    """This process's resident memory in MB, or None where it cannot be read
+    (no dependency: /proc on Linux, the Win32 API on Windows)."""
+    try:
+        with open("/proc/self/status", encoding="ascii") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024.0
+    except OSError:
+        pass
+    if os.name == "nt":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class _PMC(ctypes.Structure):
+                _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                            ("PeakWorkingSetSize", ctypes.c_size_t),
+                            ("WorkingSetSize", ctypes.c_size_t),
+                            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                            ("PagefileUsage", ctypes.c_size_t),
+                            ("PeakPagefileUsage", ctypes.c_size_t)]
+            pmc = _PMC()
+            pmc.cb = ctypes.sizeof(_PMC)
+            # declared types: an untyped call truncates the 64-bit handle
+            current = ctypes.windll.kernel32.GetCurrentProcess
+            current.restype = wintypes.HANDLE
+            info = ctypes.windll.psapi.GetProcessMemoryInfo
+            info.argtypes = [wintypes.HANDLE, ctypes.POINTER(_PMC), wintypes.DWORD]
+            info.restype = wintypes.BOOL
+            if info(current(), ctypes.byref(pmc), pmc.cb):
+                return pmc.WorkingSetSize / (1024.0 * 1024.0)
+        except Exception:
+            return None
+    return None
+
+
+def memory_limit_mb() -> float:
+    """OCR_MEMORY_LIMIT_MB (default 3072); 0 or less turns the guard off."""
+    raw = (os.environ.get("OCR_MEMORY_LIMIT_MB") or "").strip()
+    try:
+        return float(raw) if raw else float(_MEMORY_DEFAULT_MB)
+    except ValueError:
+        return float(_MEMORY_DEFAULT_MB)
+
+
+def _over_memory():
+    """A sentence when this process is past OCR_MEMORY_LIMIT_MB, else None."""
+    limit = memory_limit_mb()
+    if limit <= 0:
+        return None
+    used, base = memory_mb(), _MEM_BASE.get()
+    if used is None:
+        return None
+    added = used - (base or 0.0)
+    if added <= limit:
+        return None
+    return (f"MemoryGuard: this document has added {added:.0f} MB to the "
+            f"process, over OCR_MEMORY_LIMIT_MB={limit:.0f}; the page was not read")
+
+
 def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
               stats: dict, image=None, dpi=None):
     """(text, lines, repairs) for a page with no text layer, read by OCR.
@@ -526,6 +651,13 @@ def _ocr_page(file_path: Path, page_number: int, doc: "ProcessedDocument",
     read = None
     if image is None:
         read = _PREFETCH.get().pop((str(file_path), page_number), None)
+    # RUNAWAY MEMORY (Part 3.6): past OCR_MEMORY_LIMIT_MB a page is not read
+    # — a named failure like any unread page (ocr_failed_pages, a note naming
+    # the setting, review) instead of the process being killed mid-job and
+    # every page lost. Checked before each page, so a long scan stops early.
+    guard = _over_memory()
+    if guard:
+        read = {"error": guard, "stats": {}, "dpi": dpi}
     if read is None:
         read = _ocr_read(file_path, page_number, dpi=dpi, image=image)
     stats.update(read["stats"])

@@ -662,8 +662,10 @@ The record keeps every value and goes to review — never hidden. Gold
 `INV-2024-0031` prints a PAID line and is flagged (a true positive). A dark
 filled rectangle on a native page is a redaction bar: values read from words
 beneath it are BLANKED and every empty slot carries `redacted_or_obscured`; a
-dark, grey-washed or barred scan page does the same. ⚠ A blank WHITE page is
-not obscured (found by `scripts/run_local_corpus.py`).
+near-black or grey-washed scan page does the same. ⚠ A blank WHITE page is
+not obscured (found by `scripts/run_local_corpus.py`). ⚠ **A bar on a SCAN is
+not detected**: two pixel rules for it flagged 6 of 60 test images, all real
+cheque photos.
 
 ### Selection state (D7)
 

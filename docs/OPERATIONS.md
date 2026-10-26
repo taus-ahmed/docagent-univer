@@ -54,6 +54,7 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `BCRYPT_ROUNDS` | `12` | | password hashing cost (tests use 4) |
 | `OCR_WORKERS` | `2` | | OCR pool size per file; default min(4, CPUs); `1` = serial (§11) |
 | `OCR_PROBE_TIMEOUT_S`, `OCR_RENDER_TIMEOUT_S`, `OCR_TESSERACT_TIMEOUT_S`, `OCR_PAGE_TIMEOUT_S`, `OCR_POOL_TIMEOUT_S` | `15`, `120`, `120`, `300`, `1800` | | deadlines for the page renderer and the OCR reader (§11) |
+| `OCR_MEMORY_LIMIT_MB` | `3072` | | memory one document's preprocessing may add before its remaining OCR pages fail by name; `0` = off (§11) |
 | `NEXT_PUBLIC_API_URL` (Vercel) | the backend URL | E | where the browser app sends requests |
 
 Not read any more and safe to delete: `GROQ_*`. Not active yet (Phase 4):
@@ -223,6 +224,38 @@ When the pool passes a deadline it is stopped (its workers and their tools
 killed) and the remaining pages are read one at a time, each still under the
 per-call deadlines; their OCR record carries `pool_fallback` saying why.
 Cancelling a job stops the pool the same way.
+
+**Memory guard.** `OCR_MEMORY_LIMIT_MB` (default `3072`; `0` = off): once
+preprocessing ONE document has added this much resident memory to the
+process, its remaining OCR pages are not read — each is a named failure
+(`ocr_failed_pages`, a note `MemoryGuard: … OCR_MEMORY_LIMIT_MB …`, review
+required) instead of the container being killed mid-job with every page lost.
+It measures what the document adds, so a long-running server is not a runaway
+because it is large. Each OCR worker holds one page at a time.
+
+**Time and memory, measured** (Part 3.6; generated image-only statements,
+30 lines a page, 200 dpi scan, the offline stub model; a 16-core Windows
+machine — a Railway container is slower: measure with `OCR_WORKERS` there):
+
+| pages | `OCR_WORKERS=4` time | peak memory (process + workers) | `OCR_WORKERS=1` time | peak memory |
+|---|---|---|---|---|
+| 10 | 32 s | 0.9 GB | 76 s | 0.25 GB |
+| 100 | 3.8 min | 1.1 GB | ~12.5 min (est.) | — |
+| 300 | 10.7 min | 1.5 GB | 34 min | 1.0 GB |
+
+Before Part 3.6 every OCR page's straightened image was kept as a bitmap for
+the whole document: 100 pages peaked at **4.2 GB** and 300 would have needed
+~12 GB. Pages are now rendered and read one at a time and their images kept
+as lossless PNG (`PackedImage`), so memory is nearly flat in the page count.
+A native (digital) PDF needs no OCR and takes seconds.
+
+**Model calls per document:** ONE slot-extraction call per document in the
+file (a file split into N documents makes N calls), plus one inference call
+per document when no template is chosen, plus at most `OPTION_MAX_CALLS_PER_JOB`
+for the options (summary, anomaly, categorize). The call carries the whole
+document's text: ~16 k characters for 10 statement pages, ~420 k for 300
+(≈ 105 k tokens; within the model's context, and the cost scales with it).
+Note `MAX_PDF_PAGES` (200) refuses a 300-page upload unless raised.
 
 **Tuning.** Raise `OCR_RENDER_TIMEOUT_S` / `OCR_TESSERACT_TIMEOUT_S` only if
 logs show `did not finish within` on large, legitimate pages on a slow

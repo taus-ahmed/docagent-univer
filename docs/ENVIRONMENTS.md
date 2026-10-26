@@ -31,7 +31,7 @@ in staging and production when missing or weak.
 | `MAX_PDF_PAGES` | `200` | `200` | `200` | per PDF; the refusal states the file's page count. Raise only with a recorded reason (memory: [OPERATIONS.md](OPERATIONS.md) §11) |
 | `MAX_IMAGE_PIXELS` | `50000000` | `50000000` | `50000000` | per image (≈ A4 at 600 dpi is 35 M); the refusal states the image's pixel count |
 | `TENANT_MONTHLY_PAGE_LIMIT`, `DATA_RETENTION_DAYS`, `DRIVE_TENANT` | off | as agreed | as agreed | |
-| `OCR_*` deadlines, `OCR_WORKERS` | defaults | defaults | defaults | [OPERATIONS.md](OPERATIONS.md) §11 |
+| `OCR_*` deadlines, `OCR_WORKERS`, `OCR_MEMORY_LIMIT_MB` | defaults | defaults | defaults (memory guard `3072`, below the container's memory) | [OPERATIONS.md](OPERATIONS.md) §11 |
 | `DOCAGENT_BOOTSTRAP_ADMIN_*` **S** | optional | first boot only | first boot only, then remove the password | |
 | `NEXT_PUBLIC_API_URL` (frontend) | `http://localhost:8000` | staging backend URL | production backend URL | build-time |
 | `BACKEND_URL` (frontend server) | `http://localhost:8000` | staging backend URL | production backend URL | used by the Next.js proxy route |

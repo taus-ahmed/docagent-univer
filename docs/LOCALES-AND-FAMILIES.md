@@ -120,7 +120,7 @@ currency, ambiguous dates) raises its own flag.
 | several documents in one file | split where a new reference corroborates a candidate. Where nothing can decide: ONE record, `possible_multiple_documents`, with the pages |
 | stamped VOID / SPECIMEN / COPY / DUPLICATE / NON-NEGOTIABLE / CANCELLED / TEST ONLY | `void_marker` on every value, review |
 | stamped PAID | `paid_marker` on every value, review |
-| painted over, or too dark to read | a value from beneath a bar is blanked; empty slots carry `redacted_or_obscured` |
+| painted over, or too dark to read | on a native page, a value from beneath a dark filled rectangle is blanked; a near-black or grey-washed scan page counts too; empty slots carry `redacted_or_obscured`. A bar on a scan is not detected (its words are unreadable to OCR as well, and come back empty) |
 | password-protected PDF | opened with the password given at upload, per file; never stored |
 | a table continued over pages | kept whole only when the document numbers the next page of the run **and** reprints the heading; otherwise the other pages' rows are left out, one flag each |
 | a table's own total line | left out when its amounts equal the sum of the rows above, and flagged |
