@@ -1523,6 +1523,24 @@ def get_date_fields(doc_type: str) -> list:
 def get_all_types() -> list:
     return [k for k in PROMPT_REGISTRY if k != "other"]
 
+_HINT_PATTERNS: dict[str, "re.Pattern"] = {}
+
+
+def _hint_in(hint: str, text_lower: str) -> bool:
+    """A hint matches as a WHOLE WORD (Part 3.2): `tin` is not in "continued",
+    `pan` is not in "company". The boundary is required only on a side where
+    the hint ends in a letter or digit, so a stem ending in punctuation
+    (`inv-`, `p.o.`, `po #`) still matches "inv-2024-0031"."""
+    pat = _HINT_PATTERNS.get(hint)
+    if pat is None:
+        import re
+        pat = re.compile((r"(?<![a-z0-9])" if hint[:1].isalnum() else "")
+                         + re.escape(hint)
+                         + (r"(?![a-z0-9])" if hint[-1:].isalnum() else ""))
+        _HINT_PATTERNS[hint] = pat
+    return pat.search(text_lower) is not None
+
+
 def classify_by_hints(text: str) -> Optional[str]:
     """Fast keyword pre-screening before LLM classifier."""
     text_lower = text[:5000].lower()
@@ -1531,7 +1549,7 @@ def classify_by_hints(text: str) -> Optional[str]:
         if doc_type == "other":
             continue
         score = sum(1 for hint in entry.get("auto_classify_hints", [])
-                    if hint in text_lower)
+                    if _hint_in(hint, text_lower))
         if score > 0:
             scores[doc_type] = score
     if not scores:

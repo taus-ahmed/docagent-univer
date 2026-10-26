@@ -266,7 +266,12 @@ class TestTheRealClosingDisclosure:
         from doc_boundaries import _doc_type
         types = [_doc_type(t) for t in cd]
         assert types[3] == "bank_statement"
-        assert types[5] == "tax_form"
+        # Part 3.2: page 6 read as a tax form only through a substring hit
+        # (`tin` inside another word). With whole-word hints the pages read as
+        # receipt / bank statement / sales invoice — MORE type changes, and the
+        # form is still one document (test_it_is_one_document).
+        assert types[5] != "tax_form"
+        assert len({t for t in types if t}) >= 3, types
 
     def test_the_form_states_its_own_extent_on_every_page_but_the_cover(self, cd):
         from doc_boundaries import page_of
