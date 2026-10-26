@@ -59,6 +59,11 @@ ALLOWLIST = {
 ROUTES = {
     ("GET", "/api/auth/me"): "self",
     ("PUT", "/api/auth/me"): "self",
+    ("POST", "/api/auth/change-password"): "self",
+    ("POST", "/api/admin/tenants"): "body",
+    ("GET", "/api/admin/tenants"): "list",
+    ("POST", "/api/admin/tenants/{client_id}/deactivate"): "id",
+    ("POST", "/api/admin/tenants/{client_id}/activate"): "id",
     ("POST", "/api/extract/upload"): "body",
     ("GET", "/api/jobs"): "list",
     ("GET", "/api/jobs/{job_id}"): "id",
@@ -335,7 +340,7 @@ def test_firm_a_records_survive_every_attack(client, firms, db):
 
 LIST_ROUTES = [("GET", "/api/jobs"), ("GET", "/api/templates"), ("GET", "/api/schemas"),
                ("GET", "/api/watch"), ("GET", "/api/admin/users"),
-               ("GET", "/api/auth/me")]
+               ("GET", "/api/auth/me"), ("GET", "/api/admin/tenants")]
 
 
 @pytest.mark.parametrize("route", LIST_ROUTES, ids=lambda r: r[1])
@@ -375,6 +380,25 @@ def test_self_routes_touch_only_the_caller(client, firms, role):
                    json={"client_id": A, "role": "admin"})
     assert r.status_code == 200 and r.json()["client_id"] == B
     assert r.json()["role"] == firms[B].users[role].role
+
+
+@pytest.mark.parametrize("role", B_ROLES)
+def test_change_password_touches_only_the_caller(client, firms, role, db):
+    from app.models.models import User
+    before = db.get(User, firms[A].users[role].id).password_hash
+    r = client.post("/api/auth/change-password", headers=firms[B].hdr[role],
+                    json={"current_password": "wrong", "new_password": "x" * 14})
+    assert r.status_code == 400
+    db.expire_all()
+    assert db.get(User, firms[A].users[role].id).password_hash == before
+
+
+@pytest.mark.parametrize("role", B_ROLES)
+def test_only_the_platform_admin_creates_a_firm(client, firms, role):
+    r = client.post("/api/admin/tenants", headers=firms[B].hdr[role],
+                    json={"client_id": "isoCfirm", "client_name": "c",
+                          "admin_username": f"isoC_{role}"})
+    assert r.status_code == 403
 
 
 def test_a_new_template_lands_in_the_callers_firm(client, firms, db):

@@ -31,6 +31,9 @@ class UserResponse(BaseModel):
     #: What this user's role may do (`permissions.permissions_of`), for the UI
     #: to hide controls; the server checks every request regardless.
     permissions: list[str] = []
+    #: The account still has a one-time password (`auth.is_one_time`): the UI
+    #: sends the user to choose their own before anything else.
+    must_change_password: bool = False
     #: Is this user's tenant one of DEMO_CLIENT_IDS? Computed per response from
     #: the configured list, NEVER stored: the demo is a deployment setting, and
     #: a column would let a row disagree with the variable that actually gates
@@ -54,6 +57,9 @@ class UserCreate(BaseModel):
     password: str = Field(..., min_length=6)
     role: str = Field(default="client", pattern="^(admin|client|reviewer)$")
     client_id: Optional[str] = Field(default=None, pattern=CLIENT_ID_PATTERN)
+    #: The password is a temporary one the admin will hand over: the user must
+    #: replace it at first sign-in.
+    must_change_password: bool = False
 
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
@@ -64,6 +70,13 @@ class UserUpdate(BaseModel):
                                 pattern="^(admin|client|reviewer|company_admin)$")
     client_id: Optional[str] = Field(default=None, pattern=CLIENT_ID_OR_EMPTY)
     is_active: Optional[bool] = None
+    #: With `password`: a reset to a temporary password the user must replace.
+    must_change_password: Optional[bool] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=200)
+    new_password: str = Field(..., min_length=12, max_length=200)
 
 
 # ─── Jobs ─────────────────────────────────────────────────────────────────────

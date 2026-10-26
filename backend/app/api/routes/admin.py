@@ -5,20 +5,25 @@ POST /api/admin/users         — create user
 PUT  /api/admin/users/{id}    — update user
 DELETE /api/admin/users/{id}  — deactivate user
 GET  /api/admin/stats         — system stats
+POST /api/admin/tenants       — create a firm + its first admin (platform admin)
+GET  /api/admin/tenants       — firms, user counts, page usage (platform admin)
+POST /api/admin/tenants/{id}/deactivate | activate — every user of a firm
 """
 
 from datetime import datetime, timedelta
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.core.auth import hash_password
+from app.core.auth import hash_password, is_one_time
 from app.core.permissions import PLATFORM_ADMIN, require, role_of
 from app.core.demo import is_demo_user
 from app.core.confidence import CONFIDENT_LEVELS
 from app.models import get_db, User, ExtractionJob, DocumentResult
 from app.schemas.schemas import (
-    UserCreate, UserUpdate, UserResponse, SystemStats,
+    CLIENT_ID_PATTERN, UserCreate, UserUpdate, UserResponse, SystemStats,
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -64,7 +69,8 @@ def create_user(
         username=payload.username,
         display_name=payload.display_name,
         email=payload.email,
-        password_hash=hash_password(payload.password),
+        password_hash=hash_password(payload.password,
+                                    one_time=payload.must_change_password),
         role=payload.role,
         client_id=payload.client_id,
     )
@@ -96,7 +102,8 @@ def update_user(
     if payload.password is not None:
         if len(payload.password) < 6:
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-        user.password_hash = hash_password(payload.password)
+        user.password_hash = hash_password(
+            payload.password, one_time=bool(payload.must_change_password))
     if payload.role is not None:
         if user.id == current_admin.id and payload.role != user.role:
             raise HTTPException(status_code=400, detail="Cannot change your own role")
@@ -205,4 +212,73 @@ def _user_to_response(u: User) -> UserResponse:
         client_id=u.client_id,
         is_demo=is_demo_user(u),
         is_active=u.is_active,
+        must_change_password=is_one_time(u.password_hash),
     )
+
+
+# ── firms (platform admin) ───────────────────────────────────────────────────
+
+class TenantCreate(BaseModel):
+    client_id: str = Field(..., pattern=CLIENT_ID_PATTERN)
+    client_name: str = Field(..., min_length=1, max_length=200)
+    admin_username: str = Field(..., min_length=3, max_length=50)
+    admin_display_name: Optional[str] = None
+
+
+@router.post("/tenants", status_code=201)
+def create_tenant_route(payload: TenantCreate, db: Session = Depends(get_db),
+                        current_admin: User = Depends(require("tenant.all"))):
+    """A new firm: its schema (the default accounting schema, renamed) and its
+    first administrator, whose ONE-TIME password is in this response and
+    nowhere else (`core/tenants.py`). Platform admin only."""
+    from app.core.tenants import TenantError, create_tenant
+    try:
+        return create_tenant(db, payload.client_id, payload.client_name,
+                             payload.admin_username, payload.admin_display_name,
+                             created_by=current_admin.id)
+    except TenantError as e:
+        code = 409 if ("exists" in str(e) or "taken" in str(e)) else 400
+        raise HTTPException(status_code=code, detail=str(e))
+
+
+@router.get("/tenants")
+def list_tenants(db: Session = Depends(get_db),
+                 _: User = Depends(require("tenant.all"))):
+    """Every firm (a schema, or users carrying its client_id), with its user
+    counts and this month's page usage. Platform admin only."""
+    from app.core.usage import usage
+    from app.models.models import ClientSchema
+    names = {s.client_id: s.client_name for s in db.query(ClientSchema).all()}
+    ids = set(names) | {c for (c,) in db.query(User.client_id).distinct() if c}
+    out = []
+    for cid in sorted(ids):
+        users = db.query(User).filter(User.client_id == cid)
+        out.append({"client_id": cid, "client_name": names.get(cid),
+                    "users": users.count(),
+                    "active_users": users.filter(User.is_active == True).count(),
+                    "usage": usage(db, cid)})
+    return out
+
+
+def _set_tenant(db, client_id: str, active: bool) -> dict:
+    from app.core.tenants import set_tenant_active
+    from app.models.models import ClientSchema
+    if not (db.query(User).filter(User.client_id == client_id).first()
+            or db.query(ClientSchema).filter(ClientSchema.client_id == client_id).first()):
+        raise HTTPException(status_code=404, detail="Firm not found")
+    return {"client_id": client_id, "active": active,
+            "users_changed": set_tenant_active(db, client_id, active)}
+
+
+@router.post("/tenants/{client_id}/deactivate")
+def deactivate_tenant(client_id: str, db: Session = Depends(get_db),
+                      _: User = Depends(require("tenant.all"))):
+    """Every user of the firm is deactivated: no sign-in, every token they
+    hold stops working at once. Data is kept (delete it per job)."""
+    return _set_tenant(db, client_id, False)
+
+
+@router.post("/tenants/{client_id}/activate")
+def activate_tenant(client_id: str, db: Session = Depends(get_db),
+                    _: User = Depends(require("tenant.all"))):
+    return _set_tenant(db, client_id, True)

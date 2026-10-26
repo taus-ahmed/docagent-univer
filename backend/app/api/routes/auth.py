@@ -15,14 +15,14 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.auth import (
     verify_password, needs_rehash, verify_unknown_user, create_access_token,
-    get_current_user, hash_password,
+    get_current_user, hash_password, is_one_time,
 )
 from app.core.permissions import permissions_of
 from app.core.demo import is_demo_user
 from app.core import demo_audit
 from app.models import get_db, User
 from app.schemas.schemas import (
-    LoginRequest, TokenResponse, UserResponse, UserUpdate,
+    ChangePasswordRequest, LoginRequest, TokenResponse, UserResponse, UserUpdate,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -120,7 +120,8 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     # the login: the old hash still verifies and is upgraded next time.
     if needs_rehash(user.password_hash):
         try:
-            user.password_hash = hash_password(payload.password)
+            user.password_hash = hash_password(
+                payload.password, one_time=is_one_time(user.password_hash))
         except Exception as exc:
             print(f"[AUTH] password rehash skipped for user {user.id}: "
                   f"{type(exc).__name__}", flush=True)
@@ -152,6 +153,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
             is_active=user.is_active,
             is_demo=is_demo_user(user),
             permissions=permissions_of(user),
+            must_change_password=is_one_time(user.password_hash),
         ),
     )
 
@@ -169,6 +171,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         is_active=current_user.is_active,
         is_demo=is_demo_user(current_user),
         permissions=permissions_of(current_user),
+        must_change_password=is_one_time(current_user.password_hash),
     )
 
 
@@ -201,7 +204,29 @@ def update_me(
         is_active=current_user.is_active,
         is_demo=is_demo_user(current_user),
         permissions=permissions_of(current_user),
+        must_change_password=is_one_time(current_user.password_hash),
     )
+
+
+@router.post("/change-password", response_model=UserResponse)
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Replace the caller's password, proving the current one. The only way
+    out of a one-time password (`auth.is_one_time`); the new one is never
+    one-time and must differ from it."""
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="The current password is not right")
+    if payload.new_password == payload.current_password:
+        raise HTTPException(status_code=400,
+                            detail="Choose a password different from the current one")
+    current_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    db.refresh(current_user)
+    print(f"[AUTH] user {current_user.id} changed their password", flush=True)
+    return get_me(current_user)
 
 
 @router.post("/logout")

@@ -11,7 +11,7 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -35,6 +35,21 @@ security = HTTPBearer()
 # only ever upgraded by someone who has just proved they know the password.
 _BCRYPT_PREFIX = "bcrypt-sha256$"
 
+# A ONE-TIME password (one an administrator or `scripts/create_tenant.py` set
+# for someone else) is the same hash behind this marker. It signs in, and
+# `get_current_user` then refuses every route but ONE_TIME_ALLOWED until the
+# owner chooses their own (`POST /api/auth/change-password`). No column, no
+# migration: the marker lives and dies with the hash it describes.
+_ONE_TIME_PREFIX = "otp$"
+ONE_TIME_ALLOWED = {("GET", "/api/auth/me"), ("POST", "/api/auth/change-password"),
+                    ("POST", "/api/auth/logout")}
+ONE_TIME_MESSAGE = ("Choose your own password first: this account still has its "
+                    "one-time password.")
+
+
+def is_one_time(password_hash) -> bool:
+    return str(password_hash or "").startswith(_ONE_TIME_PREFIX)
+
 
 def _bcrypt_rounds() -> int:
     """Cost factor; BCRYPT_ROUNDS (4–16) exists so a test suite can run fast."""
@@ -48,15 +63,18 @@ def _prehash(password: str) -> bytes:
     return base64.b64encode(hashlib.sha256(password.encode("utf-8")).digest())
 
 
-def hash_password(password: str) -> str:
-    """A bcrypt hash of `password` (see above)."""
+def hash_password(password: str, one_time: bool = False) -> str:
+    """A bcrypt hash of `password` (see above); marked one-time on request."""
     import bcrypt
     h = bcrypt.hashpw(_prehash(password), bcrypt.gensalt(_bcrypt_rounds()))
-    return _BCRYPT_PREFIX + h.decode("ascii")
+    return (_ONE_TIME_PREFIX if one_time else "") + _BCRYPT_PREFIX + h.decode("ascii")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
     """Verify a password against a stored hash of either scheme."""
+    password_hash = str(password_hash or "")
+    if password_hash.startswith(_ONE_TIME_PREFIX):
+        password_hash = password_hash[len(_ONE_TIME_PREFIX):]
     try:
         if password_hash.startswith(_BCRYPT_PREFIX):
             import bcrypt
@@ -70,7 +88,10 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def needs_rehash(password_hash: str) -> bool:
-    """True for a legacy hash, or a bcrypt hash below the current cost."""
+    """True for a legacy hash, or a bcrypt hash below the current cost. The
+    one-time marker is not part of the question (a rehash keeps it)."""
+    if is_one_time(password_hash):
+        password_hash = password_hash[len(_ONE_TIME_PREFIX):]
     if not (password_hash or "").startswith(_BCRYPT_PREFIX):
         return True
     try:
@@ -120,6 +141,7 @@ def decode_token(token: str) -> dict:
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
+    request: Request = None,
 ) -> User:
     """Dependency: extract + verify JWT, return current User ORM object."""
     token = credentials.credentials
@@ -138,6 +160,10 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
+    if (request is not None and is_one_time(user.password_hash)
+            and (request.method, request.url.path) not in ONE_TIME_ALLOWED):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=ONE_TIME_MESSAGE)
     return user
 
 
