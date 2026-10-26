@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Run a folder of PDFs through the engine, offline (Part 3.4 d). Not a test.
 
-    python scripts/run_local_corpus.py [--dir E:\\docagent-testdocs]
+    python scripts/run_local_corpus.py [--dir <folder>]   (or DOCAGENT_TESTDOCS)
            [--provider stub|replay] [--template t.json] [--doc-type invoice]
 
 For every PDF under --dir: the records the engine finds (one file can be
@@ -28,7 +28,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "backend"), str(ROOT / "backend" / "engine")]
-DEFAULT_DIR = r"E:\docagent-testdocs"
+#: the folder, when --dir is not given (a local path: never committed)
+DEFAULT_DIR = os.environ.get("DOCAGENT_TESTDOCS", "")
 
 
 def _reasons(ed):
@@ -66,8 +67,8 @@ def main(argv=None) -> int:
     ap.add_argument("--doc-type", default=None)
     a = ap.parse_args(argv)
     folder = Path(a.dir)
-    if not folder.is_dir():
-        print(f"{folder}: no such folder — nothing to run (see PROGRESS BLOCKED)")
+    if not a.dir or not folder.is_dir():
+        print(f"{a.dir or "(no folder: pass --dir or set DOCAGENT_TESTDOCS)"}: no such folder — nothing to run")
         return 2
     pdfs = sorted(folder.rglob("*.pdf"))
     if not pdfs:
