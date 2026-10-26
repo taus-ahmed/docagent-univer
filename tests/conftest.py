@@ -91,12 +91,16 @@ def pytest_collection_modifyitems(config, items):
 
 
 def _as_replay_skip(item, exc):
+    """Under `skip`, a MARKED test's mismatch becomes a named skip. An
+    UNMARKED test's is left to fail (Run 15): a test that quietly came to
+    depend on the replay cache must say so with the marker, not vanish."""
     from tests.harness.llm_cache import ReplayEnvironmentError
     if isinstance(exc, ReplayEnvironmentError) and _replay_policy() == "skip":
         marked = item.get_closest_marker("replay") is not None
         _REPLAY_SKIPS.append((item.nodeid, marked))
-        pytest.skip("REPLAY ENVIRONMENT MISMATCH (not a test failure): "
-                    + str(exc).split(". ")[0])
+        if marked:
+            pytest.skip("REPLAY ENVIRONMENT MISMATCH (not a test failure): "
+                        + str(exc).split(". ")[0])
 
 
 @pytest.hookimpl(wrapper=True)
@@ -120,10 +124,17 @@ def pytest_runtest_call(item):
 def pytest_terminal_summary(terminalreporter):
     if not _REPLAY_SKIPS:
         return
+    marked = [n for n, m in _REPLAY_SKIPS if m]
     unmarked = [n for n, m in _REPLAY_SKIPS if not m]
-    terminalreporter.write_sep(
-        "=", f"{len(_REPLAY_SKIPS)} replay-dependent test(s) SKIPPED: this "
-             f"machine renders page images differently from the one that "
-             f"recorded tests/llm_cache", yellow=True)
-    for n in unmarked:
-        terminalreporter.write_line(f"  not marked `replay` (add it): {n}")
+    if marked:
+        terminalreporter.write_sep(
+            "=", f"{len(marked)} replay-dependent test(s) SKIPPED: this "
+                 f"machine renders page images differently from the one that "
+                 f"recorded tests/llm_cache", yellow=True)
+    if unmarked:
+        terminalreporter.write_sep(
+            "=", f"{len(unmarked)} UNMARKED test(s) raised "
+                 f"ReplayEnvironmentError and FAILED (mark them `replay`)",
+            red=True)
+        for n in unmarked:
+            terminalreporter.write_line(f"  {n}")
