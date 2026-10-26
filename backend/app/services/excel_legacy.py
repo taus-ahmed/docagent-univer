@@ -308,11 +308,15 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 print(f"[EXPORT] layout: doc {block_idx+1} expanded — "
                       f"overflow per band (template_end_row, rows) {_ov}", flush=True)
         else:
-            # ── Legacy fallback: no column groups — write at the AI's row numbers ──
-            for sec in (ls.values() if isinstance(ls, dict) else []):
-                if not isinstance(sec, dict):
-                    continue
-                for row in sec.get("rows", []) or []:
+            # ── Legacy fallback: no column groups — write at the AI's row numbers.
+            #    Every section is "unmatched" here (there is no group to match),
+            #    so STEP 4 used to write each one a SECOND time below the
+            #    template (Part 3.2). It now gets only the rows this pass could
+            #    not place; the de-duplicated `kept` list is the source, as for
+            #    the grouped path. ──
+            placed = set()
+            for _k, rows in kept:
+                for row in rows:
                     if not isinstance(row, dict):
                         continue
                     try:
@@ -321,12 +325,18 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                         continue
                     lci = _col_idx(row.get("label_col"))
                     vci = _col_idx(row.get("value_col"))
+                    if not (lci or vci):
+                        continue
+                    placed.add(id(row))
                     if lci and row.get("label") not in (None, ""):
                         ws.cell(row=rnum + doc_offset, column=lci).value = str(row.get("label"))
                     if vci and row.get("value") not in (None, ""):
                         _set_num(ws.cell(row=rnum + doc_offset, column=vci), row.get("value"))
                         _row_mark(ws.cell(row=rnum + doc_offset, column=vci), row,
                                   row.get("value"))
+            unmatched = [(k, [r for r in rows if id(r) not in placed])
+                         for k, rows in unmatched]
+            unmatched = [(k, rows) for k, rows in unmatched if rows]
 
         # ── 3. Fixed cells (totals) by reference, row-shifted ──
         for ref, v in (ed.get("extracted_fields", {}) or {}).items():

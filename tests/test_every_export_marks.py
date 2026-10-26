@@ -329,10 +329,10 @@ WRITERS = {
     "form": (MARKED | ROW_MARKED, CLEAN | ROW_CLEAN, 8),
     "table": (ROW_MARKED, ROW_CLEAN, 4),
     "mixed": (MARKED | ROW_MARKED, CLEAN | ROW_CLEAN, 8),
-    # 3, not 2: the legacy layout writer writes this fixture's section twice
-    # (B2-B4, then B3-B5), so lay-low sits in TWO cells and the header counts
-    # cells. Legacy jobs only; recorded in PROGRESS (Run 15), not changed here.
-    "layout": ({"lay-low", "lay-none"}, {"lay-high"}, 3),
+    # 2: lay-low and lay-none, each in ONE cell. It read 3 while the legacy
+    # layout writer wrote this fixture's section twice (Part 3.2,
+    # tests/test_layout_writer_once.py).
+    "layout": ({"lay-low", "lay-none"}, {"lay-high"}, 2),
     "flat": (MARKED, CLEAN, 5),
     "combined": (MARKED, CLEAN, 5),
     "per_file": (MARKED, CLEAN, 5),
