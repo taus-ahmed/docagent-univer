@@ -240,12 +240,23 @@ def _release_stranded_jobs():
                 .filter(ExtractionJob.status.in_(("pending", "processing"))).all())
         if not jobs:
             return
-        # Results are committed when a job FINISHES, so a job cut off mid-way
-        # has none; the message says so, and the reason travels as a mark.
-        msg = ("Interrupted by a server restart before it finished. "
-               "Nothing was saved for this job — upload the files again.")
+        # Each FILE is committed when it finishes (job_worker._commit_file),
+        # so a job cut off mid-way may hold results for the files before the
+        # one in flight. The message says which is true, and the reason
+        # travels as a mark.
+        from app.models.models import DocumentResult
         now = datetime.utcnow()
         for job in jobs:
+            saved = (db.query(DocumentResult)
+                     .filter(DocumentResult.job_id == job.id).count())
+            if saved:
+                msg = ("Interrupted by a server restart before it finished. "
+                       f"{saved} of {job.total_docs or '?'} document result(s) "
+                       "had been saved and are kept; upload the remaining "
+                       "files again.")
+            else:
+                msg = ("Interrupted by a server restart before it finished. "
+                       "Nothing was saved for this job — upload the files again.")
             job.status = "failed"
             job.error_message = msg
             job.progress_message = msg

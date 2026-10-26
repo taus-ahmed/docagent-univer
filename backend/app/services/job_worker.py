@@ -555,6 +555,13 @@ def _cancel_probe(session_factory, job_id):
     return probe
 
 
+def _commit_file(session, staged) -> None:
+    """Store every record of one file in ONE transaction, or none of them."""
+    for doc, _ok, _tokens in staged:
+        session.add(doc)
+    session.commit()
+
+
 def _persist_cancelled(session_factory, job_id, names) -> None:
     """One row per file that did not finish, saying it was cancelled — never a
     row that looks like a result (no extraction_json, needs_review)."""
@@ -778,6 +785,16 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 if is_cancelled(force=True):
                     raise Cancelled()
 
+                # ONE FILE, ONE TRANSACTION. Every record of this file is
+                # built first (`staged`) and nothing touches the session until
+                # one last cancel check has passed; then all of them are
+                # committed together (`_commit_file`). A cancel before that
+                # check — or raised while a record is being built — discards
+                # the whole file, which is then listed as cancelled; a cancel
+                # after it lets the file complete and be saved whole. A
+                # record could no longer be stored half-way through a file.
+                staged = []          # (doc, success, tokens)
+                file_failures = []   # (ref, error) for records not built
                 for result in results:
                     result.filename = _result_display_name(
                         getattr(result, "filename", ""), display_filename)
@@ -888,33 +905,45 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                                          if result.extraction_response else 0),
                             latency_ms=result.processing_time_ms,
                         )
-                        session.add(doc)
-                        session.flush()
-
                         doc_tokens = (result.extraction_response.tokens_used
                                       if result.extraction_response else 0) or 0
-                        total_tokens_used += doc_tokens
-                        doc_cost = (doc_tokens / 1_000_000) * 0.15
-                        total_cost_usd += doc_cost
-
-                        print(f"[THREAD] saved: {doc_ref(result.filename)} "
-                              f"tokens={doc_tokens} cost=${doc_cost:.5f} "
-                              f"| job_total={total_tokens_used} tokens "
-                              f"${total_cost_usd:.4f}", flush=True)
-
-                        if result.success:
-                            successful += 1
-                            if doc.needs_review:
-                                needs_review += 1
-                        else:
-                            failed += 1
+                        staged.append((doc, bool(result.success), doc_tokens))
 
                     except Exception as save_err:
                         print(f"[THREAD] SAVE ERROR for {doc_ref(result.filename)}: {exc_brief(save_err)}", flush=True)
                         print_safe_traceback()
+                        file_failures.append((getattr(result, "filename", fp), save_err))
+
+                # The last moment a cancel discards this file.
+                if is_cancelled(force=True):
+                    raise Cancelled()
+                try:
+                    _commit_file(session, staged)
+                except Exception as commit_err:
+                    session.rollback()
+                    print(f"[THREAD] SAVE ERROR for {doc_ref(display_filename)}: "
+                          f"{exc_brief(commit_err)} — none of its "
+                          f"{len(staged)} record(s) were stored", flush=True)
+                    print_safe_traceback()
+                    staged = []
+                    file_failures.append((display_filename, commit_err))
+                for doc, ok, doc_tokens in staged:
+                    total_tokens_used += doc_tokens
+                    doc_cost = (doc_tokens / 1_000_000) * 0.15
+                    total_cost_usd += doc_cost
+                    print(f"[THREAD] saved: {doc_ref(doc.filename)} "
+                          f"tokens={doc_tokens} cost=${doc_cost:.5f} "
+                          f"| job_total={total_tokens_used} tokens "
+                          f"${total_cost_usd:.4f}", flush=True)
+                    if ok:
+                        successful += 1
+                        if doc.needs_review:
+                            needs_review += 1
+                    else:
                         failed += 1
-                        _persist_failure(Session, job_id,
-                                         getattr(result, "filename", fp), save_err)
+                for ref, err in file_failures:
+                    failed += 1
+                    _persist_failure(Session, job_id, ref, err)
 
             except Cancelled:
                 cancelled_at = i
