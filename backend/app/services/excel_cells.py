@@ -385,6 +385,33 @@ def _review_status_unknown(value):
     return _review.value_status(value, None)
 
 
+def _add_categories_sheet(wb, doc_results, demo=False):
+    """A "Categories" sheet when the categorization option ran (Part A2):
+    one row per categorized table row, the category cell marked exactly as
+    any other value (a model guess or "Uncategorized" is filled and
+    explained). Categories are never written into the results sheet's own
+    cells: the document did not print them."""
+    from app.core import review as _review
+    from app.core.export_marks import SheetMarks
+    rows = []
+    for d in doc_results:
+        ed = d.get_extracted_data()
+        if isinstance(ed, dict):
+            name = "" if demo else (getattr(d, "filename", "") or "")
+            rows += [(name, v) for v in _review.category_values(ed, _review.document_reviewed(ed))]
+    if not rows:
+        return
+    ws = wb.create_sheet("Categories")
+    ws.append(["Document", "Table", "Row", "Category", "How it was assigned"])
+    sm = SheetMarks(ws)
+    for name, v in rows:
+        ws.append([name, v["table"], v["row"] + 1, v["value"], v["source"]])
+        sm.mark(ws.cell(row=ws.max_row, column=4), v)
+    sm.finish()
+    for col, w in zip("ABCDE", (28, 14, 6, 22, 48)):
+        ws.column_dimensions[col].width = w
+
+
 def _add_review_legend(wb, doc_results, demo=False):
     """A "Legend" sheet: how many values need review, what each mark means,
     and one line per document. Added to every export, whichever writer drew
@@ -392,6 +419,7 @@ def _add_review_legend(wb, doc_results, demo=False):
     the image fallback) says how much of it is unchecked."""
     from openpyxl.styles import Font, PatternFill
     from app.core import review as _review
+    _add_categories_sheet(wb, doc_results, demo=demo)
     lg = wb.create_sheet("Legend")
     per_doc, total = [], {"values": 0, "needs_review": 0, "low": 0,
                           "unverified": 0, "empty_flagged": 0}

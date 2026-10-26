@@ -729,6 +729,7 @@ everything carries `False` and `[]`.
 | `vat_format_invalid` | a slot declared `vat` is not in the format of its EU (or GB/XI) country prefix; format only, no checksum claimed | exactly `low` |
 | `trn_invalid` | a slot declared `trn` (UAE tax registration number) is not 15 digits | exactly `low` |
 | `ein_invalid` | a slot declared `ein` is not nine digits or has a prefix the IRS never assigns | exactly `low` |
+| `category_uncertain` | the categorization option could not assign one category with confidence: rules of several categories matched the row (an ambiguous merchant), none matched and no model was allowed or available, or the model's answer was not a listed category. The category is "Uncategorized" (engine/categorize.py); nothing is guessed | none — it requires review |
 
 Document-level facts that have no single value to sit on are reported in
 `validation` and `flagged_fields` and set `needs_review` directly: a MICR

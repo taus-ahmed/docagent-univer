@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { gateDecision, loginUrl } from "@/lib/session-gate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { gridSignature, leaveWarning, validateTemplate, type FieldError } from "@/lib/templateForm";
+import { formatRules, parseRules, type CategoryRule } from "@/lib/categoryRules";
 import { templatesApi, type TemplateColumn, type ColumnTemplate,
          type ShapePreview } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -30,6 +31,9 @@ export default function TemplateEditor({ templateId }: Props) {
   // A7: field-level errors and the unsaved-changes guard (lib/templateForm.ts)
   const [fieldErrors, setFieldErrors] = useState<FieldError[]>([]);
   const [dirty, setDirty] = useState(false);
+  // A2: this template's category rules, one per line: "Category: word, phrase"
+  const [categoryRules, setCategoryRules] = useState<CategoryRule[]>([]);
+  const [rulesText, setRulesText] = useState("");
   const baselineRef = useRef<string>(gridSignature(null));
   const { user, isAuthenticated, initialized, logout, initializeFromStorage } = useAuthStore();
   const [name, setName] = useState("");
@@ -129,6 +133,10 @@ export default function TemplateEditor({ templateId }: Props) {
     return null;
   })();
 
+  useEffect(() => {
+    const r = (existingLayout as any)?.categories;
+    if (Array.isArray(r)) { setCategoryRules(r); setRulesText(formatRules(r)); }
+  }, [JSON.stringify((existingLayout as any)?.categories ?? null)]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (existingLayout) baselineRef.current = gridSignature(existingLayout); },
             // eslint-disable-next-line react-hooks/exhaustive-deps
             [JSON.stringify(existingLayout ?? null)]);
@@ -300,7 +308,7 @@ export default function TemplateEditor({ templateId }: Props) {
         name: n,
         document_type: finalDocType,
         columns: cols,
-        description: JSON.stringify(fullLayout),
+        description: JSON.stringify({ ...fullLayout, categories: categoryRules }),
       };
 
       return templateId
@@ -467,6 +475,26 @@ export default function TemplateEditor({ templateId }: Props) {
             ))}
           </div>
         )}
+
+        {/* A2: category rules for the categorization option */}
+        <details style={{ flexShrink:0, background:"#fff", borderBottom:"1px solid #e5e7eb", padding:"6px 20px", fontSize:12 }}>
+          <summary style={{ cursor:"pointer", color:"#374151" }}>
+            Category rules ({categoryRules.length}) — used when "Categorize" is on; checked before the firm's and the default lists
+          </summary>
+          <label htmlFor="tpl-cat-rules" style={{ display:"block", color:"#6b7280", margin:"6px 0 4px" }}>
+            One rule per line: <code>Category: keyword, another phrase, /regex/</code>. A row matching rules of two categories stays "Uncategorized" and is flagged.
+          </label>
+          <textarea id="tpl-cat-rules" rows={4} value={rulesText}
+            onChange={e => {
+              setRulesText(e.target.value); setDirty(true);
+              const { rules, problems } = parseRules(e.target.value);
+              setCategoryRules(rules);
+              setFieldErrors(f => [...f.filter(x => !x.message.startsWith("Category rule")),
+                ...problems.map(p => ({ field: "grid" as const, message: `Category rule ${p}` }))]);
+            }}
+            onKeyDown={e => e.stopPropagation()}
+            style={{ width:"100%", fontFamily:"var(--font-mono, monospace)", fontSize:12, border:"1px solid #e5e7eb", borderRadius:6, padding:6 }} />
+        </details>
 
         {/* HINT BAR */}
         <div style={{ flexShrink:0, background:"#fffbeb", borderBottom:"1px solid #fde68a", padding:"7px 20px", fontSize:12, color:"#92400e", display:"flex", alignItems:"center", gap:6 }}>

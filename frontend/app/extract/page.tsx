@@ -179,6 +179,7 @@ function InsightsPanel({
   const tableRows: Record<string, any>[] = [];
   const summaries: string[] = [];
   const anomalies: string[] = [];
+  const categories: { category: string; level: string; by: string; reasons?: string[] }[] = [];
 
   results.forEach(r => {
     const data = r.extracted_data ?? {};
@@ -189,6 +190,9 @@ function InsightsPanel({
       }
     });
     (data.table_rows ?? []).forEach((row: any) => tableRows.push(row));
+    // A2: categories live beside the rows (never inside them), with a level
+    Object.values(data.categories ?? {}).forEach((entries: any) =>
+      (entries ?? []).forEach((e: any) => categories.push(e)));
     if (data.summary) summaries.push(data.summary);
     if (Array.isArray(data.anomalies)) anomalies.push(...data.anomalies);
   });
@@ -196,15 +200,11 @@ function InsightsPanel({
   // ── Categorization ────────────────────────────────────────────────────────
   const catCount: Record<string, number> = {};
   const catAmount: Record<string, number> = {};
-  if (options.includes("categorize") && tableRows.length > 0) {
-    tableRows.forEach(row => {
-      const cat = row.Category ?? row.category ?? "Other";
-      catCount[cat] = (catCount[cat] ?? 0) + 1;
-      const amt = parseFloat(String(
-        row.Amount ?? row.Debit ?? row.Credit ?? row["Item Subtotal"] ?? row.Price ?? "0"
-      ).replace(/[^0-9.-]/g, "")) || 0;
-      catAmount[cat] = (catAmount[cat] ?? 0) + amt;
-    });
+  // Counts only: amounts per category come from the server's own
+  // aggregation (one currency at a time), never from parsing text here.
+  const catOpen = categories.filter(e => (e.reasons ?? []).length > 0 || e.by === "model").length;
+  if (options.includes("categorize")) {
+    categories.forEach(e => { catCount[e.category] = (catCount[e.category] ?? 0) + 1; });
   }
   const catPie = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 8)
     .map(([label, value]) => ({ label, value, color: catColor(label) }));

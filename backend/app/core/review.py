@@ -163,6 +163,9 @@ REASONS: dict[str, tuple[str, str]] = {
     "ein_invalid": (
         "EIN is not valid",
         "A US EIN is nine digits (12-3456789) with an assigned prefix."),
+    "category_uncertain": (
+        "Category not certain",
+        "No single category rule fits this row. Choose its category, or add a rule to the template or firm list."),
 }
 
 
@@ -294,6 +297,33 @@ def document_values(ed: dict) -> list[dict]:
                             "ref": None, "label": f"{name} row {i + 1}: {col}",
                             "value": v, "level": level, "page": row.get("_page"),
                             "source": row.get("_source"), **st})
+    out.extend(category_values(ed, doc_ok))
+    return out
+
+
+def category_values(ed: dict, doc_ok: bool = False) -> list[dict]:
+    """The categories the option assigned (engine/categorize.py), as values
+    with the SAME status rules as any other: a rule hit is `grounded`, a model
+    guess `unverified` (owes review), "Uncategorized" carries its reason. A
+    category is resolved when its row (or the document) is marked reviewed."""
+    out = []
+    keys = dict(table_keys(ed))
+    for name, entries in (ed.get("categories") or {}).items():
+        rows = ed.get(keys.get(name, f"{name}_rows")) or []
+        for e in entries or []:
+            if not isinstance(e, dict) or not isinstance(e.get("row"), int):
+                continue
+            row = rows[e["row"]] if 0 <= e["row"] < len(rows) and isinstance(rows[e["row"]], dict) else {}
+            reasons = list(e.get("reasons") or [])
+            st = value_status(e.get("category"), e.get("level"),
+                              review_required=bool(reasons) or e.get("by") == "model",
+                              reasons=reasons, reviewed=doc_ok or bool(row.get("_reviewed")))
+            how = {"rule": f"{e.get('rule')} rule matched {e.get('matched')!r}",
+                   "model": "suggested by the model, not checked"}.get(e.get("by"), e.get("note", ""))
+            out.append({"kind": "category", "table": name, "row": e["row"], "column": "Category",
+                        "ref": None, "label": f"{name} row {e['row'] + 1}: Category",
+                        "value": e.get("category"), "level": e.get("level"),
+                        "page": row.get("_page"), "source": how, **st})
     return out
 
 

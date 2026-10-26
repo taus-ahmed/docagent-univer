@@ -191,40 +191,46 @@ def _extract_with_template_inner(orchestrator, file_path: Path, template_data: d
                           batch_schemas=batch_schemas)
 
 
-def _post_categorize(extracted: dict, orchestrator, doc_type: str) -> dict:
-    """
-    Second-pass categorization when the extraction didn't produce Category values.
-    Sends only the table rows to Gemini for categorization — minimal tokens.
-    """
-    try:
-        table_rows = extracted.get("table_rows", [])
-        if not table_rows:
-            return extracted
-
-        rows_text = "\n".join(
-            f"Row {i+1}: {json.dumps(row)}"
-            for i, row in enumerate(table_rows[:50])  # max 50 rows
-        )
-        prompt = (
-            f"Assign a business category to each row below.\n"
-            f"Use these categories: Travel, Meals, Lodging, Office Supplies, "
-            f"Software, Marketing, Professional Fees, Utilities, Salary, "
-            f"Rent, Insurance, Equipment, Tax, Bank Charges, Other.\n\n"
-            f"Return ONLY a JSON object: {{\"categories\": [\"cat1\", \"cat2\", ...]}}\n"
-            f"One category per row in the same order.\n\n"
-            f"Rows:\n{rows_text}"
-        )
-        result = orchestrator.llm.extract(text=rows_text, prompt=prompt)
-        if result.success and result.parsed_json:
-            cats = result.parsed_json.get("categories", [])
-            for i, row in enumerate(table_rows):
-                if i < len(cats) and not row.get("Category"):
-                    row["Category"] = cats[i]
-            extracted["table_rows"] = table_rows
-            print(f"[OPTIONS] categorized {len(cats)} rows", flush=True)
-    except Exception as e:
-        print(f"[OPTIONS] categorize failed: {exc_brief(e)}", flush=True)
+def _post_categorize(extracted: dict, orchestrator, doc_type: str,
+                     template_rules=None, firm_rules=None) -> dict:
+    """Categorize every table's rows (engine/categorize.py, Part A2): the
+    template's rules, then the firm's, then generic defaults; the model only
+    for rows no rule decided. Stored in `extracted["categories"]` — never
+    written into a row, because a category is the engine's opinion about a
+    row and not something the document printed."""
+    from categorize import categorize_rows, model_categorizer
+    model = model_categorizer(orchestrator) if getattr(orchestrator, "llm", None) else None
+    out = {}
+    for key, rows in list(extracted.items()):
+        if not (isinstance(rows, list) and (key == "table_rows" or key.endswith("_rows"))):
+            continue
+        if not rows:
+            continue
+        name = "table" if key == "table_rows" else key[:-len("_rows")]
+        try:
+            out[name] = categorize_rows(rows, template_rules, firm_rules, model=model)
+        except Exception as e:
+            print(f"[OPTIONS] categorize failed: {exc_brief(e)}", flush=True)
+            extracted.setdefault("validation_notes", []).append(
+                "categorization could not run for one table; its rows are not categorized")
+    if out:
+        extracted["categories"] = out
+        n = sum(len(v) for v in out.values())
+        open_ = sum(1 for v in out.values() for e in v if e["reasons"] or e["by"] == "model")
+        print(f"[OPTIONS] categorized {n} row(s), {open_} need review", flush=True)
     return extracted
+
+
+def _firm_categories(schema_path):
+    """`categories:` (a rule list) from the firm's schema YAML, or None."""
+    try:
+        import yaml
+        with open(schema_path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+        rules = data.get("categories") if isinstance(data, dict) else None
+        return rules if isinstance(rules, list) else None
+    except Exception:
+        return None
 
 
 def _post_summarize(extracted: dict, orchestrator, doc_type: str) -> dict:
@@ -728,6 +734,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         # for reading numbers, after a template's own (engine/amounts.py).
         from amounts import FIRM_LOCALE
         FIRM_LOCALE.set(_firm_locale(schema_path))
+        firm_categories = _firm_categories(schema_path)
 
         # The worker builds its OWN storage handle. `storage` in the upload
         # route is a request dependency (`Depends(get_storage)`) and does not
@@ -915,12 +922,11 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                             # If categorize option is on and Category is missing from
                             # table rows, inject it via a second Gemini call
                             if "categorize" in options:
-                                table_rows = extracted.get("table_rows", [])
-                                missing_cat = table_rows and not table_rows[0].get("Category")
-                                if missing_cat:
-                                    extracted = _post_categorize(
-                                        extracted, orchestrator, result.document_type or ""
-                                    )
+                                extracted = _post_categorize(
+                                    extracted, orchestrator, result.document_type or "",
+                                    template_rules=((template_data or {}).get("layout") or {}).get("categories"),
+                                    firm_rules=firm_categories,
+                                )
 
                             # --- AI SUMMARY ---
                             # Gemini generates a 2-3 sentence plain English summary
