@@ -134,7 +134,7 @@ def _demo_error(status_code: int, detail: str,
 
 
 def _scanned() -> HTTPException:
-    return _demo_error(status.HTTP_422_UNPROCESSABLE_ENTITY,
+    return _demo_error(422,
                        SCANNED_DOC_MESSAGE, reason="scanned")
 
 
