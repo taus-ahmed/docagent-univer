@@ -22,10 +22,19 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
   try {
     const res = await fetch(url, { method: req.method, headers, body });
     const resBody = await res.blob();
-    return new NextResponse(resBody, {
-      status: res.status,
-      headers: { "content-type": res.headers.get("content-type") || "application/json" },
-    });
+    // The backend's caching policy travels with its answer: every /api/
+    // response is one firm's data ("no-store"; page images "private"), and an
+    // edge cache must not keep it for the next caller. Downloads keep their
+    // file name.
+    const out: Record<string, string> = {
+      "content-type": res.headers.get("content-type") || "application/json",
+      "cache-control": res.headers.get("cache-control") || "no-store",
+    };
+    for (const h of ["vary", "content-disposition"]) {
+      const v = res.headers.get(h);
+      if (v) out[h] = v;
+    }
+    return new NextResponse(resBody, { status: res.status, headers: out });
   } catch (e: any) {
     return NextResponse.json({ detail: `Proxy error: ${e.message}` }, { status: 502 });
   }

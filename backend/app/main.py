@@ -464,6 +464,18 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Every /api/ response is one firm's data: no shared cache (a proxy, a
+    # CDN, the frontend's edge) may keep it. A route that sets its own policy
+    # keeps it — the page image is "private", cacheable by the viewer's own
+    # browser only. Vary: Authorization in case anything caches regardless.
+    @app.middleware("http")
+    async def _no_shared_caching(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-store")
+            response.headers.setdefault("Vary", "Authorization")
+        return response
+
     # Global Exception Handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):

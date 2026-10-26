@@ -230,8 +230,9 @@ def resolve_client_id(current_user, requested: Optional[str]) -> str:
     own = getattr(current_user, "client_id", None)
     if own:
         if requested and requested != own:
-            print(f"[TENANCY] user {current_user.id} requested client_id="
-                  f"{requested!r}; using own {own!r} from token", flush=True)
+            # ids only: neither firm's client_id goes in the log
+            print(f"[TENANCY] user {current_user.id} named another client_id; "
+                  "using the token's own", flush=True)
         return own
     from app.core.permissions import PLATFORM_ADMIN, role_of
     if role_of(current_user) == PLATFORM_ADMIN:
