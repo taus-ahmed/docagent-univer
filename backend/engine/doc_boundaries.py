@@ -160,7 +160,7 @@ def page_of(text):
     return (n, total) if 1 <= n <= total else None
 
 
-def find_starts(page_texts):
+def find_starts(page_texts, family=None):
     """Indices of the pages that BEGIN a document, and why.
 
     Always includes page 0. Returns ([0]) — a single document — when neither
@@ -248,7 +248,7 @@ def find_starts(page_texts):
     # (cheque_segmenter.py): a scanned cheque has no title the next one
     # repeats, no type change and no page numbering, so without it ten cheques
     # were one document.
-    segs = segmenters.for_family()
+    segs = segmenters.for_family(family)
     marks = [[s.page_marks(t) for t in page_texts] for s in segs]
     seg_starts = [set() for _ in segs]
 
@@ -387,7 +387,8 @@ def _restarts_its_own_numbering(pages_of, i):
     return bool(a and b and b[0] == 1 and a[0] > 1)
 
 
-def split(page_texts, page_lines=None, page_images=None, forced=()):
+def split(page_texts, page_lines=None, page_images=None, forced=(),
+          family=None):
     """[(pages, lines, images, first_page_number)] — one entry per document.
 
     Slices are handed to the ordinary pipeline unchanged, one per document, so
@@ -398,7 +399,7 @@ def split(page_texts, page_lines=None, page_images=None, forced=()):
     the regions of one page cut into cheques (cheque_regions.py), which are
     two documents by construction, not by evidence the text could overrule.
     """
-    starts, why = find_starts(page_texts)
+    starts, why = find_starts(page_texts, family=family)
     if forced:
         extra = sorted(set(forced) - set(starts) - {0})
         starts = sorted(set(starts) | set(forced) | {0})

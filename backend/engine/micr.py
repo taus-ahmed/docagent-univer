@@ -215,6 +215,56 @@ def page_bands(text) -> list:
             if b]
 
 
+# ── is this a CHEQUE? (Run 15, item 9) ───────────────────────────────────────
+#
+# `band_identity` is tolerant on purpose (OCR), and so a reference line on an
+# invoice, a payslip or a statement — `#123456789# 123456789012` — reads as a
+# band, and two pages of one invoice with different reference lines were cut
+# into two "cheques". A band counts as a CHEQUE's band only with both:
+#
+#   genuine MICR evidence — a sentinel that is an E-13B symbol or one of its
+#     ASCII stand-ins (letters, never the punctuation reference lines use), or
+#     a transit number passing the ABA checksum; and
+#   a cheque context on the same page — the words every cheque prints.
+
+#: E-13B symbols and the LETTER stand-ins font vendors emit for them.
+_GENUINE_SENTINELS = set("⑆⑇⑈⑉ATtCOoBDd")
+#: The legal amount's cents written as a fraction (`and 25/100`) is the
+#: cheque convention and is what the generated fixtures print instead of the
+#: words "pay to the order of".
+_CHEQUE_CONTEXT = re.compile(
+    r"to\s+the\s+order|\border\s+of\b|\bdollars\b|\bmemo\b"
+    r"|authori[sz]ed\s+signature|\bvoid\s+after"
+    r"|\band\s+[0-9OoIlSZ]{2}\s*/\s*100\b", re.IGNORECASE)
+
+
+def cheque_context(text) -> bool:
+    """The page prints what a cheque prints (payee line, amount words, memo)."""
+    return bool(_CHEQUE_CONTEXT.search(str(text or "")))
+
+
+def genuine_band(line: str) -> bool:
+    """A band-shaped line whose transit field is delimited by MICR sentinels
+    (or their letter stand-ins), or whose transit number passes ABA."""
+    s = str(line or "")
+    m = _LOOSE_TRANSIT.search(s)
+    if not m:
+        return False
+    if aba_is_valid(m.group(1).replace(" ", "")):
+        return True
+    around = s[m.start():m.start(1)] + s[m.end(1):m.end()]
+    return any(ch in _GENUINE_SENTINELS for ch in around)
+
+
+def cheque_bands(text) -> list:
+    """`page_bands`, but only a cheque's: [] on a page with no cheque context,
+    and only bands with genuine MICR evidence."""
+    if not cheque_context(text):
+        return []
+    return [b for b in (band_identity(ln) for ln in str(text or "").split("\n")
+                        if genuine_band(ln)) if b]
+
+
 #: A line SHAPED like a band whose digits did not survive the reading — a
 #: transit-like field (one or two sentinel glyphs, 8-10 digit-like glyphs, a
 #: sentinel) on a line with at least 10 real digits. `A423S11G18A C5S94…` is

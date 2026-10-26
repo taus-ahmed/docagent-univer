@@ -632,7 +632,8 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         """
         import segmenters
         from slot_extractor import POSSIBLE_MULTIPLE
-        seen = next((s.multiple_in_record(texts) for s in segmenters.for_family()
+        seen = next((s.multiple_in_record(texts)
+                     for s in segmenters.for_family(default_doc_type)
                      if s.multiple_in_record(texts)), None)
         if not seen:
             return results
@@ -698,13 +699,13 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     # that must start a document. A page that cannot be cut stays whole and is
     # flagged `possible_multiple_documents` by `_note_bands` below.
     units = _cheque_units(doc, doc_text_pages, doc_page_lines, page_images,
-                          page_numbers, page_origins)
+                          page_numbers, page_origins, family=default_doc_type)
     forced, regions = (), {}
     if units:
         (doc_text_pages, doc_page_lines, page_images, page_numbers, forced,
          regions) = units
     slices, why = _split_documents(doc_text_pages, doc_page_lines, page_images,
-                                   forced=forced)
+                                   forced=forced, family=default_doc_type)
     if len(slices) > 1:
         _log("SPLIT", f"{doc_ref(file_path)}: {len(slices)} documents in one file "
                       f"({why}) — extracting each separately")
@@ -768,7 +769,7 @@ def _count_flags(results):
     return results
 
 
-def _cheque_units(doc, texts, lines, images, numbers, origins):
+def _cheque_units(doc, texts, lines, images, numbers, origins, family=None):
     """Pages cut into cheque regions, as units — or None when no page is cut.
 
     Only OCR pages are cut: their straightened image is the frame their word
@@ -778,7 +779,7 @@ def _cheque_units(doc, texts, lines, images, numbers, origins):
     """
     import segmenters
     from core.preprocessor import _image_to_base64, _optimize_image
-    cutters = [s for s in segmenters.for_family()
+    cutters = [s for s in segmenters.for_family(family)
                if type(s).cut_page is not segmenters.Segmenter.cut_page]
     ocr_images = getattr(doc, "ocr_images", {}) or {}
     out_t, out_l, out_i, out_n, forced, report = [], [], [], [], [], {}

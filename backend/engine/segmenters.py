@@ -41,6 +41,9 @@ class Segmenter:
     start_reason = ""
     #: what one cut region is called in logs and notes ("cheque")
     unit = "document"
+    #: For an `ANY` segmenter: the families it belongs to. A file whose family
+    #: is KNOWN and not one of these never runs it; None = every family.
+    families = None
 
     def page_marks(self, text) -> list:
         return []
@@ -60,11 +63,22 @@ def register(family, segmenter):
     return segmenter
 
 
+#: Family names that say nothing: the `ANY` segmenters all run.
+UNKNOWN_FAMILIES = frozenset({"", "other", "unknown", "auto", "mixed", ANY})
+
+
 def for_family(family=None) -> list:
-    """The `ANY` segmenters, then the family's own."""
+    """The `ANY` segmenters, then the family's own.
+
+    An `ANY` segmenter declaring `families` runs for an unknown family and for
+    its own, never for a KNOWN other one: an invoice template's file is not
+    split on a MICR-shaped reference line (Run 15, item 9)."""
     _load()
     fam = str(family or "").strip().lower()
-    return list(REGISTRY.get(ANY, [])) + (list(REGISTRY.get(fam, [])) if fam and fam != ANY else [])
+    known = fam not in UNKNOWN_FAMILIES
+    anys = [s for s in REGISTRY.get(ANY, [])
+            if not known or s.families is None or fam in s.families]
+    return anys + (list(REGISTRY.get(fam, [])) if known else [])
 
 
 _loaded = False
