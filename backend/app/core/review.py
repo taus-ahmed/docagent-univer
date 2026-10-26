@@ -127,6 +127,12 @@ REASONS: dict[str, tuple[str, str]] = {
     "non_english_text": (
         "Not English — not checked",
         "This value was read from text in another language or script. The engine's checks only understand English, so compare it with the document."),
+    "currency_mismatch": (
+        "Amounts in different currencies",
+        "These amounts are added or compared, but they are in different currencies. Check which currency each one is in."),
+    "currency_ambiguous": (
+        "Currency unclear",
+        "These amounts may be in different currencies (for example US and Canadian dollars). Check the currency of each."),
 }
 
 

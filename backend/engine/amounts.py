@@ -361,6 +361,42 @@ def _finish(raw, whole, frac, dec, notation, currency, cands, neg, pct, resolved
                   resolved_by=resolved, reasons=tuple(reasons))
 
 
+# ── currency consistency (Part 1.5) ──────────────────────────────────────────
+
+CURRENCY_MISMATCH = "currency_mismatch"
+CURRENCY_AMBIGUOUS = "currency_ambiguous"
+
+
+def currency_agreement(texts) -> tuple:
+    """("ok" | CURRENCY_MISMATCH | CURRENCY_AMBIGUOUS, sorted currencies).
+
+    Amounts that are summed or compared must be in one currency. Within one
+    document the SAME marker names the same currency (a page of "$" amounts is
+    consistent whichever dollar it is); an unmarked amount takes the
+    document's currency. Two markers that cannot name the same currency
+    ("£" and "€", "$" and "€") are a mismatch; two that may or may not ("$"
+    and "C$", "¥" and "元") are ambiguous unless one stated code settles it."""
+    sets, stated = [], set()
+    for t in texts or ():
+        a = parse_amount(t)
+        if a.ok and a.currencies:
+            sets.append(frozenset(a.currencies))
+            codes = [c for c in _ISO_RE.findall(str(t)) if c in ISO_4217]
+            stated.update(codes)
+    distinct = set(sets)
+    if len(distinct) <= 1:
+        return "ok", sorted(next(iter(distinct))) if distinct else []
+    common = frozenset.intersection(*distinct)
+    named = sorted(set().union(*distinct))
+    if not common:
+        return CURRENCY_MISMATCH, named
+    # a CODE printed on one of them ("CAD 10.00") settles what "C$" or "$"
+    # means beside it; a symbol alone never does
+    if len(stated) == 1 and next(iter(stated)) in common:
+        return "ok", sorted(stated)
+    return CURRENCY_AMBIGUOUS, named
+
+
 # ── evidence from the document ───────────────────────────────────────────────
 
 def document_hint(texts: Iterable, locale: Optional[str] = None) -> Optional[str]:
@@ -415,6 +451,7 @@ def money(text, decimal_hint: Optional[str] = None,
     return a.value if a.ok and not a.percent else None
 
 
-__all__ = ["DOCUMENT_HINT", "FIRM_LOCALE", "Amount", "ISO_4217", "MINOR_UNITS_MISMATCH", "NUMBER_AMBIGUOUS",
+__all__ = ["CURRENCY_AMBIGUOUS", "CURRENCY_MISMATCH", "currency_agreement",
+           "DOCUMENT_HINT", "FIRM_LOCALE", "Amount", "ISO_4217", "MINOR_UNITS_MISMATCH", "NUMBER_AMBIGUOUS",
            "SYMBOLS", "decimal_for_locale", "document_hint", "minor_units",
            "money", "parse_amount"]

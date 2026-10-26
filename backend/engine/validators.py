@@ -121,11 +121,52 @@ def run_checks(doc_type, ctx):
         DOCUMENT_HINT.reset(token)
 
 
+def _slot_texts(ctx, ref):
+    """The text(s) a result's slot holds: a field's value, or a row's cells."""
+    if ref in (ctx.values or {}):
+        return [ctx.values[ref]]
+    import re as _re
+    m = _re.fullmatch(r"(.+)_rows\[(\d+)\]", str(ref))
+    if m:
+        rows = (ctx.rows or {}).get(m.group(1)) or []
+        i = int(m.group(2))
+        if i < len(rows) and isinstance(rows[i], dict):
+            return [v for k, v in rows[i].items() if not str(k).startswith("_")]
+    return []
+
+
+#: checks about one value's own notation: no currency comparison applies
+_PER_VALUE = {"number_notation", "date_notation", "language_check"}
+
+
+def _currency_gate(res, ctx):
+    """CURRENCY CONSISTENCY (Part 1.5), for every check that compares or sums
+    amounts: a result over values in two currencies is not a result. Mixed
+    currencies make it a FAIL `currency_mismatch` (values exactly low);
+    markers that may name different currencies make it UNREADABLE
+    `currency_ambiguous` (review, no level moves)."""
+    from amounts import CURRENCY_AMBIGUOUS, CURRENCY_MISMATCH, currency_agreement
+    if res.check in _PER_VALUE or res.status not in (PASS, FAIL) or len(res.slots) < 2:
+        return res
+    texts = [t for ref in res.slots for t in _slot_texts(ctx, ref)]
+    verdict, named = currency_agreement(texts)
+    if verdict == "ok":
+        return res
+    said = (f"the {res.check} check compares amounts in "
+            f"{'different currencies' if verdict == CURRENCY_MISMATCH else 'currencies that may differ'}"
+            f" ({', '.join(named)}); it was not decided on them")
+    return CheckResult(res.check, FAIL if verdict == CURRENCY_MISMATCH else UNREADABLE,
+                       list(res.slots), verdict, evidence=res.evidence,
+                       flags=[(res.check, "", said)], notes=[said],
+                       validation={**res.validation, "currency_check": verdict},
+                       needs_review=True)
+
+
 def _run(fam, ctx):
     out = []
     for v in REGISTRY.get(ANY, []) + (REGISTRY.get(fam, []) if fam != ANY else []):
         try:
-            out.extend(v(ctx) or [])
+            out.extend(_currency_gate(r, ctx) for r in (v(ctx) or []))
         except Exception as exc:
             # A check that cannot run is not a check that passed: say so on
             # the record and send it for review, never take the record down.
