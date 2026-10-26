@@ -68,7 +68,8 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     folder = Path(a.dir)
     if not a.dir or not folder.is_dir():
-        print(f"{a.dir or "(no folder: pass --dir or set DOCAGENT_TESTDOCS)"}: no such folder — nothing to run")
+        where = a.dir or "(no folder: pass --dir or set DOCAGENT_TESTDOCS)"
+        print(f"{where}: no such folder — nothing to run")
         return 2
     pdfs = sorted(folder.rglob("*.pdf"))
     if not pdfs:
