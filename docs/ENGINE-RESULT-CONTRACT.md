@@ -77,16 +77,20 @@ user — exactly as for an id that does not exist, so an id in another tenant
 cannot be told apart from a missing one. A super-admin (role `admin`, no
 `client_id`) sees every tenant's job.
 
-**Cancel** (`DELETE /api/jobs/{id}`, owner or an admin in scope): the job
-thread stops at its next checkpoint (before a file, between pages, before a
-document's model call). Files that finished keep their records; the file in
-flight is discarded, never stored as if final; every unfinished file gets a
-record with `document_type: "cancelled"`, no `extracted_data`, `needs_review`,
-and `validation_errors` saying it was not processed. The job's status stays
-`cancelled`, with `status_reason` (who cancelled) and `progress_message` (how
-far it got). A job left running by a restart is `failed` with `status_reason`
-"Interrupted by restart" and no records (results are committed when a job
-finishes).
+**Cancel** (`DELETE /api/jobs/{id}`, owner, an admin in scope, or a
+`company_admin` of the job's firm): the job thread stops at its next
+checkpoint (before a file, between pages, before a document's model call).
+Each file's records are committed together, in ONE transaction, after a last
+cancel check (Run 15): a cancel before that check discards the file in flight
+(never stored as if final); a cancel after it lets that file complete and be
+saved whole. Files that finished keep their records; every unfinished file
+gets a record with `document_type: "cancelled"`, no `extracted_data`,
+`needs_review`, and `validation_errors` saying it was not processed. The job's
+status stays `cancelled`, with `status_reason` (who cancelled) and
+`progress_message` (how far it got). A job left running by a restart is
+`failed` with `status_reason` "Interrupted by restart"; the records of files
+that had finished are kept, and `error_message` says how many (or "Nothing was
+saved" when none had).
 
 After a hard delete (`DELETE /api/jobs/{id}/data?confirm=true`, or the daily retention purge) the job answers with
 `deleted_at` set and `/results` returns `[]`: the result records described
@@ -123,8 +127,8 @@ below no longer exist. The job's counts are kept so history adds up.
 | `flagged_count` | int | always `len(flagged_fields)` (set last, by the extractor) |
 | `page_origins` | {file page: `native` \| `ocr` \| `pre_ocr`} | pages this record was read from (keys are strings after JSON) |
 | `page_gates` | {file page: {origin, graded_cells, low_confidence_cells, low_confidence_ratio, review_gate, text_floor, selective_ocr?, thin_text_layer?}} | per-page gate; `selective_ocr` / `thin_text_layer` as on `ocr_pages` / `thin_text_layer_pages` below, only on such a page |
-| `ocr_pages` | [{page, words, rotated, deskewed, skew_detector, retry, dpi, reader, reader_version, selective_ocr?}] | every OCR'd page of this record. `skew_detector`: `dark` \| `none`; `retry`: `none` \| `crop_psm6`. `selective_ocr` = {image_cover, native_words, ocr_words, ratio, cover_threshold, ratio_threshold}: a page WITH a text layer read by OCR because one image covers it (≥ 0.99) and its layer holds under half OCR's words (Gate 2c) |
-| `ocr_failed_pages`, `ocr_zero_word_pages` | [int] | named failures; non-empty ⇒ `needs_review` |
+| `ocr_pages` | [{page, words, rotated, deskewed, skew_detector, retry, dpi, reader, reader_version, selective_ocr?}] | every OCR'd page of this record; `pool_fallback` (optional) = why the page was read serially instead of in the pool — the pool broke, could not start, or passed its per-page/total deadline. `skew_detector`: `dark` \| `none`; `retry`: `none` \| `crop_psm6`. `selective_ocr` = {image_cover, native_words, ocr_words, ratio, cover_threshold, ratio_threshold}: a page WITH a text layer read by OCR because one image covers it (≥ 0.99) and its layer holds under half OCR's words (Gate 2c) |
+| `ocr_failed_pages`, `ocr_zero_word_pages` | [int] | named failures; non-empty ⇒ `needs_review`. A page whose renderer or reader ran past its deadline is a failed page, its note naming the program and the setting (`ToolTimeout: … OCR_RENDER_TIMEOUT_S …`, docs/OPERATIONS.md §11) |
 | `thin_text_layer_pages` | [int] | Gate 2c pages that qualified for selective OCR where OCR failed or read nothing, so they stayed native; non-empty ⇒ `needs_review`, `thin_text_layer` on their values, a flag per page. Not listed in `ocr_failed_pages` (those pages HAVE a text layer) |
 | `routing_checksum` | `pass` \| `fail` \| null | the MICR band's transit field; null = no band read. Set by the `aba_checksum` validator, which runs for EVERY family |
 | `micr_band_unreadable` | true | optional, cheque family — a band is printed, no digit of it readable |
@@ -252,6 +256,11 @@ THREE records, each like (b) for its own cheque, plus:
  {"filename": "batch.pdf [2 of 3]", "extracted_data": {"document_index": 2, "...": "index 2 of 3, its own box"}},
  {"filename": "batch.pdf [3 of 3]", "extracted_data": {"document_index": 3, "...": "index 3 of 3, its own box"}}]
 ```
+
+Bands count only on a page with a cheque context and genuine MICR evidence,
+and never for a template of a known non-cheque family (Run 15): a reference
+line shaped like a band on an invoice, payslip or statement neither cuts the
+page, nor starts a document, nor raises the flag below.
 
 If the page cannot be cut with confidence it is ONE record instead, with
 `validation.possible_multiple_documents: {"micr_bands": 3, "readable": 3}` and
