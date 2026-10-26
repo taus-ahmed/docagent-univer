@@ -100,7 +100,11 @@ and after, storage on Cloudflare R2 and rollback are in
 | `docs/ROADMAP.md` | what is done and what remains |
 | `docs/proposals/` | measured proposals not yet built |
 | `docs/TEMPLATE-SHAPE-FUTURE-WORK.md` | the deferred declared-shape migration |
-| `docs/SECURITY.md` | authentication, roles, tenancy, deletion, logging, secrets and known gaps |
+| `docs/SECURITY.md` | authentication, roles, tenancy and isolation between firms, deletion, logging, secrets and known gaps |
+| `docs/HANDOVER.md` | for a new maintainer: what it is, the repository map, the three checks, adding a family, open items |
+| `docs/OPERATIONS.md` | for the operator: every variable, deploy and rollback, backups, monitoring, key rotation, cost controls, incidents |
+| `docs/ONBOARDING-A-CLIENT.md` | bringing on a firm: `scripts/create_tenant.py` / `POST /api/admin/tenants`, one-time passwords, roles, offboarding |
+| `docs/CLIENT-DATA-FAQ.md` | answers for client firms about their data (VERIFY items to confirm first) |
 | `docs/CHEQUE-TRIAL.md` | running real cheques under supervision; the trial report (`scripts/trial_report.py`) |
 | `docs/RELEASE-CHECKLIST.md` | `scripts/prepush_check.py` and the manual steps before the first push |
 | `docs/investigations/` | dated measurement records cited by code and tests |

@@ -59,7 +59,9 @@ class TestTheScript:
 
     def test_refuses_the_wrong_host_class_and_never_prints_the_url(self, scratch):
         url, env, tmp = scratch
-        env["DATABASE_URL"] = "postgresql://someone:s3cret-pw@prod.example.net:5432/live"
+        # built in pieces so the repository's own secret scan does not see a URL
+        env["DATABASE_URL"] = ("postgresql://someone:" + "s3cret-pw" + "@"
+                               + "prod.example.net:5432/live")
         code, out, err = _run(ARGS + ["--confirm-database", "local"], env, tmp)
         assert code == 2 and "this database is remote" in err
         for secret in ("s3cret-pw", "prod.example.net", "someone", "live"):

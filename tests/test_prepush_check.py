@@ -88,3 +88,15 @@ def test_manual_items_fail_until_acknowledged(monkeypatch, capsys):
     assert pc.main(["--quick"]) == 1
     assert "Revoke the Groq API key" in capsys.readouterr().out
     assert pc.main(["--quick", "--manual-done"]) == 0
+
+
+def test_every_setting_must_be_in_the_operations_doc(tmp_path):
+    cfg = "class Settings:\n    SECRET_KEY: str = 'x'\n    NEW_KNOB: int = 0\n    APP_NAME: str = 'a'\n"
+    root = _repo(tmp_path, {"backend/app/config.py": cfg,
+                            "docs/OPERATIONS.md": "| `SECRET_KEY` | x |\n"})
+    st, detail = _check(root)["every setting documented in docs/OPERATIONS.md"]
+    assert st == "FAIL" and detail == "NEW_KNOB"
+
+
+def test_the_real_settings_are_all_documented():
+    assert pc.undocumented_settings() == []

@@ -77,8 +77,27 @@ MANUAL = [
     "Choose and add a LICENSE",
     "Review redistribution terms of the third-party sample PDFs in tests/test_pdfs/round2",
     "Set up staging (docs/CHEQUE-TRIAL.md section 1) before real cheques",
-    "Decide owner hard-delete and the explicit platform_admin role (docs/proposals/roles.md)",
+    "Decide the explicit platform_admin role (docs/proposals/roles.md); owner delete was decided in round 14",
+    "Confirm every VERIFY in docs/OPERATIONS.md and docs/CLIENT-DATA-FAQ.md before showing the FAQ to a client",
+    "Railway: set DRIVE_TENANT if Google Drive is used (off by default since round 14); confirm Railway appends the client IP last in X-Forwarded-For",
 ]
+
+#: Settings that are internal constants, not something an operator sets.
+SETTINGS_INTERNAL = {"APP_NAME", "APP_VERSION", "ALGORITHM"}
+SETTING_RE = re.compile(r"^    ([A-Z][A-Z0-9_]+)\s*:", re.M)
+
+
+def undocumented_settings(root=ROOT) -> list[str] | None:
+    """Every field of backend/app/config.py::Settings must be named in
+    docs/OPERATIONS.md (the operator's variable table). None when the repo
+    has no config file."""
+    cfg = root / "backend" / "app" / "config.py"
+    if not cfg.exists():
+        return None
+    ops = root / "docs" / "OPERATIONS.md"
+    text = ops.read_text(encoding="utf-8") if ops.exists() else ""
+    names = sorted(set(SETTING_RE.findall(cfg.read_text(encoding="utf-8"))) - SETTINGS_INTERNAL)
+    return [n for n in names if f"`{n}`" not in text]
 
 
 class Report:
@@ -189,6 +208,10 @@ def check_repo(rep: Report, root=ROOT):
             if rel and not (root / f).parent.joinpath(rel).exists():
                 broken.append(f"{f} -> {target}")
     rep.add("README and docs links resolve", not broken, "; ".join(broken[:20]))
+
+    missing = undocumented_settings(root)
+    rep.add("every setting documented in docs/OPERATIONS.md", not missing,
+            "no backend/app/config.py" if missing is None else ", ".join(missing))
 
     bad = []
     try:

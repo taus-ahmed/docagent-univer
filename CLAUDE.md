@@ -1469,6 +1469,30 @@ PostgreSQL (`postgres:14-alpine`) + backend with hot reload via
 
 ---
 
+## Firms: isolation, onboarding, cost, retention (round 14)
+
+- **Every route is in `tests/http/test_tenant_isolation_all_routes.py`** —
+  `ROUTES` (how firm B attacks it with firm A's ids) or `ALLOWLIST` (why it
+  holds no firm's data). A new route without a case FAILS the suite. Another
+  firm's id must answer exactly like a missing id (404, same body).
+- A firm id is used **verbatim** as its storage prefix or refused
+  (`storage._tenant_segment`, `schemas.CLIENT_ID_PATTERN`).
+- Google Drive is one server-wide credential: `DRIVE_TENANT` names its firm;
+  empty = off.
+- Firms are created by `scripts/create_tenant.py` or `POST /api/admin/tenants`
+  (`core/tenants.py`); the first admin gets a **one-time password** (an `otp$`
+  marker on the hash — no column); `get_current_user` refuses everything but
+  `/me`, change-password and logout until it is changed.
+- `TENANT_MONTHLY_PAGE_LIMIT` / a firm YAML's `monthly_page_limit`
+  (`core/usage.py`, the job's `pages` mark); `DATA_RETENTION_DAYS`
+  (`core/retention.py`). Both 0 = off. The login limiter keys on (last
+  X-Forwarded-For entry, username).
+- Operator docs: `docs/OPERATIONS.md`, `docs/ONBOARDING-A-CLIENT.md`,
+  `docs/HANDOVER.md`, `docs/CLIENT-DATA-FAQ.md`. Every Settings field must be
+  named in OPERATIONS.md (`prepush_check.py` checks).
+
+---
+
 ## Common Gotchas
 
 - **Say UTF-8 out loud in every measurement or comparison script.** `locale.getpreferredencoding()` here is cp1252, so anything that reads bytes without an explicit codec — `subprocess.run(..., text=True)`, a bare `open()`, `Path.read_text()` — mangles an en dash or an em dash into U+FFFD. It has done this twice in this project, and **both times it produced a false before/after difference**: a report diff that named documents whose scores had not moved. Pass `capture_output=True` and `.stdout.decode("utf-8")`, or `encoding="utf-8"`. A measuring instrument that invents a difference is worse than none.

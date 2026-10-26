@@ -24,6 +24,7 @@ satisfied. Secrets are reported by path, line and type, never by value.
 | removed provider | "Groq", "Grok" or "xAI" appears only in history docs (`DEPLOY-RUNBOOK`, `ROADMAP`, `SECURITY`, this file, `design-history/`, `DECISION-LOG`) and the test that pins its absence |
 | links | every relative link in `README.md` and `docs/**/*.md` resolves |
 | CI | every `.github/workflows/*.yml` parses and has `jobs` |
+| settings documented | every field of `backend/app/config.py::Settings` is named in `docs/OPERATIONS.md` |
 | suite | `pytest` passes in the clean export |
 | native readings | `python -m tests.harness.native_hashes --check` matches `tests/reports/native_hashes.json` (69 PDFs) |
 | harness | replay, templated EXPORT = 97.2% and no-template EXPORT = 96.7% (`tests/reports/release_baseline.json`) |
@@ -54,9 +55,21 @@ The script lists them as MANUAL and fails until run with `--manual-done`.
    would then change and the baselines need a recorded update).
 6. **Staging.** Set up the staging environment in `docs/CHEQUE-TRIAL.md` §1
    before any real cheque is uploaded.
-7. **Roles.** Decide whether the owner of a job may hard-delete it (today:
-   tenant admin and platform admin only) and whether to make `platform_admin`
-   an explicit stored role (a data migration) — `docs/proposals/roles.md`.
+7. **Roles.** Decide whether to make `platform_admin` an explicit stored role
+   (a data migration) — `docs/proposals/roles.md`. (Owner hard-delete was
+   decided in round 14: the job's own user may delete it, with confirmation.)
+8. **VERIFY items.** Confirm each one in `docs/OPERATIONS.md` and
+   `docs/CLIENT-DATA-FAQ.md`; the FAQ is not shown to a client before.
+9. **Drive and the proxy.** Set `DRIVE_TENANT` if Google Drive is used (off
+   by default since round 14); confirm Railway appends the client address as
+   the last `X-Forwarded-For` entry (the login limiter relies on it).
+
+New in round 14 (no migration): routes `POST/GET /api/admin/tenants`,
+`POST /api/admin/tenants/{id}/deactivate|activate`, `POST
+/api/auth/change-password`, `GET /api/usage`; `DELETE /api/jobs/{id}/data`
+now needs `?confirm=true`; script `scripts/create_tenant.py`; variables
+`TENANT_MONTHLY_PAGE_LIMIT`, `DATA_RETENTION_DAYS`, `DRIVE_TENANT` (all off by
+default).
 
 ## 3. After the push
 

@@ -88,7 +88,7 @@ far it got). A job left running by a restart is `failed` with `status_reason`
 "Interrupted by restart" and no records (results are committed when a job
 finishes).
 
-After a hard delete (`DELETE /api/jobs/{id}/data`) the job answers with
+After a hard delete (`DELETE /api/jobs/{id}/data?confirm=true`, or the daily retention purge) the job answers with
 `deleted_at` set and `/results` returns `[]`: the result records described
 below no longer exist. The job's counts are kept so history adds up.
 

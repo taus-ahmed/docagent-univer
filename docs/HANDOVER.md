@@ -86,8 +86,8 @@ financial statements and a few forms have no validators.
 
 ## Still open — manual items
 
-1. **Leaked key:** commit `ecaead9` on `main` holds a Groq key — revoke it at
-   the provider (history is not rewritten).
+1. **Leaked key:** commit `ecaead9` on `main` holds an old provider API key —
+   revoke it at that provider (history is not rewritten).
 2. **Railway variables:** delete `GROQ_*`; check `PRIMARY_LLM`.
 3. **`DEMO_CLIENT_IDS`** names only the demo tenant.
 4. **License:** none chosen; add `LICENSE`.

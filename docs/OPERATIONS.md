@@ -32,7 +32,9 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | | the model (production runs flash-lite) |
 | `PRIMARY_LLM` / `LLM_FALLBACKS` | `gemini` / empty | | provider order; only Gemini exists |
 | `BATCH_SIZE`, `RATE_LIMIT_DELAY`, `MAX_RETRIES` | `5`, `2.0`, `3` | | pacing of model calls |
+| `DEBUG` | `false` | | verbose errors; keep `false` in production |
 | `STORAGE_BACKEND` | `s3` | E | `local` (ephemeral disk) or `s3` (R2) |
+| `LOCAL_UPLOAD_DIR`, `LOCAL_OUTPUT_DIR`, `LOCAL_SCHEMAS_DIR` | `./storage/uploads`, … | | where `local` storage writes (relative to `backend/`) |
 | `S3_BUCKET`, `S3_ENDPOINT_URL`, `AWS_REGION` | `docagent-prod`, `https://<acct>.r2.cloudflarestorage.com`, `auto` | E | the bucket |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | R2 token | S E | bucket credentials |
 | `ALLOWED_ORIGINS` (or `CORS_ORIGINS`) | `https://your-frontend.vercel.app` | E | which site may call the API; unset = any (a warning at boot) |
@@ -48,8 +50,8 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `BCRYPT_ROUNDS` | `12` | | password hashing cost (tests use 4) |
 | `NEXT_PUBLIC_API_URL` (Vercel) | the backend URL | E | where the browser app sends requests |
 
-Not read any more and safe to delete: `GROQ_*`. Not active yet: `REDIS_URL`,
-`CELERY_*`.
+Not read any more and safe to delete: `GROQ_*`. Not active yet (Phase 4):
+`REDIS_URL`, `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`.
 
 ## 3. Deploy and rollback
 
