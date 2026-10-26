@@ -9,7 +9,10 @@ from cheque_amounts import compare_amounts, parse_numeric_amount, parse_words_am
     ("$1,234.56", D("1234.56")),
     ("1234.56", D("1234.56")),
     ("$ 3,572.78", D("3572.78")),
-    ("$1,000", D("1000.00")),
+    ("$1,000.00", D("1000.00")),
+    # global notations (Part 1.1): the shared parser reads every locale
+    ("1.234,56", D("1234.56")), ("1.234.567", D("1234567")),
+    ("1,23,456.00", D("123456.00")), ("€ 1.234,56", D("1234.56")),
     ("***$150.00***", D("150.00")),
     ("0.99", D("0.99")),
     ("$12,345,678.90", D("12345678.90")),
@@ -19,8 +22,8 @@ def test_numeric_ok(text, expected):
 
 
 @pytest.mark.parametrize("text", [
-    "", "   ", "abc", "1.234,56", "1.234.567", "1,23,456.00", "(150.00)",
-    "-150.00", "150.5", "150.555", "12 and 3", "$", "1,2345.00",
+    "", "   ", "abc", "(150.00)", "$1,000", "1,234",
+    "-150.00", "150.5", "150.555", "12 and 3", "$", "1,2345.00", "JPY 1,000.50",
 ])
 def test_numeric_refuses_to_guess(text):
     assert parse_numeric_amount(text).value is None
@@ -78,7 +81,20 @@ def test_unreadable_when_either_side_is_missing_or_junk():
     assert compare_amounts(None, "One hundred and 00/100").status == "unreadable"
     assert compare_amounts("$100.00", None).status == "unreadable"
     assert compare_amounts("$100.00", "On hundrad and 00/100").status == "unreadable"
-    assert compare_amounts("1.234,56", "One thousand two hundred thirty-four and 56/100").status == "unreadable"
+    assert compare_amounts("1.234,5x", "One thousand two hundred thirty-four and 56/100").status == "unreadable"
+
+
+def test_the_words_resolve_an_ambiguous_figure():
+    """Part 1.1: "$1,000" is 1000 or 1.000; the amount in words decides."""
+    c = compare_amounts("$1,000", "One thousand and 00/100")
+    assert c.status == "match" and c.numeric == D("1000")
+    assert "numeric:notation_resolved_by_words" in c.reasons
+    assert compare_amounts("$1,000", "Two thousand and 00/100").status == "unreadable"
+
+
+def test_european_notation_is_compared_not_refused():
+    c = compare_amounts("1.234,56", "One thousand two hundred thirty-four and 56/100")
+    assert c.status == "match"
 
 
 def test_unreadable_is_never_a_match_and_never_a_mismatch():

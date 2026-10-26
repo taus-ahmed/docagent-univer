@@ -188,7 +188,7 @@ def labels_an_identifier(label) -> bool:
     return bool(_ID_LABEL.search(text))
 
 
-def coerce_cell_value(value, label=""):
+def coerce_cell_value(value, label="", decimal_hint=None):
     """The value as it will actually appear in the spreadsheet cell.
 
     Money and numbers are written as NUMBERS: the currency symbol, thousands
@@ -225,17 +225,16 @@ def coerce_cell_value(value, label=""):
     if re.fullmatch(r"\d+", txt) and (txt[0] == "0" or len(txt) >= 9):
         return txt
 
-    num = txt.replace(",", "")
-    for sym in "$£€₹¥":
-        num = num.replace(sym, "")
-    neg = num.startswith("(") and num.endswith(")")
-    if neg:
-        num = num[1:-1]
-    try:
-        val = float(num)
-        return -val if neg else val
-    except ValueError:
-        return txt
+    # ONE PARSER (engine/amounts.py), in any locale. It used to strip every
+    # comma and call float(): "1.234,56" became 1.23456 — a wrong number in
+    # the client's file, silently. An amount whose notation is AMBIGUOUS
+    # ("1,234" with nothing on the document to say which style it uses) stays
+    # the text it was: a number cell must never hold a guess.
+    from amounts import parse_amount
+    a = parse_amount(txt, decimal_hint)
+    if a.ok and not a.percent:
+        return float(a.value)
+    return txt
 
 
 #: Excel number formats, by the notation the document actually used. Money
@@ -244,7 +243,7 @@ def coerce_cell_value(value, label=""):
 _FMT_PLAIN = "#,##0"
 
 
-def cell_format(value, label=""):
+def cell_format(value, label="", decimal_hint=None):
     """The Excel number format that reproduces how the document wrote it.
 
     `coerce_cell_value` deliberately writes money as a NUMBER, so the cell
@@ -263,19 +262,16 @@ def cell_format(value, label=""):
     if value is None:
         return None
     txt = str(value).strip()
-    if not txt or coerce_cell_value(txt, label) is None:
+    if not txt or coerce_cell_value(txt, label, decimal_hint) is None:
         return None
-    if isinstance(coerce_cell_value(txt, label), str):
+    if isinstance(coerce_cell_value(txt, label, decimal_hint), str):
         return None                       # identifier or free text
 
+    from amounts import parse_amount
+    a = parse_amount(txt, decimal_hint)
     sym = next((c for c in "$£€₹¥" if c in txt), "")
     accounting = txt.replace(sym, "").strip().startswith("(")
-    frac = 0
-    body = txt.replace(",", "")
-    for c in "$£€₹¥()- ":
-        body = body.replace(c, "")
-    if "." in body:
-        frac = len(body.split(".")[-1])
+    frac = a.decimals
     # I6 — exactly as many decimals as the document printed. This used to floor
     # every count of 2 or more at 2, so a rate printed `$0.04116` displayed
     # `$0.04` and four others displayed `$0.00`: the cell held the full number,

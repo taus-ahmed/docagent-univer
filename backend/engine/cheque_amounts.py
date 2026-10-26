@@ -54,44 +54,33 @@ class AmountCheck:
     reasons: List[str] = field(default_factory=list)
 
 
-def parse_numeric_amount(text: str) -> ParsedAmount:
-    """Parse '$1,234.56', '1234.56', '$ 1,234.50', '1,234' into a Decimal.
+def parse_numeric_amount(text: str, decimal_hint: Optional[str] = None) -> ParsedAmount:
+    """The courtesy amount as a Decimal, read by the shared parser
+    (engine/amounts.py) in any locale: '$1,234.56', '1.234,56 €', '₹1,23,456.00'.
 
-    Returns value=None (with a reason) when the notation is ambiguous or not a
-    plain amount: European 1.234,56, negative amounts, letters, several amounts.
+    Refused (value None, with a reason) rather than guessed: a negative or
+    bracketed amount (a cheque cannot be drawn for one), letters or several
+    amounts, an ambiguous notation ('1,234' with nothing to resolve it — the
+    amount in words may: `compare_amounts`), and a fraction other than none or
+    the currency's own minor units (two when the currency is unknown).
     """
-    if text is None:
+    from amounts import DOCUMENT_HINT, parse_amount, minor_units
+    if text is None or not str(text).strip():
         return ParsedAmount(None, ["empty"])
-    t = str(text).strip()
-    if not t:
-        return ParsedAmount(None, ["empty"])
-    t = t.replace("$", "").replace("USD", "").replace("usd", "")
-    t = re.sub(r"\s+", "", t)
-    t = t.strip("*#=")  # check protectors such as ***1,234.56*** or =1,234.56= (never a minus sign)
-    if t.startswith("(") or t.startswith("-") or t.endswith("-"):
+    hint = decimal_hint if decimal_hint is not None else DOCUMENT_HINT.get()
+    a = parse_amount(text, hint)
+    if a.negative:
         return ParsedAmount(None, ["negative_or_bracketed"])
-    if not re.fullmatch(r"[0-9][0-9,\.]*", t):
+    if a.ambiguous:
+        return ParsedAmount(None, ["ambiguous_notation"])
+    if not a.ok or a.percent:
         return ParsedAmount(None, ["not_a_plain_number"])
-    if "," in t and "." in t and t.rfind(",") > t.rfind("."):
-        return ParsedAmount(None, ["ambiguous_notation"])  # 1.234,56
-    if t.count(".") > 1:
-        return ParsedAmount(None, ["ambiguous_notation"])  # 1.234.567
-    if "." in t:
-        whole, _, frac = t.partition(".")
-        if len(frac) != 2:
-            return ParsedAmount(None, ["unexpected_decimal_places"])
-        if "," in frac:
-            return ParsedAmount(None, ["ambiguous_notation"])
-    else:
-        whole, frac = t, "00"
-    if "," in whole:
-        groups = whole.split(",")
-        if not groups[0] or len(groups[0]) > 3 or any(len(g) != 3 for g in groups[1:]):
-            return ParsedAmount(None, ["ambiguous_notation"])
-        whole = "".join(groups)
-    if not whole.isdigit() or not frac.isdigit():
-        return ParsedAmount(None, ["not_a_plain_number"])
-    return ParsedAmount(Decimal(f"{int(whole)}.{frac}"))
+    allowed = {0, minor_units(a.currency) if a.currency else 2}
+    if a.currencies and not a.currency:
+        allowed |= {minor_units(c) for c in a.currencies}
+    if a.decimals not in allowed:
+        return ParsedAmount(None, ["unexpected_decimal_places"])
+    return ParsedAmount(a.value)
 
 
 def _group_value(tokens: List[str], only_group: bool) -> Optional[int]:
@@ -242,6 +231,15 @@ def compare_amounts(numeric_text: Optional[str], words_text: Optional[str]) -> A
     """Cross-check the numeric (courtesy) amount against the written (legal) amount."""
     n = parse_numeric_amount(numeric_text) if numeric_text is not None else ParsedAmount(None, ["missing"])
     w = parse_words_amount(words_text) if words_text is not None else ParsedAmount(None, ["missing"])
+    if n.value is None and n.reasons == ["ambiguous_notation"] and w.value is not None:
+        # THE WORDS ARE EVIDENCE. "1,234" is 1234 or 1.234; the legal amount
+        # says which. Exactly one reading must agree, else nothing is decided.
+        fits = [r.value for r in (parse_numeric_amount(numeric_text, "."),
+                                  parse_numeric_amount(numeric_text, ","))
+                if r.value is not None and r.value == w.value]
+        if len(fits) == 1:
+            return AmountCheck("match", fits[0], w.value,
+                               ["numeric:notation_resolved_by_words"])
     reasons = [f"numeric:{r}" for r in n.reasons] + [f"words:{r}" for r in w.reasons]
     if n.value is None or w.value is None:
         return AmountCheck("unreadable", n.value, w.value, reasons)

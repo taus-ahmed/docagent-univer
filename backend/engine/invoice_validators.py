@@ -60,18 +60,11 @@ def role(label):
 
 
 def money(text):
-    """Decimal, or None when the string is not one plain amount.
-    `$1,234.56`, `1234.5`, `(10.00)` and `-10.00` (negative) are amounts."""
-    t = re.sub(r"[\s$€£]|USD|EUR|GBP", "", str(text or ""))
-    neg = t.startswith("(") and t.endswith(")") or t.startswith("-")
-    t = t.strip("()-")
-    if not re.fullmatch(r"\d{1,3}(,\d{3})*(\.\d{1,2})?|\d+(\.\d{1,2})?", t):
-        return None
-    try:
-        v = Decimal(t.replace(",", ""))
-    except InvalidOperation:
-        return None
-    return -v if neg else v
+    """Decimal, or None when the string is not one amount — or is one whose
+    notation is ambiguous on this document. The shared parser
+    (engine/amounts.py), in any locale, with the record's own evidence."""
+    from amounts import money as _money
+    return _money(text)
 
 
 def _line_column(table):

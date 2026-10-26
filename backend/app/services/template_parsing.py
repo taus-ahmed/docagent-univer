@@ -38,6 +38,8 @@ def _parse_template(tpl: ColumnTemplate) -> Optional[dict]:
                     "layout": raw,
                     "doc_type": tpl.document_type or "other",
                     "name": tpl.name,
+                    # number/date locale hint (engine/amounts.py); None = auto
+                    "locale": raw.get("locale"),
                 }
                 # Analyse regions once and cache in template_data
                 try:

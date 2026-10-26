@@ -151,6 +151,19 @@ def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod, provenance=True):
     return True
 
 
+def _document_hint_of(ed):
+    """The decimal separator a stored result's own numbers agree on, or None."""
+    from amounts import document_hint
+    if not isinstance(ed, dict):
+        return None
+    texts = list((ed.get("extracted_fields") or {}).values())
+    for k, rows in ed.items():
+        if k.endswith("_rows") and isinstance(rows, list):
+            texts += [v for r in rows if isinstance(r, dict)
+                      for c, v in r.items() if not str(c).startswith("_")]
+    return document_hint(texts, ed.get("locale"))
+
+
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                       provenance=True, marks=True):
     """
@@ -234,18 +247,22 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
     row_status = {}           # output row -> [status word, ...]
     unresolved_total = 0
 
+    #: the decimal separator the document being written uses, from its own
+    #: unambiguous numbers (engine/amounts.document_hint); per document.
+    doc_hint = [None]
+
     def put(r, c, value, label=""):
         cell = ws.cell(row=r + 1, column=c + 1)
         if isinstance(cell, MergedCell):
             return None
-        out = coerce_cell_value(value, label)
+        out = coerce_cell_value(value, label, doc_hint[0])
         if out is not None:
             cell.value = out
             # D8 — the cell keeps the number AND the notation the document
             # printed it with. Without this the export drops the currency
             # symbol and the trailing cents, which is what an accountant
             # actually looks at.
-            fmt = cell_format(value, label)
+            fmt = cell_format(value, label, doc_hint[0])
             if fmt:
                 cell.number_format = fmt
             return cell
@@ -253,6 +270,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
 
     for doc in doc_results:
         ed = doc.get_extracted_data()
+        doc_hint[0] = _document_hint_of(ed)
         if not isinstance(ed, dict):
             continue
         slot_map = ed.get("slot_map") or {}

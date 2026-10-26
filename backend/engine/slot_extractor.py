@@ -830,6 +830,14 @@ def select_region(located, all_lines, page_lines):
 # RUN
 # ══════════════════════════════════════════════════════════════════════════════
 
+def template_locale(template_data):
+    """The template's locale (`locale` on the template data or its grid), or
+    None. A hint for reading numbers and dates, never a guess."""
+    td = template_data if isinstance(template_data, dict) else {}
+    grid = td.get("layout") if isinstance(td.get("layout"), dict) else {}
+    return td.get("locale") or grid.get("locale") or None
+
+
 def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         page_images, doc_text, doc_text_pages, file_type,
                         default_doc_type, start, page_lines=None,
@@ -1367,9 +1375,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # read rows; a row is addressed `<table>_rows[i]`.
     check_notice, check_validation, check_review = {}, {}, False
     row_notice = []
+    locale = template_locale(template_data)
     for res in run_checks(default_doc_type, CheckContext(
             slots["fields"], extracted_fields, pages,
-            tables=slots["tables"], rows=tables_out, incomplete=incomplete)):
+            tables=slots["tables"], rows=tables_out, incomplete=incomplete,
+            locale=locale)):
         for ref, ev in res.evidence.items():
             if ref in field_prov:
                 field_prov[ref].update(ev)

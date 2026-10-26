@@ -112,6 +112,12 @@ REASONS: dict[str, tuple[str, str]] = {
         "Possible duplicate",
         "Another record in this batch looks like the same cheque (same bank, "
         "account and serial number). Check it was not scanned twice."),
+    "number_ambiguous": (
+        "Number format is ambiguous",
+        "This could be a thousands separator or a decimal point, and nothing on the document says which. The text is kept as printed; set the template's or firm's locale, or check the value."),
+    "minor_units_mismatch": (
+        "Decimals do not fit the currency",
+        "The amount has more or fewer decimal places than its currency uses. Check the amount and the currency."),
 }
 
 

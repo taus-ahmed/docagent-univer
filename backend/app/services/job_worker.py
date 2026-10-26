@@ -621,6 +621,18 @@ def _release_copy(storage, path):
         print(f"[THREAD] temp copy release failed: {type(e).__name__}", flush=True)
 
 
+def _firm_locale(schema_path):
+    """`locale:` from the firm's schema YAML, or None. Never raises."""
+    try:
+        import yaml
+        with open(schema_path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+        loc = data.get("locale") if isinstance(data, dict) else None
+        return str(loc) if loc else None
+    except Exception:
+        return None
+
+
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
                           selected_pages=None, original_filenames=None):
@@ -677,6 +689,10 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
 
         from orchestrator import Orchestrator
         orchestrator = Orchestrator(client_schema_path=schema_path)
+        # The firm's locale (`locale:` in its schema YAML) — the second hint
+        # for reading numbers, after a template's own (engine/amounts.py).
+        from amounts import FIRM_LOCALE
+        FIRM_LOCALE.set(_firm_locale(schema_path))
 
         # The worker builds its OWN storage handle. `storage` in the upload
         # route is a request dependency (`Depends(get_storage)`) and does not

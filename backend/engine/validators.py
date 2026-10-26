@@ -44,6 +44,18 @@ class CheckContext:
     #: duplicate, an empty or malformed row): what is left is not the whole
     #: table, so a check summing or chaining its rows must not run.
     incomplete: set = field(default_factory=set)
+    #: the template's locale, else the firm's (`locale:` in its YAML); None =
+    #: let the document's own numbers decide (engine/amounts.py)
+    locale: object = None
+
+    def texts(self):
+        """Every extracted value of the record, fields and table cells."""
+        out = [v for v in (self.values or {}).values()]
+        for rows in (self.rows or {}).values():
+            for r in rows or []:
+                if isinstance(r, dict):
+                    out += [v for k, v in r.items() if not str(k).startswith("_")]
+        return out
 
 
 @dataclass
@@ -93,7 +105,18 @@ def run_checks(doc_type, ctx):
     """Every result of every validator for this document type's family:
     the `ANY` checks first, then the family's own."""
     _load()
-    fam = family_of(doc_type)
+    from amounts import DOCUMENT_HINT, FIRM_LOCALE, document_hint
+    # Locale hint, in order: the template's, the firm's, then the document's
+    # own unambiguous numbers (engine/amounts.py).
+    token = DOCUMENT_HINT.set(document_hint(ctx.texts(),
+                                            ctx.locale or FIRM_LOCALE.get()))
+    try:
+        return _run(fam=family_of(doc_type), ctx=ctx)
+    finally:
+        DOCUMENT_HINT.reset(token)
+
+
+def _run(fam, ctx):
     out = []
     for v in REGISTRY.get(ANY, []) + (REGISTRY.get(fam, []) if fam != ANY else []):
         try:
@@ -117,6 +140,7 @@ def _load():
     global _loaded
     if not _loaded:
         _loaded = True
+        import notation_validators  # noqa: F401
         import cheque_validators  # noqa: F401
         import invoice_validators  # noqa: F401
         import bank_validators  # noqa: F401

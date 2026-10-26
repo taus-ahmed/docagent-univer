@@ -53,9 +53,11 @@ def _digits(v) -> str:
     return "".join(str(int(c)) for c in str(v or "") if c.isdecimal())
 
 
-def _amount(v):
-    from invoice_validators import money
-    return money(v)
+def _amount(v, hint=None):
+    """The shared parser (engine/amounts.py) with the record's own evidence;
+    an ambiguous amount is None — unknown, so never a duplicate by amount."""
+    from amounts import money
+    return money(v, hint)
 
 
 _DATE_FORMATS = ("%m/%d/%Y", "%m/%d/%y", "%Y-%m-%d", "%d %B %Y", "%B %d, %Y",
@@ -89,6 +91,8 @@ def identity(ed) -> dict | None:
         v = values.get(f["ref"])
         if r and str(v or "").strip():
             by_role.setdefault(r, []).append((f["ref"], v))
+    from amounts import document_hint
+    hint = document_hint(list(values.values()), ed.get("locale"))
     out, refs = {}, {}
     for r in IDENTITY:
         hits = by_role.get(r) or []
@@ -102,7 +106,7 @@ def identity(ed) -> dict | None:
             d = _digits(v)
             out[r] = d.lstrip("0") or ("0" if d else None)
         elif r == "amount":
-            out[r] = _amount(v)
+            out[r] = _amount(v, hint)
         else:
             out[r] = _date(v)
         if out[r] is not None:

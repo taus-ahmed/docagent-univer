@@ -37,17 +37,6 @@ def _digits(s) -> str:
     return re.sub(r'[^0-9]', '', str(s or ""))
 
 
-def _num(s):
-    """Parse a money/number string to float, or None."""
-    t = str(s or "").strip().replace(",", "").replace("$", "").replace("£", "").replace("€", "")
-    if t.startswith("(") and t.endswith(")"):
-        t = "-" + t[1:-1]
-    try:
-        return float(t)
-    except (ValueError, TypeError):
-        return None
-
-
 def _unreadable(file_path, doc):
     """Why this file has nothing to read, or "" when it has something.
 
