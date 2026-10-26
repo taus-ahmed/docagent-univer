@@ -1241,8 +1241,10 @@ store (Cloudflare R2 in production) — no route changes.
   (`StorageError`) — a write that silently failed leaves a job pointing at a
   key holding nothing.
 - `signed_url()` (capped at 1 h; **None** on local, so a never-expiring link
-  cannot ship by accident) and `delete_job_sources()` (sources go, outputs
-  stay) exist for Phase 11 and are tested, but are not yet wired to a route.
+  cannot ship by accident) exists for Phase 11 and is tested, but is not yet
+  wired to a route. A job's files are deleted by `core/job_lifecycle.py::
+  purge_job` (the whole `job_prefix`), behind `DELETE /api/jobs/{id}/data` and
+  the retention purge.
 
 ⚠ **Schemas must be materialised at boot.** A schema lives twice: the text in
 `client_schemas.yaml_content`, and a copy in storage that `get_schema_path()`
@@ -1258,9 +1260,10 @@ every download. Nothing is lost on restart, and nothing needed migrating.
 
 ### `backend/app/api/routes/auth.py` — rate limiter
 
-In-memory, thread-safe (`Lock()`), per-IP: `_fail_counts` + `_lockout_until`.
-5 failed attempts = 15 min lockout. `_get_client_ip()` respects
-`X-Forwarded-For` (Railway proxy). Stateless JWT — logout is a server no-op.
+In-memory, thread-safe (`Lock()`), per (address, username): `_fail_counts` +
+`_lockout_until`. 5 failed attempts = 15 min lockout. `_get_client_ip()` takes
+the `TRUSTED_PROXY_COUNT`-th `X-Forwarded-For` entry from the right (default 1,
+Railway's proxy), else the TCP peer. Stateless JWT — logout is a server no-op.
 
 ### Engine modules on `sys.path`
 

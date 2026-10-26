@@ -96,6 +96,8 @@ financial statements and a few forms have no validators.
 6. **Staging** environment before real client documents.
 7. Every **VERIFY** in [OPERATIONS.md](OPERATIONS.md) and
    [CLIENT-DATA-FAQ.md](CLIENT-DATA-FAQ.md).
-8. New this round: set `DRIVE_TENANT` if anyone used Google Drive (it is now
-   off by default); confirm Railway appends the client address last in
-   `X-Forwarded-For`.
+8. Set `DRIVE_TENANT` if anyone used Google Drive (it is off by default);
+   confirm Railway appends the client address last in `X-Forwarded-For`
+   (else set `TRUSTED_PROXY_COUNT`).
+9. Before the first deploy of this release, run `scripts/check_firm_ids.py`
+   on the production firm ids ([OPERATIONS.md](OPERATIONS.md) §12).

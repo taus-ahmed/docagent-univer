@@ -27,8 +27,10 @@ names the code that implements it.
   lock that (address, username) out for 15 minutes (`routes/auth.py`). Keyed
   by the pair so nobody can lock out another firm's users: failures against a
   username lock only that username, only from that address. The address is
-  the LAST `X-Forwarded-For` entry — the one Railway's proxy appends (⚠
-  VERIFY); earlier entries are the caller's to choose and are ignored. In
+  the `X-Forwarded-For` entry the farthest trusted proxy appended — the
+  `TRUSTED_PROXY_COUNT`-th from the right (default 1: the one Railway's proxy
+  appends, ⚠ VERIFY); earlier entries are the caller's to choose and are
+  ignored, and with no header (or too few entries) the TCP peer is used. In
   memory: resets on restart and does not span instances. A per-username lock
   across all addresses was rejected: it lets anyone lock a named user out.
 - **One-time passwords**: an account created for someone else (onboarding,
@@ -66,9 +68,12 @@ names the code that implements it.
   need a migration: `proposals/retention-v2.md`.
 - Cost control: `TENANT_MONTHLY_PAGE_LIMIT` / a firm's `monthly_page_limit`
   (`core/usage.py`); refused before anything is stored (429).
-- Cancel: `DELETE /api/jobs/{id}` — the owner, or an admin in scope; the job
-  thread stops at its next checkpoint and lists unfinished files as cancelled
-  (docs/ENGINE-RESULT-CONTRACT.md §1.2). Logged as job and user ids.
+- Cancel: `DELETE /api/jobs/{id}` — the owner, an admin in scope, or a
+  `company_admin` of the job's firm; the job thread stops at its next
+  checkpoint and lists unfinished files as cancelled
+  (docs/ENGINE-RESULT-CONTRACT.md §1.2). Each file is saved in one
+  transaction after a last cancel check, so a cancel never leaves a file
+  half-saved. Logged as job and user ids.
 - Roles: one permission function, `app/core/permissions.py::can(user, action,
   resource)`, with the matrix as data (`docs/proposals/roles.md`, "As
   implemented"); routes never compare role strings themselves.

@@ -367,13 +367,16 @@ and nothing warns you before you start.
 ## A job interrupted by a server restart
 
 **ABSENT (fixed to fail rather than hang).** If the server restarts mid-run — a
-deployment, for instance — that run is lost. It now reports **"Interrupted by a
-server restart before it finished. Nothing was saved for this job — upload the
-files again."** rather than sitting at *processing* for ever.
+deployment, for instance — the file being read is lost. Each file's results are
+saved when that file finishes (one transaction per file), so the job reports
+either **"Interrupted by a server restart before it finished. N of M document
+result(s) had been saved and are kept; upload the remaining files again."** or,
+when nothing had finished, **"… Nothing was saved for this job — upload the
+files again."** — rather than sitting at *processing* for ever.
 
-Nothing partial is kept, so there is no half-finished spreadsheet to mistake for
-a finished one. The job says *Interrupted by restart*; it cannot list which
-files were in it, because the file list lives only in the running job.
+No file is ever kept half-saved, so there is no half-finished record to mistake
+for a finished one. The job says *Interrupted by restart*; it cannot list which
+files were not reached, because the file list lives only in the running job.
 
 ## Cancelling a job stops at the next page, not instantly
 

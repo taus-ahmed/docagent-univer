@@ -6,7 +6,8 @@
 `String(20)`, so no migration); another tenant's job answers 404. **Open:** step 3
 (explicit `platform_admin` role — a data migration; until then platform_admin is
 derived from "admin with no client_id" exactly as before). The inventory below
-is the one taken 2026-10-23 before the change; line numbers are at that commit.
+is the one taken 2026-10-23 before the change; line numbers are at that commit,
+and each finding that has since been resolved is marked **[resolved]**.
 
 ### As implemented
 
@@ -15,7 +16,7 @@ is the one taken 2026-10-23 before the change; line numbers are at that commit.
 | Upload documents | ✓ (names a tenant) | ✓ | ✓ | ✓ | ✓ |
 | View / review / edit / export results | all tenants | own tenant | own tenant | own tenant | own jobs |
 | Cancel a job | any | own tenant | own tenant | own jobs | own jobs |
-| Hard-delete a job | any | own tenant | — | — | — |
+| Hard-delete a job | any | own tenant | own jobs | own jobs | own jobs |
 | Templates: create / edit own | ✓ | ✓ | ✓ | — | ✓ |
 | Templates: share, edit the firm's | ✓ | ✓ | ✓ | — | — |
 | Schemas, users, system statistics | all tenants | own tenant | — | — | — |
@@ -102,25 +103,31 @@ routes (`review.py:51`).
 
 ## Routes that do not fit any coherent rule
 
-1. **Watch folders cross the tenant boundary** — `drive.py:274` lists every
+1. **[resolved, round 13; Drive itself gated by `DRIVE_TENANT` in round 14]**
+   **Watch folders cross the tenant boundary** — `drive.py:274` lists every
    tenant's watch folders to any `role == "admin"`, and `drive.py:331` lets any
    admin delete any tenant's folder. A tenant admin is an admin, so tenant A's
    admin sees tenant B's Drive folder ids and can stop B's watch. **This is a
    tenancy defect, not only a role question; it should be fixed first** (scope
    both to `client_id` unless super-admin). Not changed in this round, as asked.
-2. **`company_admin` is half a role** — it reads the whole tenant's jobs and
+2. **[decided: kept as the legacy firm-wide role with its old powers,
+   including cancelling any job of its firm — Run 15]**
+   **`company_admin` is half a role** — it reads the whole tenant's jobs and
    shares templates, but `require_admin` refuses it, and the API cannot assign
    it (`schemas.py:43`). Nobody can create one except by SQL.
 3. **Anyone who can see a job can edit and approve it** (`extract.py:7009,
    7022, 7039`, `review.py:140`). There is no read-only role: an auditor or a
    client's staff member who should only download cannot be given access.
-4. **403 versus 404** across tenants on the job routes (`extract.py:7077`)
+4. **[resolved, round 13; every route since round 14 — the isolation suite]**
+   **403 versus 404** across tenants on the job routes (`extract.py:7077`)
    tells a caller that a job id exists in another tenant; the review routes
    already answer 404.
 5. **Tenant admin and super-admin are the same `role` string**, told apart by
    the absence of `client_id`. One `UPDATE users SET client_id = NULL` turns a
    tenant admin into a platform administrator.
-6. **Nothing deletes data** (see `retention.md`): no role can remove a job, a
+6. **[resolved, rounds 13/14: `DELETE /api/jobs/{id}/data?confirm=true` for the
+   owner, firm admin and platform admin; `DATA_RETENTION_DAYS`]**
+   **Nothing deletes data** (see `retention.md`): no role can remove a job, a
    result or an uploaded file through the API.
 
 ## Recommended matrix
@@ -136,7 +143,7 @@ routes (`review.py:51`).
 | Manage templates | ✓ | own tenant, shared | own (not shared) | own |
 | Drive / watch folders | ✓ | own tenant | own | own |
 | System statistics | all tenants | own tenant | — | — |
-| Delete data (job, results, files) | ✓ | own tenant | — | own jobs (proposal) |
+| Delete data (job, results, files) | ✓ | own tenant | — | own jobs (implemented, round 14) |
 
 `reviewer` is the role the first customer asks for: a second accountant who
 checks values across the firm's jobs without managing users. A read-only
