@@ -86,13 +86,13 @@ class _FakeGemini:
                 if line:
                     fields[sid] = {"value": line[len(label) + 1:], "source": line, "page": 1}
             return json.dumps({"fields": fields, "tables": {}})
-        if '"categories"' in prompt:
-            return json.dumps({"categories": [f"{SENTINEL}CAT"]})
         if '"summary"' in prompt:
             if not self.broke_once:
                 self.broke_once = True
                 return f"Sorry, I read {SENTINEL}RAW and cannot answer as JSON"
             return json.dumps({"summary": f"The customer {SENTINEL}SUMMARY owes money."})
+        if 'Assign a business category' in prompt or '"categories"' in prompt:
+            return json.dumps({"categories": [f"{SENTINEL}CAT"]})
         if '"anomalies"' in prompt:
             return json.dumps({"anomalies": [f"{SENTINEL}ANOMALY looks odd"]})
         # Shape inference: design a template from the document.
@@ -202,7 +202,7 @@ def test_a_templated_run_with_every_option_logs_no_content(
     from app.models.models import DocumentResult
     job = _run(db, users, _db_url, monkeypatch, tmp_path, template=True,
                keys=[f"clients/acme_001/jobs/1/source/{FILENAME}"],
-               options=["categorize", "summary", "anomaly"])
+               options=["categorize", "summary", "narrative", "anomaly"])
     out = _assert_clean(capfd, everything_logged)
     # The run really happened and really carried the sentinel to the result —
     # otherwise a clean log would prove nothing.
