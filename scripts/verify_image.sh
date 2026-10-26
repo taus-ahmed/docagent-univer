@@ -23,12 +23,20 @@ echo "== running"
 CID=$(docker run -d -p "$PORT:8000" -e ENVIRONMENT=development \
       -e DATABASE_URL=sqlite:////tmp/verify.db -e SECRET_KEY=verify-only-not-a-secret-0123456789abcdef "$IMG")
 i=0; until curl -fsS "http://127.0.0.1:$PORT/health" >/dev/null 2>&1 || [ $i -ge 60 ]; do i=$((i+1)); sleep 1; done
-curl -fsS "http://127.0.0.1:$PORT/health"; echo; check "/health answers" $?
+curl -fsS "http://127.0.0.1:$PORT/health"; ok=$?; echo; check "/health answers" $ok
 curl -sS "http://127.0.0.1:$PORT/ready"; echo
 code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/ready"); [ "$code" = "200" ]; check "/ready is 200" $?
-n=$(docker top "$CID" -eo comm | grep -c uvicorn || true); echo "uvicorn processes: $n"
+docker exec "$CID" sh -c 'ls /proc | grep -E "^[0-9]+$" | while read p; do tr "\0" " " < /proc/$p/cmdline 2>/dev/null; echo; done' | grep -c "bin/uvicorn" | grep -qx 1; check "one uvicorn process (no shell between tini and it)" $?
 docker exec "$CID" sh -c 'cat /proc/1/comm' | grep -q tini; check "PID 1 is tini" $?
-docker stop -t 30 "$CID" >/dev/null; check "stops on SIGTERM within 30 s" $?
+[ "$(docker inspect -f '{{.State.Running}}' "$CID")" = "true" ]; check "still running before stop" $?
+t0=$(date +%s); docker stop -t 30 "$CID" >/dev/null
+code=$(docker inspect -f '{{.State.ExitCode}}' "$CID"); t=$(( $(date +%s) - t0 ))
+echo "stopped in ${t}s, exit code $code"
+# 137 = SIGKILL after the timeout. 143 is normal: uvicorn re-raises SIGTERM
+# after a clean shutdown, so the log line is what proves the lifespan drained.
+[ "$code" != "137" ] && [ "$t" -lt 30 ]; check "stops on SIGTERM within 30 s" $?
+docker logs "$CID" 2>&1 | grep -q "Application shutdown complete"; check "lifespan shutdown ran (jobs drained)" $?
+[ $fail = 0 ] || docker logs "$CID" 2>&1 | tail -20
 docker rm "$CID" >/dev/null 2>&1
 [ $fail = 0 ] && echo "ALL PASSED" || echo "SOME CHECKS FAILED"
 exit $fail

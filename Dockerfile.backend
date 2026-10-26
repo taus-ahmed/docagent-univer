@@ -46,6 +46,7 @@ RUN groupadd --gid 10001 docagent \
         --shell /usr/sbin/nologin docagent \
     && mkdir -p storage/uploads storage/outputs storage/schemas/clients \
     && chown -R docagent:docagent storage \
+    && sed -i 's/\r$//' /app/docker-entrypoint.sh \
     && chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 8000
