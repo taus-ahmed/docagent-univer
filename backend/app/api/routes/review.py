@@ -132,58 +132,109 @@ class ReviewMark(BaseModel):
     reviewed: bool = True
 
 
+def _apply_marks(ed: dict, payload: ReviewMark, stamp: dict) -> dict:
+    """The marks in `payload` applied to `ed` in place (and returned).
+    Marking a value already marked re-stamps it; nothing accumulates."""
+    if payload.scope == "document":
+        ed["review"] = ({"document_reviewed": True, **stamp} if payload.reviewed
+                        else {"document_reviewed": False})
+        return ed
+    prov = ed.setdefault("field_provenance", {})
+    tables = dict(R.table_keys(ed))
+    for v in payload.values:
+        if v.get("ref") is not None:
+            ref = str(v["ref"])
+            if ref not in prov and ref not in (ed.get("extracted_fields") or {}):
+                raise HTTPException(status_code=404, detail=f"No field at {ref!r}")
+            p = prov.setdefault(ref, {})
+            if payload.reviewed:
+                p["reviewed"] = stamp
+            else:
+                p.pop("reviewed", None)
+        elif v.get("table") is not None and isinstance(v.get("row"), int):
+            key = tables.get(str(v["table"]))
+            rows = ed.get(key) if key else None
+            if not isinstance(rows, list) or not 0 <= v["row"] < len(rows)                     or not isinstance(rows[v["row"]], dict):
+                raise HTTPException(status_code=404, detail="No such table row")
+            if payload.reviewed:
+                rows[v["row"]]["_reviewed"] = stamp
+            else:
+                rows[v["row"]].pop("_reviewed", None)
+        else:
+            raise HTTPException(status_code=422,
+                                detail="Each value needs a ref, or a table and a row")
+    return ed
+
+
+def _swap(db, doc_id: int, old: str, values: dict) -> bool:
+    """UPDATE the row only if its stored JSON is still `old`; True if it was.
+
+    A compare-and-swap on the text itself: no version column, no migration,
+    and it works the same on SQLite and PostgreSQL and across processes."""
+    from sqlalchemy import update
+    from app.models.models import DocumentResult
+    done = db.execute(update(DocumentResult)
+                      .where(DocumentResult.id == doc_id,
+                             DocumentResult.extraction_json.is_(None)
+                             if old is None else
+                             DocumentResult.extraction_json == old)
+                      .values(**values)
+                      .execution_options(synchronize_session=False))
+    if done.rowcount == 1:
+        db.commit()
+        return True
+    db.rollback()
+    return False
+
+
+#: How often a mark is re-read and re-applied after losing a race.
+MARK_ATTEMPTS = 8
+
+
 @router.post("/jobs/{job_id}/docs/{doc_id}/review")
 def mark_reviewed(job_id: int, doc_id: int, payload: ReviewMark,
                   db: Session = Depends(get_db),
                   current_user: User = Depends(get_current_user)):
-    import copy
+    """Mark values (or the document) reviewed.
+
+    CONCURRENCY-SAFE without a migration: the stored JSON is re-read, the
+    marks applied to that, and written only if nobody wrote in between
+    (`_swap`); otherwise read again and re-applied. Two reviewers marking
+    different values at once both persist; a conflict that never clears is a
+    409, never a silently dropped mark."""
+    import json
+    from sqlalchemy import select
+    from app.models.models import DocumentResult
     _, doc = _doc_for(job_id, doc_id, current_user, db, "job.review")
-    stored = doc.get_extracted_data() or {}
-    if not isinstance(stored, dict):
-        raise HTTPException(status_code=422, detail="This document has no stored result")
-    ed = copy.deepcopy(stored)
     stamp = {"by": current_user.username, "at": datetime.utcnow().isoformat() + "Z"}
-    if payload.scope == "document":
-        ed["review"] = ({"document_reviewed": True, **stamp} if payload.reviewed
-                        else {"document_reviewed": False})
-    else:
-        prov = ed.setdefault("field_provenance", {})
-        tables = dict(R.table_keys(ed))
-        for v in payload.values:
-            if v.get("ref") is not None:
-                ref = str(v["ref"])
-                if ref not in prov and ref not in (ed.get("extracted_fields") or {}):
-                    raise HTTPException(status_code=404, detail=f"No field at {ref!r}")
-                p = prov.setdefault(ref, {})
-                if payload.reviewed:
-                    p["reviewed"] = stamp
-                else:
-                    p.pop("reviewed", None)
-            elif v.get("table") is not None and isinstance(v.get("row"), int):
-                key = tables.get(str(v["table"]))
-                rows = ed.get(key) if key else None
-                if not isinstance(rows, list) or not 0 <= v["row"] < len(rows) \
-                        or not isinstance(rows[v["row"]], dict):
-                    raise HTTPException(status_code=404, detail="No such table row")
-                if payload.reviewed:
-                    rows[v["row"]]["_reviewed"] = stamp
-                else:
-                    rows[v["row"]].pop("_reviewed", None)
-            else:
-                raise HTTPException(status_code=422,
-                                    detail="Each value needs a ref, or a table and a row")
-    values = R.document_values(ed)
-    open_ = R.summarise(values)["needs_review"]
-    doc.set_extracted_data(ed)
-    # The document is reviewed when nothing in it is still owed a look.
-    doc.reviewed = open_ == 0
-    doc.reviewed_by = current_user.username if open_ == 0 else doc.reviewed_by
-    if open_ == 0:
-        doc.reviewed_at = datetime.utcnow()
-        doc.needs_review = False
-    db.commit()
-    return {"doc_id": doc_id, "summary": R.summarise(values), "values": values,
-            "document_reviewed": R.document_reviewed(ed)}
+    for _attempt in range(MARK_ATTEMPTS):
+        row = db.execute(select(DocumentResult.extraction_json,
+                                DocumentResult.reviewed_by)
+                         .where(DocumentResult.id == doc.id)).one()
+        db.rollback()          # end the read: the write starts fresh (SQLite WAL)
+        old, reviewed_by = row
+        try:
+            stored = json.loads(old) if old else {}
+        except ValueError:
+            stored = {}
+        if not isinstance(stored, dict):
+            raise HTTPException(status_code=422,
+                                detail="This document has no stored result")
+        ed = _apply_marks(stored, payload, stamp)
+        values = R.document_values(ed)
+        open_ = R.summarise(values)["needs_review"]
+        # The document is reviewed when nothing in it is still owed a look.
+        cols = {"extraction_json": json.dumps(ed, default=str),
+                "reviewed": open_ == 0,
+                "reviewed_by": current_user.username if open_ == 0 else reviewed_by}
+        if open_ == 0:
+            cols.update(reviewed_at=datetime.utcnow(), needs_review=False)
+        if _swap(db, doc.id, old, cols):
+            return {"doc_id": doc_id, "summary": R.summarise(values),
+                    "values": values, "document_reviewed": R.document_reviewed(ed)}
+    raise HTTPException(status_code=409,
+                        detail="This document was changed by someone else at the "
+                               "same moment; nothing was marked. Try again.")
 
 
 # ── page images and boxes ────────────────────────────────────────────────────
