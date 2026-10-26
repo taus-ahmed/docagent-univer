@@ -47,7 +47,9 @@ GRID = {"cells": {"0,0": {"value": "Invoice No"}, "1,0": {"value": "Invoice Date
 
 @pytest.fixture
 def stub(monkeypatch):
-    from app.config import settings
+    # Patch the object the ROUTER reads: a test that reloads app.config
+    # leaves app.config.settings and the router's settings different objects.
+    from connectors.llm_router import settings
     monkeypatch.setattr(settings, "PRIMARY_LLM", "stub", raising=False)
     monkeypatch.setattr(settings, "LLM_FALLBACKS", "", raising=False)
     from connectors.llm_router import LLMRouter
@@ -76,8 +78,8 @@ def test_no_template_inference_runs_offline(stub, tmp_path):
 
 
 def test_the_router_never_falls_back_to_the_stub(monkeypatch):
-    from app.config import settings
     from connectors import llm_router
+    settings = llm_router.settings
     monkeypatch.setattr(settings, "PRIMARY_LLM", "nonsense", raising=False)
     monkeypatch.setattr(settings, "LLM_FALLBACKS", "", raising=False)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "", raising=False)
