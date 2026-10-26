@@ -267,35 +267,18 @@ def _post_summarize(extracted: dict, orchestrator, doc_type: str) -> dict:
 
 
 def _post_anomaly(extracted: dict, orchestrator, doc_type: str) -> dict:
-    """
-    Detect anomalies in extracted data — duplicate values, unusual amounts,
-    missing required fields, outliers.
-    Stored in extracted['anomalies'] as a list of strings.
-    """
+    """Anomalies by RULES, with evidence (engine/anomalies.py, Part A3): no
+    model call. Each states its rule, rows and numbers; none changes a level.
+    The model pass this replaces returned unexplained sentences."""
+    from anomalies import detect
     try:
-        inner = extracted.get("extracted_data", {})
-        fields = {k: (v.get("value", "") if isinstance(v, dict) else v)
-                  for k, v in inner.items() if not k.startswith("_label_")}
-        table_rows = extracted.get("table_rows", [])[:30]
-
-        field_str = "\n".join(f"{k}: {v}" for k, v in list(fields.items())[:15])
-        row_str   = "\n".join(f"Row {i+1}: {json.dumps(r)}"
-                               for i, r in enumerate(table_rows))
-
-        prompt = (
-            f"Analyse this extracted {doc_type} data for anomalies: "
-            f"unusual values, duplicates, outliers, or missing required fields.\n"
-            f"Return ONLY a JSON object: {{\"anomalies\": [\"issue1\", \"issue2\"]}}\n"
-            f"Maximum 5 items. If nothing unusual return {{\"anomalies\": []}}\n\n"
-            f"Fields:\n{field_str}\n\nRows:\n{row_str}"
-        )
-        result = orchestrator.llm.extract(text=field_str, prompt=prompt)
-        if result.success and result.parsed_json:
-            anomalies = result.parsed_json.get("anomalies", [])
-            extracted["anomalies"] = anomalies if isinstance(anomalies, list) else []
-            print(f"[OPTIONS] anomalies: {len(extracted['anomalies'])} found", flush=True)
+        extracted["anomalies"] = detect(extracted)
+        print(f"[OPTIONS] anomalies: {len(extracted['anomalies'])} found", flush=True)
     except Exception as e:
         print(f"[OPTIONS] anomaly failed: {exc_brief(e)}", flush=True)
+        extracted["anomalies"] = []
+        extracted.setdefault("validation_notes", []).append(
+            "anomaly detection could not run for this document")
     return extracted
 
 

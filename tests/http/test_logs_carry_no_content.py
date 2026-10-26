@@ -71,13 +71,13 @@ class _FakeGemini:
         self.broke_once = False
 
     def _answer(self, prompt: str) -> str:
-        if "Return ONLY a JSON object starting with" in prompt:   # the client's retry
-            return json.dumps({"fields": {}, "tables": {}})
         slots = re.findall(r'^\s+(F\d+): .*"([^"]+)"$', prompt, re.M)
+        if "Return ONLY a JSON object starting with" in prompt and not slots:
+            return json.dumps({"fields": {}, "tables": {}})   # the client's retry
         if slots:
-            if not self.broke_once:
-                self.broke_once = True
-                return f"Sorry, I read {SENTINEL}RAW and cannot answer as JSON"
+            # (the deliberate non-JSON answer moved to the summary call when
+            # anomalies became rule-based, Part A3: the retry resends the bad
+            # answer, not the prompt, so breaking HERE left nothing extracted)
             by_label = {"Customer Name": LINES[1], "Invoice Number": LINES[2],
                         "Notes": LINES[3]}
             fields = {}
@@ -89,6 +89,9 @@ class _FakeGemini:
         if '"categories"' in prompt:
             return json.dumps({"categories": [f"{SENTINEL}CAT"]})
         if '"summary"' in prompt:
+            if not self.broke_once:
+                self.broke_once = True
+                return f"Sorry, I read {SENTINEL}RAW and cannot answer as JSON"
             return json.dumps({"summary": f"The customer {SENTINEL}SUMMARY owes money."})
         if '"anomalies"' in prompt:
             return json.dumps({"anomalies": [f"{SENTINEL}ANOMALY looks odd"]})

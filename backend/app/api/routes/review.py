@@ -114,9 +114,12 @@ def job_review(job_id: int, db: Session = Depends(get_db),
             "error": d.validation_errors or "",
             "values": values,
             "summary": R.summarise(values),
+            # Part A3: informational, counted, never a level
+            "anomalies": [a for a in (ed.get("anomalies") or []) if isinstance(a, dict)],
         })
     s = R.summarise(all_values)
     s["documents"] = len(out)
+    s["anomalies"] = sum(len(o["anomalies"]) for o in out)
     s["documents_needing_review"] = sum(1 for o in out if o["summary"]["needs_review"]
                                         or (o["failed"] and not o["document_reviewed"]))
     return {"job_id": job_id, "summary": s, "documents": out}

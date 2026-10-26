@@ -178,7 +178,7 @@ function InsightsPanel({
   const allFields: Record<string, string> = {};
   const tableRows: Record<string, any>[] = [];
   const summaries: string[] = [];
-  const anomalies: string[] = [];
+  const anomalies: { rule: string; severity: string; message: string }[] = [];
   const categories: { category: string; level: string; by: string; reasons?: string[] }[] = [];
 
   results.forEach(r => {
@@ -194,7 +194,9 @@ function InsightsPanel({
     Object.values(data.categories ?? {}).forEach((entries: any) =>
       (entries ?? []).forEach((e: any) => categories.push(e)));
     if (data.summary) summaries.push(data.summary);
-    if (Array.isArray(data.anomalies)) anomalies.push(...data.anomalies);
+    // A3: rule-based anomalies (an older job may hold plain sentences)
+    if (Array.isArray(data.anomalies)) data.anomalies.forEach((a: any) =>
+      anomalies.push(typeof a === "string" ? { rule: "", severity: "low", message: a } : a));
   });
 
   // ── Categorization ────────────────────────────────────────────────────────
@@ -228,7 +230,8 @@ function InsightsPanel({
   const fieldPie = numericFields.map((f, i) => ({ ...f, color: CHART_COLORS[i % CHART_COLORS.length] }));
 
   const summary = summaries[0] ?? "";
-  const uniqueAnomalies = [...new Set(anomalies)];
+  const uniqueAnomalies = anomalies.filter((a, i) =>
+    anomalies.findIndex(b => b.message === a.message) === i);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
@@ -384,7 +387,10 @@ function InsightsPanel({
                     <line x1="12" y1="8" x2="12" y2="12"/>
                     <line x1="12" y1="16" x2="12.01" y2="16"/>
                   </svg>
-                  <span style={{ fontSize: 11.5, color: "var(--text2)", lineHeight: 1.5 }}>{a}</span>
+                  <span style={{ fontSize: 11.5, color: "var(--text2)", lineHeight: 1.5 }}>
+                    <strong style={{ textTransform: "uppercase", fontSize: 10, marginRight: 6 }}>{a.severity}</strong>
+                    {a.message}{a.rule ? <span style={{ color: "var(--text3)" }}> · {a.rule}</span> : null}
+                  </span>
                 </div>
               ))}
             </div>

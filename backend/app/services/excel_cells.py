@@ -385,6 +385,29 @@ def _review_status_unknown(value):
     return _review.value_status(value, None)
 
 
+def _add_anomalies_sheet(wb, doc_results, demo=False):
+    """An "Anomalies" sheet when the option ran (Part A3): rule, severity,
+    rows, numbers and the sentence, per document. Informational: no value's
+    mark changes because of an anomaly."""
+    rows = []
+    for d in doc_results:
+        ed = d.get_extracted_data()
+        for a in (ed.get("anomalies") if isinstance(ed, dict) else None) or []:
+            if isinstance(a, dict):
+                rows.append(["" if demo else (getattr(d, "filename", "") or ""),
+                             a.get("severity", ""), a.get("rule", ""), a.get("message", ""),
+                             ", ".join(a.get("rows") or []),
+                             "; ".join(f"{k}={v}" for k, v in (a.get("numbers") or {}).items())])
+    if not rows:
+        return
+    ws = wb.create_sheet("Anomalies")
+    ws.append(["Document", "Severity", "Rule", "What", "Rows", "Numbers"])
+    for r in rows:
+        ws.append(r)
+    for col, w in zip("ABCDEF", (28, 10, 22, 70, 30, 40)):
+        ws.column_dimensions[col].width = w
+
+
 def _add_categories_sheet(wb, doc_results, demo=False):
     """A "Categories" sheet when the categorization option ran (Part A2):
     one row per categorized table row, the category cell marked exactly as
@@ -420,6 +443,7 @@ def _add_review_legend(wb, doc_results, demo=False):
     from openpyxl.styles import Font, PatternFill
     from app.core import review as _review
     _add_categories_sheet(wb, doc_results, demo=demo)
+    _add_anomalies_sheet(wb, doc_results, demo=demo)
     lg = wb.create_sheet("Legend")
     per_doc, total = [], {"values": 0, "needs_review": 0, "low": 0,
                           "unverified": 0, "empty_flagged": 0}
