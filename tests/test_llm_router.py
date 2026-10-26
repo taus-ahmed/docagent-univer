@@ -52,7 +52,10 @@ def test_default_is_gemini_only_with_no_fallback(monkeypatch):
     r = llm_router.LLMRouter()
     assert [n for n, _ in r.providers] == ["gemini"]
     assert isinstance(r.primary, GeminiClient)
-    assert list(llm_router.PROVIDERS) == ["gemini"]
+    # The offline stub is registered but EXPLICIT_ONLY: never in a default
+    # order and never a fallback (tests/test_stub_provider.py).
+    assert list(llm_router.PROVIDERS) == ["gemini", "stub"]
+    assert llm_router.EXPLICIT_ONLY == {"stub"}
 
 
 def test_primary_receives_every_argument_unchanged(providers):

@@ -395,6 +395,10 @@ class LLMCache:
     # ── the wrapped calls ────────────────────────────────────────────────────
 
     def _dispatch(self, method: str, orig, router, kwargs: dict):
+        # The offline stub provider (connectors/stub_client.py) is a pure
+        # function of the prompt: nothing to record, nothing to replay.
+        if [n for n, _ in getattr(router, "providers", [])][:1] == ["stub"]:
+            return orig(router, **kwargs)
         key = request_key(method, text=kwargs.get("text", ""),
                           image_b64=kwargs.get("image_b64", ""),
                           prompt=kwargs.get("prompt", ""),

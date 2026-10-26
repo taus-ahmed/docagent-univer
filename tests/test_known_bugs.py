@@ -191,5 +191,9 @@ class TestP3FabricatedLineItem:
         leftmost silently loses half the sheet."""
         _results, ws, _log = _run_and_export()
         values = [c.value for row in ws.iter_rows() for c in row]
-        assert 415000 in values, values
-        assert 400000 in values, values
+        # Part 1.1: "415,000" on a page with no decimal anywhere is
+        # number_ambiguous (415 thousand, or 415.000 in de-DE), so the export
+        # keeps the printed text rather than guess a number. What this test
+        # pins is that BOTH totals are written, not their cell type.
+        assert {415000, "415,000"} & set(values), values
+        assert {400000, "400,000"} & set(values), values

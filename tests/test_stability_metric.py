@@ -23,7 +23,11 @@ class TestCoerceCellValue:
     def test_currency_and_separators_are_notation(self):
         assert coerce_cell_value("$1,365,503") == 1365503.0
         assert coerce_cell_value("1,365,503") == 1365503.0
-        assert coerce_cell_value("£1 234") == "£1 234"     # space is not a separator
+        # Part 1.1: a space (or no-break / thin space) grouping exact 3-digit
+        # groups is the fr-FR / sv-SE / pl-PL thousands notation, and a space
+        # is never a decimal mark, so this is unambiguous.
+        assert coerce_cell_value("£1 234") == 1234.0
+        assert coerce_cell_value("1 23") == "1 23"          # not a 3-digit group
 
     def test_accounting_parentheses_are_negative(self):
         assert coerce_cell_value("($3,240.00)") == -3240.0
