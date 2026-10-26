@@ -49,6 +49,7 @@ ALLOWLIST = {
     ("GET", "/"): "public banner, no data",
     ("GET", "/api/review/reasons"): "static reason-code vocabulary",
     ("POST", "/api/templates/shape"): "pure function of the posted grid; reads nothing stored",
+    ("POST", "/api/extract/page-count"): "pure function of the posted files; reads and stores nothing",
     ("GET", "/api/drive/auth/status"): "two booleans about the server's credential",
     ("POST", "/api/drive/auth"): "starts the server credential's OAuth; returns no data",
 }

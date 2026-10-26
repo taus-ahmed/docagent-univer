@@ -493,6 +493,27 @@ async def upload_and_extract(
     )
 
 
+@router.post("/extract/page-count")
+async def get_pdf_page_count(
+    files: list[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Pages per uploaded file, for the extract page's "choose pages" dialog.
+    Reads only the posted bytes; stores nothing. A locked PDF answers 1 (its
+    pages are counted again, with its password, when it is uploaded).
+
+    Restored (Part A7): a cleanup removed it while the page still called it,
+    and the dialog silently stopped appearing."""
+    if len(files) > settings.MAX_FILES_PER_BATCH:
+        raise HTTPException(status_code=400, detail=f"Max {settings.MAX_FILES_PER_BATCH} files.")
+    results = []
+    for f in files:
+        content = await f.read()
+        safe_name, _kind, page_count = _validate_upload_content(f.filename, content)
+        results.append({"filename": safe_name, "page_count": page_count})
+    return results
+
+
 def _parse_passwords(raw, n_files):
     """A JSON array of passwords (or nulls) in file order, or None. A
     malformed value is refused without echoing it."""

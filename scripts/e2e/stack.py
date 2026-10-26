@@ -107,7 +107,7 @@ def main():
     procs = []
     with open(work / "backend.log", "wb") as blog, open(work / "web.log", "wb") as wlog:
         procs.append(subprocess.Popen(
-            [PY, "-m", "uvicorn", "app.main:app", "--port", str(a.api_port)],
+            [PY, "-m", "uvicorn", "app.main:app", "--port", str(a.api_port), "--reload"],
             cwd=ROOT / "backend", env=env, stdout=blog, stderr=subprocess.STDOUT))
         wenv = dict(os.environ, BACKEND_URL=creds["api"], NEXT_PUBLIC_API_URL=creds["api"],
                     PORT=str(a.web_port), NEXT_TELEMETRY_DISABLED="1")
