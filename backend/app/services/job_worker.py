@@ -221,6 +221,27 @@ def _post_categorize(extracted: dict, orchestrator, doc_type: str,
     return extracted
 
 
+def _grant_option_call(session, job) -> bool:
+    """One more model call for an option (Part A4): within the per-job cap
+    (OPTION_MAX_CALLS_PER_JOB) and the firm's monthly limit, where each such
+    call counts as one page (core/usage.py). Granted = counted."""
+    from app.core.usage import PAGES_MARK, page_limit, pages_used
+    used = int(job.marks().get("option_calls") or 0)
+    if used >= int(getattr(settings, "OPTION_MAX_CALLS_PER_JOB", 20) or 0):
+        return False
+    limit, _src = page_limit(session, job.client_id)
+    if limit and pages_used(session, job.client_id) + 1 > limit:
+        return False
+    job.set_mark("option_calls", used + 1)
+    job.set_mark(PAGES_MARK, int(job.marks().get(PAGES_MARK) or 0) + 1)
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        return False
+    return True
+
+
 def _firm_categories(schema_path):
     """`categories:` (a rule list) from the firm's schema YAML, or None."""
     try:
@@ -233,36 +254,49 @@ def _firm_categories(schema_path):
         return None
 
 
-def _post_summarize(extracted: dict, orchestrator, doc_type: str) -> dict:
-    """
-    Generate a 2-3 sentence plain English summary of the extracted document.
-    Uses Gemini — stored in extracted['summary'].
-    """
+def _post_summarize(extracted: dict, orchestrator, doc_type: str,
+                     narrative: bool = False, allow_call=None) -> dict:
+    """A summary that cannot invent numbers (engine/summary.py, Part A4).
+
+    Always: facts computed from the extracted values and a plain summary built
+    from them alone. Only with `narrative` AND `allow_call()` granting one more
+    model call (the per-job cap and the firm's monthly limit): prose written by
+    the model from those facts, kept only if every number, date and name in it
+    exists in the facts — otherwise discarded, with a notice. Prompts and
+    answers are never logged; only counts."""
+    from summary import LABEL, deterministic_text, facts, narrative_prompt, verify_narrative
     try:
-        inner = extracted.get("extracted_data", {})
-        fields = {k: (v.get("value", "") if isinstance(v, dict) else v)
-                  for k, v in inner.items() if not k.startswith("_label_")}
-        if not fields:
-            return extracted
-
-        field_str = "\n".join(f"{k}: {v}" for k, v in list(fields.items())[:20])
-        table_rows = extracted.get("table_rows", [])
-        table_str = f"\n{len(table_rows)} line items." if table_rows else ""
-
-        prompt = (
-            f"Summarise this {doc_type} document in 2-3 plain English sentences. "
-            f"Be specific about key values. No bullet points.\n\n"
-            f"Fields:\n{field_str}{table_str}\n\n"
-            f"Return ONLY a JSON object: {{\"summary\": \"your summary here\"}}"
-        )
-        result = orchestrator.llm.extract(text=field_str, prompt=prompt)
-        if result.success and result.parsed_json:
-            summary = result.parsed_json.get("summary", "")
-            if summary:
-                extracted["summary"] = summary
-                print(f"[OPTIONS] summary generated: {len(summary)} chars", flush=True)
+        f = facts(extracted)
     except Exception as e:
         print(f"[OPTIONS] summary failed: {exc_brief(e)}", flush=True)
+        return extracted
+    out = {"facts": f, "text": deterministic_text(f), "narrative": None,
+           "notice": None, "label": LABEL}
+    if narrative:
+        if allow_call is not None and not allow_call():
+            out["notice"] = ("the written summary was not generated: this job or this "
+                             "firm reached its model-call limit")
+        else:
+            try:
+                r = orchestrator.llm.extract(text=json.dumps(f)[:4000],
+                                             prompt=narrative_prompt(f))
+                prose = (r.parsed_json or {}).get("summary") if r.success else None
+            except Exception as e:
+                print(f"[OPTIONS] summary call failed: {exc_brief(e)}", flush=True)
+                prose = None
+            if not prose:
+                out["notice"] = "the written summary could not be generated; this one is built from the data"
+            else:
+                ok, problems = verify_narrative(prose, f)
+                if ok:
+                    out["narrative"] = prose
+                else:
+                    out["notice"] = ("the written summary was discarded because it mentioned "
+                                     f"{len(problems)} thing(s) not in the data; this one is "
+                                     "built from the data alone")
+                print(f"[OPTIONS] summary narrative {'kept' if ok else 'discarded'} "
+                      f"({len(problems)} unsupported item(s))", flush=True)
+    extracted["summary"] = out
     return extracted
 
 
@@ -916,7 +950,9 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                             # stored in extraction_json.summary
                             if "summary" in options and not extracted.get("summary"):
                                 extracted = _post_summarize(
-                                    extracted, orchestrator, result.document_type or ""
+                                    extracted, orchestrator, result.document_type or "",
+                                    narrative="narrative" in options,
+                                    allow_call=lambda: _grant_option_call(session, job),
                                 )
 
                             # --- ANOMALY DETECTION ---

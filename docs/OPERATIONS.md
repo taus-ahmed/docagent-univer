@@ -44,6 +44,7 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `MAX_FILES_PER_BATCH` | `100` | | per upload |
 | `TENANT_MONTHLY_PAGE_LIMIT` | `2000` | | pages per firm per calendar month; `0` = unlimited (default) |
 | `DATA_RETENTION_DAYS` | `90` | | delete jobs this many days after they finish, daily; `0` = off (default) |
+| `OPTION_MAX_CALLS_PER_JOB` | `20` | | model calls the additional options may make per job (the written summary); each also counts as one page toward the firm's monthly limit |
 | `TRUSTED_PROXY_COUNT` | `1` | | proxies in front of the backend that each append one `X-Forwarded-For` entry; the login limiter trusts the N-th entry from the right (§9). `0` = ignore the header |
 | `DRIVE_TENANT` | `smith_cpa` | | the one firm whose Google Drive the server's Drive credential is; empty = Drive off (default) |
 | `DEMO_CLIENT_IDS`, `DEMO_MAX_MB`, `DEMO_MAX_UPLOADS`, `DEMO_UPLOADS_ENABLED`, `DEMO_HISTORY_CUTOFF` | `pearx_demo`, `10`, `20`, `true`, empty | | the investor demo; empty `DEMO_CLIENT_IDS` = no demo |

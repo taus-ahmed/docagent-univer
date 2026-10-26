@@ -177,7 +177,7 @@ function InsightsPanel({
   // ── Flatten data from all results ─────────────────────────────────────────
   const allFields: Record<string, string> = {};
   const tableRows: Record<string, any>[] = [];
-  const summaries: string[] = [];
+  const summaries: { text: string; notice?: string | null; label?: string }[] = [];
   const anomalies: { rule: string; severity: string; message: string }[] = [];
   const categories: { category: string; level: string; by: string; reasons?: string[] }[] = [];
 
@@ -193,7 +193,11 @@ function InsightsPanel({
     // A2: categories live beside the rows (never inside them), with a level
     Object.values(data.categories ?? {}).forEach((entries: any) =>
       (entries ?? []).forEach((e: any) => categories.push(e)));
-    if (data.summary) summaries.push(data.summary);
+    // A4: facts-based summary; the prose only if it passed verification
+    if (data.summary) summaries.push(typeof data.summary === "string"
+      ? { text: data.summary, label: "generated, verify against the data" }
+      : { text: data.summary.narrative || data.summary.text, notice: data.summary.notice,
+          label: data.summary.label });
     // A3: rule-based anomalies (an older job may hold plain sentences)
     if (Array.isArray(data.anomalies)) data.anomalies.forEach((a: any) =>
       anomalies.push(typeof a === "string" ? { rule: "", severity: "low", message: a } : a));
@@ -229,7 +233,7 @@ function InsightsPanel({
   const fieldBar = numericFields.map((f, i) => ({ ...f, color: CHART_COLORS[i % CHART_COLORS.length] }));
   const fieldPie = numericFields.map((f, i) => ({ ...f, color: CHART_COLORS[i % CHART_COLORS.length] }));
 
-  const summary = summaries[0] ?? "";
+  const summary = summaries[0] ?? null;
   const uniqueAnomalies = anomalies.filter((a, i) =>
     anomalies.findIndex(b => b.message === a.message) === i);
 
@@ -249,11 +253,17 @@ function InsightsPanel({
                 <line x1="16" y1="17" x2="8" y2="17"/>
               </svg>
             </div>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>AI Summary</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>Summary</span>
+            <span style={{ fontSize: 10.5, color: "var(--amber)", marginLeft: "auto" }}>
+              {summary?.label ?? "generated, verify against the data"}
+            </span>
           </div>
           <p style={{ fontSize: 12.5, color: "var(--text2)", lineHeight: 1.65 }}>
-            {summary || "Summary was requested — check that extraction completed successfully."}
+            {summary?.text || "No summary: the document produced no values to summarise."}
           </p>
+          {summary?.notice && (
+            <p role="status" style={{ fontSize: 11.5, color: "var(--amber)", marginTop: 6 }}>{summary.notice}</p>
+          )}
         </div>
       )}
 

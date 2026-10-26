@@ -188,6 +188,12 @@ class Settings(BaseSettings):
     #: peer). Fewer entries than N also falls back to the peer.
     TRUSTED_PROXY_COUNT: int = 1
 
+    # ── Additional options ────────────────────────────────────────────────────
+    #: Model calls the options may make per job (the written summary; the
+    #: categorization fallback asks once per table). Each also counts as one
+    #: page toward the firm's monthly limit (core/usage.py).
+    OPTION_MAX_CALLS_PER_JOB: int = 20
+
     @property
     def max_upload_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
