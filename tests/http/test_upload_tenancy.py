@@ -54,13 +54,13 @@ class TestTemplateOwnership:
         """THE HOLE. acme asking to extract with other_002's private template."""
         r = _upload(client, auth["acme"], pdf_bytes,
                     template_id=templates["other_private"].id)
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
     def test_a_client_user_cannot_use_another_tenants_template_either(
             self, client, auth, templates, pdf_bytes):
         r = _upload(client, auth["other"], pdf_bytes, client_id="other_002",
                     template_id=templates["acme_private"].id)
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
     def test_your_own_template_is_accepted(self, client, auth, templates, pdf_bytes):
         r = _upload(client, auth["acme"], pdf_bytes,

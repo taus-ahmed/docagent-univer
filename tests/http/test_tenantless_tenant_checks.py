@@ -73,7 +73,7 @@ def test_tenantless_company_admin_cannot_delete_the_system_default(client, templ
 def test_tenantless_user_does_not_see_a_super_admins_shared_template(client, tenantless, role):
     hdr, shared = tenantless
     r = client.get(f"/api/templates/{shared.id}", headers=hdr[role])
-    assert r.status_code == 403, r.text
+    assert r.status_code == 404, r.text
     listed = client.get("/api/templates", headers=hdr[role])
     assert listed.status_code == 200
     assert shared.id not in {t["id"] for t in listed.json()}
@@ -93,4 +93,4 @@ def test_load_template_for_user_needs_a_tenant(db, tenantless):
                                  User.username.like("nt_client_%")).first()
     with pytest.raises(HTTPException) as e:
         load_template_for_user(db, shared.id, user)
-    assert e.value.status_code == 403
+    assert e.value.status_code == 404

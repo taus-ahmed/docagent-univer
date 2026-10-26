@@ -44,11 +44,11 @@ class TestTemplateVisibility:
             "/api/templates", headers=auth["super"]).json()}
         assert {"acme_private", "other_private", "system_default"} <= names
 
-    def test_fetching_another_tenants_template_by_id_is_403(
+    def test_fetching_another_tenants_template_by_id_is_404(
             self, client, auth, templates):
         r = client.get(f"/api/templates/{templates['other_private'].id}",
                        headers=auth["acme"])
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
     def test_a_template_that_does_not_exist_is_404(self, client, auth):
         assert client.get("/api/templates/987654",
@@ -56,17 +56,17 @@ class TestTemplateVisibility:
 
 
 class TestTemplateMutation:
-    def test_editing_another_tenants_template_is_403(
+    def test_editing_another_tenants_template_is_404(
             self, client, auth, templates):
         r = client.put(f"/api/templates/{templates['other_private'].id}",
                        headers=auth["acme"], json={"name": "hijacked"})
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
-    def test_deleting_another_tenants_template_is_403(
+    def test_deleting_another_tenants_template_is_404(
             self, client, auth, templates):
         r = client.delete(f"/api/templates/{templates['other_private'].id}",
                           headers=auth["acme"])
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
     def test_a_refused_edit_really_did_not_change_anything(
             self, client, auth, db, templates):

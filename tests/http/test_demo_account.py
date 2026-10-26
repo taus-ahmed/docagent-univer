@@ -305,11 +305,11 @@ class TestADeliberateRefusalIsMarkedAsOne:
 
     def test_an_ordinary_error_is_NOT_tagged(
             self, client, demo_auth, demo_on, pdf_bytes, templates):
-        """A 403 about somebody else's template is not a demo message, and the
+        """A 404 about somebody else's template is not a demo message, and the
         demo user should see the neutral sentence for it, not this."""
         r = _upload(client, demo_auth, pdf_bytes,
                     template_id=templates["other_private"].id)
-        assert r.status_code == 403
+        assert r.status_code == 404
         assert self.HEADER not in {k.lower() for k in r.headers}
 
     def test_nothing_is_tagged_for_a_normal_user(
@@ -337,13 +337,13 @@ class TestTheDemoSeesNoSystemDefaults:
             self, client, demo_auth, demo_on, templates):
         r = client.get(f"/api/templates/{templates['system_default'].id}",
                        headers=demo_auth)
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
     def test_extracting_with_that_default_is_refused(
             self, client, demo_auth, demo_on, templates, pdf_bytes):
         r = _upload(client, demo_auth, pdf_bytes,
                     template_id=templates["system_default"].id)
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
     def test_extracting_with_its_own_template_still_works(
             self, client, demo_auth, demo_on, demo_templates, pdf_bytes):

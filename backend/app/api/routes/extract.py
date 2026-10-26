@@ -266,7 +266,8 @@ def load_template_for_user(db: Session, template_id: Optional[int], current_user
     # the user's own client — permissions.can("template.view")
     if can(current_user, "template.view", tpl):
         return tpl
-    raise HTTPException(status_code=403, detail="Not your template")
+    # the same answer as a missing id: another firm's template ids cannot be probed
+    raise HTTPException(status_code=404, detail="Template not found")
 
 
 # ==============================================================================

@@ -75,8 +75,9 @@ def get_template(
     # to a demo account, whose picker is limited to its own and its client's)
     if can(current_user, "template.view", tpl):
         return _to_response(tpl)
-
-    raise HTTPException(status_code=403, detail="Access denied")
+    # Another firm's template answers exactly like a missing one, so its ids
+    # cannot be probed (tests/http/test_tenant_isolation_all_routes.py).
+    raise HTTPException(status_code=404, detail="Template not found")
 
 
 @router.post("/shape")
@@ -262,6 +263,10 @@ def _get_template_or_403(template_id: int, current_user: User, db: Session) -> C
     # company_admin within their company — permissions.can("template.edit")
     if can(current_user, "template.edit", tpl):
         return tpl
+    # One the caller cannot even see (another firm's, another user's private
+    # one) is missing; one it can see but not change is forbidden.
+    if not can(current_user, "template.view", tpl):
+        raise HTTPException(status_code=404, detail="Template not found")
     raise HTTPException(status_code=403, detail="Not your template")
 
 
