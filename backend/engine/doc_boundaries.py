@@ -122,7 +122,7 @@ def _doc_type(text):
 #: like a different document from the page before it.
 _REFERENCE = re.compile(
     r"\b([A-Z]{2,6}-[0-9][0-9A-Za-z-]{2,})\b"
-    r"|\b(?:id|no|number|ref)\b\.?\s*#?\s*([0-9]{6,})\b"
+    r"|\b(?:id|no|number|ref)\b\.?:?\s*#?\s*([0-9]{6,})\b"
     r"|#\s*([0-9]{6,})\b",
     re.I)
 
@@ -160,11 +160,22 @@ def page_of(text):
     return (n, total) if 1 <= n <= total else None
 
 
-def find_starts(page_texts, family=None):
+def _blank(text):
+    """A separator page: nothing on it, or one stray line (a scanner's
+    "intentionally left blank", a page number)."""
+    return len([l for l in str(text or "").split(chr(10)) if l.strip()]) <= 1
+
+
+def find_starts(page_texts, family=None, report=None):
     """Indices of the pages that BEGIN a document, and why.
 
     Always includes page 0. Returns ([0]) — a single document — when neither
     signal fires, which is the behaviour every caller had before this existed.
+
+    `report`, when a dict, receives `uncertain`: [(page index, why)] for every
+    candidate boundary that nothing vetoed and nothing could decide (Part 3.3).
+    The file is kept as one record there — never split on a guess — and the
+    caller says so on the record (`possible_multiple_documents`).
     """
     n = len(page_texts or [])
     if n <= 1:
@@ -172,6 +183,12 @@ def find_starts(page_texts, family=None):
 
     sigs = [_signature(t) for t in page_texts]
     types = [_doc_type(t) for t in page_texts]
+    # SIGNAL 3 (Part 3.3): the first page after a BLANK separator page — how a
+    # scanned stack is often divided. A candidate like the others: a blank
+    # page is also the back of a duplex sheet inside one document.
+    after_blank = {i for i in range(1, n)
+                   if _blank(page_texts[i - 1]) and not _blank(page_texts[i])}
+    uncertain = []
 
     # SIGNAL 2 first: where the document TYPE changes, a document MAY begin —
     # a candidate, corroborated below like any other. A page the classifier
@@ -186,6 +203,12 @@ def find_starts(page_texts, family=None):
             changed.add(i)
         if t:
             prev_known = t
+    # For the UNDECIDED report only (Part 3.3), never a split: the first page
+    # that classifies at all, after pages that did not — a cheque inside a
+    # claim packet whose estimate and release read as nothing.
+    first_typed = {next((i for i, t in enumerate(types) if t), 0)} - {0}
+    if types[0]:
+        first_typed = set()
 
     # SIGNAL 1, applied WITHIN each type-homogeneous segment: a document start
     # looks like that segment's FIRST page.
@@ -276,7 +299,12 @@ def find_starts(page_texts, family=None):
             starts.append(i)
             carried, carried_marks = set(refs[i]), [list(m[i]) for m in marks]
             continue
-        if i not in repeated and i not in changed:
+        if i not in repeated and i not in changed and i not in after_blank:
+            if (i in first_typed and refs[i] & carried
+                    and not _continues_a_numbered_run(pages_of, i)):
+                uncertain.append((i, f"the page reads as {types[i]} after pages "
+                                     f"that read as no kind, under the same "
+                                     f"reference"))
             carried |= refs[i]
             continue
         if _continues_a_numbered_run(pages_of, i):
@@ -311,6 +339,29 @@ def find_starts(page_texts, family=None):
             starts.append(i)
             carried, carried_marks = set(refs[i]), [list(m[i]) for m in marks]
         else:
+            # UNDECIDED (Part 3.3) — kept as one record, and said: a candidate
+            # whose page, or the document before it, carries no reference at
+            # all has nothing to corroborate or refute it; and a page of a
+            # different KIND that shares the reference (an estimate, the
+            # cheque paying it and a release, all quoting one claim) may be
+            # one packet or three documents. A repeated title sharing the
+            # reference is a form's continuation, and says nothing.
+            # A keyword TYPE change alone is too weak to raise this: every
+            # gold income statement's page 2 is a line of small print that
+            # reads as audit_report and carries no reference (5 of 25
+            # multi-page corpus files flagged, all wrongly).
+            if (not refs[i] or not carried) and (i in repeated or i in after_blank):
+                uncertain.append((i, "no reference on the page to tell"))
+            elif (i in changed or i in first_typed) and refs[i] & carried:
+                uncertain.append((i, f"the page reads as {types[i]} after "
+                                     f"{next(t for t in reversed(types[:i]) if t)}, "
+                                     f"under the same reference"))
+            elif (i in repeated or i in after_blank) and refs[i] & carried:
+                # Two months of ONE account reopen with the same title under
+                # the same account number. A form that reopens with its title
+                # states its pages ("3 of 5"), which vetoed it above.
+                uncertain.append((i, "the page reopens with the title, under "
+                                     "the same reference"))
             carried |= refs[i]
 
     # A candidate whose document would be page furniture is a CONTINUATION —
@@ -326,6 +377,8 @@ def find_starts(page_texts, family=None):
         if lines_in >= _MIN_LINES_PER_DOC:
             kept.append(a)
     starts = kept
+    if isinstance(report, dict):
+        report["uncertain"] = [(i, w) for i, w in uncertain if i not in starts]
     if len(starts) < 2:
         return [0], ""
 
@@ -388,7 +441,7 @@ def _restarts_its_own_numbering(pages_of, i):
 
 
 def split(page_texts, page_lines=None, page_images=None, forced=(),
-          family=None):
+          family=None, report=None):
     """[(pages, lines, images, first_page_number)] — one entry per document.
 
     Slices are handed to the ordinary pipeline unchanged, one per document, so
@@ -399,7 +452,7 @@ def split(page_texts, page_lines=None, page_images=None, forced=(),
     the regions of one page cut into cheques (cheque_regions.py), which are
     two documents by construction, not by evidence the text could overrule.
     """
-    starts, why = find_starts(page_texts, family=family)
+    starts, why = find_starts(page_texts, family=family, report=report)
     if forced:
         extra = sorted(set(forced) - set(starts) - {0})
         starts = sorted(set(starts) | set(forced) | {0})

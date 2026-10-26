@@ -620,13 +620,24 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         needs review: `possible_multiple_documents`.
         """
         import segmenters
-        from slot_extractor import POSSIBLE_MULTIPLE
         seen = next((s.multiple_in_record(texts)
                      for s in segmenters.for_family(default_doc_type)
                      if s.multiple_in_record(texts)), None)
         if not seen:
             return results
         total, readable = seen["micr_bands"], seen["readable"]
+        return _mark_possible_multiple(
+            results, {"micr_bands": total, "readable": readable},
+            f"{total} MICR band(s) in this record ({readable} readable) — "
+            f"it may hold more than one cheque, and how many could not be "
+            f"established, so it was kept as ONE record. Check it against "
+            f"the original.")
+
+    def _mark_possible_multiple(results, info, note):
+        """Every value of the record says `possible_multiple_documents`, the
+        record goes to review, and `validation` says what was seen. Shared by
+        the cheque-band check above and the generic splitter (Part 3.3)."""
+        from slot_extractor import POSSIBLE_MULTIPLE
         for r in results or []:
             ed = getattr(r, "extracted_data", None)
             if not isinstance(ed, dict):
@@ -644,15 +655,28 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                             if POSSIBLE_MULTIPLE not in reasons:
                                 reasons.append(POSSIBLE_MULTIPLE)
                             row["_review_required"] = True
-            ed.setdefault("validation", {})["possible_multiple_documents"] = {
-                "micr_bands": total, "readable": readable}
-            ed.setdefault("validation_notes", []).append(
-                f"{total} MICR band(s) in this record ({readable} readable) — "
-                f"it may hold more than one cheque, and how many could not be "
-                f"established, so it was kept as ONE record. Check it against "
-                f"the original.")
+            prior = ed.setdefault("validation", {}).get("possible_multiple_documents")
+            ed["validation"]["possible_multiple_documents"] = (
+                {**prior, **info} if isinstance(prior, dict) else dict(info))
+            ed.setdefault("validation_notes", []).append(note)
             ed["needs_review"] = True
         return results
+
+    def _note_undecided(results, first_page, n_pages):
+        """A candidate boundary inside this record that nothing could decide
+        (doc_boundaries, Part 3.3): the record is kept whole and says so."""
+        hits = [(i, w) for i, w in boundary_report.get("uncertain") or []
+                if first_page - 1 < i < first_page - 1 + n_pages]
+        if not hits:
+            return results
+        pages = [i + 1 for i, _w in hits]
+        why = "; ".join(f"page {i + 1}: {w}" for i, w in hits)
+        return _mark_possible_multiple(
+            results, {"undecided_boundaries": pages},
+            f"this record may hold more than one document — a new one may "
+            f"begin at page(s) {', '.join(str(p) for p in pages)} ({why}), and "
+            f"it could not be established, so it was kept as ONE record. "
+            f"Check it against the original.")
 
     def _note_selection(results):
         """Selected page numbers this file does not have, said on the result.
@@ -693,8 +717,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
     if units:
         (doc_text_pages, doc_page_lines, page_images, page_numbers, forced,
          regions) = units
+    boundary_report = {}
     slices, why = _split_documents(doc_text_pages, doc_page_lines, page_images,
-                                   forced=forced, family=default_doc_type)
+                                   forced=forced, family=default_doc_type,
+                                   report=boundary_report)
     if len(slices) > 1:
         _log("SPLIT", f"{doc_ref(file_path)}: {len(slices)} documents in one file "
                       f"({why}) — extracting each separately")
@@ -709,9 +735,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             sub["page_numbers"] = numbers
             sub["page_origins"] = ({n: page_origins[n] for n in numbers
                                     if n in page_origins} or None)
-            part = _note_bands(_extract_one(
+            part = _note_undecided(_note_bands(_extract_one(
                 orchestrator, file_path, template_data, sub, sub["doc_text"],
-                texts, images, default_doc_type, batch_schemas), texts)
+                texts, images, default_doc_type, batch_schemas), texts),
+                first_page, len(texts))
             # FILE pages, not unit indices: a page cut into regions is
             # several units with one page number.
             first, last = (numbers[0], numbers[-1]) if numbers else (first_page,
@@ -740,10 +767,10 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             _note_shredded(results)))))
 
     return _count_flags(_note_selection(_note_ocr(_note_unchecked(_note_shredded(
-        _note_bands(_extract_one(orchestrator, file_path, template_data, ctx,
-                                 doc_text, doc_text_pages, page_images,
-                                 default_doc_type, batch_schemas),
-                    doc_text_pages))))))
+        _note_undecided(_note_bands(_extract_one(orchestrator, file_path, template_data, ctx,
+                                                 doc_text, doc_text_pages, page_images,
+                                                 default_doc_type, batch_schemas),
+                                    doc_text_pages), 1, len(doc_text_pages)))))))
 
 
 def _count_flags(results):

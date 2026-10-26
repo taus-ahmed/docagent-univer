@@ -106,8 +106,9 @@ REASONS: dict[str, tuple[str, str]] = {
         "with an OCR reading, so the text may carry only part of the page."),
     "possible_multiple_documents": (
         "May contain more than one document",
-        "The engine could not establish how many cheques this record holds "
-        "and kept it as one rather than guess a split."),
+        "The engine could not establish how many documents (or cheques) "
+        "this record holds and kept it as one rather than guess a split. The "
+        "notes say at which page a new one may begin."),
     "possible_duplicate": (
         "Possible duplicate",
         "Another record in this batch looks like the same cheque (same bank, "
