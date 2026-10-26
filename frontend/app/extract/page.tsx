@@ -10,6 +10,7 @@ import { confirmExport } from "@/lib/confirm-export";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
 import SampleDocsPanel from "@/components/extract/SampleDocsPanel";
+import { bars, emptyReason, reviewBanner, type ChartsResponse } from "@/lib/charts";
 import {
   extractApi, exportApi, templatesApi, schemasApi,
   type ColumnTemplate, type JobStatus, type DocumentResult,
@@ -167,10 +168,41 @@ function BarChart({ data, height = 100 }: { data: { label: string; value: number
 // Graphs are rendered from the already-extracted numeric fields.
 // No browser API calls to Anthropic — everything is pre-computed server-side.
 
+function ChartsPanel({ jobId }: { jobId: number }) {
+  const { data, isError } = useQuery<ChartsResponse>({
+    queryKey: ["charts", jobId],
+    queryFn: () => extractApi.charts(jobId),
+  });
+  const empty = isError ? "Charts could not be loaded." : emptyReason(data);
+  const banner = data ? reviewBanner(data) : null;
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)", marginBottom: 8 }}>Charts</div>
+      {banner && <p role="status" style={{ fontSize: 11.5, color: "var(--amber)", marginBottom: 8 }}>{banner}</p>}
+      {empty ? <p style={{ fontSize: 12, color: "var(--text3)" }}>{empty}</p> : (
+        <>
+          {data!.message && <p style={{ fontSize: 11.5, color: "var(--text3)", marginBottom: 8 }}>{data!.message}</p>}
+          {Object.entries(data!.currencies).map(([cur, g]) => (
+            <div key={cur} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text2)", marginBottom: 6 }}>{cur}</div>
+              {g.by_category.length > 0 && (<><div style={{ fontSize: 11, color: "var(--text3)" }}>Spend by category</div>
+                <BarChart data={bars(g.by_category)} height={90}/></>)}
+              {g.by_month.length > 1 && (<><div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>By month</div>
+                <BarChart data={bars(g.by_month, 12)} height={90}/></>)}
+              {g.top_items.length > 0 && (<><div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Largest items</div>
+                <BarChart data={bars(g.top_items, 5)} height={70}/></>)}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 function InsightsPanel({
-  results, options,
+  results, options, jobId,
 }: {
-  results: DocumentResult[]; options: OptionId[];
+  results: DocumentResult[]; options: OptionId[]; jobId?: number | null;
 }) {
   if (!options.length) return null;
 
@@ -328,40 +360,8 @@ function InsightsPanel({
         </div>
       )}
 
-      {/* Graphs — pure frontend, no API call, renders from extracted numeric fields */}
-      {options.includes("graphs") && fieldBar.length > 0 && (
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 7, background: "#10b98118",
-              display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-                <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text1)" }}>Numeric Breakdown</span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14,
-            alignItems: "center", marginBottom: 14 }}>
-            <PieChart data={fieldPie} size={110}/>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {fieldPie.map((d, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: 2, background: d.color, flexShrink: 0 }}/>
-                  <span style={{ fontSize: 10.5, color: "var(--text2)", flex: 1,
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {d.label}
-                  </span>
-                  <span style={{ fontSize: 10.5, color: "var(--text3)", fontWeight: 600 }}>
-                    {d.value.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <BarChart data={fieldBar} height={90}/>
-        </div>
-      )}
+      {/* Charts (A5): the server's exact aggregation, one currency at a time */}
+      {options.includes("graphs") && jobId != null && <ChartsPanel jobId={jobId} />}
 
       {/* Anomaly Detection — reads from extracted_data.anomalies (set by backend) */}
       {options.includes("anomaly") && (
@@ -975,7 +975,7 @@ export default function ExtractPage() {
             <>
               <ResultsGrid results={results} jobId={activeJobId!} template={selectedTemplate}/>
               {selectedOptions.length > 0 && (
-                <InsightsPanel results={results} options={selectedOptions}/>
+                <InsightsPanel results={results} options={selectedOptions} jobId={activeJobId}/>
               )}
             </>
           ) : (

@@ -932,6 +932,9 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         extracted = result.extracted_data or {}
 
                         if result.success and options:
+                            # which options this result was produced with (the
+                            # export's Charts sheet asks for "graphs")
+                            extracted["options_requested"] = sorted(set(options))
                             # --- CATEGORIZATION ---
                             # Category is already embedded by the AI in table_rows
                             # via the extraction prompt (bank_statement taxonomy,

@@ -104,6 +104,7 @@ ROUTES = {
     ("GET", "/api/demo/sample-docs/{filename}/download"): "demo",
     ("POST", "/api/demo/sample-docs/{filename}/extract"): "demo",
     ("GET", "/api/jobs/{job_id}/review"): "id",
+    ("GET", "/api/jobs/{job_id}/charts"): "id",
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/review"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}/image"): "id",

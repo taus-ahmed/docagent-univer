@@ -385,6 +385,47 @@ def _review_status_unknown(value):
     return _review.value_status(value, None)
 
 
+def _add_charts_sheet(wb, doc_results):
+    """A "Charts" sheet with native Excel charts when the job asked for
+    graphs (Part A5): per currency, spend by category and by month, from the
+    same aggregation the app shows (engine/charts.py), with the banner of how
+    many values still need review. Never one chart over two currencies."""
+    eds = [d.get_extracted_data() for d in doc_results]
+    eds = [e for e in eds if isinstance(e, dict)]
+    if not any("graphs" in (e.get("options_requested") or []) for e in eds):
+        return
+    from openpyxl.chart import BarChart, LineChart, Reference
+    from charts import aggregate
+    from app.core import review as _review
+    agg = aggregate(eds)
+    open_ = _review.summarise([v for e in eds for v in _review.export_values(e)])["needs_review"]
+    ws = wb.create_sheet("Charts")
+    ws.append([f"Includes {open_} value(s) that still need review." if open_
+               else "Every charted value has been checked or needed no review."])
+    if agg.get("message"):
+        ws.append([agg["message"]])
+    row = ws.max_row + 2
+    for cur, g in sorted(agg["currencies"].items()):
+        for title, series, kind in (("Spend by category", g["by_category"], BarChart),
+                                    ("Spend by month", g["by_month"], LineChart)):
+            if len(series) < 1:
+                continue
+            ws.cell(row=row, column=1, value=f"{title} ({cur})")
+            ws.cell(row=row + 1, column=1, value="Label")
+            ws.cell(row=row + 1, column=2, value=f"Amount ({cur})")
+            for k, (label, amount) in enumerate(series, start=row + 2):
+                ws.cell(row=k, column=1, value=label)
+                ws.cell(row=k, column=2, value=float(amount))
+            last = row + 1 + len(series)
+            ch = kind()
+            ch.title = f"{title} ({cur})"
+            ch.add_data(Reference(ws, min_col=2, min_row=row + 1, max_row=last), titles_from_data=True)
+            ch.set_categories(Reference(ws, min_col=1, min_row=row + 2, max_row=last))
+            ch.height, ch.width = 7, 14
+            ws.add_chart(ch, f"D{row}")
+            row = max(last, row + 15) + 2
+
+
 def _add_anomalies_sheet(wb, doc_results, demo=False):
     """An "Anomalies" sheet when the option ran (Part A3): rule, severity,
     rows, numbers and the sentence, per document. Informational: no value's
@@ -444,6 +485,7 @@ def _add_review_legend(wb, doc_results, demo=False):
     from app.core import review as _review
     _add_categories_sheet(wb, doc_results, demo=demo)
     _add_anomalies_sheet(wb, doc_results, demo=demo)
+    _add_charts_sheet(wb, doc_results)
     lg = wb.create_sheet("Legend")
     per_doc, total = [], {"values": 0, "needs_review": 0, "low": 0,
                           "unverified": 0, "empty_flagged": 0}

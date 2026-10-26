@@ -30,6 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+import app.services.paths  # noqa: F401  (engine on sys.path)
 from app.core import review as R
 from app.core.auth import get_current_user
 from app.models import DocumentResult, User, get_db
@@ -85,6 +86,25 @@ def _pages_of(ed: dict) -> list[int]:
     if isinstance(sp, list) and len(sp) == 2 and all(isinstance(x, int) for x in sp):
         pages.update(range(sp[0], sp[1] + 1))
     return sorted(pages)
+
+
+@router.get("/jobs/{job_id}/charts")
+def job_charts(job_id: int, db: Session = Depends(get_db),
+               current_user: User = Depends(get_current_user)):
+    """Chart data for a job (Part A5): exact aggregations of the CURRENT
+    values (edits included), one currency at a time, with how many values
+    still need review — the banner every chart shows."""
+    _job_for(job_id, current_user, db)
+    from charts import aggregate
+    eds, values = [], []
+    for d in db.query(DocumentResult).filter(DocumentResult.job_id == job_id).all():
+        ed = d.get_extracted_data() or {}
+        if isinstance(ed, dict):
+            eds.append(ed)
+            values += R.document_values(ed)
+    out = aggregate(eds)
+    out["needs_review"] = R.summarise(values)["needs_review"]
+    return out
 
 
 @router.get("/jobs/{job_id}/review")

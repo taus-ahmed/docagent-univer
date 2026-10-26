@@ -1,4 +1,5 @@
 import { tokenValid } from "./session-gate";
+import type { ChartsResponse } from "./charts";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import type { JobReview, ReasonMap, ReviewSummary, ReviewValue } from "./review";
 
@@ -413,7 +414,9 @@ export const extractApi = {
     fd.append("client_id", clientId);
     if (templateId != null) fd.append("template_id", String(templateId));
     // Backend-processed options only (not "graphs" which is frontend-only)
-    const backendOptions = options.filter(o => o !== "graphs");
+    // "graphs" is sent too: the server records it so the Excel export
+    // carries a Charts sheet (Part A5); it costs no model call.
+    const backendOptions = options;
     if (backendOptions.length > 0) fd.append("options", JSON.stringify(backendOptions));
     if (selectedPages && selectedPages.length > 0) fd.append("selected_pages", JSON.stringify(selectedPages));
     const res = await api.post("/api/extract/upload", fd);
@@ -432,7 +435,9 @@ export const extractApi = {
   ): Promise<{ job_id: number; message: string; total_files: number; status: string }> => {
     const fd = new FormData();
     if (templateId != null) fd.append("template_id", String(templateId));
-    const backendOptions = options.filter(o => o !== "graphs");
+    // "graphs" is sent too: the server records it so the Excel export
+    // carries a Charts sheet (Part A5); it costs no model call.
+    const backendOptions = options;
     if (backendOptions.length > 0) fd.append("options", JSON.stringify(backendOptions));
     if (selectedPages && selectedPages.length > 0) fd.append("selected_pages", JSON.stringify(selectedPages));
     const res = await api.post(
@@ -448,6 +453,10 @@ export const extractApi = {
     const res = await api.post("/api/extract/page-count", fd);
     return res.data;
   },
+
+  /** Part A5: exact chart aggregations, one currency at a time. */
+  charts: async (jobId: number): Promise<ChartsResponse> =>
+    (await api.get<ChartsResponse>(`/api/jobs/${jobId}/charts`)).data,
 
   listJobs: async (params?: {
     limit?: number;
