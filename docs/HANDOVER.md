@@ -23,7 +23,7 @@ each other's data. Running it: [OPERATIONS.md](OPERATIONS.md); a new firm:
 | `backend/engine/` | extraction: `extractor.py` (entry), `template_shape.py`, `slot_extractor.py`, `shape_inference.py`, `text_layer.py`, `doc_boundaries.py`, `core/preprocessor.py`, `ocr_source.py`, `validators.py` + `*_validators.py`, `segmenters.py` / `cheque_segmenter.py`, `micr.py`, `connectors/` (Gemini) |
 | `frontend/` | Next.js app (`app/` pages, `components/`, `lib/api.ts`) |
 | `tests/` | the suite; `tests/http/` goes through the real app; `tests/harness/` the accuracy harness; `tests/gold/` labelled documents |
-| `scripts/` | `prepush_check.py`, `create_tenant.py`, `trial_report.py`, split tools |
+| `scripts/` | `prepush_check.py`, `create_tenant.py`, `check_firm_ids.py` (read-only, before a deploy), `trial_report.py`, split tools |
 | `docs/` | this folder; the reasoning behind the engine is `DECISION-LOG.md` |
 
 ## The three checks

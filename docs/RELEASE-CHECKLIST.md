@@ -62,7 +62,11 @@ The script lists them as MANUAL and fails until run with `--manual-done`.
    `docs/CLIENT-DATA-FAQ.md`; the FAQ is not shown to a client before.
 9. **Drive and the proxy.** Set `DRIVE_TENANT` if Google Drive is used (off
    by default since round 14); confirm Railway appends the client address as
-   the last `X-Forwarded-For` entry (the login limiter relies on it).
+   the last `X-Forwarded-For` entry (the login limiter relies on it; set
+   `TRUSTED_PROXY_COUNT` if another proxy sits in front).
+10. **Firm ids.** Run `scripts/check_firm_ids.py` on every production firm id
+    before the first deploy of this release; every line must say `ok`
+    ([OPERATIONS.md](OPERATIONS.md) §12).
 
 New in round 14 (no migration): routes `POST/GET /api/admin/tenants`,
 `POST /api/admin/tenants/{id}/deactivate|activate`, `POST
@@ -70,6 +74,13 @@ New in round 14 (no migration): routes `POST/GET /api/admin/tenants`,
 now needs `?confirm=true`; script `scripts/create_tenant.py`; variables
 `TENANT_MONTHLY_PAGE_LIMIT`, `DATA_RETENTION_DAYS`, `DRIVE_TENANT` (all off by
 default).
+
+New in Run 15 (no migration): `TRUSTED_PROXY_COUNT` (default 1), the OCR
+deadlines `OCR_PROBE_TIMEOUT_S`, `OCR_RENDER_TIMEOUT_S`,
+`OCR_TESSERACT_TIMEOUT_S`, `OCR_PAGE_TIMEOUT_S`, `OCR_POOL_TIMEOUT_S`
+(OPERATIONS §11); script `scripts/check_firm_ids.py`; review marks answer 409
+on a conflict that never clears; page routes answer 413 for an image over
+`MAX_IMAGE_PIXELS` and 503 when the renderer times out.
 
 ## 3. After the push
 

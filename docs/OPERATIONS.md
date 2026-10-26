@@ -219,3 +219,24 @@ container; lower them to fail faster. `OCR_WORKERS=1` reads serially (no pool),
 which also avoids any problem particular to running tools in parallel. In the
 logs look for `did not finish within`, `version probe failed`, and
 `parallel OCR unavailable`.
+
+## 12. Before the first deploy of this release: check the firm ids
+
+From this release a firm id (`client_id`) is used **exactly as written** as
+the folder its files live under, or refused — it is no longer silently
+rewritten (two ids such as `a b` and `a_b` used to share one folder). A firm
+whose id contains anything but letters, digits, `.`, `_` and `-` (or starts
+or ends with one of the last three) can no longer upload.
+
+1. Get the list of firm ids in production, one per line — from the Admin
+   page, or ask whoever has database access for
+   `SELECT DISTINCT client_id FROM users` (**do not** give the script database
+   access; it never connects to anything).
+2. Run, on any machine with Python:
+   `python scripts/check_firm_ids.py ids.txt` (or pipe the list into it).
+3. Every line must say `ok`; the exit code is 0. The live demo's id
+   (`demo_001`, and whatever `DEMO_CLIENT_IDS` names) must pass.
+4. A `REFUSED` id must be renamed to a valid one **and its files moved** from
+   the folder the script names (`clients/<old folder>/…`) before that firm
+   uploads again; a `COLLIDE` line means those firms' files already share a
+   folder — stop and get the developer before deploying.

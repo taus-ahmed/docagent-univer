@@ -80,6 +80,7 @@ MANUAL = [
     "Decide the explicit platform_admin role (docs/proposals/roles.md); owner delete was decided in round 14",
     "Confirm every VERIFY in docs/OPERATIONS.md and docs/CLIENT-DATA-FAQ.md before showing the FAQ to a client",
     "Railway: set DRIVE_TENANT if Google Drive is used (off by default since round 14); confirm Railway appends the client IP last in X-Forwarded-For",
+    "Run scripts/check_firm_ids.py on the production firm ids before the first deploy (docs/OPERATIONS.md section 12)",
 ]
 
 #: Settings that are internal constants, not something an operator sets.
