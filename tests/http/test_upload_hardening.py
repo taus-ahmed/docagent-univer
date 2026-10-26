@@ -134,10 +134,16 @@ def test_pdf_over_page_limit_is_rejected_before_side_effects(
                      _pdf_with_pages(201), "pages", "application/pdf")
 
 
-def test_encrypted_pdf_is_rejected_before_side_effects(
-        client, auth, db, monkeypatch):
-    _assert_rejected(client, auth, db, monkeypatch, "locked.pdf",
-                     _encrypted_pdf(), "encrypted", "application/pdf")
+def test_a_user_password_pdf_is_accepted_and_failed_per_file_later(
+        client, auth, monkeypatch):
+    """Part 1.7 replaced the whole-request refusal: a locked PDF is accepted,
+    and the worker opens it with the password given for it or fails THAT file
+    by name (tests/http/test_pdf_passwords.py)."""
+    saved, threaded = _guard_side_effects(monkeypatch)
+    response = _post(client, auth, "locked.pdf", _encrypted_pdf(), "application/pdf")
+    assert response.status_code == 202, response.text
+    assert saved == ["locked.pdf"]
+    assert threaded == ["constructed", "started"]
 
 
 def test_owner_password_only_pdf_is_accepted(client, auth, monkeypatch):

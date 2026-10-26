@@ -4,11 +4,11 @@
 value that has letters of a non-Latin script, or was read from a page whose
 text is in another script or (by function words) another Latin-script
 language. Nothing is translated or guessed. The language of each page is in
-`validation.page_languages`. engine/scripts.py.
+`validation.page_languages`. engine/writing_systems.py.
 """
 from __future__ import annotations
 
-from scripts import non_latin_scripts, page_language
+from writing_systems import non_latin_scripts, page_language
 from validators import ANY, UNREADABLE, CheckResult, register
 
 NON_ENGLISH = "non_english_text"

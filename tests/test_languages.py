@@ -7,7 +7,7 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
-from scripts import non_latin_scripts, page_language  # noqa: E402
+from writing_systems import non_latin_scripts, page_language  # noqa: E402
 from validators import CheckContext  # noqa: E402
 
 EN = ("Invoice number 42 for the services of March. The total amount is due "
