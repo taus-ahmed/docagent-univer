@@ -131,10 +131,15 @@ def _validate_upload_content(filename: str, content: bytes,
             raise HTTPException(status_code=400,
                                 detail="PDF is malformed or truncated.")
         if page_count > settings.MAX_PDF_PAGES:
+            # Part 3.4: the refusal states the file's own count, the limit and
+            # the setting that holds it — the user can split the file, the
+            # operator knows what governs it.
             raise HTTPException(
                 status_code=400,
-                detail=(f"PDF has {page_count} pages; maximum is "
-                        f"{settings.MAX_PDF_PAGES} pages."))
+                detail=(f"{Path(str(filename or 'This PDF')).name} has {page_count} "
+                        f"pages; the maximum is {settings.MAX_PDF_PAGES} pages per PDF "
+                        f"(MAX_PDF_PAGES). Split it into smaller files and upload "
+                        f"those."))
         return _safe_upload_name(filename, ".pdf"), "pdf", page_count
 
     image_magic = (
@@ -163,15 +168,24 @@ def _validate_upload_content(filename: str, content: bytes,
                 if width * height > settings.MAX_IMAGE_PIXELS:
                     raise HTTPException(
                         status_code=400,
-                        detail=(f"Image has {width * height} pixels; maximum is "
-                                f"{settings.MAX_IMAGE_PIXELS} pixels."))
+                        detail=(f"{Path(str(filename or 'This image')).name} is "
+                                f"{width} x {height} = {width * height:,} pixels; the "
+                                f"limit is {settings.MAX_IMAGE_PIXELS:,} pixels "
+                                f"(MAX_IMAGE_PIXELS). Scan it at 300 dpi or less."))
                 image.verify()
     except HTTPException:
         raise
-    except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+        # Pillow refuses before the size check above; its message carries
+        # the image's own pixel count ("Image size (N pixels) exceeds …").
+        import re as _re
+        m = _re.search(r"\((\d+) pixels\)", str(exc))
+        size = f" is {int(m.group(1)):,} pixels;" if m else " exceeds"
         raise HTTPException(
             status_code=400,
-            detail=f"Image exceeds the {settings.MAX_IMAGE_PIXELS} pixel limit.")
+            detail=(f"{Path(str(filename or 'This image')).name}{size} the "
+                    f"limit is {settings.MAX_IMAGE_PIXELS:,} pixels (MAX_IMAGE_PIXELS). "
+                    f"Scan it at 300 dpi or less."))
     except Exception:
         raise HTTPException(status_code=400,
                             detail="Image is malformed or truncated.")

@@ -430,8 +430,8 @@ class StorageService:
         if size == 0:
             return "File is empty."
         if size > settings.max_upload_bytes:
-            return (f"File too large ({size / 1024 / 1024:.1f}MB). "
-                    f"Max: {settings.MAX_UPLOAD_SIZE_MB}MB")
+            return (f"too large: {size / 1024 / 1024:.1f} MB; the limit is "
+                    f"{settings.MAX_UPLOAD_SIZE_MB} MB per file (MAX_UPLOAD_SIZE_MB).")
         return None
 
     # ─── Internals ───────────────────────────────────────────────────────────

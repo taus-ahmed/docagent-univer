@@ -27,6 +27,9 @@ in staging and production when missing or weak.
 | `GRACEFUL_SHUTDOWN_SECONDS` | `60` | `60` | `60`, below the platform's stop timeout | |
 | `LOG_FORMAT` | `text` | `json` recommended | `json` recommended | [OPERATIONS.md](OPERATIONS.md) §5 |
 | `OPTION_MAX_CALLS_PER_JOB` | `20` | `20` | `20` | |
+| `MAX_UPLOAD_SIZE_MB` (alias `MAX_FILE_SIZE_MB`) | `50` | `50` | `50` | per file. A refusal names the file, its size, the limit and this setting |
+| `MAX_PDF_PAGES` | `200` | `200` | `200` | per PDF; the refusal states the file's page count. Raise only with a recorded reason (memory: [OPERATIONS.md](OPERATIONS.md) §11) |
+| `MAX_IMAGE_PIXELS` | `50000000` | `50000000` | `50000000` | per image (≈ A4 at 600 dpi is 35 M); the refusal states the image's pixel count |
 | `TENANT_MONTHLY_PAGE_LIMIT`, `DATA_RETENTION_DAYS`, `DRIVE_TENANT` | off | as agreed | as agreed | |
 | `OCR_*` deadlines, `OCR_WORKERS` | defaults | defaults | defaults | [OPERATIONS.md](OPERATIONS.md) §11 |
 | `DOCAGENT_BOOTSTRAP_ADMIN_*` **S** | optional | first boot only | first boot only, then remove the password | |
