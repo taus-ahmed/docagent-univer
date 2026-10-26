@@ -10,7 +10,7 @@ test("options toggle from the keyboard, explain prerequisites and are remembered
   await expect(group).toBeVisible({ timeout: 60000 });
   const narrative = group.getByRole("checkbox").nth(3);
   await expect(narrative).toBeDisabled();
-  await expect(group.getByText(/Turn on Summary first/)).toBeVisible();
+  await expect(group.getByText(/Turn on Summary first/).first()).toBeVisible();
   const summary = group.getByRole("checkbox").nth(2);
   await summary.focus();
   await page.keyboard.press("Space");

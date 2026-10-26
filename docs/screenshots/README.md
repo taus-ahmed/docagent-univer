@@ -12,3 +12,17 @@ database seeded with the **synthetic** cheques in `tests/test_OCR/`
 | `results-table-tablet.png` | the table at tablet width |
 | `review-panel-laptop.png` | the review panel: the straightened scan the reader saw, the selected value's box, reasons as labels |
 | `review-panel-tablet.png` | the panel stacked at tablet width |
+
+## Main pages (Part A8)
+
+Taken by `frontend/e2e/sweep.spec.cjs` against `scripts/e2e/stack.py` — the stub
+model (`PRIMARY_LLM=stub`), a throwaway SQLite database and two synthetic
+firms; no client data. Laptop 1280×800, tablet 820×1180.
+
+| file | shows |
+|---|---|
+| `app-laptop-extract.png` | the extract page with the Additional options panel (help, cost, prerequisites) |
+| `app-tablet-extract.png` | the same at tablet width |
+| `app-laptop-templates-new.png` | the template editor: the grid, the category-rules box, the hint bar |
+| `app-laptop-history.png` | job history |
+| `app-laptop-admin.png` | users, firm usage and system figures |

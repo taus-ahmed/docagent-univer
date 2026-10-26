@@ -29,7 +29,7 @@ const EXTRA_OPTIONS = [
   {
     id: "categorize",
     label: "Categorization",
-    desc: "AI assigns a category to every line item or transaction",
+    desc: "Category for each line item, by your rules first",
     color: "#6366f1",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -41,7 +41,7 @@ const EXTRA_OPTIONS = [
   {
     id: "graphs",
     label: "Charts & Graphs",
-    desc: "Visual breakdown — pie and bar charts from extracted data",
+    desc: "Charts per currency, from the extracted values",
     color: "#10b981",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -55,7 +55,7 @@ const EXTRA_OPTIONS = [
   {
     id: "summary",
     label: "AI Summary",
-    desc: "3-line plain-English summary of the document contents",
+    desc: "Counts, totals and dates, built from the data",
     color: "#f59e0b",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -69,7 +69,7 @@ const EXTRA_OPTIONS = [
   {
     id: "narrative",
     label: "Written summary (AI)",
-    desc: "Prose from the summary's facts; discarded if it adds anything",
+    desc: "AI prose from the summary's facts, checked",
     color: "#d97706",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -80,7 +80,7 @@ const EXTRA_OPTIONS = [
   {
     id: "anomaly",
     label: "Anomaly Detection",
-    desc: "Flag unusual values, duplicates or outliers",
+    desc: "Duplicates, outliers, odd dates, gaps",
     color: "#ef4444",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -676,7 +676,7 @@ export default function ExtractPage() {
         .opt-card.on .opt-lbl { color: var(--text1); }
         .opt-chk { width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .opt-card.on .opt-chk { background: var(--accent); border-color: var(--accent); }
-        .opt-desc { font-size: 9.5px; color: var(--text4); line-height: 1.4; padding-left: 27px; }
+        .opt-desc { font-size: 10.5px; color: var(--text2); line-height: 1.4; padding-left: 27px; }
 
         /* Right panel welcome */
         .welcome-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -750,7 +750,9 @@ export default function ExtractPage() {
                     </div>
                   ) : filteredTemplates.map(t => (
                     <div key={t.id} className={`tpl-row ${selectedTemplate?.id === t.id ? "sel" : ""}`}
-                      onClick={() => setSelectedTemplate(selectedTemplate?.id === t.id ? null : t)}>
+                      role="button" tabIndex={0} aria-pressed={selectedTemplate?.id === t.id}
+                      onClick={() => setSelectedTemplate(selectedTemplate?.id === t.id ? null : t)}
+                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedTemplate(selectedTemplate?.id === t.id ? null : t); } }}>
                       <div className="tpl-dot"/>
                       <span className="tpl-name">{t.name}</span>
                       <span className="tpl-type">{t.document_type}</span>
@@ -786,7 +788,7 @@ export default function ExtractPage() {
                   return (
                   <label key={opt.id} className={`opt-card ${selectedOptions.includes(opt.id) ? "on" : ""}`}
                     style={st.disabled && !isDemo ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
-                    title={st.why || info.cost}>
+                    title={[info.help, info.cost, st.why].filter(Boolean).join(" ")}>
                     <input type="checkbox" className="sr-only" checked={selectedOptions.includes(opt.id)}
                       disabled={st.disabled && !isDemo}
                       aria-describedby={`opt-help-${opt.id}`}
@@ -802,10 +804,12 @@ export default function ExtractPage() {
                         )}
                       </div>
                     </div>
-                    <p className="opt-desc" id={`opt-help-${opt.id}`}>
-                      {info.help} <span style={{ color: "var(--text3)" }}>{info.cost}</span>
+                    <p className="opt-desc">
+                      {opt.desc}
+                      <span style={{ display: "block", color: "var(--text3)" }}>{info.cost}</span>
                       {st.why && !isDemo && <span style={{ display: "block", color: "var(--amber)" }}>{st.why}</span>}
                     </p>
+                    <span className="sr-only" id={`opt-help-${opt.id}`}>{info.help} {info.cost} {st.why}</span>
                   </label>
                   );
                 })}
@@ -824,7 +828,9 @@ export default function ExtractPage() {
                 {(isDemo
                   ? (["upload","folder"] as SourceTab[])
                   : (["upload","folder","drive"] as SourceTab[])).map(tab => (
-                  <div key={tab} className={`src-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
+                  <div key={tab} className={`src-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}
+                    role="tab" tabIndex={0} aria-selected={activeTab === tab}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveTab(tab); } }}>
                     {tab === "upload" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>}
                     {tab === "folder" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
                     {tab === "drive" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>}
@@ -1145,7 +1151,7 @@ export default function ExtractPage() {
                         </div>
                         <div>
                           <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>{opt.label}</p>
-                          <p style={{ fontSize: 10.5, color: "var(--text4)" }}>{opt.desc}</p>
+                          <p style={{ fontSize: 10.5, color: "var(--text3)" }}>{opt.desc}</p>
                         </div>
                       </div>
                     ))}

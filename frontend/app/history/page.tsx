@@ -465,7 +465,10 @@ export default function HistoryPage() {
                 <div
                   key={job.id}
                   className={`job-card ${selectedJobId === job.id ? "sel" : ""} ${job.status === "failed" ? "failed" : ""}`}
+                  role="button" tabIndex={0} aria-pressed={selectedJobId === job.id}
+                  aria-label={`Job ${job.id}, ${job.status}`}
                   onClick={() => { setSelectedJobId(job.id); setDocSearch(""); }}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedJobId(job.id); setDocSearch(""); } }}
                 >
                   <StatusIcon status={job.status} />
                   <div className="job-meta">
