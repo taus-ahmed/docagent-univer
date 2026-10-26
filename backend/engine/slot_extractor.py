@@ -773,7 +773,46 @@ def _pages_of(occurrences, all_lines):
             if p is not None}
 
 
-def select_region(located, all_lines, page_lines):
+_PAGE_N_OF = re.compile(r"page\s+(\d{1,3})\s*(?:of|/)\s*(\d{1,3})", re.I)
+
+
+def continued_pages(kept_page, all_lines, headers):
+    """Pages after `kept_page` that the DOCUMENT says continue its table
+    (Part 3.5): each is numbered as the next page of the same run ("Page 2 of
+    5" after "Page 1 of 5") AND reprints the band's own heading line. Both,
+    because a heading alone is what two different tables share (Berkshire's
+    two earnings tables, round 2 I1), and numbering alone says nothing about
+    which table a page holds. Anything less stays a different region."""
+    heads = [str(h or "").strip().casefold() for h in headers or [] if str(h or "").strip()]
+    if len(heads) < 2 or not all_lines:
+        return set()
+    by_page = {}
+    for ln in all_lines:
+        p = line_page(ln)
+        if p is not None:
+            by_page.setdefault(p, []).append(
+                " ".join(str(w.get("text", "")) for w in ln if isinstance(w, dict)))
+
+    def numbered(p):
+        for t in by_page.get(p, []):
+            m = _PAGE_N_OF.search(t)
+            if m:
+                return int(m.group(1)), int(m.group(2))
+        return None
+
+    def heading(p):
+        return any(all(h in t.casefold() for h in heads) for t in by_page.get(p, []))
+
+    out, p = set(), kept_page
+    while True:
+        a, b = numbered(p), numbered(p + 1)
+        if not (a and b and b == (a[0] + 1, a[1]) and heading(p + 1)):
+            return out
+        out.add(p + 1)
+        p += 1
+
+
+def select_region(located, all_lines, page_lines, headers=None):
     """(located rows kept, region report or None).
 
     `located` is [(cells, source, page, key, occurrences)] in the model's
@@ -806,21 +845,22 @@ def select_region(located, all_lines, page_lines):
     # whose source is printed on several pages cannot.
     kept_page = next((next(iter(p)) for p in pages_by_row if len(p) == 1),
                      distinct[0])
+    region = {kept_page} | continued_pages(kept_page, all_lines, headers)
     kept, left_out = [], []
     for row, pages in zip(located, pages_by_row):
-        if pages and kept_page not in pages:
+        if pages and not (pages & region):
             left_out.append(row)
             continue
         cells, source, page, key, occurrences = row
         if pages:
             occurrences = [i for i in occurrences
-                           if line_page(all_lines[i]) in (kept_page, None)]
+                           if line_page(all_lines[i]) in region | {None}]
         kept.append((cells, source, page, key, occurrences))
     if not left_out:
         return located, None
-    matched = sorted({kept_page} | {p for (row, pages) in zip(located, pages_by_row)
-                                    if pages and kept_page not in pages
-                                    for p in pages})
+    matched = sorted(region | {p for (row, pages) in zip(located, pages_by_row)
+                               if pages and not (pages & region)
+                               for p in pages})
     return kept, {"pages": matched, "kept_page": kept_page,
                   "kept_rows": len(kept), "left_out": len(left_out),
                   "left_out_rows": [(c, s) for c, s, *_ in left_out]}
@@ -1220,7 +1260,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 located.append((cells, source, page, key, occurrences))
 
             # ONE REGION PER BAND (round 2, I1). See `select_region`.
-            located, region = select_region(located, all_lines, page_lines)
+            located, region = select_region(
+                located, all_lines, page_lines,
+                headers=[c.get("header") for c in t.get("columns") or []])
             if region:
                 shown_pages = ", ".join(str(p) for p in region["pages"])
                 left = region["left_out"]

@@ -76,15 +76,14 @@ def test_an_aaaaaa_net_settlement_is_flagged_low_by_the_settlement_rule(tmp_path
     assert ed["needs_review"]
 
 
-def test_the_five_page_excerpt_is_one_record_and_says_which_rows_it_did_not_bind(tmp_path):
+def test_the_five_page_excerpt_is_one_record_with_all_twenty_rows(tmp_path):
     [r] = run("statement_5p", tmp_path)
     ed = r.extracted_data
     rows = ed.get("rows_rows") or []
     truth = DOCS["statement_5p"]["rows"]
-    # One region per band (round-2 I1, DECISION-LOG §12): page 1's rows are
-    # kept and grounded; the other 16 are left out OUT LOUD, one flag each.
-    assert [x["Description"] for x in rows] == [t["Description"] for t in truth[:4]]
+    # Part 3.5: each page is numbered as the next of one run ("Page n of 5")
+    # AND reprints the table's heading line, so the document itself says the
+    # table continues — every row is kept, grounded, nothing left unbound.
+    assert [x["Description"] for x in rows] == [t["Description"] for t in truth]
     assert all(x.get("_confidence") != "low" for x in rows)
-    unbound = [f for f in ed["validation"]["flagged_fields"] if "[not bound]" in f["ref"]]
-    assert len(unbound) == 16 and ed["validation"]["unbound_row_count"] == 16
-    assert ed["needs_review"]
+    assert not ed["validation"].get("unbound_row_count")
