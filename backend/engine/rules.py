@@ -23,7 +23,9 @@ REFERENCES. A value is named by the template's own words:
 
 TYPES
   sum_equals    terms -> total; a column term sums its rows. Tolerance: one
-                cent per summed amount (as the coded line check), or `tolerance`
+                cent per summed amount (as the coded line check), or `tolerance`.
+                A value with no digit in it ("aaaaaa") FAILS the rule; an
+                ambiguous figure ("1,234") makes it UNREADABLE
   equals        left == right: as amounts when both are amounts, else as text
                 (case and spacing ignored)
   product       factors multiply to result; with a column it runs PER ROW
@@ -245,6 +247,15 @@ def _sum_equals(rule, ctx, R):
     want = _money(ttext)
     if want is None:
         unreadable.append(total.text)
+    # NOT AN AMOUNT AT ALL (Part 3.4 e): a value in the sum with no digit in
+    # it ("aaaaaa", "see attached") is wrong, not ambiguous — the rule FAILS
+    # and the values go low. An ambiguous figure ("1,234") stays UNREADABLE.
+    texts = [_field_text(ctx, t) for t in terms if not t.is_column] + [ttext]
+    texts += [txt for t in terms if t.is_column for _sid, txt in _rows(ctx, t)]
+    junk = [x for x in texts if x and not any(ch.isdigit() for ch in x)]
+    if junk:
+        return [_result(rule, FAIL, slots,
+                        f"{', '.join(repr(x) for x in dict.fromkeys(junk))} is not an amount")]
     if unreadable:
         return [_result(rule, UNREADABLE, slots,
                         f"{', '.join(dict.fromkeys(unreadable))} is not a plain amount")]
