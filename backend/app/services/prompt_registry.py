@@ -1523,7 +1523,7 @@ def get_date_fields(doc_type: str) -> list:
 def get_all_types() -> list:
     return [k for k in PROMPT_REGISTRY if k != "other"]
 
-_HINT_PATTERNS: dict[str, "re.Pattern"] = {}
+_HINT_PATTERNS: dict = {}
 
 
 def _hint_in(hint: str, text_lower: str) -> bool:

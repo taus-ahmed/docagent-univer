@@ -134,10 +134,12 @@ class TestEveryValueKnowsWhereItCameFrom:
                         pages_seen.add((doc, row["_page"]))
                         if not _on_page(v, texts[row["_page"] - 1]):
                             wrong.append((doc, key, col, v, row["_page"]))
-        # 386 = every confident value in the gold corpus: 109 fields, 277 row
-        # cells (89 rows). All 89 rows are page 1 (the page-2 continuations are
-        # the rows I1 leaves out), so page 2 comes from fields: 9 of 115.
-        assert checked >= 386 and not wrong, (checked, wrong[:10])
+        # 382 = every confident value in the gold corpus: 109 fields, 273 row
+        # cells (87 rows). It was 386 until the total-row gate (Part 3.5) left
+        # out PAYSLIP-EMP-0012's two "Total" lines — 4 cells the harness counted
+        # as misfiled. All rows are page 1 (the page-2 continuations are the
+        # rows I1 leaves out), so page 2 comes from fields: 9 of 115.
+        assert checked >= 382 and not wrong, (checked, wrong[:10])
         assert any(p > 1 for _d, p in pages_seen), "no value came from page 2+"
 
     def test_a_document_split_out_of_a_file_reports_file_pages(self, merged):

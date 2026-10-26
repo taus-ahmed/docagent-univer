@@ -123,7 +123,7 @@ def htr_result(htr_document, pdf_dir, monkeypatch):
         doc_boundaries, "split",
         # Same signature as doc_boundaries.split, `forced` and `family`
         # included: one document, so nothing is cut here.
-        lambda texts, lines=None, images=None, forced=(), family=None: (
+        lambda texts, lines=None, images=None, forced=(), family=None, report=None: (
             [(texts, lines, images, 1)], ""))
     monkeypatch.setattr(
         extractor, "_extract_one",
