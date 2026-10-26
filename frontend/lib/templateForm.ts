@@ -46,6 +46,16 @@ export function validateTemplate(input: {
   return out;
 }
 
+/** What a grid holds that a user would lose: non-empty values, styles,
+ *  merges and declared regions — never bookkeeping such as empty entries. */
+export function gridSignature(grid: any): string {
+  const cells = Object.entries((grid && grid.cells) || {})
+    .filter(([, c]: [string, any]) => (c?.value ?? "") !== "" || Object.keys(c?.style || {}).length || c?.id_type)
+    .map(([k, c]: [string, any]) => [k, c?.value ?? "", c?.style ?? {}, c?.id_type ?? ""])
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  return JSON.stringify({ cells, merges: (grid && grid.merges) || {}, regions: (grid && grid.regions) || [] });
+}
+
 /** The text of the browser's leave-page warning, or null when nothing is unsaved. */
 export function leaveWarning(dirty: boolean): string | null {
   return dirty ? "You have unsaved changes to this template. Leave without saving?" : null;

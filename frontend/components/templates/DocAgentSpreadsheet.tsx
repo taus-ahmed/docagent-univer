@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { templatesApi, type ShapePreview } from "@/lib/api";
 import { editKey, gridOwnsKey, selectKey } from "@/lib/gridKeys";
 
@@ -350,28 +350,52 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       const nc = Math.max(0, Math.min(COLS - 1, savedC + dc));
       setSelR(nr); setSelC(nc); setRng({ r1: nr, c1: nc, r2: nr, c2: nc });
     }
-    refocusGrid();
   }, [editR, editC, editVal, cells, ph, upd]);
 
   // The cell input unmounts when an edit ends; focus would fall to the page
   // body and every key after it would be lost. Give it back to the grid.
-  const refocusGrid = () => setTimeout(() => gridRef.current?.focus({ preventScroll: true }), 0);
+  // SYNCHRONOUS: a Tab pressed right after another must find the grid
+  // focused (the browser test typed faster than a deferred focus). The
+  // input's blur that this causes must not commit a second time.
+  const skipBlur = useRef(false);
+  const refocusGrid = () => {
+    skipBlur.current = true;
+    gridRef.current?.focus({ preventScroll: true });
+    setTimeout(() => { skipBlur.current = false; }, 0);
+  };
   const cancelEdit = () => { setEditR(null); setEditC(null); setEditVal(""); refocusGrid(); };
   const onEditKey = (e: React.KeyboardEvent, inCell: boolean) => {
     e.stopPropagation();
     const a = editKey({ key: e.key, shift: e.shiftKey });
-    if (a.kind === "commit") { e.preventDefault(); commitEdit(inCell ? a.dr : 0, a.dc); }
+    if (a.kind === "commit") { e.preventDefault(); commitEdit(inCell ? a.dr : 0, a.dc); refocusGrid(); }
     else if (a.kind === "cancel") { e.preventDefault(); cancelEdit(); }
   };
+  const onEditBlur = () => { if (!skipBlur.current) commitEdit(0, 0); };
 
+  // Keys typed between "start editing" and the cell input taking focus (one
+  // render) used to be lost or restart the edit: "Total" typed fast after Tab
+  // came out "Ttal" (found by the browser test). They are appended instead.
+  const editStarting = useRef(false);
   const startEdit = useCallback((r: number, c: number, initChar?: string) => {
+    editStarting.current = true;
     setEditR(r); setEditC(c);
     setEditVal(initChar !== undefined ? initChar : (cells[ck(r, c)]?.value ?? ""));
-    setTimeout(() => {
-      const inp = inputRef.current;
-      if (inp) { inp.focus(); const l = inp.value.length; inp.setSelectionRange(initChar !== undefined ? l : 0, l); }
-    }, 0);
+    editCaretEnd.current = initChar !== undefined;
   }, [cells]);
+
+  // Focus the cell input in the SAME commit that mounts it (a layout effect),
+  // so the very next key press — Enter, Tab, another letter — lands in it.
+  const editCaretEnd = useRef(false);
+  useLayoutEffect(() => {
+    if (editR === null) return;
+    const inp = inputRef.current;
+    editStarting.current = false;
+    if (inp && document.activeElement !== inp) {
+      inp.focus();
+      const l = inp.value.length;
+      inp.setSelectionRange(editCaretEnd.current ? l : 0, l);
+    }
+  }, [editR, editC]);
 
   const nav = useCallback((dr: number, dc: number) => {
     const nr = Math.max(0, Math.min(ROWS - 1, selR + dr));
@@ -405,6 +429,9 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      if (editStarting.current && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault(); setEditVal(v => v + e.key); return;
+      }
       const a = document.activeElement as HTMLElement;
       // A7: the grid takes keys only when focus is IN it and no dialog sits on
       // top (lib/gridKeys.ts). It used to take them from the whole window.
@@ -790,9 +817,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
             }
           }}
           onBlur={() => {
-            if (editR !== null && editC !== null) {
-              commitEdit(0, 0);
-            }
+            if (editR !== null && editC !== null) onEditBlur();
           }}
           aria-label="Formula bar: the selected cell's text"
           onKeyDown={e => onEditKey(e, false)}
@@ -904,7 +929,7 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                             data-grid="true"
                             value={editVal}
                             onChange={e => setEditVal(e.target.value)}
-                            onBlur={() => commitEdit(0, 0)}
+                            onBlur={onEditBlur}
                             aria-label="Cell value"
                             onKeyDown={e => onEditKey(e, true)}
                             style={{ width: "100%", height: `${DRH}px`, maxHeight: `${DRH}px`, border: "none", outline: "none", padding: "0 6px", fontFamily: ff, fontSize: `${fs}px`, fontWeight: fw, fontStyle: s.italic ? "italic" : "normal", background: "transparent", color: fc, textAlign: s.align ?? "left", overflow: "hidden" }}

@@ -28,3 +28,10 @@ test("the leave warning only when something is unsaved", () => {
   assert.equal(leaveWarning(false), null);
   assert.match(leaveWarning(true) ?? "", /unsaved/);
 });
+
+test("the dirty signature ignores bookkeeping and sees real edits", async () => {
+  const { gridSignature } = await import("./templateForm.ts");
+  const empty = gridSignature(null);
+  assert.equal(gridSignature({ cells: { "0,0": { value: "", style: {} } } }), empty);
+  assert.notEqual(gridSignature({ cells: { "0,0": { value: "Label" } } }), empty);
+});

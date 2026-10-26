@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { gateDecision, loginUrl } from "@/lib/session-gate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { leaveWarning, validateTemplate, type FieldError } from "@/lib/templateForm";
+import { gridSignature, leaveWarning, validateTemplate, type FieldError } from "@/lib/templateForm";
 import { templatesApi, type TemplateColumn, type ColumnTemplate,
          type ShapePreview } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -30,7 +30,7 @@ export default function TemplateEditor({ templateId }: Props) {
   // A7: field-level errors and the unsaved-changes guard (lib/templateForm.ts)
   const [fieldErrors, setFieldErrors] = useState<FieldError[]>([]);
   const [dirty, setDirty] = useState(false);
-  const baselineRef = useRef<string | null>(null);
+  const baselineRef = useRef<string>(gridSignature(null));
   const { user, isAuthenticated, initialized, logout, initializeFromStorage } = useAuthStore();
   const [name, setName] = useState("");
   const [docType, setDocType] = useState("invoice");
@@ -129,6 +129,10 @@ export default function TemplateEditor({ templateId }: Props) {
     return null;
   })();
 
+  useEffect(() => { if (existingLayout) baselineRef.current = gridSignature(existingLayout); },
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            [JSON.stringify(existingLayout ?? null)]);
+
   // FIX 1: Pre-populate sheetDataRef from existingLayout as soon as it's available.
   // This means save works immediately when the user opens an existing template
   // even before they interact with the spreadsheet.
@@ -143,10 +147,10 @@ export default function TemplateEditor({ templateId }: Props) {
   const handleSheetsChange = useCallback((data: SheetSaveData) => {
     sheetDataRef.current = data;
     setSheetReady(true);
-    // the first report is the loaded state; anything different is an edit
-    const now = JSON.stringify({ c: data?.cells, m: data?.merges, r: (data as any)?.regions });
-    if (baselineRef.current === null) baselineRef.current = now;
-    else if (now !== baselineRef.current) setDirty(true);
+    // dirty = the grid's CONTENT differs from what was loaded (or from an
+    // empty grid for a new template). The sheet may report only on change, so
+    // its first report cannot be the baseline (found by the browser test).
+    if (gridSignature(data) !== baselineRef.current) setDirty(true);
   }, []);
 
   // Leaving with unsaved edits asks first: the browser's own prompt on reload
