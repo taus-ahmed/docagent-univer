@@ -861,6 +861,50 @@ def _pdf_pages_to_images(file_path: Path, doc: ProcessedDocument):
         doc.processing_notes += f"pdf2image conversion error: {e}. "
 
 
+class ImageTooLarge(ValueError):
+    """An image whose header declares more pixels than MAX_IMAGE_PIXELS."""
+
+
+def _pixel_limit() -> int:
+    try:
+        from config import settings
+        return int(getattr(settings, "MAX_IMAGE_PIXELS", 0) or 50_000_000)
+    except Exception:
+        return 50_000_000
+
+
+def open_image_bounded(path, limit=None):
+    """`Image.open(path)`, refused BEFORE anything is decoded when the header
+    declares more than `limit` pixels (default MAX_IMAGE_PIXELS).
+
+    `Image.open` is lazy: it reads the header, so the declared size is known
+    without decompressing a byte. A PNG of a few hundred bytes can declare
+    40,000 x 40,000 pixels — 4.8 GB once converted — and nothing between
+    storage and `convert()` would have stopped it. PIL's own bomb check (twice
+    its global limit) also fires at open time and is reported the same way.
+    The global limit is not touched: other threads open images too."""
+    import warnings
+    limit = int(limit or _pixel_limit())
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", Image.DecompressionBombWarning)
+            img = Image.open(path)
+    except Image.DecompressionBombError as exc:
+        m = re.search(r"\((\d+) pixels\)", str(exc))
+        declared = f"{m.group(1)} pixels" if m else "more pixels than allowed"
+        raise ImageTooLarge(_too_large(declared, limit)) from None
+    w, h = img.size
+    if w * h > limit:
+        img.close()
+        raise ImageTooLarge(_too_large(f"{w} x {h} = {w * h} pixels", limit))
+    return img
+
+
+def _too_large(declared, limit) -> str:
+    return (f"This image declares {declared}; the limit is {limit} pixels "
+            f"(MAX_IMAGE_PIXELS). It was not decoded.")
+
+
 def _process_image(file_path: Path) -> ProcessedDocument:
     """Process an image file."""
     doc = ProcessedDocument(
@@ -871,8 +915,8 @@ def _process_image(file_path: Path) -> ProcessedDocument:
         has_meaningful_text=False,
     )
 
+    img = open_image_bounded(file_path)       # ImageTooLarge: named, raised
     try:
-        img = Image.open(file_path)
         if img.mode == "RGBA":
             img = img.convert("RGB")
         page = img if img.mode in ("RGB", "L") else img.convert("RGB")

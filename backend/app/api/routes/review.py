@@ -289,9 +289,12 @@ def _reading(job, doc) -> dict:
     for p in (str(_engine_dir), str(_backend_dir), str(_project_dir)):
         if p not in sys.path:
             sys.path.insert(0, p)
-    from core.preprocessor import preprocess_file
-    with contextlib.redirect_stdout(io.StringIO()):
-        pd = preprocess_file(path)
+    from core.preprocessor import ImageTooLarge, preprocess_file
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            pd = preprocess_file(path)
+    except ImageTooLarge as exc:
+        raise HTTPException(status_code=413, detail=str(exc))
     ocr_images = dict(getattr(pd, "ocr_images", {}) or {})
     sizes = {n: (im.width * 72.0 / dpi, im.height * 72.0 / dpi)
              for n, (im, dpi) in ocr_images.items()}
@@ -416,7 +419,11 @@ def _page_png(reading, page) -> bytes:
             raise HTTPException(status_code=503,
                                 detail=f"This page could not be rendered: {exc}")
     else:
-        img = Image.open(reading["path"])
+        from core.preprocessor import ImageTooLarge, open_image_bounded
+        try:
+            img = open_image_bounded(reading["path"])   # header checked first
+        except ImageTooLarge as exc:
+            raise HTTPException(status_code=413, detail=str(exc))
     if img is None:
         raise HTTPException(status_code=404, detail="This page could not be rendered")
     img = img.convert("RGB")
