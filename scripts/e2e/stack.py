@@ -91,6 +91,11 @@ def main():
     ap.add_argument("--api-port", type=int, default=8100)
     ap.add_argument("--web-port", type=int, default=3100)
     a = ap.parse_args()
+    import socket
+    for port in (a.api_port, a.web_port):
+        with socket.socket() as so:
+            if so.connect_ex(("127.0.0.1", port)) == 0:
+                sys.exit(f"port {port} is busy: stop the previous stack first")
     work = Path(a.workdir).resolve()
     work.mkdir(parents=True, exist_ok=True)
     if (work / "e2e.db").exists():

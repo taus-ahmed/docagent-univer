@@ -86,3 +86,14 @@ on a conflict that never clears; page routes answer 413 for an image over
 
 Railway (backend) and Vercel (frontend) deploy from `main`; follow
 `docs/DEPLOY-RUNBOOK.md` and confirm the commit SHA is on GitHub.
+
+## Demo acceptance (Part A9)
+
+Before showing the product to a client, run the whole demo flow offline
+(`scripts/e2e/README.md`): `scripts/e2e/stack.py` (stub model, throwaway
+database), then `frontend/e2e/run.sh`. `demo-acceptance.spec.cjs` fails on
+any broken step — sign in, draw a template, upload a two-invoice file with
+every option on (it must come back as two documents), edit a value, mark the
+document reviewed, export, and a second firm getting 404 for the job — and
+the other specs cover the editor's keyboard, the options panel and every
+page at laptop and tablet width. All must pass.

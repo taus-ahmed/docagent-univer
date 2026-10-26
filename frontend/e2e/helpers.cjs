@@ -49,3 +49,35 @@ const INVOICE = ["ACME TRADING LTD", "Invoice No: INV-9001", "Invoice Date: 2024
 
 module.exports.makePdf = makePdf;
 module.exports.INVOICE = INVOICE;
+
+/** A multi-page PDF: one page per entry of `pages` (each a list of lines). */
+function makePdfPages(pages) {
+  const esc = s => s.replace(/[\()]/g, m => "\\" + m);
+  const objs = ["<< /Type /Catalog /Pages 2 0 R >>", null,
+                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
+  const kids = [];
+  for (const lines of pages) {
+    const body = "BT /F1 11 Tf " + lines.map((l, i) => `1 0 0 1 72 ${740 - 22 * i} Tm (${esc(l)}) Tj`).join(" ") + " ET";
+    objs.push(`<< /Length ${body.length} >>\nstream\n${body}\nendstream`);
+    const contents = objs.length;
+    objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${contents} 0 R /Resources << /Font << /F1 3 0 R >> >> >>`);
+    kids.push(`${objs.length} 0 R`);
+  }
+  objs[1] = `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${kids.length} >>`;
+  let out = "%PDF-1.4\n";
+  const offs = [];
+  objs.forEach((o, i) => { offs.push(out.length); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const x = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` +
+    offs.map(o => String(o).padStart(10, "0") + " 00000 n \n").join("") +
+    `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`;
+  return Buffer.from(out, "latin1");
+}
+
+/** The signed-in user's bearer token, read from the app's own storage. */
+async function token(page) {
+  return page.evaluate(() => localStorage.getItem("da_token"));
+}
+
+module.exports.makePdfPages = makePdfPages;
+module.exports.token = token;
