@@ -133,6 +133,36 @@ REASONS: dict[str, tuple[str, str]] = {
     "currency_ambiguous": (
         "Currency unclear",
         "These amounts may be in different currencies (for example US and Canadian dollars). Check the currency of each."),
+    "iban_invalid": (
+        "IBAN is not valid",
+        "The IBAN fails its length or check-digit test, so at least one character is wrong."),
+    "swift_invalid": (
+        "SWIFT/BIC is not valid",
+        "The SWIFT/BIC code is not in the right format or names no country."),
+    "sort_code_invalid": (
+        "Sort code is not valid",
+        "A UK sort code is six digits (12-34-56)."),
+    "gstin_invalid": (
+        "GSTIN is not valid",
+        "The GSTIN fails its format or its check character, so at least one character is wrong."),
+    "pan_invalid": (
+        "PAN is not valid",
+        "The PAN is not in the right format."),
+    "pan_gstin_mismatch": (
+        "PAN does not match the GSTIN",
+        "A GSTIN contains its holder's PAN; these two do not agree, so one of them is wrong."),
+    "ifsc_invalid": (
+        "IFSC is not valid",
+        "An IFSC is 4 letters, a zero, then 6 letters or digits."),
+    "vat_format_invalid": (
+        "VAT number format is wrong",
+        "This VAT number does not have the format its country prefix requires."),
+    "trn_invalid": (
+        "TRN is not valid",
+        "A UAE TRN is 15 digits."),
+    "ein_invalid": (
+        "EIN is not valid",
+        "A US EIN is nine digits (12-3456789) with an assigned prefix."),
 }
 
 

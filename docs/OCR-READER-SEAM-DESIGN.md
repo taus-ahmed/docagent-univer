@@ -719,6 +719,16 @@ everything carries `False` and `[]`.
 | `non_english_text` | the value has letters of a non-Latin script, or was read from a page whose text is in another script or (by function words) another Latin-script language (engine/scripts.py). The engine's prompts and checks are English: nothing is translated, and the value was not checked by them. Page languages are in `validation.page_languages` | none — it requires review |
 | `currency_mismatch` | a check that sums or compares amounts (any family) found them in currencies that cannot be one (`£` and `€`, `USD` and `INR`); the check is not decided on them (`validators._currency_gate`) | every value of that check exactly `low` |
 | `currency_ambiguous` | the amounts a check compares carry markers that may name different currencies (`$` and `C$`, `¥` and `元`) and no stated code settles it | none — it requires review |
+| `iban_invalid` | a slot declared `id_type: iban` holds a value that is not a valid IBAN: shape, the country's length, or the mod-97 check digits (engine/identifiers/banking.py) | exactly `low` |
+| `swift_invalid` | a slot declared `swift` / `bic` holds a value not in the BIC format (4 letters, a country code, 2 characters, optionally 3) | exactly `low` |
+| `sort_code_invalid` | a slot declared `uk_sort_code` does not hold six digits | exactly `low` |
+| `gstin_invalid` | a slot declared `gstin` fails the GSTIN format (state code, PAN, entity, Z) or its official check character (engine/identifiers/india.py) | exactly `low` |
+| `pan_invalid` | a slot declared `pan` is not a PAN (5 letters, the 4th a holder type, 4 digits, a letter) | exactly `low` |
+| `pan_gstin_mismatch` | a record with one PAN and one GSTIN slot whose PAN is not the GSTIN's characters 3-12; set on both | both exactly `low` |
+| `ifsc_invalid` | a slot declared `ifsc` is not an IFSC (4 letters, 0, 6 letters or digits) | exactly `low` |
+| `vat_format_invalid` | a slot declared `vat` is not in the format of its EU (or GB/XI) country prefix; format only, no checksum claimed | exactly `low` |
+| `trn_invalid` | a slot declared `trn` (UAE tax registration number) is not 15 digits | exactly `low` |
+| `ein_invalid` | a slot declared `ein` is not nine digits or has a prefix the IRS never assigns | exactly `low` |
 
 Document-level facts that have no single value to sit on are reported in
 `validation` and `flagged_fields` and set `needs_review` directly: a MICR

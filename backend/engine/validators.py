@@ -189,6 +189,7 @@ def _load():
         import notation_validators  # noqa: F401
         import date_validators  # noqa: F401
         import language_validators  # noqa: F401
+        import identifier_validators  # noqa: F401
         import cheque_validators  # noqa: F401
         import invoice_validators  # noqa: F401
         import bank_validators  # noqa: F401

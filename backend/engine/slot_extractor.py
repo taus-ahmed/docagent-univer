@@ -830,6 +830,28 @@ def select_region(located, all_lines, page_lines):
 # RUN
 # ══════════════════════════════════════════════════════════════════════════════
 
+def declare_id_types(grid, slots):
+    """`slots` with `id_type` copied from the template grid onto the field
+    slots and table columns that declare one. New dicts: the shape (cached on
+    the template data) is never mutated."""
+    cells = (grid or {}).get("cells") or {}
+
+    def kind(r, c):
+        cell = cells.get(f"{r},{c}")
+        return cell.get("id_type") if isinstance(cell, dict) else None
+    fields = []
+    for f in slots.get("fields") or []:
+        k = kind(f.get("row"), f.get("col"))
+        fields.append({**f, "id_type": k} if k else f)
+    tables = []
+    for t in slots.get("tables") or []:
+        hr = t.get("header_row")
+        cols = [({**c, "id_type": kind(hr, c.get("col"))} if kind(hr, c.get("col")) else c)
+                for c in t.get("columns") or []]
+        tables.append({**t, "columns": cols} if cols != (t.get("columns") or []) else t)
+    return {**slots, "fields": fields, "tables": tables}
+
+
 def template_locale(template_data):
     """The template's locale (`locale` on the template data or its grid), or
     None. A hint for reading numbers and dates, never a guess."""
@@ -883,6 +905,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             why += f" — the model call failed: {err or 'no error given'}"
         return [_fail(file_path.name, why)]
 
+    # Declared identifier kinds (`id_type` on a value cell or a table
+    # heading) — attached AFTER the prompt is built, so a declaration never
+    # changes what the model is asked (Part 1.6).
+    slots = declare_id_types(grid, slots)
     by_id = {f["slot_id"]: f for f in slots["fields"]}
     # I2 — where each field value was read from: {ref: {source, page, grounded}}.
     # `grounded` is None when the value never reached span verification (it was
