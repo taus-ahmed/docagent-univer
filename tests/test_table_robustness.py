@@ -64,3 +64,54 @@ def test_property_continuation_stops_at_the_first_page_that_breaks_the_run(seed)
         pages[p] = _page(p if kind != "number" else p + 1, n, heading=kind != "heading")
     got = continued_pages(1, _lines(pages), HEAD)
     assert got == set(range(2, min(brk, n + 1)))
+
+
+# ── a table's own total line (split_total_rows) ─────────────────────────────
+
+from slot_extractor import split_total_rows  # noqa: E402
+
+KEYS = ["Item", "Amount", "Tax"]
+
+
+def _rows(rng, n):
+    rows = []
+    for k in range(n):
+        a, t = rng.randrange(100, 99_999), rng.randrange(0, 999)
+        rows.append({"Item": f"Line {k}", "Amount": f"${a // 100:,}.{a % 100:02d}",
+                     "Tax": f"${t // 100}.{t % 100:02d}"})
+    return rows
+
+
+def _sum(rows, k):
+    c = sum(int(r[k].replace("$", "").replace(",", "").replace(".", "")) for r in rows)
+    return f"${c // 100:,}.{c % 100:02d}"
+
+
+@pytest.mark.parametrize("seed", range(25))
+def test_property_a_proven_total_line_is_left_out_and_nothing_else(seed):
+    rng = random.Random(seed)
+    rows = _rows(rng, rng.randrange(1, 9))
+    word = rng.choice(["Total", "TOTAL", "Grand Total", "Subtotal", "Total:", "Total Amount"])
+    total = {"Item": word, "Amount": _sum(rows, "Amount"), "Tax": _sum(rows, "Tax")}
+    kept, out = split_total_rows(rows + [total], KEYS)
+    assert kept == rows and out == [total]
+
+
+@pytest.mark.parametrize("seed", range(25))
+def test_property_a_total_that_does_not_add_up_stays_a_row(seed):
+    rng = random.Random(seed)
+    rows = _rows(rng, rng.randrange(1, 9))
+    wrong = {"Item": "Total", "Amount": "$1.23", "Tax": _sum(rows, "Tax")}
+    kept, out = split_total_rows(rows + [wrong], KEYS)
+    assert out == [] and kept[-1] == wrong
+
+
+@pytest.mark.parametrize("label", ["Total Fuel", "Totally new", "Subtotal of fees paid in advance"])
+def test_a_label_that_only_starts_with_total_stays_a_row(label):
+    rows = [{"Item": "A", "Amount": "$1.00", "Tax": ""}, {"Item": "B", "Amount": "$2.00", "Tax": ""}]
+    assert split_total_rows(rows + [{"Item": label, "Amount": "$3.00", "Tax": ""}], KEYS)[1] == []
+
+
+def test_an_ambiguous_figure_proves_nothing():
+    rows = [{"Item": "A", "Amount": "1,000", "Tax": ""}, {"Item": "B", "Amount": "2,000", "Tax": ""}]
+    assert split_total_rows(rows + [{"Item": "Total", "Amount": "3,000", "Tax": ""}], KEYS)[1] == []

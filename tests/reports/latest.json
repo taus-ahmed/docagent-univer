@@ -1,6 +1,6 @@
 {
- "run_id": "2026-09-16 07:58:39",
- "git_commit": "9f8d800",
+ "run_id": "2026-10-26 12:38:45",
+ "git_commit": "2ca6e5c",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -12,6 +12,7 @@
  },
  "cache_stats": {
   "hits": 10,
+  "alias_hits": 0,
   "recorded": 0,
   "live": 0,
   "misses": 0
@@ -25,7 +26,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] BS-2024-Q1.pdf: file_type=digital_pdf pages=2 text_len=1242",
+    "route": "[ROUTE] doc-aa42f790f4: file_type=digital_pdf pages=2 text_len=1242",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -1437,7 +1438,7 @@
      "Total Non-Current Assets": {
       "outcome": "correct",
       "expected": 236500,
-      "actual": 236500.0,
+      "actual": "$236,500",
       "type": "money",
       "in_gold_schema": true
      },
@@ -1451,28 +1452,28 @@
      "Total Current Liabilities": {
       "outcome": "correct",
       "expected": 421200,
-      "actual": 421200.0,
+      "actual": "$421,200",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Long-Term Liabilities": {
       "outcome": "correct",
       "expected": 129400,
-      "actual": 129400.0,
+      "actual": "$129,400",
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL LIABILITIES": {
       "outcome": "correct",
       "expected": 550600,
-      "actual": 550600.0,
+      "actual": "$550,600",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Equity": {
       "outcome": "correct",
       "expected": 698104,
-      "actual": 698104.0,
+      "actual": "$698,104",
       "type": "money",
       "in_gold_schema": true
      },
@@ -1514,7 +1515,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 143803,
-        "actual": 143803.0,
+        "actual": "$143,803",
         "in_gold_schema": true
        },
        {
@@ -1534,7 +1535,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 348200,
-        "actual": 348200.0,
+        "actual": "$348,200",
         "in_gold_schema": true
        },
        {
@@ -1554,7 +1555,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 612000,
-        "actual": 612000.0,
+        "actual": "$612,000",
         "in_gold_schema": true
        },
        {
@@ -1574,7 +1575,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 16200,
-        "actual": 16200.0,
+        "actual": "$16,200",
         "in_gold_schema": true
        },
        {
@@ -1594,7 +1595,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8800,
-        "actual": 8800.0,
+        "actual": "$8,800",
         "in_gold_schema": true
        }
       ]
@@ -1628,7 +1629,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 240000,
-        "actual": 240000.0,
+        "actual": "$240,000",
         "in_gold_schema": true
        },
        {
@@ -1648,7 +1649,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 108500,
-        "actual": 108500.0,
+        "actual": "$108,500",
         "in_gold_schema": true
        },
        {
@@ -1668,7 +1669,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85000,
-        "actual": 85000.0,
+        "actual": "$85,000",
         "in_gold_schema": true
        },
        {
@@ -1688,7 +1689,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 20000,
-        "actual": 20000.0,
+        "actual": "$20,000",
         "in_gold_schema": true
        }
       ]
@@ -1722,7 +1723,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 254800,
-        "actual": 254800.0,
+        "actual": "$254,800",
         "in_gold_schema": true
        },
        {
@@ -1742,7 +1743,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 44200,
-        "actual": 44200.0,
+        "actual": "$44,200",
         "in_gold_schema": true
        },
        {
@@ -1762,7 +1763,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 80000,
-        "actual": 80000.0,
+        "actual": "$80,000",
         "in_gold_schema": true
        },
        {
@@ -1782,7 +1783,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18200,
-        "actual": 18200.0,
+        "actual": "$18,200",
         "in_gold_schema": true
        },
        {
@@ -1802,7 +1803,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 24000,
-        "actual": 24000.0,
+        "actual": "$24,000",
         "in_gold_schema": true
        }
       ]
@@ -1836,7 +1837,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 121000,
-        "actual": 121000.0,
+        "actual": "$121,000",
         "in_gold_schema": true
        },
        {
@@ -1856,7 +1857,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8400,
-        "actual": 8400.0,
+        "actual": "$8,400",
         "in_gold_schema": true
        }
       ]
@@ -1905,7 +1906,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 100000,
-        "actual": 100000.0,
+        "actual": "$100,000",
         "in_gold_schema": true
        },
        {
@@ -2035,7 +2036,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] CHQ-001847.pdf: file_type=digital_pdf pages=1 text_len=501",
+    "route": "[ROUTE] doc-f7ea3d6e0e: file_type=digital_pdf pages=1 text_len=501",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -2376,7 +2377,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] EXP-2024-0081.pdf: file_type=digital_pdf pages=1 text_len=1107",
+    "route": "[ROUTE] doc-71691073cd: file_type=digital_pdf pages=1 text_len=1107",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -4854,7 +4855,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] INV-2024-0031.pdf: file_type=digital_pdf pages=1 text_len=971",
+    "route": "[ROUTE] doc-9f942c192f: file_type=digital_pdf pages=1 text_len=971",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -6262,7 +6263,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] INV-2024-0047.pdf: file_type=digital_pdf pages=1 text_len=1040",
+    "route": "[ROUTE] doc-eba86b7cfd: file_type=digital_pdf pages=1 text_len=1040",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -7904,7 +7905,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] IS-2024-Q4.pdf: file_type=digital_pdf pages=2 text_len=970",
+    "route": "[ROUTE] doc-dd7566581f: file_type=digital_pdf pages=2 text_len=970",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -9118,49 +9119,49 @@
      "Gross Profit": {
       "outcome": "correct",
       "expected": 695400,
-      "actual": 695400.0,
+      "actual": "$695,400",
       "type": "money",
       "in_gold_schema": true
      },
      "Total Operating Expenses": {
       "outcome": "correct",
       "expected": 359250,
-      "actual": 359250.0,
+      "actual": "$359,250",
       "type": "money",
       "in_gold_schema": true
      },
      "Operating Income (EBIT)": {
       "outcome": "correct",
       "expected": 336150,
-      "actual": 336150.0,
+      "actual": "$336,150",
       "type": "money",
       "in_gold_schema": true
      },
      "Interest Income": {
       "outcome": "correct",
       "expected": 1240,
-      "actual": 1240.0,
+      "actual": "$1,240",
       "type": "money",
       "in_gold_schema": true
      },
      "Net Income Before Tax": {
       "outcome": "correct",
       "expected": 337390,
-      "actual": 337390.0,
+      "actual": "$337,390",
       "type": "money",
       "in_gold_schema": true
      },
      "Income Tax Provision": {
       "outcome": "correct",
       "expected": 70852,
-      "actual": 70852.0,
+      "actual": "$70,852",
       "type": "money",
       "in_gold_schema": true
      },
      "Net Income After Tax": {
       "outcome": "correct",
       "expected": 266538,
-      "actual": 266538.0,
+      "actual": "$266,538",
       "type": "money",
       "in_gold_schema": true
      }
@@ -9215,7 +9216,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 28600,
-        "actual": 28600.0,
+        "actual": "$28,600",
         "in_gold_schema": true
        }
       ]
@@ -9249,7 +9250,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 648000,
-        "actual": 648000.0,
+        "actual": "$648,000",
         "in_gold_schema": true
        },
        {
@@ -9289,7 +9290,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 52000,
-        "actual": 52000.0,
+        "actual": "$52,000",
         "in_gold_schema": true
        },
        {
@@ -9309,7 +9310,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 724000,
-        "actual": 724000.0,
+        "actual": "$724,000",
         "in_gold_schema": true
        }
       ]
@@ -9343,7 +9344,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 190000,
-        "actual": 190000.0,
+        "actual": "$190,000",
         "in_gold_schema": true
        },
        {
@@ -9363,7 +9364,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85500,
-        "actual": 85500.0,
+        "actual": "$85,500",
         "in_gold_schema": true
        },
        {
@@ -9383,7 +9384,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 22400,
-        "actual": 22400.0,
+        "actual": "$22,400",
         "in_gold_schema": true
        },
        {
@@ -9403,7 +9404,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 12100,
-        "actual": 12100.0,
+        "actual": "$12,100",
         "in_gold_schema": true
        },
        {
@@ -9423,7 +9424,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 10300,
-        "actual": 10300.0,
+        "actual": "$10,300",
         "in_gold_schema": true
        },
        {
@@ -9443,7 +9444,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 7150,
-        "actual": 7150.0,
+        "actual": "$7,150",
         "in_gold_schema": true
        },
        {
@@ -9463,7 +9464,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 5800,
-        "actual": 5800.0,
+        "actual": "$5,800",
         "in_gold_schema": true
        },
        {
@@ -9483,7 +9484,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18000,
-        "actual": 18000.0,
+        "actual": "$18,000",
         "in_gold_schema": true
        },
        {
@@ -9503,7 +9504,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 3800,
-        "actual": 3800.0,
+        "actual": "$3,800",
         "in_gold_schema": true
        },
        {
@@ -9523,7 +9524,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 4200,
-        "actual": 4200.0,
+        "actual": "$4,200",
         "in_gold_schema": true
        }
       ]
@@ -9590,7 +9591,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] PAYSLIP-EMP-0007-APR2024.pdf: file_type=digital_pdf pages=2 text_len=887",
+    "route": "[ROUTE] doc-c6ca0ed7a1: file_type=digital_pdf pages=2 text_len=887",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -10895,7 +10896,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] PAYSLIP-EMP-0012-APR2024.pdf: file_type=digital_pdf pages=2 text_len=852",
+    "route": "[ROUTE] doc-b4129481ed: file_type=digital_pdf pages=2 text_len=852",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -10927,11 +10928,6 @@
       {
        "Description": "Performance Bonus",
        "Amount": "$800.00",
-       "_confidence": "high"
-      },
-      {
-       "Description": "Total",
-       "Amount": "$8,300.00",
        "_confidence": "high"
       }
      ],
@@ -10974,11 +10970,6 @@
       {
        "Description": "Dental & Vision",
        "Amount": "($45.00)",
-       "_confidence": "high"
-      },
-      {
-       "Description": "Total",
-       "Amount": "($3,117.35)",
        "_confidence": "high"
       }
      ]
@@ -11084,23 +11075,14 @@
      "earnings": {
       "table": "earnings",
       "gold_row_count": 2,
-      "pred_row_count": 3,
-      "row_count_mismatch": 1,
+      "pred_row_count": 2,
+      "row_count_mismatch": 0,
       "matched_rows": 2,
-      "row_precision": 0.6666666666666666,
+      "row_precision": 1.0,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 2,
-        "pred": {
-         "Description": "Total",
-         "Amount": "$8,300.00",
-         "_confidence": "high"
-        }
-       }
-      ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
@@ -11141,53 +11123,20 @@
         "expected": 800.0,
         "actual": "$800.00",
         "in_gold_schema": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Description",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Total",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$8,300.00",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
        }
       ]
      },
      "deductions": {
       "table": "deductions",
       "gold_row_count": 8,
-      "pred_row_count": 9,
-      "row_count_mismatch": 1,
+      "pred_row_count": 8,
+      "row_count_mismatch": 0,
       "matched_rows": 8,
-      "row_precision": 0.8888888888888888,
+      "row_precision": 1.0,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 8,
-        "pred": {
-         "Description": "Total",
-         "Amount": "($3,117.35)",
-         "_confidence": "high"
-        }
-       }
-      ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
@@ -11348,48 +11297,23 @@
         "expected": -45.0,
         "actual": "($45.00)",
         "in_gold_schema": true
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Description",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Total",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "($3,117.35)",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 32,
-     "hallucinated": 4
+     "correct": 32
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
-     "misfiled": 4,
+     "misfiled": 0,
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.10810810810810811,
+    "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -11492,23 +11416,14 @@
      "earnings": {
       "table": "earnings",
       "gold_row_count": 2,
-      "pred_row_count": 3,
-      "row_count_mismatch": 1,
+      "pred_row_count": 2,
+      "row_count_mismatch": 0,
       "matched_rows": 2,
-      "row_precision": 0.6666666666666666,
+      "row_precision": 1.0,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 2,
-        "pred": {
-         "Description": "Total",
-         "Amount": "$8,300.00",
-         "_confidence": "high"
-        }
-       }
-      ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
@@ -11549,53 +11464,20 @@
         "expected": 800.0,
         "actual": "$800.00",
         "in_gold_schema": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Description",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Total",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "$8,300.00",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
        }
       ]
      },
      "deductions": {
       "table": "deductions",
       "gold_row_count": 8,
-      "pred_row_count": 9,
-      "row_count_mismatch": 1,
+      "pred_row_count": 8,
+      "row_count_mismatch": 0,
       "matched_rows": 8,
-      "row_precision": 0.8888888888888888,
+      "row_precision": 1.0,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 8,
-        "pred": {
-         "Description": "Total",
-         "Amount": "($3,117.35)",
-         "_confidence": "high"
-        }
-       }
-      ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
@@ -11756,48 +11638,23 @@
         "expected": -45.0,
         "actual": "($45.00)",
         "in_gold_schema": true
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Description",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Total",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "($3,117.35)",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 32,
-     "hallucinated": 4
+     "correct": 32
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
-     "misfiled": 4,
+     "misfiled": 0,
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.10810810810810811,
+    "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -11900,22 +11757,14 @@
      "earnings": {
       "table": "earnings",
       "gold_row_count": 2,
-      "pred_row_count": 3,
-      "row_count_mismatch": 1,
+      "pred_row_count": 2,
+      "row_count_mismatch": 0,
       "matched_rows": 2,
-      "row_precision": 0.6666666666666666,
+      "row_precision": 1.0,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 2,
-        "pred": {
-         "Description": "Total",
-         "Amount": 8300.0
-        }
-       }
-      ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
@@ -11956,52 +11805,20 @@
         "expected": 800.0,
         "actual": 800.0,
         "in_gold_schema": true
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Description",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Total",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
-       },
-       {
-        "row": null,
-        "pred_row": 2,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": 8300.0,
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
        }
       ]
      },
      "deductions": {
       "table": "deductions",
       "gold_row_count": 8,
-      "pred_row_count": 9,
-      "row_count_mismatch": 1,
+      "pred_row_count": 8,
+      "row_count_mismatch": 0,
       "matched_rows": 8,
-      "row_precision": 0.8888888888888888,
+      "row_precision": 1.0,
       "row_recall": 1.0,
       "cell_accuracy": 1.0,
       "missed_rows": [],
-      "hallucinated_rows": [
-       {
-        "pred_row": 8,
-        "pred": {
-         "Description": "Total",
-         "Amount": -3117.35
-        }
-       }
-      ],
+      "hallucinated_rows": [],
       "cells": [
        {
         "row": 0,
@@ -12162,59 +11979,33 @@
         "expected": -45.0,
         "actual": -45.0,
         "in_gold_schema": true
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Description",
-        "type": "string",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": "Total",
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
-       },
-       {
-        "row": null,
-        "pred_row": 8,
-        "column": "Amount",
-        "type": "money",
-        "outcome": "hallucinated",
-        "expected": null,
-        "actual": -3117.35,
-        "in_gold_schema": true,
-        "grounded": true,
-        "halluc_kind": "misfiled"
        }
       ]
      }
     },
     "counts": {
      "near": 1,
-     "correct": 32,
-     "hallucinated": 4
+     "correct": 32
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
-     "misfiled": 4,
+     "misfiled": 0,
      "out_of_schema": 0
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.10810810810810811,
+    "hallucination_rate": 0.0,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "near": 1,
-     "correct": 22,
-     "unmatched": 2
+     "correct": 22
     },
     "gold_valued": 23,
     "accuracy": 0.9565217391304348,
-    "unmatched": 2,
+    "unmatched": 0,
     "mismatches": [
      {
       "key": "employer name",
@@ -12228,21 +12019,21 @@
    "score_structure": {
     "gold_tables": 2,
     "tables_present": 2,
-    "tables_exact_rows": 0,
+    "tables_exact_rows": 2,
     "fidelity": 1.0,
-    "row_count_fidelity": 0.0,
+    "row_count_fidelity": 1.0,
     "tables": {
      "earnings": {
       "gold_rows": 2,
-      "pred_rows": 3,
+      "pred_rows": 2,
       "present": true,
-      "row_delta": 1
+      "row_delta": 0
      },
      "deductions": {
       "gold_rows": 8,
-      "pred_rows": 9,
+      "pred_rows": 8,
       "present": true,
-      "row_delta": 1
+      "row_delta": 0
      }
     },
     "extra_tables": []
@@ -12257,7 +12048,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] PO-2024-0018.pdf: file_type=digital_pdf pages=1 text_len=1048",
+    "route": "[ROUTE] doc-95170d496c: file_type=digital_pdf pages=1 text_len=1048",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -13497,7 +13288,7 @@
    "success": true,
    "errors": [],
    "log": {
-    "route": "[ROUTE] STMT-2024-01.pdf: file_type=digital_pdf pages=1 text_len=1403",
+    "route": "[ROUTE] doc-5223753b4c: file_type=digital_pdf pages=1 text_len=1403",
     "engine_fallback_to_legacy": false,
     "fatal": false,
     "replay_cache_miss": false
@@ -16976,7 +16767,6 @@
     "correct": 383,
     "missed": 6,
     "near": 5,
-    "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
@@ -16984,14 +16774,14 @@
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
-   "hallucinated": 4,
-   "hallucination_rate": 0.01020408163265306,
+   "hallucinated": 0,
+   "hallucination_rate": 0.0,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
-   "misfiled": 4,
+   "misfiled": 0,
    "out_of_schema": 0,
-   "defect_rate": 0.01020408163265306
+   "defect_rate": 0.0
   },
   "by_document_type": {
    "balance_sheet": {
@@ -17090,22 +16880,21 @@
     "counts": {
      "near": 2,
      "correct": 66,
-     "missed": 2,
-     "hallucinated": 4
+     "missed": 2
     },
     "gold_valued": 70,
     "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 4,
-    "hallucination_rate": 0.05555555555555555,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 4,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.05555555555555555
+    "defect_rate": 0.0
    },
    "purchase_order": {
     "counts": {
@@ -17169,7 +16958,6 @@
     "counts": {
      "correct": 158,
      "missed": 3,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
@@ -17177,14 +16965,14 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 2,
-    "hallucination_rate": 0.0125,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 2,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.0125
+    "defect_rate": 0.0
    },
    "number": {
     "counts": {
@@ -17208,22 +16996,21 @@
     "counts": {
      "correct": 183,
      "missed": 3,
-     "near": 5,
-     "hallucinated": 2
+     "near": 5
     },
     "gold_valued": 191,
     "accuracy": 0.9581151832460733,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 2,
-    "hallucination_rate": 0.010526315789473684,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 2,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.010526315789473684
+    "defect_rate": 0.0
    }
   }
  },
@@ -17232,7 +17019,7 @@
    "counts": {
     "correct": 185,
     "missed": 204,
-    "hallucinated": 202,
+    "hallucinated": 198,
     "near": 5
    },
    "gold_valued": 394,
@@ -17240,14 +17027,14 @@
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
-   "hallucinated": 202,
-   "hallucination_rate": 0.5153061224489796,
+   "hallucinated": 198,
+   "hallucination_rate": 0.5103092783505154,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
-   "misfiled": 4,
+   "misfiled": 0,
    "out_of_schema": 198,
-   "defect_rate": 0.01020408163265306
+   "defect_rate": 0.0
   },
   "by_document_type": {
    "balance_sheet": {
@@ -17352,22 +17139,21 @@
     "counts": {
      "near": 2,
      "correct": 66,
-     "missed": 2,
-     "hallucinated": 4
+     "missed": 2
     },
     "gold_valued": 70,
     "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 4,
-    "hallucination_rate": 0.05555555555555555,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 4,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.05555555555555555
+    "defect_rate": 0.0
    },
    "purchase_order": {
     "counts": {
@@ -17435,22 +17221,21 @@
    "money": {
     "counts": {
      "correct": 101,
-     "missed": 60,
-     "hallucinated": 2
+     "missed": 60
     },
     "gold_valued": 161,
     "accuracy": 0.6273291925465838,
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 2,
-    "hallucination_rate": 0.019417475728155338,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 2,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.019417475728155338
+    "defect_rate": 0.0
    },
    "number": {
     "counts": {
@@ -17473,7 +17258,7 @@
    "string": {
     "counts": {
      "missed": 111,
-     "hallucinated": 200,
+     "hallucinated": 198,
      "correct": 75,
      "near": 5
     },
@@ -17482,14 +17267,14 @@
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 200,
-    "hallucination_rate": 0.7142857142857143,
+    "hallucinated": 198,
+    "hallucination_rate": 0.7122302158273381,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 2,
+    "misfiled": 0,
     "out_of_schema": 198,
-    "defect_rate": 0.007142857142857143
+    "defect_rate": 0.0
    }
   }
  },
@@ -17499,7 +17284,6 @@
     "correct": 383,
     "missed": 6,
     "near": 5,
-    "hallucinated": 4,
     "empty_ok": 12
    },
    "gold_valued": 394,
@@ -17507,14 +17291,14 @@
    "near_rate": 0.012690355329949238,
    "renamed": 0,
    "rename_rate": 0.0,
-   "hallucinated": 4,
-   "hallucination_rate": 0.01020408163265306,
+   "hallucinated": 0,
+   "hallucination_rate": 0.0,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
-   "misfiled": 4,
+   "misfiled": 0,
    "out_of_schema": 0,
-   "defect_rate": 0.01020408163265306
+   "defect_rate": 0.0
   },
   "by_document_type": {
    "balance_sheet": {
@@ -17613,22 +17397,21 @@
     "counts": {
      "near": 2,
      "correct": 66,
-     "missed": 2,
-     "hallucinated": 4
+     "missed": 2
     },
     "gold_valued": 70,
     "accuracy": 0.9428571428571428,
     "near_rate": 0.02857142857142857,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 4,
-    "hallucination_rate": 0.05555555555555555,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 4,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.05555555555555555
+    "defect_rate": 0.0
    },
    "purchase_order": {
     "counts": {
@@ -17692,7 +17475,6 @@
     "counts": {
      "correct": 158,
      "missed": 3,
-     "hallucinated": 2,
      "empty_ok": 12
     },
     "gold_valued": 161,
@@ -17700,14 +17482,14 @@
     "near_rate": 0.0,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 2,
-    "hallucination_rate": 0.0125,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 2,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.0125
+    "defect_rate": 0.0
    },
    "number": {
     "counts": {
@@ -17731,22 +17513,21 @@
     "counts": {
      "correct": 183,
      "missed": 3,
-     "near": 5,
-     "hallucinated": 2
+     "near": 5
     },
     "gold_valued": 191,
     "accuracy": 0.9581151832460733,
     "near_rate": 0.02617801047120419,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 2,
-    "hallucination_rate": 0.010526315789473684,
+    "hallucinated": 0,
+    "hallucination_rate": 0.0,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
-    "misfiled": 2,
+    "misfiled": 0,
     "out_of_schema": 0,
-    "defect_rate": 0.010526315789473684
+    "defect_rate": 0.0
    }
   }
  },
@@ -17754,28 +17535,27 @@
   "counts": {
    "correct": 233,
    "missed": 3,
-   "near": 5,
-   "unmatched": 2
+   "near": 5
   },
   "gold_valued": 241,
-  "unmatched": 2,
+  "unmatched": 0,
   "accuracy": 0.966804979253112
  },
  "summary_structure": {
   "gold_tables": 17,
   "tables_present": 17,
-  "tables_exact_rows": 13,
+  "tables_exact_rows": 15,
   "fidelity": 1.0,
-  "row_count_fidelity": 0.7647058823529411
+  "row_count_fidelity": 0.8823529411764706
  },
  "calibration": {
   "high": {
-   "n": 386,
+   "n": 382,
    "correct": 380,
    "wrong": 0,
    "missed": 0,
    "near": 2,
-   "hallucinated": 4
+   "hallucinated": 0
   },
   "low": {
    "n": 6,
@@ -17787,6 +17567,43 @@
   }
  },
  "unstable_total": 0,
- "diff": [],
- "diff_against": "2026-09-16 06:44:23"
+ "diff": [
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions :: row_count_mismatch",
+   "before": "1",
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Amount",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: deductions[pred_row 8].Description",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings :: row_count_mismatch",
+   "before": "1",
+   "after": "0",
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Amount",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  },
+  {
+   "key": "PAYSLIP-EMP-0012-APR2024 :: earnings[pred_row 2].Description",
+   "before": "hallucinated",
+   "after": null,
+   "regression": false
+  }
+ ],
+ "diff_against": "2026-09-16 07:58:39"
 }

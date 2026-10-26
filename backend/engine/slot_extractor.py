@@ -773,6 +773,58 @@ def _pages_of(occurrences, all_lines):
             if p is not None}
 
 
+_TOTAL_LABEL = re.compile(r"^\s*(?:grand\s+|sub[- ]?)?totals?\b[\s:]*(?:amount|due)?\s*:?\s*$",
+                          re.I)
+
+
+def split_total_rows(rows, keys):
+    """(rows, total rows) — a row is the table's OWN TOTAL only when its
+    label cell is a total word ("Total", "Subtotal", "Grand Total") AND every
+    amount it carries equals the sum of that column over the rows above it
+    (since the previous total), to the cent per row. Vocabulary alone is not
+    evidence — "Total Fuel" can be a line — and arithmetic alone is not
+    either; both, or the row stays (Part 3.5). An ambiguous figure proves
+    nothing and keeps the row."""
+    from decimal import Decimal
+
+    from amounts import parse_amount
+    if not rows or not keys:
+        return rows, []
+    label = keys[0]
+    kept, totals, since = [], [], []
+    for row in rows:
+        lab = str(row.get(label) or "").strip()
+        nums = {}
+        for k in keys[1:]:
+            txt = str(row.get(k) or "").strip()
+            if txt:
+                a = parse_amount(txt)
+                nums[k] = a.value if a.ok and not a.percent else None
+        if _TOTAL_LABEL.match(lab) and since and nums and None not in nums.values():
+            sums_ok = True
+            for k, v in nums.items():
+                col = []
+                for r in since:
+                    t = str(r.get(k) or "").strip()
+                    if not t:
+                        continue
+                    a = parse_amount(t)
+                    if not a.ok or a.percent:
+                        col = None
+                        break
+                    col.append(a.value)
+                if not col or abs(sum(col) - v) > Decimal("0.01") * len(col):
+                    sums_ok = False
+                    break
+            if sums_ok:
+                totals.append(row)
+                since = []
+                continue
+        kept.append(row)
+        since.append(row)
+    return kept, totals
+
+
 _PAGE_N_OF = re.compile(r"page\s+(\d{1,3})\s*(?:of|/)\s*(\d{1,3})", re.I)
 
 
@@ -959,6 +1011,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     misplaced = 0
     dropped = 0
     empty_rows = 0
+    total_rows = 0
     off_schema_keys = 0
     merged_columns = 0
     overprinted = 0
@@ -1430,9 +1483,20 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 if row_why:
                     row_fail.append((row, row_why))
                 rows_out.append(row)
+            rows_out, totals = split_total_rows(rows_out, table_headers(t))
+            for row in totals:
+                shown = " | ".join(f"{k}={v}" for k, v in row.items()
+                                   if not str(k).startswith("_") and str(v).strip())
+                flagged.append(_flag(
+                    f'{t["name"]}[total row]', shown,
+                    "row left out: it is the table's own total — each of its "
+                    "amounts equals the sum of the rows above it"))
+                notes.append(f'{t["name"]}: left out its total line ({shown[:80]!r}); '
+                             f"the arithmetic shows it sums the rows above it")
+            total_rows += len(totals)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
-            if len(rows_out) < len(raw):
+            if len(rows_out) + len(totals) < len(raw):
                 incomplete.add(t["name"])
 
     # ── CROSS-FIELD CHECKS, by document family (validators.py) ──
@@ -1655,6 +1719,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     or bool(dropped) or bool(merged_columns)
                     or bool(regions_warned)
                     or bool(empty_rows) or bool(off_schema_keys)
+                    or bool(total_rows)
                     or check_review
                     # THE REVIEW INVARIANT: any value that requires review
                     # makes the document require review — every reason code,
@@ -1726,6 +1791,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # this template has, and the values discarded for being keyed with
             # a column name it does not have.
             "empty_row_count": empty_rows,
+            # Part 3.5 — a table's own total line, left out on arithmetic
+            "total_row_count": total_rows,
             "off_schema_key_count": off_schema_keys,
             # One entry per band that more than one region matched:
             # {table, pages, kept_page, kept_rows, left_out}.
