@@ -105,7 +105,11 @@ and after, storage on Cloudflare R2 and rollback are in
 | `docs/OPERATIONS.md` | for the operator: every variable, deploy and rollback, backups, monitoring, key rotation, cost controls, incidents |
 | `docs/ONBOARDING-A-CLIENT.md` | bringing on a firm: `scripts/create_tenant.py` / `POST /api/admin/tenants`, one-time passwords, roles, offboarding |
 | `docs/CLIENT-DATA-FAQ.md` | answers for client firms about their data (VERIFY items to confirm first) |
-| `docs/CHEQUE-TRIAL.md` | running real cheques under supervision; the trial report (`scripts/trial_report.py`) |
+| `docs/LOCALES-AND-FAMILIES.md` | what is supported globally (numbers, currencies, dates, languages, identifiers, families), what is flagged, what is not supported yet |
+| `docs/ADDING-A-DOCUMENT-FAMILY.md` | declared template rules (no code) and coded validators |
+| `docs/ENVIRONMENTS.md` | every variable per environment, what staging and production refuse, platform settings |
+| `docs/CLIENT-TRIAL.md` | running any firm's real documents under supervision; the questions to ask a new client |
+| `docs/CHEQUE-TRIAL.md` | the cheque example of the trial; the trial report (`scripts/trial_report.py`) |
 | `docs/RELEASE-CHECKLIST.md` | `scripts/prepush_check.py` and the manual steps before the first push |
 | `docs/investigations/` | dated measurement records cited by code and tests |
 

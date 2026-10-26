@@ -53,8 +53,9 @@ The script lists them as MANUAL and fails until run with `--manual-done`.
    release). Check their terms allow redistribution in a public repository,
    or keep the repository private, or remove them (the 69-PDF measurements
    would then change and the baselines need a recorded update).
-6. **Staging.** Set up the staging environment in `docs/CHEQUE-TRIAL.md` §1
-   before any real cheque is uploaded.
+6. **Staging.** Set up the staging environment in `docs/CLIENT-TRIAL.md` §1
+   (any family; `docs/CHEQUE-TRIAL.md` is the cheque example) before any real
+   document is uploaded, and run `scripts/smoke_test.py --base-url` against it.
 7. **Roles.** Decide whether to make `platform_admin` an explicit stored role
    (a data migration) — `docs/proposals/roles.md`. (Owner hard-delete was
    decided in round 14: the job's own user may delete it, with confirmation.)
@@ -86,6 +87,17 @@ on a conflict that never clears; page routes answer 413 for an image over
 
 Railway (backend) and Vercel (frontend) deploy from `main`; follow
 `docs/DEPLOY-RUNBOOK.md` and confirm the commit SHA is on GitHub.
+
+New in Runs 16-20 (no migration): `ENVIRONMENT=staging|production` now
+REFUSES to start on a short or placeholder `SECRET_KEY` (< 32 characters),
+SQLite or localhost `DATABASE_URL`, incomplete s3 settings, a missing
+`GEMINI_API_KEY`, open CORS, or `TRUSTED_PROXY_COUNT` outside 0–5 —
+**check the live variables against docs/ENVIRONMENTS.md before deploying**;
+`GRACEFUL_SHUTDOWN_SECONDS` (60), `LOG_FORMAT` (`text`|`json`); routes
+`GET /ready` (set it as the Railway health check), `GET /api/jobs/{id}/charts`,
+`POST /api/extract/page-count`; the backend image runs as UID 10001 under
+tini (`scripts/verify_image.sh`); Next.js 15.5 / React 19, FastAPI 0.129.
+After the deploy: `python scripts/smoke_test.py --base-url <url>`.
 
 ## Demo acceptance (Part A9)
 

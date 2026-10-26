@@ -132,12 +132,15 @@ below no longer exist. The job's counts are kept so history adds up.
 | `thin_text_layer_pages` | [int] | Gate 2c pages that qualified for selective OCR where OCR failed or read nothing, so they stayed native; non-empty ⇒ `needs_review`, `thin_text_layer` on their values, a flag per page. Not listed in `ocr_failed_pages` (those pages HAVE a text layer) |
 | `routing_checksum` | `pass` \| `fail` \| null | the MICR band's transit field; null = no band read. Set by the `aba_checksum` validator, which runs for EVERY family |
 | `micr_band_unreadable` | true | optional, cheque family — a band is printed, no digit of it readable |
-| `possible_multiple_documents` | {micr_bands: int, readable: int} | optional — the record may hold several cheques; kept as one |
+| `possible_multiple_documents` | {micr_bands?: int, readable?: int, undecided_boundaries?: [int]} | optional — the record may hold several documents; kept as one. `micr_bands`/`readable` from the cheque segmenter; `undecided_boundaries` = file pages where a new document may begin and nothing could decide (doc_boundaries, Part 3.3) |
+| `rule:<name>` | `pass`/`fail`/`unreadable` | one per rule the template declares (engine/rules.py); the values it names carry `rule_failed:<name>` / `rule_unreadable:<name>` |
+| `document_marks` | {void_marker?: {marks, pages}, paid_marker?: {marks, pages}} | optional — stamp lines found (engine/marks.py); every value carries the reason |
+| `redacted_or_obscured` | {pages: [int], blanked: [ref], scan_pages: {page: "page"\|"regions"}} | optional — painted-over or unreadable regions; values read from beneath a bar were blanked |
 | `possible_duplicate` | {of: [filename]} | optional, set by the job runner across a batch — the same cheque (routing + account + serial, and amount and date where both have them) appears in the named records too; `possible_duplicate` on the identity values, `needs_review` |
 | `source_region` | {page, index, of, box_pt: [x0, top, x1, bottom], frame} | optional — this record is cheque `index` of `of` on `page`; box in points, top-left origin, in the frame of the STRAIGHTENED page image |
 | `selected_pages_ignored` | [any] | optional — requested pages this file does not have |
 | `shredded_pages`, `unchecked_overprint_pages`, `unchecked_shred_pages` | [int] | optional — text-layer checks found / not performed |
-| counters | int | `ungrounded_count`, `misplaced_count`, `dropped_row_count`, `empty_row_count`, `off_schema_key_count`, `unbound_row_count`, `merged_column_count`, `overprinted_count`, `unwitnessed_count`, `low_confidence_cells`, `graded_cells`, `grounded_count` |
+| counters | int | `ungrounded_count`, `misplaced_count`, `dropped_row_count`, `empty_row_count`, `off_schema_key_count`, `unbound_row_count`, `total_row_count` (a table's own total line, left out on arithmetic, Part 3.5), `merged_column_count`, `overprinted_count`, `unwitnessed_count`, `low_confidence_cells`, `graded_cells`, `grounded_count` |
 | `low_confidence_ratio` | float | |
 | `document_needs_review` | bool | the >30%-low gate alone (NOT the same as `needs_review`) |
 | `regions` | [{table, pages, kept_page, kept_rows, left_out}] | a table matched on several pages |

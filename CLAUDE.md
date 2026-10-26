@@ -527,6 +527,23 @@ readable reference is treated as one document.** Falling back to the title rule
 there was considered and rejected — it reintroduces guessing exactly where there
 is least information to justify it.
 
+**Undecided is SAID, not merged (Part 3.3).** `find_starts(..., report={})`
+returns `uncertain`: candidates nothing vetoed and nothing could decide — a
+repeated title or a page after a **blank separator page** (a new candidate
+signal) carrying no reference to compare; a page of another KIND under the
+same reference (an estimate, the cheque paying it and the release, one claim
+number — and the invoice + cheque sharing `PO-2024-0018` above); the title
+reopening under the same reference (two months of one account). The file stays
+ONE record and every value carries `possible_multiple_documents`, with
+`validation.possible_multiple_documents.undecided_boundaries` (the pages).
+⚠ **A keyword type change ALONE never raises it** — it flagged all five gold
+income statements (page 2 is small print reading as `audit_report`); with that
+excluded, 0 of 25 multi-page corpus files are flagged. `Label: 000123456789`
+(a colon after the label) is now a reference. Since Part 3.2
+`classify_by_hints` matches hints as WHOLE words (`tin` is not in
+"continued"), which changed 32 of 185 corpus page types, none of them a split.
+Fixtures: `tests/fixtures/make_multidoc_fixtures.py`.
+
 ### One region per band (round-2 I1)
 
 A band describes a shape, and **nothing ever chose which region of the document
@@ -542,10 +559,14 @@ was read from (`text_layer.line_page`), falling back to the page the model
 claimed, mapped from prompt numbering to file numbering. The kept region is the
 page the model's answer **begins** on; every row from another page is left out.
 
-- **Never across a page, including genuine continuations.** A short table is
-  visible; a merged lookalike is not. A header-repeat exception was rejected:
-  the Berkshire tables share their headings. Costs measured on gold:
-  `BS-2024-Q1` equity loses 2 rows, `PAYSLIP-EMP-0007-APR2024` deductions 1.
+- **Never across a page — unless the DOCUMENT says the table continues
+  (Part 3.5).** `continued_pages`: the next page is numbered as the next of
+  the same run (`Page 2 of 5` after `Page 1 of 5`) **and** reprints the band's
+  heading line. Both, because headings alone are what the Berkshire tables
+  share and numbering alone says nothing about which table a page holds. A
+  short table is visible; a merged lookalike is not. Costs still measured on
+  gold (which prints no page numbering): `BS-2024-Q1` equity loses 2 rows,
+  `PAYSLIP-EMP-0007-APR2024` deductions 1.
 - **Never silent.** A `{table}[regions]` flag naming the count and pages, one
   `{table}[not bound]` flag per row carrying its content, `needs_review`, and
   `validation.regions` / `validation.unbound_row_count`.
@@ -567,9 +588,13 @@ templates in `tests/fixtures/round2_templates/` are **reconstructions**.
 
 ### Every gate that drops a row says so (I4)
 
-Four gates drop a table row: a malformed object, a row bound to another region,
-a row claiming a source line already spoken for, and **a row none of whose
-values landed in a column this template has**. The fourth was silent — no flag,
+Five gates drop a table row: a malformed object, a row bound to another region,
+a row claiming a source line already spoken for, **a row none of whose
+values landed in a column this template has**, and (Part 3.5) **the table's
+own total line** — `split_total_rows`: the label cell is a total word AND each
+of its amounts equals the column's sum over the rows above it; a `[total row]`
+flag, a note, `validation.total_row_count`; it does not mark the table
+incomplete. The fourth was silent — no flag,
 no note, no counter, no review state — so a template that loses a section total
 looked exactly like one that had none.
 
@@ -612,6 +637,33 @@ were reported ungrounded — correct, and marked `low`. `record_span` runs from
 the line this row was read from to the line the NEXT row was read from, so a
 cell can be checked against its own record and **can never reach into a
 neighbouring one**. Capped at 8 lines.
+
+### Declared rules — a family's checks as data (Part 3.1, `engine/rules.py`)
+
+A template may carry `rules` (on its grid): `sum_equals`, `equals`,
+`product`, `range`, `regex`, `id_type`, `date_order`, `count_matches`,
+`currency_same`, `required_if`, naming values by the template's own labels
+(`Subtotal`, `items.Amount`, `-Discount`, `Tax?`). They run through the
+validator registry under `ANY` and obey the same three outcomes as coded checks;
+reasons `rule_failed:<name>` / `rule_unreadable:<name>` (`reason_text` strips
+the name into the label). An ambiguous amount or date is UNREADABLE; a value
+with NO digit in a sum (`aaaaaa`) FAILS. A wrongly stated rule is UNREADABLE
+at run time and **blocks the template save** (`coverage.blocking`); the editor
+carries `rules` through a save it cannot edit. Equality with the coded checks
+(`tests/test_rules_equality.py`): 14 of 16 locale fixtures mark exactly the
+same values low; the other two are caught both ways, differently — a running
+balance cannot be declared. Guide: `docs/ADDING-A-DOCUMENT-FAMILY.md`.
+
+### Stamps and painted-over regions (Part 3.4, `engine/marks.py`)
+
+A stamp LINE (VOID, SPECIMEN, SAMPLE, TEST ONLY, NON-NEGOTIABLE, CANCELLED,
+DUPLICATE, COPY) puts `void_marker` on every value; PAID puts `paid_marker`.
+The record keeps every value and goes to review — never hidden. Gold
+`INV-2024-0031` prints a PAID line and is flagged (a true positive). A dark
+filled rectangle on a native page is a redaction bar: values read from words
+beneath it are BLANKED and every empty slot carries `redacted_or_obscured`; a
+dark, grey-washed or barred scan page does the same. ⚠ A blank WHITE page is
+not obscured (found by `scripts/run_local_corpus.py`).
 
 ### Selection state (D7)
 
@@ -1016,12 +1068,12 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 |---|---|---|
 | **accuracy** (container-aware headline) | **97.2%** | **96.7%** |
 | **content** (container-blind) | 96.7% | 95.9% |
-| **structure fidelity** | **100%** (17/17; 13 exact row count) | **100%** (17/17; 15 exact) |
+| **structure fidelity** | **100%** (17/17; 15 exact row count) | **100%** (17/17; 15 exact) |
 | accuracy RAW (all adapter widenings off) | 47.0% | 70.1% |
 | invented (value nowhere in the PDF) | 0 | 0 |
-| misfiled | 4 | **0** |
+| misfiled | **0** | **0** |
 | out-of-schema (*not* a defect) | 0 | 60 |
-| **defect rate** | 1.0% | **0.0%** |
+| **defect rate** | **0.0%** | **0.0%** |
 | fields varying across 3 live repeats (Phase 9) | 0 | 1 |
 
 **Down from 98.7% / 98.2%, and the whole loss is the strict region rule
@@ -1032,8 +1084,10 @@ rows up: `BS-2024-Q1` equity loses 2 rows (100% → 91.3%) and
 both modes, nothing else moved. The trade is recorded in DECISION-LOG §12.
 
 `CHQ-001847`, `IS-2024-Q4` and `STMT-2024-01` score 100% in both modes. The
-remaining misfilings are one intermittent bug on one document:
-`PAYSLIP-EMP-0012`'s "Total" summary line coming back as a data row.
+one known misfiling — `PAYSLIP-EMP-0012`'s "Total" summary line coming back as
+a data row — is gone since the total-row gate (Part 3.5): templated misfiled
+4 → 0, defect rate 1.0% → 0.0%, exact row count 13 → 15 of 17, headline
+unchanged.
 
 ⚠ **"invented 0" is a measurement of ten documents, not a property of the
 system.** The harness counts a value as invented only when it appears nowhere
@@ -1162,6 +1216,7 @@ liveness; anyone scaling past one worker must rework this in the same commit.
 - Swagger/ReDoc disabled in production (`ENVIRONMENT=production`)
 - `_run_migrations()` runs idempotent PostgreSQL DDL on every boot, before Alembic. **It fails loudly**: any failed statement plus `ENVIRONMENT=production` raises and refuses to serve. On non-PostgreSQL dialects it logs a warning that it was SKIPPED rather than reporting success.
 - `Settings._refuse_to_run_production_on_a_known_key` refuses to boot production on a shipped placeholder `SECRET_KEY`.
+- `Settings._validate_for_environment` (Part 2.4): `ENVIRONMENT=staging|production` refuses to start on a `SECRET_KEY` under 32 characters, SQLite/localhost `DATABASE_URL`, incomplete s3 settings, a missing Gemini key, open CORS or `TRUSTED_PROXY_COUNT` outside 0–5 — every problem in one message, naming settings, never values (`docs/ENVIRONMENTS.md`). `GET /health` is liveness, `GET /ready` readiness. SIGTERM drains (`app/core/lifecycle.py`, `GRACEFUL_SHUTDOWN_SECONDS`); every request has an `X-Request-ID`; `LOG_FORMAT=json`.
 - There is no default administrator: the first one is created from `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME` / `DOCAGENT_BOOTSTRAP_ADMIN_PASSWORD` when none exists (`_bootstrap_admin`); known default passwords are refused.
 
 ### `backend/app/config.py`
@@ -1348,7 +1403,7 @@ server, so the rule has exactly one implementation.
 
 ### Routing and pages
 
-Next.js 14 App Router:
+Next.js 15 App Router (React 19; dynamic route `params` are a Promise):
 - `/login` — auth form → `authApi.login()` → Zustand store + localStorage
 - `/extract` — template picker + options + file dropzone + AG Grid results + InsightsPanel
 - `/history` — job list with status badges, line-item expansion, download buttons

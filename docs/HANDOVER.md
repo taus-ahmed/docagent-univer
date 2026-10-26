@@ -52,9 +52,13 @@ Details: [../tests/README.md](../tests/README.md),
    `backend/app/services/prompt_registry.py` (`required_fields`,
    `numeric_fields`, `date_fields`) and its keywords for `classify_by_hints`
    (the no-LLM page classifier).
-3. **Validators:** a `<family>_validators.py` registering checks in
-   `engine/validators.py` (see `invoice_validators.py`); a failed check marks
-   the value low and gives a reason code.
+3. **Checks, without code first:** declare the family's arithmetic as
+   template `rules` (sum_equals, product, date_order, id_type, …) —
+   [ADDING-A-DOCUMENT-FAMILY.md](ADDING-A-DOCUMENT-FAMILY.md). Only what a rule
+   cannot say (a running balance, finding values by meaning) needs a
+   `<family>_validators.py` registering checks in `engine/validators.py` (see
+   `invoice_validators.py`); a failed check marks the value low and gives a
+   reason code.
 4. **Segmenter** (only if one file holds several documents of that family):
    `engine/segmenters.py`.
 5. **Gold:** a labelled document under `tests/gold/` and a recorded answer;
@@ -66,7 +70,10 @@ Every value needing review carries reason codes (`GET /api/review/reasons`
 lists them with labels; defined in `app/core/review.py`, explained in
 [OCR-READER-SEAM-DESIGN.md](OCR-READER-SEAM-DESIGN.md) §12): e.g.
 `grounding_failed` (quote not found), `ocr_origin` (read from a scan),
-`amount_mismatch`, `possible_duplicate`.
+`amount_mismatch`, `possible_duplicate`, `rule_failed:<name>` (a template
+rule), `possible_multiple_documents`, `void_marker` / `paid_marker`,
+`redacted_or_obscured`. What each locale and family supports, flags and does
+not do yet: [LOCALES-AND-FAMILIES.md](LOCALES-AND-FAMILIES.md).
 
 ## Known limitations
 
