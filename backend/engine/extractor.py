@@ -662,6 +662,15 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             ed["needs_review"] = True
         return results
 
+    def _note_marks(results, texts, numbers, images, origins):
+        """Stamps (VOID, PAID, …) and painted-over or unreadable regions,
+        said on every record (engine/marks.py, Part 3.4)."""
+        import marks
+        for r in results or []:
+            marks.apply(getattr(r, "extracted_data", None), texts, file_path,
+                        numbers, images, origins)
+        return results
+
     def _note_undecided(results, first_page, n_pages):
         """A candidate boundary inside this record that nothing could decide
         (doc_boundaries, Part 3.3): the record is kept whole and says so."""
@@ -735,10 +744,11 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             sub["page_numbers"] = numbers
             sub["page_origins"] = ({n: page_origins[n] for n in numbers
                                     if n in page_origins} or None)
-            part = _note_undecided(_note_bands(_extract_one(
+            part = _note_marks(_note_undecided(_note_bands(_extract_one(
                 orchestrator, file_path, template_data, sub, sub["doc_text"],
                 texts, images, default_doc_type, batch_schemas), texts),
-                first_page, len(texts))
+                first_page, len(texts)), texts, numbers, images,
+                sub["page_origins"])
             # FILE pages, not unit indices: a page cut into regions is
             # several units with one page number.
             first, last = (numbers[0], numbers[-1]) if numbers else (first_page,
@@ -767,10 +777,11 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
             _note_shredded(results)))))
 
     return _count_flags(_note_selection(_note_ocr(_note_unchecked(_note_shredded(
-        _note_undecided(_note_bands(_extract_one(orchestrator, file_path, template_data, ctx,
-                                                 doc_text, doc_text_pages, page_images,
-                                                 default_doc_type, batch_schemas),
-                                    doc_text_pages), 1, len(doc_text_pages)))))))
+        _note_marks(_note_undecided(_note_bands(_extract_one(
+            orchestrator, file_path, template_data, ctx, doc_text, doc_text_pages,
+            page_images, default_doc_type, batch_schemas), doc_text_pages),
+            1, len(doc_text_pages)), doc_text_pages, page_numbers, page_images,
+            page_origins))))))
 
 
 def _count_flags(results):

@@ -176,6 +176,15 @@ REASONS: dict[str, tuple[str, str]] = {
     "rule_unreadable": (
         "Template rule not checked",
         "A check written into this template could not be applied to these values (the rule's name follows), so they were not checked by it."),
+    "void_marker": (
+        "Marked void or copy",
+        "The document is stamped VOID, SPECIMEN, COPY or similar. Its values are shown for checking only."),
+    "paid_marker": (
+        "Stamped PAID",
+        "The document is stamped PAID. Check it has not already been settled before acting on it."),
+    "redacted_or_obscured": (
+        "Painted over or unreadable",
+        "Part of the page is blacked out or too dark to read. This value may be there but could not be read, and nothing was guessed."),
 }
 
 

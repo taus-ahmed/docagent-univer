@@ -733,6 +733,9 @@ everything carries `False` and `[]`.
 | `row_count_mismatch` | bank-statement family: the statement prints how many transactions it has (`Number of Transactions`) and that is not the number of transaction rows extracted — repeated headings, wrapped narrations and brought/carried-forward lines are not counted (`bank_validators._row_count`) | the count exactly `low` |
 | `rule_failed` | A rule the template declares (`rules`, engine/rules.py) failed on these values. Stored as `rule_failed:<rule name>`. | exactly `low`, review required |
 | `rule_unreadable` | A declared rule could not be decided: a value is not a plain amount or date, or the template states the rule wrongly. Stored as `rule_unreadable:<rule name>`. | reason added, level unchanged, review required |
+| `void_marker` | the document carries a stamp line saying it is not the live original: VOID, SPECIMEN, SAMPLE, TEST ONLY, NON-NEGOTIABLE, CANCELLED, DUPLICATE or COPY (engine/marks.py); document-level, set on every value; `validation.document_marks.void_marker` names the marks and pages. The record is never hidden | none — it requires review |
+| `paid_marker` | the document carries a PAID stamp line (engine/marks.py); document-level, set on every value; `validation.document_marks.paid_marker` | none — it requires review |
+| `redacted_or_obscured` | part of a page is painted over (a dark filled rectangle on a native page) or too dark / without contrast on a scan (engine/marks.py). A value read from beneath a bar is BLANKED; every empty slot of the record carries this reason and a flag, so an empty cell says why. `validation.redacted_or_obscured` lists the pages and what was blanked | blanked values `low`; empty slots flagged; review required |
 
 Document-level facts that have no single value to sit on are reported in
 `validation` and `flagged_fields` and set `needs_review` directly: a MICR
