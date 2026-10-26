@@ -27,10 +27,20 @@ Reason codes: balance_mismatch, balance_unreadable (OCR-READER-SEAM-DESIGN §12)
 from __future__ import annotations
 
 from invoice_validators import CENT, _words, money
+import re
+
+from amounts import parse_amount
 from validators import FAIL, PASS, UNREADABLE, CheckResult, register
 
 BALANCE_MISMATCH = "balance_mismatch"
 BALANCE_UNREADABLE = "balance_unreadable"
+ROW_COUNT_MISMATCH = "row_count_mismatch"
+
+#: what a statement prints in an empty debit/credit cell
+_EMPTY = {"", "-", "–", "—", "nil", "n/a", "--"}
+#: rows that carry a balance across a page, not a transaction
+_FORWARD = re.compile(r"\b(brought|carried)\s+forward\b|\bb/f\b|\bc/f\b|"
+                      r"\bbalance\s+forward\b|\bopening\s+balance\b|\bclosing\s+balance\b", re.I)
 
 _CREDIT = {"credit", "credits", "deposit", "deposits"}
 _DEBIT = {"debit", "debits", "withdrawal", "withdrawals"}
@@ -67,12 +77,31 @@ def _column(table, test):
 
 
 def _txn_columns(table):
+    """(credit, debit, balance) — or (amount, None, balance) for a statement
+    printing ONE amount column whose sign or Dr/Cr marker says which way it
+    went (Indian and many European statements)."""
     cr = _column(table, lambda w: bool(w & _CREDIT or {"paid", "in"} <= w)
                  and not w & _DEBIT)
     dr = _column(table, lambda w: bool(w & _DEBIT or {"paid", "out"} <= w)
                  and not w & _CREDIT)
     bal = _column(table, lambda w: "balance" in w and not w & (_CREDIT | _DEBIT))
-    return (cr, dr, bal) if cr and dr and bal else None
+    if cr and dr and bal:
+        return (cr, dr, bal)
+    amt = _column(table, lambda w: bool(w & {"amount", "amt", "value"})
+                  and not w & (_CREDIT | _DEBIT | {"balance"}))
+    return (amt, None, bal) if amt and bal and not (cr or dr) else None
+
+
+def _signed(text):
+    """A single-column amount: its sign (Dr / brackets / minus = out, Cr or
+    plus = in), or None when nothing on it says which way it went."""
+    a = parse_amount(text)
+    if a.value is None:
+        return None
+    t = str(text)
+    if re.search(r"\b(dr|cr)\b\.?", t, re.I) or a.negative or t.strip().startswith("+"):
+        return a.value
+    return None
 
 
 def _single(roles, name):
@@ -109,12 +138,63 @@ def _summary(ctx, f):
             f"reads {closing} — MISMATCH, all four values marked low"])]
 
 
+def _is_header_repeat(table, r):
+    """A row whose cells are the table's own headings (a header repeated at
+    the top of a later page, read as a row)."""
+    heads = {str(c.get("header") or c.get("key") or "").strip().lower()
+             for c in table.get("columns") or []}
+    cells = [str(v).strip().lower() for k, v in r.items()
+             if not str(k).startswith("_") and str(v).strip()]
+    return bool(cells) and all(c in heads for c in cells)
+
+
 def _transactions(ctx, table, cols):
-    """[(i, row)] in printed order, leaving out rows whose text is a total."""
+    """[(i, row)] in printed order, leaving out rows whose text is a total and
+    headings repeated on a later page."""
     return [(i, r) for i, r in enumerate(ctx.rows.get(table["name"]) or [])
             if isinstance(r, dict)
+            and not _is_header_repeat(table, r)
             and not any(_w(v) & _TOTAL for k, v in r.items()
                         if k not in cols and not str(k).startswith("_"))]
+
+
+def _count_role(label):
+    w = _words(label)
+    return bool(w & {"number", "no", "count", "#"}) and bool(
+        w & {"transactions", "transaction", "entries", "entry", "items", "txns"})
+
+
+def _row_count(ctx):
+    """ROW COUNT (Part 1.9): a statement printing how many transactions it has
+    is checked against the transaction rows extracted — a dropped or an
+    invented row shows here even when the balances happen to work. Not run
+    on a table a gate dropped rows from, or when the count is ambiguous."""
+    counts = [f for f in ctx.fields if _count_role(f.get("row_label"))
+              and str(ctx.values.get(f["ref"], "")).strip()]
+    tables = [(t, _txn_columns(t)) for t in ctx.tables or []]
+    tables = [(t, c) for t, c in tables if c]
+    if len(counts) != 1 or len(tables) != 1:
+        return []
+    f, (t, cols) = counts[0], tables[0]
+    if t["name"] in (ctx.incomplete or ()):
+        return []
+    want_text = str(ctx.values[f["ref"]]).strip()
+    if not re.fullmatch(r"\d{1,6}", want_text):
+        return []
+    amount_cols = [c for c in cols[:2] if c]
+    real = [i for i, r in _transactions(ctx, t, cols)
+            if any(str(r.get(c) or "").strip().lower() not in _EMPTY for c in amount_cols)
+            and not any(_FORWARD.search(str(v)) for k, v in r.items() if not str(k).startswith("_"))]
+    want = int(want_text)
+    if want == len(real):
+        return [CheckResult("bank_row_count", PASS, [f["ref"]], "",
+                            {f["ref"]: {"row_count_check": "pass"}})]
+    said = (f"the statement says {want} transactions; {len(real)} were extracted — "
+            f"a row was {'dropped' if len(real) < want else 'added'} or the count is wrong")
+    return [CheckResult("bank_row_count", FAIL, [f["ref"]], ROW_COUNT_MISMATCH,
+                        {f["ref"]: {"row_count_check": "fail"}},
+                        flags=[(f["row_label"], want_text, said)], notes=[said],
+                        validation={"transaction_rows": len(real)})]
 
 
 def _chain(ctx, name, cols, ordered, opening, closing):
@@ -130,9 +210,17 @@ def _chain(ctx, name, cols, ordered, opening, closing):
     for i, r in ordered:
         ref = f"{name}_rows[{i}]"
         span.append(ref)
-        for k, sign in ((cr, 1), (dr, -1)):
+        if dr is None:                      # one signed amount column
+            s = str(r.get(cr) or "").strip()
+            if s.lower() not in _EMPTY:
+                v = _signed(s)
+                if v is None:
+                    odd = True
+                else:
+                    delta += v
+        for k, sign in (((cr, 1), (dr, -1)) if dr is not None else ()):
             s = str(r.get(k) or "").strip()
-            if s:
+            if s.lower() not in _EMPTY:
                 v = money(s)
                 if v is None:
                     odd = True
@@ -222,7 +310,7 @@ def bank_balances(ctx):
     if any(len(v) > 1 for v in roles.values()):
         return []                           # ambiguous: do not guess
     f = {k: _single(roles, k) for k in ("opening", "credits", "debits", "closing")}
-    return _summary(ctx, f) + _running(ctx, f)
+    return _summary(ctx, f) + _running(ctx, f) + _row_count(ctx)
 
 
 register("bank_statement", bank_balances)

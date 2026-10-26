@@ -730,6 +730,7 @@ everything carries `False` and `[]`.
 | `trn_invalid` | a slot declared `trn` (UAE tax registration number) is not 15 digits | exactly `low` |
 | `ein_invalid` | a slot declared `ein` is not nine digits or has a prefix the IRS never assigns | exactly `low` |
 | `category_uncertain` | the categorization option could not assign one category with confidence: rules of several categories matched the row (an ambiguous merchant), none matched and no model was allowed or available, or the model's answer was not a listed category. The category is "Uncategorized" (engine/categorize.py); nothing is guessed | none — it requires review |
+| `row_count_mismatch` | bank-statement family: the statement prints how many transactions it has (`Number of Transactions`) and that is not the number of transaction rows extracted — repeated headings, wrapped narrations and brought/carried-forward lines are not counted (`bank_validators._row_count`) | the count exactly `low` |
 
 Document-level facts that have no single value to sit on are reported in
 `validation` and `flagged_fields` and set `needs_review` directly: a MICR

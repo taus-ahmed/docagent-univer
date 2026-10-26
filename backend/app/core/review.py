@@ -166,6 +166,9 @@ REASONS: dict[str, tuple[str, str]] = {
     "category_uncertain": (
         "Category not certain",
         "No single category rule fits this row. Choose its category, or add a rule to the template or firm list."),
+    "row_count_mismatch": (
+        "Transaction count does not match",
+        "The statement says how many transactions it has, and a different number of rows was read. A row may have been missed or added."),
 }
 
 
