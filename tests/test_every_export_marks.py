@@ -219,3 +219,164 @@ def test_combined_and_per_file(per_file):
     wb = openpyxl.load_workbook(io.BytesIO(data))
     seen = _check(wb, MARKED, CLEAN)
     assert seen >= MARKED | CLEAN
+
+
+# ── Run 15 item 8: every writer for real, exact counts, and a mutation proof ──
+#
+# Each writer below is run over the fixture and must (1) mark every value
+# owing review and leave clean ones clean (`_check`) and (2) head its Review
+# status column with EXACTLY the number of unresolved values it wrote. The
+# fixture's unresolved values are 4 fields (unverified, low, medium,
+# required), B9 (empty and flagged) where the writer writes it, and 4 table
+# cells (row-low and row-legacy, both columns).
+#
+# MUTATION: the same check runs again with that ONE writer's marks disabled
+# (every other writer untouched), and must fail. A test that still passes
+# with the marks off proves nothing about them.
+
+def _mixed_grid():
+    grid = _grid(True)
+    grid["cells"]["10,0"] = {"value": "Item"}
+    grid["cells"]["10,1"] = {"value": "Amount"}
+    return grid
+
+
+MIXED_REGIONS = {"primary_mode": "mixed", "table_regions": [
+    {"header_row": 10, "start_col": 0, "column_names": ["Item", "Amount"],
+     "section_label": ""}]}
+TABLE_GRID = {"cells": {"0,0": {"value": "Item"}, "0,1": {"value": "Amount"}},
+              "colWidths": [], "merges": {}}
+TABLE_REGIONS = {"primary_mode": "table", "table_regions": [
+    {"header_row": 0, "start_col": 0, "column_names": ["Item", "Amount"]}]}
+
+
+def _layout_result():
+    ed = _result("structural")
+    ed["extracted_fields"] = {}
+    ed["layout_sections"] = {"Assets": {"rows": [
+        {"label": "Cash", "value": "lay-low", "confidence": "low",
+         "row": 2, "label_col": "A", "value_col": "B"},
+        {"label": "Bank", "value": "lay-high", "confidence": "high",
+         "row": 3, "label_col": "A", "value_col": "B"},
+        {"label": "Misc", "value": "lay-none",
+         "row": 4, "label_col": "A", "value_col": "B"}]}}
+    return ed
+
+
+def _off(monkeypatch, name):
+    """Disable the marks of the writer `name` only."""
+    import app.services.excel_slot as XS
+    from app.core.export_marks import SheetMarks
+    if name == "slot":
+        real = XS._write_slot_excel
+        monkeypatch.setattr(XS, "_write_slot_excel",
+                            lambda *a, **k: real(*a, **{**k, "marks": False}))
+        return
+    attr = {"form": "_write_form_excel", "table": "_write_table_excel",
+            "mixed": "_write_mixed_excel", "layout": "_write_layout_excel"}[name]
+    real = getattr(XS, attr)
+
+    def unmarked(ws, *a, **k):
+        k["marks"] = SheetMarks(ws, enabled=False)
+        return real(ws, *a, **k)
+    monkeypatch.setattr(XS, attr, unmarked)
+
+
+def _run_writer(name, monkeypatch, disabled=False):
+    from app.api.routes import extract as X
+    if name in ("combined", "per_file"):
+        from app.api.routes import export as E
+        if disabled:
+            from app.core.export_marks import SheetMarks
+            monkeypatch.setattr(E, "SheetMarks",
+                                lambda ws: SheetMarks(ws, enabled=False),
+                                raising=False)
+            import app.core.export_marks as EM
+            monkeypatch.setattr(EM, "SheetMarks",
+                                lambda ws, enabled=True: SheetMarks(ws, enabled=False))
+        job = SimpleNamespace(id=1, total_docs=1, successful=1, failed=0,
+                              needs_review=1, total_time_sec=1.0)
+        data = E._build_excel(job, [_doc(_result("slot"))], None,
+                              per_file=(name == "per_file"))
+        return openpyxl.load_workbook(io.BytesIO(data))
+    if name == "flat":
+        wb = openpyxl.Workbook()
+        docs = [_doc(_result("slot"))]
+        with contextlib.redirect_stdout(io.StringIO()):
+            X._write_flat_table(wb.active, docs, openpyxl, marks=not disabled)
+            X._add_review_legend(wb, docs)
+        return wb
+    if disabled:
+        _off(monkeypatch, name)
+    if name == "slot":
+        return _excel(_result("slot"), _grid())
+    if name == "form":
+        return _excel(_result("labeled"), _grid(True), {"primary_mode": "form_kv"})
+    if name == "table":
+        return _excel(_result("labeled"), TABLE_GRID, TABLE_REGIONS)
+    if name == "mixed":
+        return _excel(_result("labeled"), _mixed_grid(), MIXED_REGIONS)
+    if name == "layout":
+        return _excel(_layout_result(), {"cells": {"0,0": {"value": "Assets"}},
+                                         "colWidths": [], "merges": {}})
+    raise KeyError(name)
+
+
+#: writer -> (values that must be marked, values that must be clean,
+#:            the exact unresolved count its Review status header states)
+WRITERS = {
+    "slot": (MARKED, CLEAN, 5),
+    "form": (MARKED | ROW_MARKED, CLEAN | ROW_CLEAN, 8),
+    "table": (ROW_MARKED, ROW_CLEAN, 4),
+    "mixed": (MARKED | ROW_MARKED, CLEAN | ROW_CLEAN, 8),
+    # 3, not 2: the legacy layout writer writes this fixture's section twice
+    # (B2-B4, then B3-B5), so lay-low sits in TWO cells and the header counts
+    # cells. Legacy jobs only; recorded in PROGRESS (Run 15), not changed here.
+    "layout": ({"lay-low", "lay-none"}, {"lay-high"}, 3),
+    "flat": (MARKED, CLEAN, 5),
+    "combined": (MARKED, CLEAN, 5),
+    "per_file": (MARKED, CLEAN, 5),
+}
+
+
+def _stated_counts(wb):
+    import re
+    out = []
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                v = str(c.value or "")
+                if v.startswith("Review status"):
+                    m = re.search(r"(\d+) values? needs? review", v)
+                    out.append(int(m.group(1)) if m else 0)
+    return out
+
+
+def _full_check(wb, name):
+    marked, clean, count = WRITERS[name]
+    seen = _check(wb, marked, clean)
+    assert seen >= marked | clean, (name, (marked | clean) - seen)
+    assert _stated_counts(wb) == [count], (name, _stated_counts(wb))
+
+
+@pytest.mark.parametrize("name", sorted(WRITERS))
+def test_every_writer_marks_and_states_the_exact_count(name, monkeypatch):
+    _full_check(_run_writer(name, monkeypatch), name)
+
+
+@pytest.mark.parametrize("name", sorted(WRITERS))
+def test_mutation_each_writers_marks_off_fails_the_check(name, monkeypatch):
+    wb = _run_writer(name, monkeypatch, disabled=True)
+    with pytest.raises(AssertionError):
+        _full_check(wb, name)
+
+
+def test_the_mixed_writer_is_the_one_that_ran(monkeypatch):
+    """The mixed case must not quietly route to another writer."""
+    import app.services.excel_slot as XS
+    calls = []
+    real = XS._write_mixed_excel
+    monkeypatch.setattr(XS, "_write_mixed_excel",
+                        lambda *a, **k: calls.append(1) or real(*a, **k))
+    _run_writer("mixed", monkeypatch)
+    assert calls == [1]
