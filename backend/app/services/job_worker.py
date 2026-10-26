@@ -585,6 +585,45 @@ def _commit_file(session, staged) -> None:
     session.commit()
 
 
+INTERRUPTED_FILE_MSG = ("Interrupted by restart before this file was read — "
+                        "upload it again.")
+
+
+def _finish_interrupted(session_factory, session, job, names, done, successful,
+                        failed, needs_review, elapsed=0.0) -> None:
+    """Close a job the server stopped while draining (Part 2.3): the files
+    that finished are kept, every file not reached gets a row saying so, and
+    the job says how many were saved — the boot recovery's wording."""
+    from app.models.models import DocumentResult
+    left = list(names[done:])
+    s = session_factory()
+    try:
+        for name in left:
+            s.add(DocumentResult(job_id=job.id, filename=Path(str(name)).name or str(name),
+                                 original_filename=Path(str(name)).name or str(name),
+                                 document_type="interrupted", overall_confidence="low",
+                                 extraction_json=None, validation_errors=INTERRUPTED_FILE_MSG,
+                                 needs_review=True, latency_ms=0, tokens_used=0))
+        s.commit()
+    except Exception as e:
+        s.rollback()
+        print(f"[THREAD] could not record {len(left)} interrupted file(s): {exc_brief(e)}", flush=True)
+    finally:
+        s.close()
+    session.refresh(job)
+    msg = (f"Interrupted by a server restart before it finished. {done} of "
+           f"{len(names)} file(s) had been read and are kept; upload the "
+           f"remaining {len(left)} again.")
+    job.status = "failed"
+    job.successful, job.failed, job.needs_review = successful, failed, needs_review
+    job.total_time_sec = elapsed
+    job.error_message = job.progress_message = msg
+    job.completed_at = job.completed_at or datetime.utcnow()
+    job.set_mark("status_reason", "Interrupted by restart")
+    session.commit()
+    print(f"[THREAD] job {job.id} stopped for shutdown after {done}/{len(names)} file(s)", flush=True)
+
+
 def _persist_cancelled(session_factory, job_id, names) -> None:
     """One row per file that did not finish, saying it was cancelled — never a
     row that looks like a result (no extraction_json, needs_review)."""
@@ -695,6 +734,8 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
     """The job thread. The schema copy the route fetched is released here,
     whatever happens inside — success, a failed document, a cancelled job, or
     a failure before the first document."""
+    from app.core.lifecycle import job_finished, job_started
+    job_started(job_id)
     try:
         _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                             project_dir, backend_dir, engine_dir, options=options,
@@ -703,6 +744,7 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                             passwords=passwords)
     finally:
         _release_copy(get_storage(), schema_path)
+        job_finished(job_id)
 
 
 def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
@@ -779,9 +821,16 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         # is persisted, and nothing leaks between clients or jobs.
         batch_schemas: dict = {}
 
+        from app.core.lifecycle import draining
+        interrupted_at = None
         for i, fp in enumerate(file_keys):
             if is_cancelled(force=True):
                 cancelled_at = i
+                break
+            # GRACEFUL SHUTDOWN (Part 2.3): the file before this one finished
+            # and was saved whole; nothing new starts once the server drains.
+            if draining():
+                interrupted_at = i
                 break
             display_filename = (
                 original_filenames[i]
@@ -1064,6 +1113,11 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 print(f"[THREAD] rate limit delay {delay}s before next doc", flush=True)
                 time.sleep(delay)
 
+        if interrupted_at is not None:
+            session.commit()                     # the files that finished
+            _finish_interrupted(Session, session, job, names, interrupted_at,
+                                successful, failed, needs_review, time.time() - start_time)
+            return
         if cancelled_at is None and is_cancelled(force=True):
             cancelled_at = len(file_keys)        # cancelled after the last file
         if cancelled_at is not None:

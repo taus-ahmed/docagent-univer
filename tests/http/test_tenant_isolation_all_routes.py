@@ -46,6 +46,7 @@ ALLOWLIST = {
     ("POST", "/api/auth/login"): "issues the token; public",
     ("POST", "/api/auth/logout"): "stateless no-op; public",
     ("GET", "/health"): "public health check, no data",
+    ("GET", "/ready"): "public readiness probe: reason codes only, no data",
     ("GET", "/"): "public banner, no data",
     ("GET", "/api/review/reasons"): "static reason-code vocabulary",
     ("POST", "/api/templates/shape"): "pure function of the posted grid; reads nothing stored",

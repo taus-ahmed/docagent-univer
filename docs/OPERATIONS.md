@@ -45,6 +45,8 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `TENANT_MONTHLY_PAGE_LIMIT` | `2000` | | pages per firm per calendar month; `0` = unlimited (default) |
 | `DATA_RETENTION_DAYS` | `90` | | delete jobs this many days after they finish, daily; `0` = off (default) |
 | `OPTION_MAX_CALLS_PER_JOB` | `20` | | model calls the additional options may make per job (the written summary); each also counts as one page toward the firm's monthly limit |
+| `LOG_FORMAT` | `json` | | `text` (default) or `json`, one object per line `{ts, level, logger, request_id, msg}`. Every line made during a request carries its `request_id`, which is also the `X-Request-ID` response header |
+| `GRACEFUL_SHUTDOWN_SECONDS` | `60` | | on SIGTERM: new jobs are refused (503) and running jobs finish the file they are on, at most this long; files not reached are marked "Interrupted by restart". Keep it below the platform's stop timeout |
 | `TRUSTED_PROXY_COUNT` | `1` | | proxies in front of the backend that each append one `X-Forwarded-For` entry; the login limiter trusts the N-th entry from the right (§9). `0` = ignore the header |
 | `DRIVE_TENANT` | `smith_cpa` | | the one firm whose Google Drive the server's Drive credential is; empty = Drive off (default) |
 | `DEMO_CLIENT_IDS`, `DEMO_MAX_MB`, `DEMO_MAX_UPLOADS`, `DEMO_UPLOADS_ENABLED`, `DEMO_HISTORY_CUTOFF` | `pearx_demo`, `10`, `20`, `true`, empty | | the investor demo; empty `DEMO_CLIENT_IDS` = no demo |

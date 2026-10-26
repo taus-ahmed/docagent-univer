@@ -17,10 +17,11 @@ from datetime import datetime
 from app.models import init_db
 from app.core.auth import hash_password
 
-logging.basicConfig(
-    level=logging.DEBUG if settings.DEBUG else logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+# Part 2.8: one handler, request id on every record, LOG_FORMAT=json for a
+# log drain (app/core/observability.py)
+from app.core.observability import configure_logging, request_id_middleware  # noqa: E402
+configure_logging(getattr(settings, "LOG_FORMAT", "text"))
+logging.getLogger().setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
 logger = logging.getLogger("docagent")
 
 
@@ -30,13 +31,16 @@ logger = logging.getLogger("docagent")
 async def lifespan(app: FastAPI):
     """Startup + shutdown tasks."""
     logger.info(f"Starting DocAgent v{settings.APP_VERSION} ({settings.ENVIRONMENT})")
+    from app.core import lifecycle
+    lifecycle.reset()                 # a new process (or test app) is not draining
 
     # Initialize database + create tables
     init_db()
     logger.info("Database initialized")
 
-    # Run safe column migrations (ADD COLUMN IF NOT EXISTS)
-    _run_migrations()
+    # Run safe column migrations (ADD COLUMN IF NOT EXISTS); the outcome is
+    # what /ready reports (app/core/readiness.py)
+    app.state.migrations = _run_migrations() or {}
 
     # Ensure storage directories exist
     settings.ensure_storage_dirs()
@@ -59,6 +63,15 @@ async def lifespan(app: FastAPI):
 
     logger.info("DocAgent ready.")
     yield
+    # GRACEFUL SHUTDOWN (Part 2.3): refuse new jobs, let each running job
+    # finish the file it is on, then let it record what it did not reach.
+    from app.core import lifecycle
+    lifecycle.begin_drain()
+    left = lifecycle.wait_for_jobs(max(1, int(getattr(settings, "GRACEFUL_SHUTDOWN_SECONDS", 60)) - 5))
+    if left:
+        logger.warning("Shutdown: %d job(s) still running; the next boot marks them "
+                       "interrupted", len(left))
+    _sweep_temp_copies()
     if retention_stop is not None:
         retention_stop.set()
 
@@ -491,7 +504,25 @@ def create_app() -> FastAPI:
         if request.url.path.startswith("/api/"):
             response.headers.setdefault("Cache-Control", "no-store")
             response.headers.setdefault("Vary", "Authorization")
+        # SECURITY HEADERS (Part 2.5) on every answer. The API serves JSON and
+        # files, never pages, so its CSP allows nothing to load or frame it.
+        h = response.headers
+        h.setdefault("X-Content-Type-Options", "nosniff")
+        h.setdefault("Referrer-Policy", "no-referrer")
+        h.setdefault("X-Frame-Options", "DENY")
+        h.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+        # HSTS only in production AND only when the request came over TLS
+        # (directly, or as the trusted proxy says): over plain HTTP the header
+        # means nothing, and in development it would pin localhost to HTTPS.
+        if settings.ENVIRONMENT == "production" and (
+                request.url.scheme == "https"
+                or request.headers.get("x-forwarded-proto", "").split(",")[-1].strip() == "https"):
+            h.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response
+
+    # Registered LAST so it runs FIRST: the request id exists for every log
+    # line the request makes, and the access log sees the final status.
+    app.middleware("http")(request_id_middleware)
 
     # Global Exception Handler
     @app.exception_handler(Exception)
@@ -530,7 +561,19 @@ def create_app() -> FastAPI:
     # Health Check
     @app.get("/health")
     def health():
+        """Liveness: the process is up (Part 2.2). Nothing is asked of any
+        dependency here; /ready does that."""
         return {"status": "ok", "version": settings.APP_VERSION, "env": settings.ENVIRONMENT}
+
+    @app.get("/ready")
+    def ready():
+        """Readiness (Part 2.2): database, storage write, Tesseract,
+        pdftoppm, boot migrations — each bounded by a timeout; 503 when any
+        fails. Reason codes only: no messages, paths, URLs or versions."""
+        from app.core.readiness import readiness
+        ok, checks = readiness(app)
+        return JSONResponse({"ready": ok, "checks": checks},
+                            status_code=200 if ok else 503)
 
     @app.get("/")
     def root():

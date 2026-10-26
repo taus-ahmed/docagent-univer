@@ -194,6 +194,17 @@ class Settings(BaseSettings):
     #: page toward the firm's monthly limit (core/usage.py).
     OPTION_MAX_CALLS_PER_JOB: int = 20
 
+    # ── Shutdown ──────────────────────────────────────────────────────────────
+    #: Seconds a SIGTERM gives running jobs to finish the file they are on
+    #: (app/core/lifecycle.py); also uvicorn's --timeout-graceful-shutdown.
+    #: Keep it below the platform's own stop timeout.
+    GRACEFUL_SHUTDOWN_SECONDS: int = 60
+
+    # ── Logs ──────────────────────────────────────────────────────────────────
+    #: "text" (default) or "json" — one JSON object per line for a log drain
+    #: (app/core/observability.py). Every record carries the request id.
+    LOG_FORMAT: str = "text"
+
     @property
     def max_upload_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
@@ -201,6 +212,76 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+
+    @model_validator(mode="after")
+    def _validate_for_environment(self):
+        """FAIL FAST on a deployment that is missing something it needs
+        (Part 2.4). ENVIRONMENT selects strictness:
+
+          development (alias dev)  nothing refused — a fresh checkout runs
+          staging, production      every rule below; one message lists every
+                                   problem, naming the SETTING, never its value
+
+        Rules: SECRET_KEY at least 32 characters and not a shipped
+        placeholder; DATABASE_URL set, not SQLite and not the shipped
+        localhost default; STORAGE_BACKEND=s3 needs S3_BUCKET and both
+        credentials; the primary model provider's key (gemini) set; explicit
+        CORS origins (not empty, not "*"); TRUSTED_PROXY_COUNT between 0 and 5.
+        Local storage in production is WARNED, not refused: it works, and loses
+        uploads at every deploy (docs/OPERATIONS.md).
+
+        DECISION (Part 2.4): the key length is now enforced in staging and
+        production, reversing the earlier warn-only choice — check the live
+        key's length before deploying (docs/RELEASE-CHECKLIST.md)."""
+        env = str(self.ENVIRONMENT or "").strip().lower()
+        if env == "dev":
+            env = "development"
+        if env not in ("development", "staging", "production"):
+            raise ValueError(f"ENVIRONMENT must be development, staging or production "
+                             f"(got an unknown value of {len(env)} characters)")
+        if env == "development":
+            return self
+        problems = []
+        key = (self.SECRET_KEY or "").strip()
+        if len(key) < 32 or key.casefold() in _PLACEHOLDER_SECRETS \
+                or "change" in key.casefold():
+            problems.append("SECRET_KEY must be at least 32 characters and not a "
+                            "placeholder (openssl rand -hex 32)")
+        db = (self.DATABASE_URL or "").strip()
+        if not db or db.startswith("sqlite") or "localhost" in db or "127.0.0.1" in db:
+            problems.append("DATABASE_URL must point at the deployment's PostgreSQL "
+                            "(not SQLite, not localhost)")
+        if (self.STORAGE_BACKEND or "local") == "s3":
+            missing = [n for n in ("S3_BUCKET", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")
+                       if not str(getattr(self, n, "") or "").strip()]
+            if missing:
+                problems.append("STORAGE_BACKEND=s3 needs " + ", ".join(missing))
+        elif env == "production":
+            import warnings
+            warnings.warn("STORAGE_BACKEND=local in production: uploaded files are "
+                          "lost at every deploy (docs/OPERATIONS.md)", stacklevel=2)
+        if str(self.PRIMARY_LLM or "gemini").strip().lower() == "gemini" \
+                and not str(self.GEMINI_API_KEY or "").strip():
+            problems.append("GEMINI_API_KEY must be set (PRIMARY_LLM=gemini)")
+        origins = (self.ALLOWED_ORIGINS or "").strip()
+        if not origins or origins == "*" or "*" in [o.strip() for o in origins.split(",")]:
+            problems.append("ALLOWED_ORIGINS (or CORS_ORIGINS) must list the frontend's "
+                            "origin(s) explicitly")
+        names = {str(self.PRIMARY_LLM or "").strip().lower()} | {
+            n.strip().lower() for n in str(self.LLM_FALLBACKS or "").split(",")}
+        if "stub" in names:
+            problems.append("PRIMARY_LLM/LLM_FALLBACKS names the 'stub' provider, "
+                            "which is for development only")
+        try:
+            tpc = int(self.TRUSTED_PROXY_COUNT)
+        except (TypeError, ValueError):
+            tpc = -1
+        if not 0 <= tpc <= 5:
+            problems.append("TRUSTED_PROXY_COUNT must be a whole number from 0 to 5")
+        if problems:
+            raise ValueError(f"ENVIRONMENT={env} cannot start:\n  - " + "\n  - ".join(problems)
+                             + "\nSee docs/ENVIRONMENTS.md.")
+        return self
 
     @model_validator(mode="after")
     def _refuse_stub_outside_development(self):

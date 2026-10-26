@@ -296,6 +296,11 @@ async def _start_extraction_job(
     pipeline that forgets a check - it runs the ordinary one, as the ordinary
     user, with the same limits and the same tenant resolution.
     """
+    from app.core.lifecycle import RESTART_REFUSAL, draining
+    if draining():
+        # Part 2.3: shutting down — a job started now would be cut off
+        raise HTTPException(status_code=503, detail=RESTART_REFUSAL,
+                            headers={"Retry-After": "60"})
     if len(sources) > settings.MAX_FILES_PER_BATCH:
         raise HTTPException(status_code=400, detail=f"Max {settings.MAX_FILES_PER_BATCH} files.")
 

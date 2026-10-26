@@ -23,13 +23,27 @@ SHIPPED_DEFAULT = "change-me-in-production-use-openssl-rand-hex-32"
 EXAMPLE_DEFAULT = "change-me-use-openssl-rand-hex-32"
 
 
+#: what a staging/production deploy must also set (Part 2.4) — test values only
+DEPLOY = {"DATABASE_URL": "postgresql://u:p@db.internal:5432/docagent",
+          "ALLOWED_ORIGINS": "https://app.example.com", "GEMINI_API_KEY": "test-not-a-key",
+          "STORAGE_BACKEND": "s3", "S3_BUCKET": "b", "AWS_ACCESS_KEY_ID": "x",
+          "AWS_SECRET_ACCESS_KEY": "y"}
+
+
 def _build(monkeypatch, **env):
     import app.config as cfg
-    for k in ("SECRET_KEY", "ENVIRONMENT"):
+    for k in ("SECRET_KEY", "ENVIRONMENT", *DEPLOY):
         monkeypatch.delenv(k, raising=False)
+    if env.get("ENVIRONMENT") in ("staging", "production"):
+        env = {**DEPLOY, **env}
+    # The reload builds a NEW module-level `settings`; every other module
+    # still holds the original, and tests after this one configure whichever
+    # `app.config.settings` names. Put the original back so they agree.
+    original = cfg.settings
+    importlib.reload(cfg)
+    cfg.settings = original
     for k, v in env.items():
         monkeypatch.setenv(k, v)
-    importlib.reload(cfg)
     return cfg.Settings(_env_file=None)
 
 
@@ -85,21 +99,22 @@ class TestItDoesNotBlockLegitimateBoots:
         s = _build(monkeypatch, ENVIRONMENT="development")
         assert s.SECRET_KEY == SHIPPED_DEFAULT
 
-    def test_staging_is_not_production(self, monkeypatch):
-        s = _build(monkeypatch, ENVIRONMENT="staging",
-                   SECRET_KEY=SHIPPED_DEFAULT)
+    def test_staging_is_not_production_but_is_validated(self, monkeypatch):
+        """Part 2.4: staging gets the same refusals as production."""
+        s = _build(monkeypatch, ENVIRONMENT="staging", SECRET_KEY=REAL_KEY)
         assert not s.is_production
+        with pytest.raises(Exception, match="SECRET_KEY"):
+            _build(monkeypatch, ENVIRONMENT="staging", SECRET_KEY=SHIPPED_DEFAULT)
 
 
-class TestWeakButSecretKeysWarnRatherThanRefuse:
-    def test_a_short_real_key_boots_with_a_warning(self, monkeypatch):
-        """Refusing a short key could take down a deployment that is currently
-        working and whose key is genuinely secret. That is a worse outcome than
-        the weakness it prevents, so this warns instead."""
-        with pytest.warns(UserWarning, match="32"):
-            s = _build(monkeypatch, ENVIRONMENT="production",
-                       SECRET_KEY="s3cr3t-but-short")
-        assert s.SECRET_KEY == "s3cr3t-but-short"
+class TestShortKeysAreRefused:
+    def test_a_short_key_is_refused_in_production(self, monkeypatch):
+        """Part 2.4 reverses the earlier warn-only choice: a deployment's key
+        must be at least 32 characters (check the live key before deploying;
+        docs/RELEASE-CHECKLIST.md). The message never prints the key."""
+        with pytest.raises(Exception) as e:
+            _build(monkeypatch, ENVIRONMENT="production", SECRET_KEY="s3cr3t-but-short")
+        assert "32" in str(e.value) and "s3cr3t" not in str(e.value)
 
     def test_a_long_key_warns_about_nothing(self, monkeypatch):
         import warnings
