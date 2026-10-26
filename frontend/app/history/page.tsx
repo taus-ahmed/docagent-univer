@@ -8,7 +8,7 @@ import { extractApi, exportApi, templatesApi, type JobStatus, type DocumentResul
 import toast from "react-hot-toast";
 import { confirmExport } from "@/lib/confirm-export";
 import { useAuthStore } from "@/lib/auth-store";
-import { can, mayCancel } from "@/lib/permissions";
+import { mayCancel, mayDelete } from "@/lib/permissions";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -301,7 +301,7 @@ export default function HistoryPage() {
   const running = (s?: string) => s === "pending" || s === "processing";
 
   const handleDelete = async (jobId: number) => {
-    if (!confirm(`Delete job #${jobId}? Its uploaded files, page images and every extracted value are removed for good. The job stays in the history, marked deleted.`)) return;
+    if (!confirm(`Delete job #${jobId}? Its uploaded files, page images and every extracted value are removed for good — this cannot be undone. The job stays in the history, marked deleted.`)) return;
     try {
       const r = await extractApi.deleteJobData(jobId);
       toast.success(r.already_deleted ? "Already deleted"
@@ -529,7 +529,7 @@ export default function HistoryPage() {
                       {[selectedJob.status_reason, selectedJob.status === "cancelled" ? selectedJob.progress_message : null].filter(Boolean).join(" — ")}
                     </span>
                   )}
-                  {can(user, "job.delete") && !selectedJob.deleted_at && !running(selectedJob.status) && (
+                  {mayDelete(user, selectedJob) && !selectedJob.deleted_at && !running(selectedJob.status) && (
                     <button className="btn btn-ghost btn-sm" style={{ color: "var(--red)" }}
                             onClick={() => handleDelete(selectedJob.id)}>
                       Delete data

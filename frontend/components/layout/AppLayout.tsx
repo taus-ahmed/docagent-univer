@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ChangePasswordForm from "./ChangePasswordForm";
 import { gateDecision, loginUrl } from "@/lib/session-gate";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
@@ -39,6 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, initialized, logout, initializeFromStorage } = useAuthStore();
 
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
+  const [changingPassword, setChangingPassword] = useState(false);
   const dragStartX    = useRef<number | null>(null);
   const dragStartW    = useRef(SIDEBAR_DEFAULT);
   const isDragging    = useRef(false);
@@ -77,6 +79,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (gate !== "allow") return null;
 
+  // A one-time password opens nothing but choosing a new one.
+  if (user?.must_change_password) return <ChangePasswordForm forced />;
+
   const initials = user?.display_name?.split(" ").map((w:string)=>w[0]).slice(0,2).join("").toUpperCase() ?? "U";
 
   return (
@@ -110,6 +115,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="sb-user-role">{user?.role}</div>
             </div>
           </div>
+          <button className="sb-signout" onClick={()=>setChangingPassword(v=>!v)}>
+            Change password
+          </button>
           <button className="sb-signout" onClick={()=>{logout();router.replace("/login");}}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign out
@@ -138,7 +146,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="page-content" style={{ marginLeft: sidebarWidth }}>
         {/* Renders nothing unless this user's tenant is a configured demo. */}
         <DemoBanner />
-        {children}
+        {changingPassword
+          ? <ChangePasswordForm onDone={() => setChangingPassword(false)} />
+          : children}
       </main>
     </div>
   );

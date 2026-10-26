@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
-import { adminApi, type User, type SystemStats } from "@/lib/api";
+import { adminApi, type User, type SystemStats, type Usage } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
 import toast from "react-hot-toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -16,11 +17,13 @@ interface UserForm {
   email: string;
   role: string;
   client_id: string;
+  /** The password is a temporary one to hand over: replaced at first sign-in. */
+  must_change_password: boolean;
 }
 
 const EMPTY_FORM: UserForm = {
   username: "", display_name: "", password: "",
-  email: "", role: "client", client_id: "",
+  email: "", role: "client", client_id: "", must_change_password: true,
 };
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -87,7 +90,8 @@ function UserFormModal({
     initial
       ? { username: initial.username, display_name: initial.display_name,
           password: "", email: initial.email ?? "",
-          role: initial.role, client_id: initial.client_id ?? "" }
+          role: initial.role, client_id: initial.client_id ?? "",
+          must_change_password: true }
       : EMPTY_FORM
   );
 
@@ -135,6 +139,11 @@ function UserFormModal({
             <label className="form-label">{isCreate ? "Password" : "New password (leave blank to keep)"}</label>
             <input className="input" type="password" placeholder={isCreate ? "Min 6 chars" : "Leave blank to keep"}
               value={form.password} onChange={set("password")} />
+            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, marginTop: 6 }}>
+              <input type="checkbox" checked={form.must_change_password}
+                onChange={e => setForm(f => ({ ...f, must_change_password: e.target.checked }))} />
+              Must choose their own password at first sign-in
+            </label>
           </div>
 
           <div>
@@ -189,6 +198,14 @@ export default function AdminPage() {
     queryFn: adminApi.stats,
     refetchInterval: 30_000,
   });
+  const me = useAuthStore(st => st.user);
+  // This firm's pages this month (a firm admin; the platform admin has no firm)
+  const { data: usage } = useQuery<Usage>({
+    queryKey: ["usage"],
+    queryFn: adminApi.usage,
+    enabled: !!me?.client_id,
+    retry: false,
+  });
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["admin-users"],
@@ -236,6 +253,7 @@ export default function AdminPage() {
       password: f.password, role: f.role,
       client_id: f.client_id || undefined,
       email: f.email || undefined,
+      must_change_password: f.must_change_password,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
@@ -252,7 +270,8 @@ export default function AdminPage() {
       email: f.email || undefined,
       role: f.role,
       client_id: f.client_id || undefined,
-      ...(f.password ? { password: f.password } : {}),
+      ...(f.password ? { password: f.password,
+                         must_change_password: f.must_change_password } : {}),
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
@@ -351,6 +370,12 @@ export default function AdminPage() {
             icon={<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} />
           <StatCard label="Jobs (7 days)" value={stats.jobs_last_7_days} color="var(--blue)"
             icon={<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>} />
+          {usage && (
+            <StatCard label={usage.page_limit ? `Pages ${usage.month} (limit ${usage.page_limit})`
+                                              : `Pages ${usage.month}`}
+              value={usage.pages_used} color={usage.page_limit && usage.pages_remaining === 0 ? "var(--red)" : "var(--accent)"}
+              icon={<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>} />
+          )}
           <StatCard label="Companies" value={companies.length} color="#8b5cf6"
             icon={<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>} />
         </div>

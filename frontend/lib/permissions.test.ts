@@ -1,7 +1,7 @@
 // Run: node --test lib/permissions.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { can, mayCancel, seesAdminArea } from "./permissions.ts";
+import { can, mayCancel, mayDelete, seesAdminArea } from "./permissions.ts";
 
 const reviewer = { id: 5, role: "reviewer",
   permissions: ["drive.use", "job.cancel", "job.export", "job.review", "job.upload", "job.view"] };
@@ -30,4 +30,11 @@ test("cancel: owner or an admin", () => {
   assert.equal(mayCancel(reviewer, { user_id: 9 }), false);
   assert.equal(mayCancel(tenantAdmin, { user_id: 9 }), true);
   assert.equal(mayCancel(null, { user_id: 9 }), false);
+});
+
+test("delete: owner or an admin", () => {
+  assert.equal(mayDelete(reviewer, { user_id: 5 }), true);
+  assert.equal(mayDelete(reviewer, { user_id: 9 }), false);
+  assert.equal(mayDelete(tenantAdmin, { user_id: 9 }), true);
+  assert.equal(mayDelete(null, { user_id: 5 }), false);
 });

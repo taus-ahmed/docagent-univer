@@ -47,6 +47,20 @@ export interface User {
    * enforced in the backend, which is why hiding the panel is enough here.
    */
   is_demo?: boolean;
+  /** The account still has a one-time password: nothing opens until the user
+   *  chooses their own (AppLayout shows ChangePasswordForm). */
+  must_change_password?: boolean;
+}
+
+/** GET /api/usage: this month's pages against the firm's limit (0 = none). */
+export interface Usage {
+  client_id: string;
+  month: string;
+  pages_used: number;
+  page_limit: number;
+  limit_source: "global" | "firm";
+  pages_remaining: number | null;
+  resets_on: string;
 }
 
 export interface TokenResponse {
@@ -234,6 +248,11 @@ export const authApi = {
   getToken,
   me: async (): Promise<User> => {
     const res = await api.get<User>("/api/auth/me");
+    return res.data;
+  },
+  changePassword: async (current_password: string, new_password: string): Promise<User> => {
+    const res = await api.post<User>("/api/auth/change-password",
+                                     { current_password, new_password });
     return res.data;
   },
 };
@@ -479,10 +498,11 @@ export const extractApi = {
     return res.data;
   },
 
-  /** Hard delete (tenant or platform admin): files, page images and results
-   *  go; the job record stays, marked deleted. */
+  /** Hard delete (the job's user, a tenant or platform admin): files, page
+   *  images and results go; the job record stays, marked deleted. The server
+   *  requires the explicit confirm, sent only after the user confirmed. */
   deleteJobData: async (jobId: number) => {
-    const res = await api.delete(`/api/jobs/${jobId}/data`);
+    const res = await api.delete(`/api/jobs/${jobId}/data`, { params: { confirm: true } });
     return res.data as { job_id: number; deleted_at: string; already_deleted: boolean;
                          files_deleted: number; results_deleted: number };
   },
@@ -682,6 +702,7 @@ export const adminApi = {
     password: string;
     role: string;
     client_id?: string;
+    must_change_password?: boolean;
   }): Promise<User> => {
     const res = await api.post<User>("/api/admin/users", payload);
     return res.data;
@@ -695,6 +716,7 @@ export const adminApi = {
       role: string;
       client_id: string;
       is_active: boolean;
+      must_change_password: boolean;
     }>,
   ): Promise<User> => {
     const res = await api.put<User>(`/api/admin/users/${userId}`, payload);
@@ -705,4 +727,8 @@ export const adminApi = {
     return res.data;
   },
   deleteUser: async (userId: number) => api.delete(`/api/admin/users/${userId}`),
+  usage: async (): Promise<Usage> => {
+    const res = await api.get<Usage>("/api/usage");
+    return res.data;
+  },
 };

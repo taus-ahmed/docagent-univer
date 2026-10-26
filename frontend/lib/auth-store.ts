@@ -11,6 +11,7 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  setUser: (user: User) => void;
   initializeFromStorage: () => Promise<void>;
 }
 
@@ -50,6 +51,8 @@ export const useAuthStore = create<AuthState>()((set) => ({
     authApi.logout();
     set({ user: null, isAuthenticated: false });
   },
+
+  setUser: (user) => set({ user }),
 
   refreshUser: async () => {
     if (!authApi.isAuthenticated()) {

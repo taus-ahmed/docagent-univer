@@ -7,7 +7,7 @@
 
 export type Action =
   | "job.view" | "job.review" | "job.export" | "job.upload" | "job.cancel"
-  | "job.cancel_any" | "job.delete" | "template.create" | "template.share"
+  | "job.cancel_any" | "job.delete" | "job.delete_own" | "template.create" | "template.share"
   | "schema.manage" | "user.manage" | "stats.view" | "drive.use";
 
 const ADMIN_ONLY: ReadonlySet<string> = new Set([
@@ -37,4 +37,11 @@ export function mayCancel(user: (PermissionSubject & { id?: number }) | null | u
                           job: { user_id?: number | null }): boolean {
   if (!user) return false;
   return can(user, "job.cancel_any") || (job.user_id != null && job.user_id === user.id);
+}
+
+/** Hard delete: the job's own user, or a role that may delete any job in scope. */
+export function mayDelete(user: (PermissionSubject & { id?: number }) | null | undefined,
+                          job: { user_id?: number | null }): boolean {
+  if (!user) return false;
+  return can(user, "job.delete") || (job.user_id != null && job.user_id === user.id);
 }
