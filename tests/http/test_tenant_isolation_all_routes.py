@@ -98,6 +98,7 @@ ROUTES = {
     ("PUT", "/api/admin/users/{user_id}"): "id",
     ("DELETE", "/api/admin/users/{user_id}"): "id",
     ("GET", "/api/admin/stats"): "list",
+    ("GET", "/api/usage"): "list",
     ("GET", "/api/demo/sample-docs"): "demo",
     ("GET", "/api/demo/sample-docs/{filename}/download"): "demo",
     ("POST", "/api/demo/sample-docs/{filename}/extract"): "demo",
@@ -357,6 +358,16 @@ def test_lists_do_show_firm_a_its_own(client, firms):
     for route in LIST_ROUTES[:5]:
         r = client.request(*route, headers=firms[A].hdr["admin"])
         assert r.status_code == 200 and _scan_bytes(r.content), route
+
+
+@pytest.mark.parametrize("role", B_ROLES)
+def test_usage_is_only_the_callers_firm(client, firms, role):
+    r = client.get("/api/usage", headers=firms[B].hdr[role], params={"client_id": A})
+    if role == "admin":
+        assert r.status_code == 200 and r.json()["client_id"] == B
+    else:
+        assert r.status_code == 403
+    assert not _scan_bytes(r.content)
 
 
 def test_stats_count_only_the_callers_firm(client, firms):

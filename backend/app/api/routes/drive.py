@@ -237,6 +237,15 @@ def extract_from_drive(
         storage.release(schema_path)
         raise
 
+    # The monthly page limit (core/usage.py). Drive files are not read until
+    # the job runs, so each counts as one page — an estimate, recorded as such.
+    from app.core.usage import PAGES_MARK, check_page_quota
+    try:
+        check_page_quota(db, client_id, len(supported))
+    except BaseException:
+        storage.release(schema_path)
+        raise
+
     job = ExtractionJob(
         user_id=current_user.id,
         client_id=client_id,
@@ -246,6 +255,7 @@ def extract_from_drive(
         input_folder=folder_id,
         started_at=datetime.utcnow(),
     )
+    job.set_mark(PAGES_MARK, len(supported))
     db.add(job)
     db.commit()
     db.refresh(job)

@@ -359,6 +359,15 @@ async def _start_extraction_job(
     # A configured demo account intentionally uses the bundled demo schema.
     # Every other tenant must have its own schema; borrowing demo_001 here
     # silently extracts real customer documents against another field set.
+    # The firm's monthly page limit (core/usage.py), before anything is stored
+    # or started: a refusal leaves no job row and costs no model call. Pages
+    # are what will be read — the selected pages of each file when a subset
+    # was asked for.
+    from app.core.usage import PAGES_MARK, check_page_quota
+    job_pages = sum(len(selected_pages_list) if selected_pages_list else n
+                    for _, n in page_counts)
+    check_page_quota(db, client_id, job_pages)
+
     schema_client_id = "demo_001" if is_demo_user(current_user) else client_id
     schema_path = storage.get_schema_path(schema_client_id)
     if schema_path is None:
@@ -395,6 +404,7 @@ async def _start_extraction_job(
             started_at=datetime.utcnow(),
             schema_id=str(template_id) if template_id else None,
         )
+        job.set_mark(PAGES_MARK, job_pages)
         db.add(job)
         db.commit()
         db.refresh(job)
@@ -928,6 +938,23 @@ def delete_job_data(job_id: int, db: Session=Depends(get_db),
         raise HTTPException(status_code=500,
                             detail=f"{e.args[0]} stored files could not be deleted; "
                                    "nothing was marked deleted — retry.")
+
+@router.get("/usage")
+def get_usage(client_id: Optional[str] = None, db: Session = Depends(get_db),
+              current_user: User = Depends(get_current_user)):
+    """This month's pages and the firm's limit (core/usage.py). A firm's
+    administrator sees its own firm, whatever it names; the platform admin
+    names the firm. Anyone else: 403."""
+    from app.core.permissions import can
+    from app.core.usage import usage
+    if not can(current_user, "stats.view"):
+        raise HTTPException(status_code=403, detail="Not permitted for this role")
+    if can(current_user, "tenant.all"):
+        if not client_id:
+            raise HTTPException(status_code=400, detail="Name the firm: ?client_id=")
+        return usage(db, client_id)
+    return usage(db, current_user.client_id)
+
 
 def _get_job_or_404(job_id, current_user, db, action="job.view"):
     """The job, if the caller may see it and do `action` to it.

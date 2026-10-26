@@ -163,6 +163,11 @@ class Settings(BaseSettings):
     #: touched, and a non-demo tenant never sees this filter at all.
     DEMO_HISTORY_CUTOFF: str = ""
 
+    # ── Cost control ──────────────────────────────────────────────────────────
+    #: Pages per firm per calendar month (UTC); 0 = unlimited. A firm's own
+    #: schema may override it with `monthly_page_limit: N` (core/usage.py).
+    TENANT_MONTHLY_PAGE_LIMIT: int = 0
+
     # ── Google Drive ──────────────────────────────────────────────────────────
     #: The ONE firm (client_id) the server's Google Drive credential belongs
     #: to. Drive is a single server-wide OAuth token, so whoever can browse it
