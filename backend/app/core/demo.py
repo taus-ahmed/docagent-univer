@@ -175,7 +175,7 @@ def check_uploads_enabled(user) -> None:
 #: / `"summary"` / `"anomaly"` tests inside `_run_extraction_sync`). All four
 #: are listed because this is the demo's answer to the whole section, and a
 #: list that silently omitted one would be a list that let one through.
-DEMO_BLOCKED_OPTIONS = ("categorize", "graphs", "summary", "anomaly")
+DEMO_BLOCKED_OPTIONS = ("categorize", "graphs", "summary", "narrative", "anomaly")
 
 
 def filter_options(user, options):

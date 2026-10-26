@@ -11,6 +11,7 @@ import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
 import SampleDocsPanel from "@/components/extract/SampleDocsPanel";
 import { bars, emptyReason, reviewBanner, type ChartsResponse } from "@/lib/charts";
+import { OPTION_INFO, loadRemembered, optionState, saveRemembered, toggle, type OptionId as OptionsId } from "@/lib/options";
 import {
   extractApi, exportApi, templatesApi, schemasApi,
   type ColumnTemplate, type JobStatus, type DocumentResult,
@@ -62,6 +63,17 @@ const EXTRA_OPTIONS = [
         <polyline points="14 2 14 8 20 8"/>
         <line x1="16" y1="13" x2="8" y2="13"/>
         <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    ),
+  },
+  {
+    id: "narrative",
+    label: "Written summary (AI)",
+    desc: "Prose from the summary's facts; discarded if it adds anything",
+    color: "#d97706",
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>
       </svg>
     ),
   },
@@ -504,8 +516,17 @@ export default function ExtractPage() {
       toast(DEMO_OPTION_UNAVAILABLE, { id: "demo-option-unavailable" });
       return;
     }
-    setSelectedOptions(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
+    setSelectedOptions(prev => {
+      const next = toggle(prev as OptionsId[], id as OptionsId) as OptionId[];
+      saveRemembered(user?.id, next as OptionsId[]);
+      return next;
+    });
   }
+
+  // A6: remember each user's choices (per browser; nothing stored server-side)
+  useEffect(() => {
+    if (user?.id != null && !isDemo) setSelectedOptions(loadRemembered(user.id) as OptionId[]);
+  }, [user?.id, isDemo]);
 
   async function startExtract(templateId?: number, selectedPages?: number[]) {
     setIsExtracting(true);
@@ -758,10 +779,18 @@ export default function ExtractPage() {
                     onClick={() => setSelectedOptions([])}>Clear</button>
                 )}
               </div>
-              <div className="opt-grid">
-                {EXTRA_OPTIONS.map(opt => (
-                  <div key={opt.id} className={`opt-card ${selectedOptions.includes(opt.id) ? "on" : ""}`}
-                    onClick={() => toggleOption(opt.id)}>
+              <div className="opt-grid" role="group" aria-label="Additional options">
+                {EXTRA_OPTIONS.map(opt => {
+                  const st = optionState(opt.id as OptionsId, selectedOptions as OptionsId[], { isDemo });
+                  const info = OPTION_INFO[opt.id as OptionsId];
+                  return (
+                  <label key={opt.id} className={`opt-card ${selectedOptions.includes(opt.id) ? "on" : ""}`}
+                    style={st.disabled && !isDemo ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+                    title={st.why || info.cost}>
+                    <input type="checkbox" className="sr-only" checked={selectedOptions.includes(opt.id)}
+                      disabled={st.disabled && !isDemo}
+                      aria-describedby={`opt-help-${opt.id}`}
+                      onChange={() => toggleOption(opt.id)} />
                     <div className="opt-top">
                       <div className="opt-ico" style={{ background: opt.color + "18" }}>
                         <span style={{ color: opt.color }}>{opt.icon}</span>
@@ -773,9 +802,13 @@ export default function ExtractPage() {
                         )}
                       </div>
                     </div>
-                    <p className="opt-desc">{opt.desc}</p>
-                  </div>
-                ))}
+                    <p className="opt-desc" id={`opt-help-${opt.id}`}>
+                      {info.help} <span style={{ color: "var(--text3)" }}>{info.cost}</span>
+                      {st.why && !isDemo && <span style={{ display: "block", color: "var(--amber)" }}>{st.why}</span>}
+                    </p>
+                  </label>
+                  );
+                })}
               </div>
             </div>
           )}

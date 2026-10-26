@@ -210,7 +210,7 @@ export interface SystemStats {
  * anomaly:    AI flags unusual values (backend, uses LLM)
  * graphs:     Charts rendered from extracted data (frontend only, no LLM)
  */
-export type ExtractionOption = "categorize" | "summary" | "anomaly" | "graphs";
+export type ExtractionOption = "categorize" | "summary" | "narrative" | "anomaly" | "graphs";
 
 // --- Axios Instance ---
 

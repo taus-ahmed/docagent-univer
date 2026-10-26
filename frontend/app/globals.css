@@ -259,3 +259,8 @@ select.input { appearance: none; cursor: pointer; }
 .da-grid-focus:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
 textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* A6: visually hidden but read and focused (the option cards' checkboxes) */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.opt-card:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
