@@ -102,6 +102,11 @@ export function badgeFor(v: Pick<ReviewValue, "status" | "resolved" | "reviewed"
 export function reasonText(code: string, map: ReasonMap | undefined): ReasonText {
   const hit = map?.[code];
   if (hit) return hit;
+  // A declared rule's code carries its name: `rule_failed:lines_sum`
+  // (backend/app/core/review.py::reason_text does the same).
+  const i = code.indexOf(":");
+  const base = i > 0 ? map?.[code.slice(0, i)] : undefined;
+  if (base) return { label: `${base.label} (${code.slice(i + 1)})`, tooltip: base.tooltip };
   return { label: `Needs review (${code})`,
            tooltip: `Reason code '${code}' has no description yet. The value still needs review.` };
 }

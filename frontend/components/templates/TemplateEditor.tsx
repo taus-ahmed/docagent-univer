@@ -242,6 +242,18 @@ export default function TemplateEditor({ templateId }: Props) {
         throw new Error(shape.coverage.blocking[0]);
       }
 
+      // Declared rules (engine/rules.py) have no editor of their own yet: they
+      // are written through the API and must survive an edit here. The
+      // spreadsheet's preview does not carry them, so ask the engine once
+      // more WITH them — a rule naming a label just renamed blocks the save.
+      const declaredRules = (existingLayout as any)?.rules;
+      if (Array.isArray(declaredRules) && declaredRules.length) {
+        const checked = await templatesApi.shape({ ...sheetData, rules: declaredRules });
+        if (checked?.coverage?.blocking?.length) {
+          throw new Error(checked.coverage.blocking[0]);
+        }
+      }
+
       // Build the columns list from the one rule (Phase 2a): a slot is an empty
       // cell, and its name is the nearest label to its left (then above). The
       // server derives the authoritative shape from the same grid; this list is
@@ -300,6 +312,7 @@ export default function TemplateEditor({ templateId }: Props) {
       // Save full grid layout in description field for perfect restore
       const fullLayout = {
         ...sheetData,
+        ...(Array.isArray(declaredRules) && declaredRules.length ? { rules: declaredRules } : {}),
         docType: finalDocType,
         savedAt: new Date().toISOString(),
       };

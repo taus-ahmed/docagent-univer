@@ -93,3 +93,9 @@ test("the export warning counts what is open, and is silent when nothing is", ()
   const w = exportWarning({ values: 3, needs_review: 2, low: 1, unverified: 1, empty_flagged: 0 });
   assert.match(w ?? "", /^2 values still need review \(1 low, 1 unverified/);
 });
+
+test("a declared rule's reason names the rule", () => {
+  const map = { rule_failed: { label: "Template rule failed", tooltip: "t" } };
+  assert.equal(reasonText("rule_failed:lines_sum", map).label, "Template rule failed (lines_sum)");
+  assert.match(reasonText("other:thing", map).label, /^Needs review/);
+});
