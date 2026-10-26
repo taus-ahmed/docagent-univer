@@ -1402,10 +1402,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     check_notice, check_validation, check_review = {}, {}, False
     row_notice = []
     locale = template_locale(template_data)
+    from rules import rules_of
     for res in run_checks(default_doc_type, CheckContext(
             slots["fields"], extracted_fields, pages,
             tables=slots["tables"], rows=tables_out, incomplete=incomplete,
-            locale=locale,
+            locale=locale, rules=rules_of(template_data),
             value_pages={ref: (field_prov.get(ref) or {}).get("page")
                          for ref in extracted_fields},
             page_numbers=page_numbers)):

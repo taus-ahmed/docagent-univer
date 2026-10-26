@@ -956,6 +956,15 @@ def compute_shape(grid, log=None):
         "inferred": True,
         "migration": migration,
     }
+    # Declared rules (Part 3.1, engine/rules.py) that name nothing in this
+    # grid, or are stated wrongly, BLOCK the save: such a rule would send every
+    # document to review as "not checked", which the author can fix now.
+    if isinstance(grid, dict) and grid.get("rules"):
+        from rules import rule_problems, rules_of
+        from slot_extractor import slots_from_shape
+        sl = slots_from_shape(shape)
+        bad = rule_problems(rules_of(grid), sl["fields"], sl["tables"])
+        shape["coverage"]["blocking"] = list(shape["coverage"].get("blocking") or []) + bad
     # Human summary computed HERE, not in the frontend: the rule has exactly one
     # implementation, and the editor displays what the engine actually decided
     # rather than a TypeScript re-derivation that could drift from it.

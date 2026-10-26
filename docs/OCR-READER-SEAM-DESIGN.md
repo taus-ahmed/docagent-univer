@@ -731,6 +731,8 @@ everything carries `False` and `[]`.
 | `ein_invalid` | a slot declared `ein` is not nine digits or has a prefix the IRS never assigns | exactly `low` |
 | `category_uncertain` | the categorization option could not assign one category with confidence: rules of several categories matched the row (an ambiguous merchant), none matched and no model was allowed or available, or the model's answer was not a listed category. The category is "Uncategorized" (engine/categorize.py); nothing is guessed | none — it requires review |
 | `row_count_mismatch` | bank-statement family: the statement prints how many transactions it has (`Number of Transactions`) and that is not the number of transaction rows extracted — repeated headings, wrapped narrations and brought/carried-forward lines are not counted (`bank_validators._row_count`) | the count exactly `low` |
+| `rule_failed` | A rule the template declares (`rules`, engine/rules.py) failed on these values. Stored as `rule_failed:<rule name>`. | exactly `low`, review required |
+| `rule_unreadable` | A declared rule could not be decided: a value is not a plain amount or date, or the template states the rule wrongly. Stored as `rule_unreadable:<rule name>`. | reason added, level unchanged, review required |
 
 Document-level facts that have no single value to sit on are reported in
 `validation` and `flagged_fields` and set `needs_review` directly: a MICR

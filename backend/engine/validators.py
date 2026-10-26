@@ -52,6 +52,8 @@ class CheckContext:
     #: the FILE page number of each entry of `pages`, when the record is a
     #: slice of a file; None = pages are 1, 2, 3, …
     page_numbers: object = None
+    #: the template's declared rules (engine/rules.py), run as one more check
+    rules: list = field(default_factory=list)
 
     def texts(self):
         """Every extracted value of the record, fields and table cells."""
@@ -195,3 +197,4 @@ def _load():
         import bank_validators  # noqa: F401
         import payslip_validators  # noqa: F401
         import receipt_validators  # noqa: F401
+        import rules  # noqa: F401  (a template's declared rules, Part 3.1)

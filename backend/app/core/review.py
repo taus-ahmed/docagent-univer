@@ -169,13 +169,25 @@ REASONS: dict[str, tuple[str, str]] = {
     "row_count_mismatch": (
         "Transaction count does not match",
         "The statement says how many transactions it has, and a different number of rows was read. A row may have been missed or added."),
+    "rule_failed": (
+        "Template rule failed",
+        "A check written into this template did not hold for these values (the rule's name follows). One of them is probably wrong."),
+    "rule_unreadable": (
+        "Template rule not checked",
+        "A check written into this template could not be applied to these values (the rule's name follows), so they were not checked by it."),
 }
 
 
 def reason_text(code: str) -> tuple[str, str]:
-    """(label, tooltip) for a code; an unknown code shows itself."""
+    """(label, tooltip) for a code; an unknown code shows itself. A declared
+    rule's code carries the rule's name (`rule_failed:lines_sum`), shown in
+    the label."""
     if code in REASONS:
         return REASONS[code]
+    base, _, name = str(code).partition(":")
+    if name and base in REASONS:
+        label, tip = REASONS[base]
+        return (f"{label} ({name})", tip)
     return (f"Needs review ({code})",
             f"Reason code '{code}' has no description yet. The value still "
             f"needs review.")
