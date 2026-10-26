@@ -188,9 +188,10 @@ class TestPathTraversalStaysDefeated:
         assert str(written).startswith(str(local_store.root.resolve()))
 
     def test_a_traversing_tenant_id_cannot_escape_either(self, local_store):
-        key = local_store.upload_key("../../root", 1, "a.pdf")
-        assert ".." not in key
-        assert key.startswith("clients/")
+        # refused outright since round 14: normalising it to `root` would hand
+        # it the prefix of a firm actually called `root`
+        with pytest.raises(StorageError):
+            local_store.upload_key("../../root", 1, "a.pdf")
 
     def test_a_write_outside_the_root_is_refused(self, local_store):
         with pytest.raises(StorageError):

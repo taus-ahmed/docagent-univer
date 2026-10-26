@@ -95,6 +95,13 @@ async def upload_schema(
             status_code=400,
             detail="YAML must have 'client_id' and 'client_name' fields",
         )
+    import re
+    from app.schemas.schemas import CLIENT_ID_PATTERN
+    if not isinstance(client_id, str) or not re.match(CLIENT_ID_PATTERN, client_id):
+        raise HTTPException(
+            status_code=400,
+            detail="client_id may use letters, digits, '.', '_' and '-' only",
+        )
     if (not _may_see_all_schemas(current_user)
             and client_id != current_user.client_id):
         raise HTTPException(

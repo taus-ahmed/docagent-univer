@@ -38,13 +38,22 @@ class UserResponse(BaseModel):
     #: shipped default.
     is_demo: bool = False
 
+#: A firm id is used verbatim as its storage prefix (core/storage.py
+#: `_tenant_segment`), so it must already be a safe path segment: two ids that
+#: normalised to one segment would share files.
+CLIENT_ID_PATTERN = r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9])?$"
+#: An update may also send "" (the platform admin removing a tenant; the route
+#: decides whether the caller may).
+CLIENT_ID_OR_EMPTY = r"^(?:|[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9])?)$"
+
+
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     display_name: str = Field(..., min_length=1, max_length=200)
     email: Optional[str] = None
     password: str = Field(..., min_length=6)
     role: str = Field(default="client", pattern="^(admin|client|reviewer)$")
-    client_id: Optional[str] = None
+    client_id: Optional[str] = Field(default=None, pattern=CLIENT_ID_PATTERN)
 
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
@@ -53,7 +62,7 @@ class UserUpdate(BaseModel):
     #: company_admin stays assignable here only (legacy, SQL-era role).
     role: Optional[str] = Field(default=None,
                                 pattern="^(admin|client|reviewer|company_admin)$")
-    client_id: Optional[str] = None
+    client_id: Optional[str] = Field(default=None, pattern=CLIENT_ID_OR_EMPTY)
     is_active: Optional[bool] = None
 
 

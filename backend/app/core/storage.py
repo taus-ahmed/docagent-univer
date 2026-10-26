@@ -69,6 +69,24 @@ def _safe_segment(value, fallback: str = "unknown") -> str:
     return name[:120]
 
 
+def _tenant_segment(client_id, fallback: str) -> str:
+    """A firm's id as the leading key segment — used AS IS or refused.
+
+    `_safe_segment` normalises, which is right for a file name and wrong for a
+    firm: `a b` and `a_b`, or `../acme` and `acme`, would share one prefix and
+    one schema file, and every key built from one would name the other's
+    files. A firm id that is not already a safe segment is refused, so two
+    firms can never map to the same prefix. No id at all keeps the fallback.
+    """
+    if client_id is None or str(client_id) == "":
+        return fallback
+    cid = str(client_id)
+    if _safe_segment(cid, fallback) != cid:
+        raise StorageError("client_id is not a valid storage segment "
+                           "(letters, digits, '.', '_' and '-' only)")
+    return cid
+
+
 def _safe_key(key: str) -> str:
     """Validate a whole key. Raises StorageError rather than silently
     normalising, because a key that needs normalising was built wrong."""
@@ -116,23 +134,23 @@ class StorageService:
 
     @staticmethod
     def upload_key(client_id, job_id, filename) -> str:
-        return _safe_key(f"clients/{_safe_segment(client_id, 'anon')}"
+        return _safe_key(f"clients/{_tenant_segment(client_id, 'anon')}"
                          f"/jobs/{_safe_segment(job_id, '0')}"
                          f"/source/{_safe_segment(filename, 'file')}")
 
     @staticmethod
     def output_key(client_id, job_id, filename) -> str:
-        return _safe_key(f"clients/{_safe_segment(client_id, 'anon')}"
+        return _safe_key(f"clients/{_tenant_segment(client_id, 'anon')}"
                          f"/jobs/{_safe_segment(job_id, '0')}"
                          f"/output/{_safe_segment(filename, 'file')}")
 
     @staticmethod
     def schema_key(client_id) -> str:
-        return _safe_key(f"schemas/clients/{_safe_segment(client_id, 'client')}.yaml")
+        return _safe_key(f"schemas/clients/{_tenant_segment(client_id, 'client')}.yaml")
 
     @staticmethod
     def job_prefix(client_id, job_id) -> str:
-        return _safe_key(f"clients/{_safe_segment(client_id, 'anon')}"
+        return _safe_key(f"clients/{_tenant_segment(client_id, 'anon')}"
                          f"/jobs/{_safe_segment(job_id, '0')}")
 
     # ─── Write ───────────────────────────────────────────────────────────────
