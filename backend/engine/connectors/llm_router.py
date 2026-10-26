@@ -26,9 +26,20 @@ def _gemini() -> Optional[LLMProvider]:
 
 #: name → factory returning a ready provider, or None when it is not configured
 #: (no API key). The names are what PRIMARY_LLM and LLM_FALLBACKS hold.
+def _stub() -> Optional[LLMProvider]:
+    # DEV ONLY (connectors/stub_client.py). Refused at startup outside
+    # ENVIRONMENT=development; never chosen unless named explicitly.
+    from connectors.stub_client import StubClient
+    return StubClient()
+
+
 PROVIDERS: dict[str, Callable[[], Optional[LLMProvider]]] = {
     "gemini": _gemini,
+    "stub": _stub,
 }
+
+#: providers that are only ever used when NAMED: never a fallback default
+EXPLICIT_ONLY = {"stub"}
 
 
 def provider_order() -> list[str]:
@@ -52,7 +63,9 @@ class LLMRouter:
         if unknown:
             logger.warning(f"Unknown LLM provider(s) ignored: {', '.join(unknown)}; "
                            f"implemented: {', '.join(PROVIDERS)}")
-        for name in [n for n in names if n in PROVIDERS] or list(PROVIDERS):
+        named = [n for n in names if n in PROVIDERS]
+        defaults = [n for n in PROVIDERS if n not in EXPLICIT_ONLY]
+        for name in named or defaults:
             try:
                 provider = PROVIDERS[name]()
             except Exception as e:

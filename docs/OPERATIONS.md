@@ -30,7 +30,7 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `DATABASE_URL` | `postgresql://user:…@host:5432/db` | S E | the database (Railway provides it) |
 | `GEMINI_API_KEY` | `AIza…` | S E | the model provider key |
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | | the model (production runs flash-lite) |
-| `PRIMARY_LLM` / `LLM_FALLBACKS` | `gemini` / empty | | provider order; only Gemini exists |
+| `PRIMARY_LLM` / `LLM_FALLBACKS` | `gemini` / empty | | provider order; only Gemini is a real provider. `stub` is a DEV-ONLY offline fake ([OFFLINE-DEMO.md](OFFLINE-DEMO.md)); the backend refuses to start with it when `ENVIRONMENT` is `staging` or `production` |
 | `BATCH_SIZE`, `RATE_LIMIT_DELAY`, `MAX_RETRIES` | `5`, `2.0`, `3` | | pacing of model calls |
 | `DEBUG` | `false` | | verbose errors; keep `false` in production |
 | `STORAGE_BACKEND` | `s3` | E | `local` (ephemeral disk) or `s3` (R2) |

@@ -197,6 +197,22 @@ class Settings(BaseSettings):
         return self.ENVIRONMENT == "production"
 
     @model_validator(mode="after")
+    def _refuse_stub_outside_development(self):
+        """The fake model provider (PRIMARY_LLM / LLM_FALLBACKS = stub,
+        engine/connectors/stub_client.py) answers from the document text with
+        no model at all. It exists for offline demos and UI tests; in staging
+        or production it would hand clients made-up extractions, so the app
+        refuses to start (Part A1)."""
+        names = {str(self.PRIMARY_LLM or "").strip().lower()} | {
+            n.strip().lower() for n in str(self.LLM_FALLBACKS or "").split(",")}
+        env = str(self.ENVIRONMENT or "").strip().lower()
+        if "stub" in names and env in ("staging", "production"):
+            raise ValueError(
+                "PRIMARY_LLM/LLM_FALLBACKS names the 'stub' provider, which is "
+                f"for development only, and ENVIRONMENT={env}. Remove it.")
+        return self
+
+    @model_validator(mode="after")
     def _refuse_to_run_production_on_a_known_key(self):
         """A production deployment must not boot on a published signing key.
 
