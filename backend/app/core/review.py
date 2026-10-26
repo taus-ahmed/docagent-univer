@@ -118,6 +118,12 @@ REASONS: dict[str, tuple[str, str]] = {
     "minor_units_mismatch": (
         "Decimals do not fit the currency",
         "The amount has more or fewer decimal places than its currency uses. Check the amount and the currency."),
+    "date_ambiguous": (
+        "Day and month could be swapped",
+        "This date reads one way in the US and another elsewhere, and nothing on the document says which. Check it, or set the template's or firm's locale."),
+    "date_unreadable": (
+        "Date in another script",
+        "The date uses digits the engine does not read. Check it against the document."),
 }
 
 

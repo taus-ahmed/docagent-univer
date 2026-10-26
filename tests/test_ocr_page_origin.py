@@ -154,7 +154,9 @@ LABELS = ["Bank", "Payee", "Amount",
 GRID = {"cells": {f"{r},0": {"value": lab, "style": {}}
                   for r, lab in enumerate(LABELS)},
         "colWidths": [120] * 26, "merges": {}, "repeatRows": [], "regions": []}
-TEMPLATE = {"layout": GRID, "doc_type": "cheque", "mode": "layout"}
+# The generated cheques are US cheques (07/08/2026 is July 8): the template
+# says so, as a firm's would (Part 1.3 — a day/month order is never guessed).
+TEMPLATE = {"layout": GRID, "doc_type": "cheque", "mode": "layout", "locale": "en-US"}
 
 
 def _fabricate(value):
@@ -454,7 +456,8 @@ FIELD_TEMPLATE = {"layout": {
     "cells": {f"{r},0": {"value": lab, "style": {}}
               for r, lab in enumerate(["Payee", "Date", "Amount"])},
     "colWidths": [120] * 26, "merges": {}, "repeatRows": [], "regions": []},
-    "doc_type": "cheque", "mode": "layout"}
+    # a US cheque: 07/08/2026 is July 8 (Part 1.3 never guesses the order)
+    "doc_type": "cheque", "mode": "layout", "locale": "en-US"}
 TABLE_TEMPLATE = {"layout": {
     "cells": {f"0,{c}": {"value": h, "style": {}}
               for c, h in enumerate(["Date", "Description", "Amount"])},

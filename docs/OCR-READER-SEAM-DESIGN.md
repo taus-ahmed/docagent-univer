@@ -714,6 +714,8 @@ everything carries `False` and `[]`.
 | `possible_multiple_documents` | the record may hold more than one document (cheque) and the engine could not establish how many with confidence, so it kept ONE record rather than guess a split; set on every value of that record | none — it requires review |
 | `number_ambiguous` | the number's notation is ambiguous on this record (`1,234` / `1.234`: a thousands group or three decimals) and nothing resolves it — no template or firm locale, no unambiguous number elsewhere on the document, no 0-decimal currency (engine/amounts.py). The verbatim text is kept and nothing reads it as a number | none — it requires review |
 | `minor_units_mismatch` | an amount carries a fraction its currency does not have (ISO 4217 minor units): a yen amount with decimals, a dollar amount with three | none — it requires review |
+| `date_ambiguous` | a numeric date whose day and month could swap (both 12 or below, and different) with no evidence of the order — no template or firm locale, no other date on the record that settles it (engine/dates.py). The verbatim text is kept | none — it requires review |
+| `date_unreadable` | a date written in digits of another script (Devanagari, Arabic-Indic, full-width, …); not converted | none — it requires review |
 
 Document-level facts that have no single value to sit on are reported in
 `validation` and `flagged_fields` and set `needs_review` directly: a MICR

@@ -141,6 +141,7 @@ def _load():
     if not _loaded:
         _loaded = True
         import notation_validators  # noqa: F401
+        import date_validators  # noqa: F401
         import cheque_validators  # noqa: F401
         import invoice_validators  # noqa: F401
         import bank_validators  # noqa: F401

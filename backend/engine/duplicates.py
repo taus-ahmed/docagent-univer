@@ -60,17 +60,15 @@ def _amount(v, hint=None):
     return money(v, hint)
 
 
-_DATE_FORMATS = ("%m/%d/%Y", "%m/%d/%y", "%Y-%m-%d", "%d %B %Y", "%B %d, %Y",
-                 "%b %d, %Y", "%d %b %Y", "%m-%d-%Y")
-
-
-def _date(v):
+def _date(v, order=None):
+    """The shared reader (engine/dates.py) — any locale; an ambiguous or
+    unreadable date falls back to its digits, which still compare equal for
+    the same printed date and never invent a day/month order."""
+    from dates import parse_date
     t = re.sub(r"\s+", " ", str(v or "")).strip()
-    for f in _DATE_FORMATS:
-        try:
-            return datetime.strptime(t, f).date()
-        except ValueError:
-            continue
+    d = parse_date(t, order)
+    if d.ok:
+        return d.value
     return _digits(t) or None
 
 
@@ -93,6 +91,8 @@ def identity(ed) -> dict | None:
             by_role.setdefault(r, []).append((f["ref"], v))
     from amounts import document_hint
     hint = document_hint(list(values.values()), ed.get("locale"))
+    from dates import document_order
+    order, _how = document_order(list(values.values()), ed.get("locale"))
     out, refs = {}, {}
     for r in IDENTITY:
         hits = by_role.get(r) or []
@@ -108,7 +108,7 @@ def identity(ed) -> dict | None:
         elif r == "amount":
             out[r] = _amount(v, hint)
         else:
-            out[r] = _date(v)
+            out[r] = _date(v, order)
         if out[r] is not None:
             refs[r] = ref
     if not (out["routing"] and out["account"] and out["serial"]):
