@@ -621,6 +621,38 @@ def _release_copy(storage, path):
         print(f"[THREAD] temp copy release failed: {type(e).__name__}", flush=True)
 
 
+def _open_locked_pdf(storage, file_path, password):
+    """(path to read, decrypted temp copy or None, failure message or None).
+
+    An unencrypted or owner-password-only PDF is returned as it is. A
+    user-password PDF is decrypted IN MEMORY with `password` into a temp copy
+    in the storage temp directory (`copy-` prefix: released like every temp
+    copy, swept at boot). The password is never written, logged or returned;
+    the message names only what went wrong."""
+    import tempfile
+    from pathlib import Path as _P
+    from pdf_password import MESSAGES, decrypt_to, pdf_lock_state
+    p = _P(str(file_path))
+    if p.suffix.lower() != ".pdf":
+        return file_path, None, None
+    try:
+        if pdf_lock_state(p) == "open":
+            return file_path, None, None
+    except Exception:
+        return file_path, None, None          # unreadable: the engine says so
+    tmp_dir = _P(getattr(storage, "temp_dir", tempfile.gettempdir()))
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    fd, dest = tempfile.mkstemp(prefix="copy-", suffix=".pdf", dir=str(tmp_dir))
+    import os
+    os.close(fd)
+    outcome = decrypt_to(p, password, dest)
+    if outcome != "ok":
+        _P(dest).unlink(missing_ok=True)
+        print(f"[THREAD] {doc_ref(p)}: {outcome}", flush=True)
+        return file_path, None, MESSAGES[outcome]
+    return _P(dest), _P(dest), None
+
+
 def _firm_locale(schema_path):
     """`locale:` from the firm's schema YAML, or None. Never raises."""
     try:
@@ -635,7 +667,8 @@ def _firm_locale(schema_path):
 
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
-                          selected_pages=None, original_filenames=None):
+                          selected_pages=None, original_filenames=None,
+                          passwords=None):
     """The job thread. The schema copy the route fetched is released here,
     whatever happens inside — success, a failed document, a cancelled job, or
     a failure before the first document."""
@@ -643,14 +676,16 @@ def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
         _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                             project_dir, backend_dir, engine_dir, options=options,
                             selected_pages=selected_pages,
-                            original_filenames=original_filenames)
+                            original_filenames=original_filenames,
+                            passwords=passwords)
     finally:
         _release_copy(get_storage(), schema_path)
 
 
 def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         project_dir, backend_dir, engine_dir, options=None,
-                        selected_pages=None, original_filenames=None):
+                        selected_pages=None, original_filenames=None,
+                        passwords=None):
     import os
     os.environ["PYTHONUTF8"] = "1"
     for p in [engine_dir, backend_dir, project_dir]:
@@ -741,6 +776,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 pass
 
             file_path = None
+            extra_copies = []
             try:
                 # `fp` is a storage KEY. Resolving it is what makes the worker
                 # independent of which machine received the upload: local
@@ -748,7 +784,23 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 # fetches to a temp file.
                 with watching(is_cancelled):
                     file_path = _resolve_source(storage, fp)
-                    if file_path is None:
+                    # PASSWORD-PROTECTED PDF (Part 1.7): opened with the
+                    # password given for THIS file, into a temp copy released
+                    # with the others; a missing or wrong one fails this file
+                    # by name and the batch carries on.
+                    locked_why = None
+                    if file_path is not None:
+                        pw = (passwords[i] if passwords and i < len(passwords) else None)
+                        resolved = file_path
+                        file_path, opened, locked_why = _open_locked_pdf(
+                            storage, file_path, pw)
+                        if opened is not None:
+                            # `file_path` is now the decrypted copy (released
+                            # in `finally`); the resolved copy goes too
+                            extra_copies.append(resolved)
+                    if locked_why:
+                        results = [_fail(display_filename, locked_why)]
+                    elif file_path is None:
                         # The source document is gone — an ephemeral disk lost it
                         # between upload and processing, or retention deleted it.
                         # That is an ordinary state, not a crash: it fails THIS
@@ -970,8 +1022,11 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 failed += 1
                 _persist_failure(Session, job_id, display_filename, doc_err)
             finally:
-                # An object-store temp copy of this client's document.
+                # An object-store temp copy of this client's document, and a
+                # decrypted copy of a password-protected one.
                 _release_copy(storage, file_path)
+                for extra in extra_copies:
+                    _release_copy(storage, extra)
 
             # Rate limit protection: delay between documents
             # Prevents provider 429 errors on batch uploads

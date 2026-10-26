@@ -287,6 +287,7 @@ async def _start_extraction_job(
     current_user: User,
     storage,
     audit_event: str = demo_audit.UPLOAD,
+    passwords: Optional[list] = None,
 ) -> ExtractUploadResponse:
     """Validate, persist and start one extraction job. The whole upload path.
 
@@ -336,7 +337,9 @@ async def _start_extraction_job(
                     in (".yaml", ".yml")):
                 check_upload_file(current_user, src.filename, content)
             safe_name, _kind, page_count = _validate_upload_content(
-                src.filename, content)
+                src.filename, content,
+                (passwords or [None] * len(sources))[sources.index(src)]
+                if passwords and sources.index(src) < len(passwords) else None)
             src.filename = _unique_upload_name(safe_name, used_names)
             check_upload_file(current_user, src.filename, content)
             sizes.append((src.original_filename, len(content)))
@@ -426,7 +429,10 @@ async def _start_extraction_job(
                   template_data, str(_project_dir), str(_backend_dir), str(_engine_dir)),
             kwargs={"options": selected_options,
                     "selected_pages": selected_pages_list,
-                    "original_filenames": [src.original_filename for src in sources]},
+                    "original_filenames": [src.original_filename for src in sources],
+                    # IN MEMORY ONLY: handed to the thread, never stored,
+                    # logged or returned (Part 1.7)
+                    "passwords": list(passwords) if passwords else None},
             daemon=True,
         )
         thread.start()
@@ -458,6 +464,9 @@ async def upload_and_extract(
     template_id: Optional[int] = Form(None),
     options: Optional[str] = Form(None),  # JSON array: ["categorize","summary","anomaly","graphs"]
     selected_pages: Optional[str] = Form(None),  # JSON array of 1-based page numbers e.g. "[1,2,5]"
+    # Part 1.7: per-file PDF passwords, a JSON array in file order (null for a
+    # file without one). Used in memory only; never stored, logged or returned.
+    passwords: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     storage=Depends(get_storage),
@@ -480,7 +489,26 @@ async def upload_and_extract(
         db=db,
         current_user=current_user,
         storage=storage,
+        passwords=_parse_passwords(passwords, len(files)),
     )
+
+
+def _parse_passwords(raw, n_files):
+    """A JSON array of passwords (or nulls) in file order, or None. A
+    malformed value is refused without echoing it."""
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        vals = json.loads(raw)
+    except ValueError:
+        raise HTTPException(status_code=400,
+                            detail="passwords must be a JSON array in file order")
+    if not isinstance(vals, list) or len(vals) > n_files or not all(
+            v is None or isinstance(v, str) for v in vals):
+        raise HTTPException(status_code=400,
+                            detail="passwords must be a JSON array of strings or nulls, "
+                                   "one per file at most")
+    return [v or None for v in vals]
 
 
 # ==============================================================================

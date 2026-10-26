@@ -403,6 +403,9 @@ export default function ExtractPage() {
   const [templateSearch, setTemplateSearch] = useState("");
   const [activeTab, setActiveTab] = useState<SourceTab>("upload");
   const [files, setFiles] = useState<File[]>([]);
+  // PDF passwords by file name: kept in this page's memory only, sent with
+  // the upload, never stored (the server does not keep them either).
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [folderPath, setFolderPath] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeJobId, setActiveJobId] = useState<number | null>(null);
@@ -493,7 +496,8 @@ export default function ExtractPage() {
     setResults([]);
     prevStatus.current = "";
     try {
-      const res = await extractApi.upload(files, clientId, templateId, selectedOptions, selectedPages);
+      const res = await extractApi.upload(files, clientId, templateId, selectedOptions, selectedPages,
+        files.map(f => passwords[f.name] || null));
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
@@ -546,7 +550,7 @@ export default function ExtractPage() {
   }
 
   function reset() {
-    setFiles([]); setResults([]); setActiveJobId(null);
+    setFiles([]); setPasswords({}); setResults([]); setActiveJobId(null);
     prevStatus.current = ""; setIsExtracting(false);
   }
 
@@ -802,6 +806,15 @@ export default function ExtractPage() {
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                       <span className="file-name">{f.name}</span>
                       <span className="file-size">{(f.size / 1024).toFixed(0)} KB</span>
+                      {f.name.toLowerCase().endsWith(".pdf") && (
+                        <input type="password" autoComplete="off" placeholder="PDF password"
+                          aria-label={`Password for ${f.name} (not saved)`}
+                          title="Only if the PDF is password-protected. Used once to open it; not saved."
+                          value={passwords[f.name] || ""}
+                          onChange={e => setPasswords(p => ({ ...p, [f.name]: e.target.value }))}
+                          style={{ width: 110, fontSize: 11, padding: "2px 6px",
+                                   border: "1px solid var(--border)", borderRadius: 4 }} />
+                      )}
                       <button onClick={() => setFiles(p => p.filter(x => x.name !== f.name))}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

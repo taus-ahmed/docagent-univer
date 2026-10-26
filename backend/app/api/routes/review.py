@@ -290,6 +290,19 @@ def _reading(job, doc) -> dict:
         if p not in sys.path:
             sys.path.insert(0, p)
     from core.preprocessor import ImageTooLarge, preprocess_file
+    if str(path).lower().endswith(".pdf"):
+        from pdf_password import pdf_lock_state
+        try:
+            locked = pdf_lock_state(path) != "open"
+        except Exception:
+            locked = False
+        if locked:
+            # The password was used once, in memory, and not kept (Part 1.7):
+            # the stored original cannot be shown.
+            raise HTTPException(status_code=409, detail=(
+                "This PDF is password-protected and its password is not kept, "
+                "so its pages cannot be shown here. The extracted values are "
+                "unaffected."))
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             pd = preprocess_file(path)

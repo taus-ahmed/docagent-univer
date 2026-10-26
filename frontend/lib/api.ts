@@ -403,9 +403,13 @@ export const extractApi = {
     templateId?: number,
     options: ExtractionOption[] = [],
     selectedPages?: number[],
+    passwords?: (string | null)[],
   ): Promise<{ job_id: number; message: string; total_files: number; status: string }> => {
     const fd = new FormData();
     files.forEach(f => fd.append("files", f));
+    // Per-file PDF passwords, in file order; used once by the server, in
+    // memory, and never saved (Part 1.7). Sent only when one was typed.
+    if (passwords && passwords.some(p => p)) fd.append("passwords", JSON.stringify(passwords.map(p => p || null)));
     fd.append("client_id", clientId);
     if (templateId != null) fd.append("template_id", String(templateId));
     // Backend-processed options only (not "graphs" which is frontend-only)

@@ -96,7 +96,8 @@ def _parse_selected_pages(
     return normalized
 
 
-def _validate_upload_content(filename: str, content: bytes) -> tuple[str, str, int]:
+def _validate_upload_content(filename: str, content: bytes,
+                             password: Optional[str] = None) -> tuple[str, str, int]:
     """Validate content before any job, storage write, or worker exists."""
     if not content:
         raise HTTPException(status_code=400, detail="File is empty.")
@@ -105,19 +106,25 @@ def _validate_upload_content(filename: str, content: bytes) -> tuple[str, str, i
         from pypdf import PdfReader
         try:
             reader = PdfReader(io.BytesIO(content), strict=False)
+            locked = False
             if reader.is_encrypted:
                 try:
                     decrypted = reader.decrypt("")
                 except Exception:
                     decrypted = 0
                 if not decrypted:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=("Encrypted or password-protected PDFs are not "
-                                "supported."))
-            page_count = len(reader.pages)
-            for page in reader.pages:
-                _ = page.mediabox
+                    # PASSWORD-PROTECTED (Part 1.7): accepted, never refused for
+                    # the whole batch. The worker opens it with the password
+                    # given for it, or fails THAT file by name ("password
+                    # required" / "password incorrect"). The password is used
+                    # here only in memory, to count the pages.
+                    from pdf_password import page_count_or_none
+                    locked = True
+                    page_count = page_count_or_none(content, password) or 1
+            if not locked:
+                page_count = len(reader.pages)
+                for page in reader.pages:
+                    _ = page.mediabox
         except HTTPException:
             raise
         except Exception:
