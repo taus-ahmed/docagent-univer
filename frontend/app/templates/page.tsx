@@ -33,6 +33,20 @@ export default function TemplatesPage() {
     queryFn: () => templatesApi.list(),
   });
 
+  // A7: duplicate a template — the copy is a new template the user owns,
+  // named so it can never be mistaken for the original.
+  const duplicateMutation = useMutation({
+    mutationFn: async (t: ColumnTemplate) => {
+      const names = new Set(templates.map(x => x.name.toLowerCase()));
+      let name = `Copy of ${t.name}`;
+      for (let i = 2; names.has(name.toLowerCase()); i++) name = `Copy of ${t.name} (${i})`;
+      return templatesApi.create({ name, document_type: t.document_type, columns: t.columns,
+                                   description: t.description ?? undefined });
+    },
+    onSuccess: (t) => { qc.invalidateQueries({ queryKey: ["templates"] }); toast.success(`Created "${t.name}"`); },
+    onError: () => toast.error("Could not duplicate the template"),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => templatesApi.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["templates"] }); toast.success("Deleted"); },
@@ -147,12 +161,23 @@ export default function TemplatesPage() {
                   <div
                     key={t.id}
                     className="tpl-card"
+                    role="link" tabIndex={0}
+                    aria-label={`Open template ${t.name}`}
                     onClick={() => router.push(`/templates/edit?id=${t.id}`)}
+                    onKeyDown={e => { if (e.key === "Enter" && e.target === e.currentTarget) router.push(`/templates/edit?id=${t.id}`); }}
                   >
                     {mayEdit && <div className="tpl-card-actions">
                       <button
+                        className="btn btn-ghost btn-sm"
+                        aria-label={`Duplicate template ${t.name}`}
+                        title="Duplicate"
+                        onClick={e => { e.stopPropagation(); duplicateMutation.mutate(t); }}
+                      >Duplicate</button>
+                      <button
                         className="btn btn-ghost btn-sm btn-icon"
-                        onClick={e => { e.stopPropagation(); if (confirm("Delete this template?")) deleteMutation.mutate(t.id); }}
+                        aria-label={`Delete template ${t.name}`}
+                        title="Delete"
+                        onClick={e => { e.stopPropagation(); if (confirm(`Delete the template "${t.name}"? This cannot be undone.`)) deleteMutation.mutate(t.id); }}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
                       </button>

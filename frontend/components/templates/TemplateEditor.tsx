@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { gateDecision, loginUrl } from "@/lib/session-gate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { leaveWarning, validateTemplate, type FieldError } from "@/lib/templateForm";
 import { templatesApi, type TemplateColumn, type ColumnTemplate,
          type ShapePreview } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -26,6 +27,10 @@ interface Props { templateId?: number }
 export default function TemplateEditor({ templateId }: Props) {
   const router = useRouter();
   const qc = useQueryClient();
+  // A7: field-level errors and the unsaved-changes guard (lib/templateForm.ts)
+  const [fieldErrors, setFieldErrors] = useState<FieldError[]>([]);
+  const [dirty, setDirty] = useState(false);
+  const baselineRef = useRef<string | null>(null);
   const { user, isAuthenticated, initialized, logout, initializeFromStorage } = useAuthStore();
   const [name, setName] = useState("");
   const [docType, setDocType] = useState("invoice");
@@ -78,7 +83,7 @@ export default function TemplateEditor({ templateId }: Props) {
   const { data: allTemplates } = useQuery({
     queryKey: ["templates"],
     queryFn: () => templatesApi.list(),
-    enabled: !templateId,
+    // also when editing: a rename is checked against the other names (A7)
   });
 
   // Auto-generate default name for new templates
@@ -138,7 +143,27 @@ export default function TemplateEditor({ templateId }: Props) {
   const handleSheetsChange = useCallback((data: SheetSaveData) => {
     sheetDataRef.current = data;
     setSheetReady(true);
+    // the first report is the loaded state; anything different is an edit
+    const now = JSON.stringify({ c: data?.cells, m: data?.merges, r: (data as any)?.regions });
+    if (baselineRef.current === null) baselineRef.current = now;
+    else if (now !== baselineRef.current) setDirty(true);
   }, []);
+
+  // Leaving with unsaved edits asks first: the browser's own prompt on reload
+  // or close, and a confirm on the editor's own Cancel / Templates links.
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (!leaveWarning(dirty)) return;
+      e.preventDefault(); e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
+  const leave = () => {
+    const w = leaveWarning(dirty);
+    if (w && !window.confirm(w)) return;
+    router.push("/templates");
+  };
 
   // FIX 3: When SheetComp loads and we have existingLayout, wait for the sheet
   // to fully initialize before allowing saves. We do this by setting a short
@@ -160,7 +185,14 @@ export default function TemplateEditor({ templateId }: Props) {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const n = nameRef.current.trim();
-      if (!n) throw new Error("Please enter a template name");
+      const errs = validateTemplate({
+        name: n, docType, customDocType,
+        cells: ((sheetDataRef.current ?? existingLayout) as any)?.cells ?? {},
+        locale: ((sheetDataRef.current ?? existingLayout) as any)?.locale ?? null,
+        existingNames: (allTemplates ?? []).filter((t: any) => t.id !== templateId).map((t: any) => t.name),
+      });
+      setFieldErrors(errs);
+      if (errs.length) throw new Error(errs[0].message);
 
       const finalDocType = docType === "other"
         ? (customDocType.trim() || "other")
@@ -293,6 +325,7 @@ export default function TemplateEditor({ templateId }: Props) {
         if (bits.length) toast(`Saved, but the engine could not read all of it: ${bits.join("; ")}`,
                                { icon: "⚠️", duration: 8000 });
       }
+      setDirty(false);
       router.push("/templates");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -363,15 +396,19 @@ export default function TemplateEditor({ templateId }: Props) {
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minWidth:0 }}>
         {/* TOP BAR */}
         <div style={{ flexShrink:0, background:"#fff", borderBottom:"1px solid #e5e7eb", height:56, display:"flex", alignItems:"center", padding:"0 20px", gap:10, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
-          <span onClick={() => router.push("/templates")}
-            style={{ fontSize:13, color:"#9ca3af", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0 }}>
+          <button type="button" onClick={leave}
+            style={{ fontSize:13, color:"#6b7280", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0,
+                     background:"none", border:"none", padding:0, fontFamily:"inherit" }}>
             Templates
-          </span>
+          </button>
           <span style={{ color:"#d1d5db", flexShrink:0 }}>›</span>
           <input
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={e => { setName(e.target.value); setDirty(true); setFieldErrors(f => f.filter(x => x.field !== "name")); }}
             placeholder="Untitled template"
+            aria-label="Template name"
+            aria-invalid={fieldErrors.some(f => f.field === "name")}
+            aria-describedby="tpl-name-error"
             onKeyDown={e => e.stopPropagation()}
             onKeyUp={e => e.stopPropagation()}
             style={{ flex:1, minWidth:0, fontSize:15, fontWeight:600, color:"#111", background:"transparent", border:"none", outline:"none", fontFamily:"inherit" }}
@@ -395,7 +432,7 @@ export default function TemplateEditor({ templateId }: Props) {
               />
             )}
             <button
-              onClick={() => router.push("/templates")}
+              onClick={leave}
               style={{ padding:"6px 14px", borderRadius:7, border:"1px solid #e5e7eb", background:"#fff", fontSize:13, fontWeight:500, cursor:"pointer", color:"#6b7280", fontFamily:"inherit" }}>
               Cancel
             </button>
@@ -415,6 +452,17 @@ export default function TemplateEditor({ templateId }: Props) {
             </button>}
           </div>
         </div>
+
+        {/* A7: errors next to what they are about, in plain words */}
+        {fieldErrors.length > 0 && (
+          <div role="alert" id="tpl-name-error"
+            style={{ flexShrink:0, background:"#fef2f2", borderBottom:"1px solid #fecaca",
+                     padding:"7px 20px", fontSize:12, color:"#991b1b" }}>
+            {fieldErrors.map((f, i) => (
+              <div key={i}><strong>{{ name: "Name", docType: "Document type", grid: "Grid", locale: "Locale" }[f.field]}:</strong> {f.message}</div>
+            ))}
+          </div>
+        )}
 
         {/* HINT BAR */}
         <div style={{ flexShrink:0, background:"#fffbeb", borderBottom:"1px solid #fde68a", padding:"7px 20px", fontSize:12, color:"#92400e", display:"flex", alignItems:"center", gap:6 }}>
