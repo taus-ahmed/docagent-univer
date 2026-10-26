@@ -922,13 +922,21 @@ def cancel_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depe
             "status_reason": job.status_reason}
 
 @router.delete("/jobs/{job_id}/data")
-def delete_job_data(job_id: int, db: Session=Depends(get_db),
+def delete_job_data(job_id: int, confirm: bool = False, db: Session=Depends(get_db),
                     current_user: User=Depends(get_current_user)):
     """Hard delete: the job's files, page readings and results go; the job
-    record stays, marked deleted (`core/job_lifecycle.purge_job`). A tenant
-    admin of the job's firm or a platform admin; another firm's job is 404."""
+    record stays, marked deleted (`core/job_lifecycle.purge_job`). The job's
+    own user, a tenant admin of its firm, or a platform admin; another firm's
+    job is 404. `?confirm=true` is required — an explicit second step, since
+    nothing can bring the data back."""
     from app.core.job_lifecycle import RUNNING, PurgeIncomplete, purge_job
-    job = _get_job_or_404(job_id, current_user, db, "job.delete")
+    from app.core.permissions import can
+    job = _get_job_or_404(job_id, current_user, db)
+    if not (can(current_user, "job.delete", job) or job.user_id == current_user.id):
+        raise HTTPException(status_code=403, detail="Not permitted for this role")
+    if not confirm:
+        raise HTTPException(status_code=400,
+                            detail="Deleting cannot be undone: repeat with ?confirm=true.")
     if job.status in RUNNING:
         raise HTTPException(status_code=409,
                             detail="The job is still running: cancel it first, then delete.")
@@ -938,6 +946,7 @@ def delete_job_data(job_id: int, db: Session=Depends(get_db),
         raise HTTPException(status_code=500,
                             detail=f"{e.args[0]} stored files could not be deleted; "
                                    "nothing was marked deleted — retry.")
+
 
 @router.get("/usage")
 def get_usage(client_id: Optional[str] = None, db: Session = Depends(get_db),

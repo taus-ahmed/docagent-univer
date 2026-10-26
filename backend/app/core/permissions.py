@@ -145,10 +145,11 @@ _INTERNAL = {"tenant.all", "drive.manage_tenant", "template.manage_tenant"}
 
 def permissions_of(user) -> list[str]:
     """The actions the user's role holds, for the UI to hide controls with.
-    `job.cancel` is listed for everyone: a user may cancel their own job."""
+    `job.cancel` and `job.delete_own` are listed for everyone: a user may
+    cancel and hard-delete their own job (`extract.py::delete_job_data`)."""
     if user is None or not getattr(user, "is_active", True):
         return []
-    held = (ROLE_ACTIONS[role_of(user)] - _INTERNAL) | {"job.cancel"}
+    held = (ROLE_ACTIONS[role_of(user)] - _INTERNAL) | {"job.cancel", "job.delete_own"}
     return sorted(held)
 
 

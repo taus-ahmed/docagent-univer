@@ -79,7 +79,7 @@ def test_delete_removes_files_results_and_content(client, auth, db, users,
     prefix = svc.job_prefix("acme_001", j.id)
     assert len(_keys_under(svc, prefix)) == 3
 
-    r = client.delete(f"/api/jobs/{j.id}/data", headers=auth["acme"])
+    r = client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=auth["acme"])
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["files_deleted"] == 3 and body["results_deleted"] == 2
@@ -102,8 +102,8 @@ def test_delete_removes_files_results_and_content(client, auth, db, users,
 
 def test_a_second_delete_is_a_no_op_that_says_so(client, auth, db, users, local):
     j = _make_job(db, users["acme2"], "acme_001", local)
-    first = client.delete(f"/api/jobs/{j.id}/data", headers=auth["acme"]).json()
-    r = client.delete(f"/api/jobs/{j.id}/data", headers=auth["acme"])
+    first = client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=auth["acme"]).json()
+    r = client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=auth["acme"])
     assert r.status_code == 200, r.text
     assert r.json()["already_deleted"] is True
     assert r.json()["files_deleted"] == 0 and r.json()["results_deleted"] == 0
@@ -113,37 +113,67 @@ def test_a_second_delete_is_a_no_op_that_says_so(client, auth, db, users, local)
 def test_another_firms_job_is_404_and_untouched(client, auth, db, users, local):
     from app.models.models import DocumentResult
     j = _make_job(db, users["other"], "other_002", local)
-    r = client.delete(f"/api/jobs/{j.id}/data", headers=auth["acme"])
-    missing = client.delete("/api/jobs/987654321/data", headers=auth["acme"])
+    r = client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=auth["acme"])
+    missing = client.delete("/api/jobs/987654321/data?confirm=true", headers=auth["acme"])
     assert r.status_code == 404 and r.json() == missing.json()
     assert len(_keys_under(local, local.job_prefix("other_002", j.id))) == 3
     db.expire_all()
     assert db.query(DocumentResult).filter(DocumentResult.job_id == j.id).count() == 2
 
 
-@pytest.mark.parametrize("who", ["acme2", "rev"])
-def test_the_owner_and_a_reviewer_may_not_hard_delete(client, auth, db, users,
-                                                      local, who):
+def _hdr(db, users, who):
     from tests.http.conftest import _mkuser
     from app.core.auth import create_access_token
     u = users.get(who) or _mkuser(db, "acme_reviewer", "reviewer", "acme_001")
+    return {"Authorization": "Bearer " + create_access_token(
+        {"sub": str(u.id), "role": u.role, "client_id": u.client_id})}
+
+
+def test_a_reviewer_may_not_hard_delete_someone_elses_job(client, db, users, local):
+    j = _make_job(db, users["acme2"], "acme_001", local)
+    h = _hdr(db, users, "rev")
+    assert client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=h).status_code == 403
+    assert len(_keys_under(local, local.job_prefix("acme_001", j.id))) == 3
+
+
+def test_the_owner_may_hard_delete_their_own_job(client, db, users, local):
+    """Round 14: the job's own user deletes it (retention.md said so; round 13
+    left it to admins)."""
+    j = _make_job(db, users["acme2"], "acme_001", local)
+    h = _hdr(db, users, "acme2")
+    assert client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=h).status_code == 200
+    assert _keys_under(local, local.job_prefix("acme_001", j.id)) == []
+
+
+def test_a_colleague_user_may_not_delete_the_owners_job(client, db, users, local):
+    from tests.http.conftest import _mkuser
+    from app.core.auth import create_access_token
+    u = _mkuser(db, "acme_colleague", "client", "acme_001")
     h = {"Authorization": "Bearer " + create_access_token(
         {"sub": str(u.id), "role": u.role, "client_id": u.client_id})}
     j = _make_job(db, users["acme2"], "acme_001", local)
-    assert client.delete(f"/api/jobs/{j.id}/data", headers=h).status_code == 403
+    assert client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=h).status_code == 404
+    assert len(_keys_under(local, local.job_prefix("acme_001", j.id))) == 3
+
+
+def test_without_confirm_nothing_is_deleted(client, auth, db, users, local):
+    j = _make_job(db, users["acme2"], "acme_001", local)
+    for q in ("", "?confirm=false"):
+        r = client.delete(f"/api/jobs/{j.id}/data{q}", headers=auth["acme"])
+        assert r.status_code == 400 and "confirm=true" in r.text
     assert len(_keys_under(local, local.job_prefix("acme_001", j.id))) == 3
 
 
 def test_a_platform_admin_may_delete_any_firms_job(client, auth, db, users, local):
     j = _make_job(db, users["other"], "other_002", local)
-    assert client.delete(f"/api/jobs/{j.id}/data",
+    assert client.delete(f"/api/jobs/{j.id}/data?confirm=true",
                          headers=auth["super"]).status_code == 200
     assert _keys_under(local, local.job_prefix("other_002", j.id)) == []
 
 
 def test_a_running_job_must_be_cancelled_first(client, auth, db, users, local):
     j = _make_job(db, users["acme2"], "acme_001", local, status="processing")
-    r = client.delete(f"/api/jobs/{j.id}/data", headers=auth["acme"])
+    r = client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=auth["acme"])
     assert r.status_code == 409, r.text
     assert len(_keys_under(local, local.job_prefix("acme_001", j.id))) == 3
 
@@ -158,7 +188,7 @@ def test_the_review_screens_readings_and_temp_copies_go(client, auth, db, users,
     copy = r2.get_local_path(d.s3_key)
     with review._cache_lock:
         review._cache[d.s3_key] = {"path": str(copy), "ocr_images": {1: "img"}}
-    assert client.delete(f"/api/jobs/{j.id}/data", headers=auth["acme"]).status_code == 200
+    assert client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=auth["acme"]).status_code == 200
     assert d.s3_key not in review._cache
     assert not Path(copy).exists()
 
@@ -166,7 +196,7 @@ def test_the_review_screens_readings_and_temp_copies_go(client, auth, db, users,
 def test_the_log_names_ids_and_counts_only(client, auth, db, users, local, capfd):
     j = _make_job(db, users["acme2"], "acme_001", local)
     capfd.readouterr()
-    client.delete(f"/api/jobs/{j.id}/data", headers=auth["acme"])
+    client.delete(f"/api/jobs/{j.id}/data?confirm=true", headers=auth["acme"])
     out = "".join(capfd.readouterr())
     assert f"job {j.id}" in out
     assert "doc0" not in out and "secret" not in out and "acme_001" not in out

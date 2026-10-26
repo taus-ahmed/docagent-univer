@@ -53,8 +53,14 @@ async def lifespan(app: FastAPI):
     # Nothing can still be running: this process just started
     _release_stranded_jobs()
 
+    # Opt-in retention (DATA_RETENTION_DAYS; 0 = off, nothing started)
+    from app.core.retention import start_daily_purge
+    retention_stop = start_daily_purge()
+
     logger.info("DocAgent ready.")
     yield
+    if retention_stop is not None:
+        retention_stop.set()
 
     logger.info("DocAgent shutting down.")
 

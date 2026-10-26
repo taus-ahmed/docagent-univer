@@ -168,6 +168,11 @@ class Settings(BaseSettings):
     #: schema may override it with `monthly_page_limit: N` (core/usage.py).
     TENANT_MONTHLY_PAGE_LIMIT: int = 0
 
+    # ── Retention ─────────────────────────────────────────────────────────────
+    #: Days after a job finishes before a daily task hard-deletes it (files,
+    #: results; the job record stays, marked deleted). 0 = off (core/retention.py).
+    DATA_RETENTION_DAYS: int = 0
+
     # ── Google Drive ──────────────────────────────────────────────────────────
     #: The ONE firm (client_id) the server's Google Drive credential belongs
     #: to. Drive is a single server-wide OAuth token, so whoever can browse it
