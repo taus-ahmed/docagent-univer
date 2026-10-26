@@ -48,6 +48,8 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `DEMO_CLIENT_IDS`, `DEMO_MAX_MB`, `DEMO_MAX_UPLOADS`, `DEMO_UPLOADS_ENABLED`, `DEMO_HISTORY_CUTOFF` | `pearx_demo`, `10`, `20`, `true`, empty | | the investor demo; empty `DEMO_CLIENT_IDS` = no demo |
 | `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME`, `…_PASSWORD`, `…_DISPLAY_NAME` | | S | creates the first platform admin on an empty database; **remove the password variable right after** |
 | `BCRYPT_ROUNDS` | `12` | | password hashing cost (tests use 4) |
+| `OCR_WORKERS` | `2` | | OCR pool size per file; default min(4, CPUs); `1` = serial (§11) |
+| `OCR_PROBE_TIMEOUT_S`, `OCR_RENDER_TIMEOUT_S`, `OCR_TESSERACT_TIMEOUT_S`, `OCR_PAGE_TIMEOUT_S`, `OCR_POOL_TIMEOUT_S` | `15`, `120`, `120`, `300`, `1800` | | deadlines for the page renderer and the OCR reader (§11) |
 | `NEXT_PUBLIC_API_URL` (Vercel) | the backend URL | E | where the browser app sends requests |
 
 Not read any more and safe to delete: `GROQ_*`. Not active yet (Phase 4):
@@ -181,3 +183,32 @@ deleting the commit.
    bucket (Railway environments — **VERIFY** setup), sign in, upload a
    document, export it.
 4. Only then merge to `main` — which deploys production immediately.
+
+## 11. Page rendering and OCR deadlines
+
+The backend starts two outside programs: Poppler (`pdftoppm`, `pdfinfo`) to
+turn PDF pages into images, and Tesseract to read scanned pages. Every call
+has a hard deadline; a call past it is **killed together with anything it
+started**, and the page (or file) fails **with a message naming the program
+and the setting** — it is never left hanging. A failed page is listed in the
+document's notes and marked for review like any other unread page.
+
+| Setting | Default | Bounds |
+|---|---|---|
+| `OCR_PROBE_TIMEOUT_S` | 15 s | `pdftoppm -v` / `tesseract --version`, asked **once per process** (the pool's workers are handed the answer); a failed probe is asked again after 5 minutes |
+| `OCR_RENDER_TIMEOUT_S` | 120 s | one `pdftoppm` / `pdfinfo` call, **per page** rendered by it |
+| `OCR_TESSERACT_TIMEOUT_S` | 120 s | one Tesseract call (a page is 1–3 calls) |
+| `OCR_PAGE_TIMEOUT_S` | 300 s | the OCR pool waiting on any one page |
+| `OCR_POOL_TIMEOUT_S` | 1800 s | the OCR pool on one file in total |
+
+When the pool passes a deadline it is stopped (its workers and their tools
+killed) and the remaining pages are read one at a time, each still under the
+per-call deadlines; their OCR record carries `pool_fallback` saying why.
+Cancelling a job stops the pool the same way.
+
+**Tuning.** Raise `OCR_RENDER_TIMEOUT_S` / `OCR_TESSERACT_TIMEOUT_S` only if
+logs show `did not finish within` on large, legitimate pages on a slow
+container; lower them to fail faster. `OCR_WORKERS=1` reads serially (no pool),
+which also avoids any problem particular to running tools in parallel. In the
+logs look for `did not finish within`, `version probe failed`, and
+`parallel OCR unavailable`.

@@ -12,7 +12,9 @@ import os
 import re
 import base64
 import multiprocessing
+import time
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from contextvars import ContextVar
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -24,6 +26,7 @@ from pypdf import PdfReader
 from text_layer import SHARD_SHRED, acroform_widgets, read_page
 from log_safety import doc_ref, exc_brief
 from cancellation import Cancelled, checkpoint
+import external_tools
 
 
 @dataclass
@@ -374,8 +377,37 @@ def ocr_workers() -> int:
 def _spawn_pool(max_workers):
     # SPAWN on every platform: forking a process that runs request and job
     # threads can copy a lock held by another thread and hang the child.
+    # The tool version probes run HERE, once, and every worker is handed the
+    # answers (external_tools.seed) — a worker never starts a probe of its own.
+    answers = external_tools.snapshot()
     return ProcessPoolExecutor(max_workers=max_workers,
-                               mp_context=multiprocessing.get_context("spawn"))
+                               mp_context=multiprocessing.get_context("spawn"),
+                               initializer=external_tools.seed,
+                               initargs=(answers,))
+
+
+def _stop_pool(pool):
+    """Kill a pool's workers and everything they started, without waiting for
+    them: a stuck worker must not hold the job, and must not outlive it."""
+    procs = list((getattr(pool, "_processes", None) or {}).values())
+    external_tools.kill_tree(*(p.pid for p in procs))
+    try:
+        pool.shutdown(wait=False, cancel_futures=True)
+    except Exception:
+        pass
+
+
+def _await(future, limit):
+    """`future.result()` within `limit` seconds, noticing a cancel every
+    second rather than only when the page is done."""
+    end = time.monotonic() + limit
+    while True:
+        checkpoint()
+        try:
+            return future.result(timeout=min(1.0, max(0.0, end - time.monotonic())))
+        except FutureTimeout:
+            if time.monotonic() >= end:
+                raise
 
 
 #: What `_prefetch_ocr` opens a pool with; tests inject executors here.
@@ -408,6 +440,10 @@ def _ocr_read(file_path, page_number, dpi=None, image=None) -> dict:
             "image": getattr(source, "_image", None), "dpi": dpi}
 
 
+#: What a pool worker runs for one page; tests substitute a slow reader.
+_POOL_READER = _ocr_read
+
+
 def _prefetch_ocr(file_path, pages) -> dict:
     """{(str(file), page): read} for `pages`, read in a pool; {} when a pool
     would not help (fewer than two pages, or OCR_WORKERS=1)."""
@@ -425,19 +461,38 @@ def _prefetch_ocr(file_path, pages) -> dict:
         read["pool_fallback"] = why
         return read
 
+    # DEADLINES (external_tools.TIMEOUTS): waiting on any one page is bounded
+    # by OCR_PAGE_TIMEOUT_S and the whole file by OCR_POOL_TIMEOUT_S. A page
+    # past either stops the pool — its workers and their pdftoppm/tesseract
+    # killed — and every page not yet read is read serially, where each tool
+    # call has its own deadline, and says so (`pool_fallback`).
+    page_limit = external_tools.timeout_s("page")
+    deadline = time.monotonic() + external_tools.timeout_s("pool")
     try:
         with _POOL_FACTORY(max_workers=workers) as pool:
-            futures = {n: pool.submit(_ocr_read, key, n) for n in pages}
+            futures = {n: pool.submit(_POOL_READER, key, n) for n in pages}
             try:
                 for n in pages:
                     checkpoint()
+                    limit = min(page_limit, max(0.0, deadline - time.monotonic()))
                     try:
-                        reads[n] = futures[n].result()
+                        reads[n] = _await(futures[n], limit)
+                    except FutureTimeout:
+                        stuck = TimeoutError(
+                            f"page {n} not read within {limit:g} s "
+                            f"(OCR_PAGE_TIMEOUT_S / OCR_POOL_TIMEOUT_S); the "
+                            f"pool was stopped")
+                        _stop_pool(pool)
+                        for m in pages:
+                            if m not in reads:
+                                reads[m] = fallback(m, stuck)
+                        break
                     except Exception as exc:
                         reads[n] = fallback(n, exc)
             except Cancelled:
                 for f in futures.values():   # pages not started never start
                     f.cancel()
+                _stop_pool(pool)             # pages started are killed
                 raise
     except Exception as exc:
         for n in pages:
@@ -788,13 +843,14 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
 def _pdf_pages_to_images(file_path: Path, doc: ProcessedDocument):
     """Convert PDF pages to base64 images."""
     try:
-        from pdf2image import convert_from_path
-        images = convert_from_path(
-            str(file_path),
+        last = min(doc.total_pages, 20)
+        images = external_tools.render(
+            file_path,
+            pages=last,
             dpi=200,
             fmt="jpeg",
             first_page=1,
-            last_page=min(doc.total_pages, 20),
+            last_page=last,
         )
         for img in images:
             img = _optimize_image(img)

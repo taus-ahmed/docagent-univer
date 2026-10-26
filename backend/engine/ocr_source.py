@@ -43,6 +43,8 @@ import re
 
 from PIL import Image, ImageOps
 
+import external_tools
+from external_tools import ToolTimeout, ToolUnavailable
 from text_layer import CoordinateSpace, PageSource
 
 #: The render the pipeline asks for. 300dpi is Tesseract's own documented
@@ -116,7 +118,8 @@ def _configure():
 def available():
     """(True, version) when a Tesseract binary can actually be called."""
     try:
-        return True, str(_configure().get_tesseract_version())
+        _configure()
+        return True, str(external_tools.tesseract_version())
     except Exception as exc:                      # pragma: no cover - env probe
         return False, f"{type(exc).__name__}: {exc}"
 
@@ -146,9 +149,11 @@ def orientation(image):
     why deskew is a separate step below rather than an extension of this one.
     """
     try:
-        osd = _configure().image_to_osd(image)
+        osd = external_tools.tesseract(_configure().image_to_osd, image)
         m = re.search(r"Rotate: (\d+)", osd)
         return int(m.group(1)) % 360 if m else 0
+    except ToolTimeout:
+        raise                 # a killed reader is a failure, not "upright"
     except Exception:
         # OSD needs its own trained data (osd.traineddata) and refuses pages
         # with too little text. Both are ordinary; neither is a reason to
@@ -291,7 +296,8 @@ class OcrPageSource(PageSource):
     def _read(self):
         if self._data is None:
             pytesseract = _configure()
-            self._data = pytesseract.image_to_data(
+            self._data = external_tools.tesseract(
+                pytesseract.image_to_data,
                 self._image, output_type=pytesseract.Output.DICT)
             if not any((t or "").strip() for t in self._data["text"]):
                 self._retry(pytesseract)
@@ -310,8 +316,9 @@ class OcrPageSource(PageSource):
             lambda v: 255 if v > INK_CUT else 0).getbbox()
         if not box:
             return
-        data = pytesseract.image_to_data(grey.crop(box), config=RETRY_PSM,
-                                         output_type=pytesseract.Output.DICT)
+        data = external_tools.tesseract(
+            pytesseract.image_to_data, grey.crop(box), config=RETRY_PSM,
+            output_type=pytesseract.Output.DICT)
         data["left"] = [v + box[0] for v in data["left"]]
         data["top"] = [v + box[1] for v in data["top"]]
         self._data = data
@@ -379,11 +386,15 @@ class OcrPageSource(PageSource):
 
 
 def render_pdf_page(path, page_number, dpi=OCR_DPI):
-    """One PDF page as an image, or None. `page_number` is 1-based."""
+    """One PDF page as an image, or None. `page_number` is 1-based.
+
+    A render that was killed for taking too long RAISES `ToolTimeout`, so the
+    page's failure names it rather than reading as "could not be rendered"."""
     try:
-        from pdf2image import convert_from_path
-        pages = convert_from_path(str(path), dpi=dpi,
-                                  first_page=page_number, last_page=page_number)
+        pages = external_tools.render(path, dpi=dpi, first_page=page_number,
+                                      last_page=page_number)
         return pages[0] if pages else None
+    except (ToolTimeout, ToolUnavailable):
+        raise
     except Exception:
         return None

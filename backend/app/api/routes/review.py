@@ -358,8 +358,12 @@ def _page_png(reading, page) -> bytes:
         img = straight.resize((max(1, int(straight.width * scale)),
                                max(1, int(straight.height * scale))))
     elif reading["file_type"] == "pdf":
-        from ocr_source import render_pdf_page
-        img = render_pdf_page(reading["path"], page, dpi=PAGE_DPI)
+        from ocr_source import ToolTimeout, ToolUnavailable, render_pdf_page
+        try:
+            img = render_pdf_page(reading["path"], page, dpi=PAGE_DPI)
+        except (ToolTimeout, ToolUnavailable) as exc:
+            raise HTTPException(status_code=503,
+                                detail=f"This page could not be rendered: {exc}")
     else:
         img = Image.open(reading["path"])
     if img is None:
