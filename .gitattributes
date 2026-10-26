@@ -31,3 +31,5 @@
 *.ttf   binary
 *.otf   binary
 *.zip   binary
+*.sh text eol=lf
+backend/docker-entrypoint.sh text eol=lf

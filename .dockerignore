@@ -1,0 +1,21 @@
+# Only what the images need goes into the build context (Part 2.1).
+.git
+.github
+**/.env
+**/.env.*
+!backend/.env.example
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/node_modules
+frontend/.next
+backend/.venv
+backend/storage
+storage
+tests
+docs
+scripts
+*.log
+*.db
+*.sqlite

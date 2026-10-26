@@ -1,0 +1,5 @@
+# The build tools themselves, pinned (Dockerfile.backend). pip 24.0 is what
+# backend/constraints.txt was resolved with.
+pip==24.0
+setuptools==69.5.1
+wheel==0.43.0

@@ -1,38 +1,61 @@
-﻿FROM python:3.11-slim
+﻿# syntax=docker/dockerfile:1
+# DocAgent backend. Hardened in Part 2.1; static review only — this machine
+# cannot build images. After any change: build, then run scripts/verify_image.sh.
+#
+# BASE IMAGE pinned by tag AND digest (resolved 2026-10-26 from Docker Hub;
+# the digest is the multi-arch index). Bump both together, deliberately.
+FROM python:3.11.17-slim-bookworm@sha256:f06d01d4ba3f8ad5af45a3ec87df19c1d317d8e8961edc0fabda61811af6f7cf
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# Install system dependencies
-# poppler-utils is REQUIRED for pdf2image (PDF -> page images for vision/layout
-# extraction); without it pages=0 / has_vision=False and balance-sheet layout
-# templates lose all spatial structure.
-# tesseract-ocr is REQUIRED for engine/ocr_source.py: a PDF page with no text
-# layer is rendered and READ, instead of reaching the model as an empty page.
-# tesseract-ocr-eng is the English trained data and is a SEPARATE package —
-# without it the binary installs and every call fails at run time, which is the
-# worst of both (the image grows and nothing works). The corpus is English;
-# another language means another -<lang> package here.
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    poppler-utils \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    && rm -rf /var/lib/apt/lists/*
+# System packages:
+#   poppler-utils      pdf2image (page rendering)        REQUIRED
+#   tesseract-ocr      OCR of pages with no text layer   REQUIRED
+#   tesseract-ocr-eng  its English data (a SEPARATE package: without it every
+#                      OCR call fails at run time)       REQUIRED
+#   tesseract-ocr-osd  orientation detection (rotated scans)
+#   tini               PID 1: forwards SIGTERM to uvicorn, reaps children
+#   gcc, libpq-dev     building wheels that have none for this platform
+# The versions actually installed are written to /app/BUILD_TOOL_VERSIONS.txt
+# and printed in the build log.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc libpq-dev poppler-utils tesseract-ocr tesseract-ocr-eng \
+        tesseract-ocr-osd tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && { pdftoppm -v 2>&1 | head -1; tesseract --version 2>&1 | head -1; \
+         tini --version; } | tee /app/BUILD_TOOL_VERSIONS.txt
 
-COPY backend/requirements.txt backend/constraints.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -c constraints.txt
+# pip and setuptools are pinned (backend/build-constraints.txt) before the
+# application's own fully pinned set is installed.
+COPY backend/build-constraints.txt backend/requirements.txt backend/constraints.txt ./
+RUN pip install -r build-constraints.txt \
+    && pip install -r requirements.txt -c constraints.txt \
+    && pip check
 
 COPY backend/ .
 
+# Non-root, fixed UID 10001; the storage directory is the only place it writes.
 RUN groupadd --gid 10001 docagent \
     && useradd --uid 10001 --gid 10001 --create-home \
         --shell /usr/sbin/nologin docagent \
     && mkdir -p storage/uploads storage/outputs storage/schemas/clients \
-    && chown -R docagent:docagent storage
+    && chown -R docagent:docagent storage \
+    && chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 8000
-
 USER docagent
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Liveness. /ready is the readiness probe for the platform (docs/ENVIRONMENTS.md).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD python -c "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8000'), timeout=4)" || exit 1
+
+# Exec form, tini as PID 1: SIGTERM reaches uvicorn (graceful shutdown,
+# app/main.py) instead of stopping at a shell. The entrypoint script only
+# expands ${PORT} and then `exec`s uvicorn, so it does not stay in between.
+ENTRYPOINT ["/usr/bin/tini", "--", "/app/docker-entrypoint.sh"]
