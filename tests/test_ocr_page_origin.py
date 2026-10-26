@@ -248,7 +248,7 @@ def _run(path, resolved=None, selected_pages=None, fail_vision=False,
         # changed MICR band rightly splits them into two records
         # (tests/test_multi_cheque.py), which would turn every per-page check
         # here into a per-document one and prove nothing about the floor.
-        mp.setattr(doc_boundaries, "find_starts", lambda texts, family=None: ([0], ""))
+        mp.setattr(doc_boundaries, "find_starts", lambda texts, family=None, report=None: ([0], ""))
         # ...and, having merged two cheques on purpose, not flag the merge
         # (`possible_multiple_documents`, which is right for a REAL merge and
         # would mask the per-page review flags these tests are about).

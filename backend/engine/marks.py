@@ -20,8 +20,8 @@ answer for a slot there can only be invented:
   native page   a dark FILLED rectangle (at least 30 x 6 pt) in the page's
                 drawing layer — a redaction bar. Words beneath it are in the
                 text layer but not on the page a person sees.
-  scanned page  the page image near-black or without contrast, or carrying
-                solid dark blocks the size of a redaction bar.
+  scanned page  the page image near-black, or a grey wash without contrast.
+                A bar on a scan is NOT detected (see image_obscured).
 Values read from beneath a bar are blanked and flagged; empty slots of a
 record with such a region are flagged — `redacted_or_obscured` — so an empty
 cell says WHY it is empty.
@@ -104,8 +104,8 @@ def native_bars(pdf_path, page_numbers=None):
 
 
 def image_obscured(b64):
-    """None, "page" (near-black or no contrast) or "regions" (solid dark
-    blocks the size of a redaction bar) for one page image."""
+    """None or "page" (near-black, or a grey wash without contrast) for one
+    page image. A blank WHITE page is neither."""
     try:
         from PIL import Image, ImageStat
         img = Image.open(io.BytesIO(base64.b64decode(b64))).convert("L")
@@ -120,26 +120,12 @@ def image_obscured(b64):
     # is. Found by scripts/run_local_corpus.py on the blank-separator stack.
     if mean < 40 or (std < 8 and mean < 220):
         return "page"
-    # 8 x 8 blocks at 400 px wide (~ 11 pt on a letter page): a block that is
-    # entirely dark is not a character; three in a row is a bar.
-    px = img.load()
-    bw = 8
-    cols, rows = img.width // bw, img.height // bw
-    dark = [[False] * cols for _ in range(rows)]
-    for by in range(rows):
-        for bx in range(cols):
-            tot = n = 0
-            for y in range(by * bw, by * bw + bw, 2):
-                for x in range(bx * bw, bx * bw + bw, 2):
-                    tot += px[x, y]
-                    n += 1
-            dark[by][bx] = tot / n < 45
-    for row in dark:
-        run = 0
-        for d in row:
-            run = run + 1 if d else 0
-            if run >= 3:
-                return "regions"
+    # NO REGION RULE FOR SCANS (DECISION, Part 3.4): telling a redaction bar
+    # from a cheque's artwork by pixels was tried twice — any 3 dark blocks in
+    # a row, then an isolated bar on a light page clear of the edges — and
+    # flagged 6 of 60 test images, every one a real cheque photo. A scan is
+    # judged on the whole page only; a bar on a scan is not detected (the
+    # values beneath it are unreadable to OCR too, and come back empty).
     return None
 
 

@@ -59,7 +59,9 @@ def test_scan_pages_that_cannot_be_read_are_recognised():
     assert image_obscured(_png(None)) is None
     assert image_obscured(_png(10)) == "page"            # near-black
     assert image_obscured(_png(128)) == "page"           # no contrast
-    assert image_obscured(_png(None, bar=(300, 400, 700, 460))) == "regions"
+    # a bar on a SCAN is not detected: pixel rules for it flagged 6 of 60
+    # real cheque photos (marks.image_obscured); only whole pages are judged
+    assert image_obscured(_png(None, bar=(300, 400, 700, 460))) is None
     assert image_obscured(_png(255)) is None             # a blank separator page
 
 
