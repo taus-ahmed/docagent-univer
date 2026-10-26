@@ -48,7 +48,10 @@ ROLE_ACTIONS: dict[str, frozenset] = {
         "template.create", "template.share", "template.manage_tenant",
         "schema.manage", "user.manage", "stats.view",
         "drive.use", "drive.manage_tenant"}),
+    # job.cancel_any: the legacy firm-wide role cancelled any job of its firm
+    # before the matrix existed, and keeps that (Run 15, Codex review).
     COMPANY_ADMIN: frozenset(_JOB | {
+        "job.cancel_any",
         "template.create", "template.share", "template.manage_tenant",
         "drive.use"}),
     REVIEWER: frozenset(_JOB | {"drive.use"}),

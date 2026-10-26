@@ -31,7 +31,7 @@ MATRIX = {
     "job.view":     ["ok", "ok", "ok", "ok", "ok", 404, 404],
     "job.review":   ["ok", "ok", "ok", "ok", "ok", 404, 404],
     "job.export":   ["ok", "ok", "ok", "ok", "ok", 404, 404],
-    "job.cancel":   ["ok", "ok", 403, 403, "ok", 404, 404],
+    "job.cancel":   ["ok", "ok", "ok", 403, "ok", 404, 404],
     "job.list":     ["ok", "ok", "ok", "ok", "ok", "ok", "ok"],
     "upload":       ["ok", "ok", "ok", "ok", "ok", "ok", "ok"],
     "template.create": ["ok", "ok", "ok", 403, "ok", "ok", "ok"],

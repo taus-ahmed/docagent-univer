@@ -14,7 +14,7 @@ is the one taken 2026-10-23 before the change; line numbers are at that commit.
 |---|---|---|---|---|---|
 | Upload documents | ✓ (names a tenant) | ✓ | ✓ | ✓ | ✓ |
 | View / review / edit / export results | all tenants | own tenant | own tenant | own tenant | own jobs |
-| Cancel a job | any | own tenant | own jobs | own jobs | own jobs |
+| Cancel a job | any | own tenant | own tenant | own jobs | own jobs |
 | Hard-delete a job | any | own tenant | — | — | — |
 | Templates: create / edit own | ✓ | ✓ | ✓ | — | ✓ |
 | Templates: share, edit the firm's | ✓ | ✓ | ✓ | — | — |
@@ -22,8 +22,10 @@ is the one taken 2026-10-23 before the change; line numbers are at that commit.
 | Watch folders | all | own tenant | own | own | own |
 
 Decisions taken: `company_admin` keeps exactly its old powers (it is still
-assignable only through `PUT /api/admin/users`); cancelling someone else's job
-needs an admin (company_admin lost that); an unknown stored role string acts as
+assignable only through `PUT /api/admin/users`), **including cancelling any
+job of its own firm** (`job.cancel_any`; briefly removed in round 13 and
+restored in Run 15 after review — another firm's job still answers 404);
+cancelling someone else's job otherwise needs an admin; an unknown stored role string acts as
 `user`, as the inline checks did; `UserUpdate.role` is now validated against the
 known role values. The UI reads `permissions` from `/api/auth/me` to hide
 controls (`frontend/lib/permissions.ts`); the server checks every request.
