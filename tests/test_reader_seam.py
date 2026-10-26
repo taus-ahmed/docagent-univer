@@ -121,9 +121,9 @@ def htr_result(htr_document, pdf_dir, monkeypatch):
         core.preprocessor, "preprocess_file", lambda _path: htr_document)
     monkeypatch.setattr(
         doc_boundaries, "split",
-        # Same signature as doc_boundaries.split, `forced` included (47e2b47):
-        # one document, so a forced region start has nothing to cut here.
-        lambda texts, lines=None, images=None, forced=(): (
+        # Same signature as doc_boundaries.split, `forced` and `family`
+        # included: one document, so nothing is cut here.
+        lambda texts, lines=None, images=None, forced=(), family=None: (
             [(texts, lines, images, 1)], ""))
     monkeypatch.setattr(
         extractor, "_extract_one",
