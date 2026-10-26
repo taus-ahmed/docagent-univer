@@ -429,7 +429,12 @@ def _validate_row_alignment(
                 f"max_fill={max_fill}, min_fill={min_fill}, "
                 f"sparse_cols={sparse_cols} — flagging for review"
             )
-            print(warn, flush=True)
+            # the stored warning names the table and columns (the user's own
+            # template); the log line carries counts only
+            print(f"[BUG6] Row-column misalignment in one table: "
+                  f"max_fill={max_fill}, min_fill={min_fill}, "
+                  f"{len(sparse_cols)} sparse column(s) — flagging for review",
+                  flush=True)
             warnings.append(warn)
             # Attempt repair: strip leading rows that are empty in ALL sparse columns
             repaired = []
@@ -444,7 +449,7 @@ def _validate_row_alignment(
             if repaired and leading_empty_stripped > 0:
                 print(
                     f"[BUG6] Stripped {leading_empty_stripped} leading-empty rows "
-                    f"to repair alignment for '{src}'",
+                    f"to repair alignment",
                     flush=True,
                 )
                 final_rows.extend(repaired)

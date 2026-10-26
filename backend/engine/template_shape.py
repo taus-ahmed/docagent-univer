@@ -602,8 +602,11 @@ def compute_shape(grid, log=None):
         if log:
             log(msg)
 
-    def _skip(msg):
+    def _skip(msg, logged=None):
         """Something the engine DECLINED to read, kept on the shape (R6).
+
+        `logged` is the same message without template text, for the log: the
+        person drawing the template sees `msg` (coverage), the log does not.
 
         Distinct from `_say`, which also narrates what the engine DID —
         "declared TRANSPOSED table: ..." is a success. Recording every message
@@ -612,7 +615,7 @@ def compute_shape(grid, log=None):
         drawing the template would never see them.
         """
         skipped.append(msg)
-        _say(msg)
+        _say(logged or msg)
 
     try:
         m, migration = _matrix(grid)
@@ -713,9 +716,12 @@ def compute_shape(grid, log=None):
                      f"({len(cols)} columns, no rows beneath) — treated as a "
                      f"band; the writer expands it to the document's rows")
             else:
+                tail = ("but has no empty rows beneath it — not treated as a "
+                        "repeating band")
                 _skip(f"row {hr} looks like a band header "
-                     f"({', '.join(m[(hr, c)] for c in cols)}) but has no empty "
-                     f"rows beneath it — not treated as a repeating band")
+                      f"({', '.join(m[(hr, c)] for c in cols)}) {tail}",
+                      logged=f"row {hr} looks like a band header "
+                             f"({len(cols)} headings) {tail}")
                 continue
         section = _section_for(m, static, hr, wide)
         headers_raw = [m[(hr, c)] for c in cols]

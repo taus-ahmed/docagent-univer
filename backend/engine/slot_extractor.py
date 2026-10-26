@@ -1138,8 +1138,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # which is the failure this is meant to prevent.
             bands = column_bands(all_lines, headers) if all_lines else {}
             if bands:
-                _log("PLACE", f'{t["name"]}: column bands read from the '
-                              f'document for {sorted(bands)}')
+                # a count only: a band's name and headings are template text
+                _log("PLACE", f"column bands read from the document for "
+                              f"{len(bands)} heading(s)")
             # ROW IDENTITY IS POSITIONAL, NOT TEXTUAL.
             #
             # This used to key a row on the TEXT of its source span and drop

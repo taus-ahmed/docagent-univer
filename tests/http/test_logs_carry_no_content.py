@@ -250,3 +250,37 @@ def test_the_unhandled_exception_handler_logs_no_content(app, everything_logged,
     assert resp.status_code == 500
     _assert_clean(capfd, everything_logged)
     assert any("ValueError" in r.getMessage() for r in everything_logged.records)
+
+
+TPL = "QZXTPLTEXT"
+
+
+def test_a_templates_own_text_is_not_logged(
+        db, users, _db_url, monkeypatch, tmp_path, offline, everything_logged, capfd):
+    """Run 15 item 7: the template's labels and headings are the firm's own
+    text. Labels, a band and a refused two-column band all carry a sentinel."""
+    import tests.http.test_logs_carry_no_content as me
+    grid = {"cells": {"0,0": {"value": f"Customer Name {TPL}"},
+                      "1,0": {"value": f"Invoice Number {TPL}"},
+                      "3,0": {"value": f"Item {TPL}"}, "3,1": {"value": f"Qty {TPL}"},
+                      "3,2": {"value": f"Amount {TPL}"},
+                      "8,0": {"value": f"Total {TPL}"}, "8,1": {"value": f"Tax {TPL}"}},
+            "colWidths": [160, 160, 160], "merges": {}, "repeatRows": []}
+    monkeypatch.setattr(me, "GRID", grid)
+    _run(db, users, _db_url, monkeypatch, tmp_path, template=True,
+         keys=[f"clients/acme_001/jobs/4/source/{FILENAME}"])
+    out, err = capfd.readouterr()
+    logged = out + err + "\n".join(r.getMessage() for r in everything_logged.records)
+    hits = [ln for ln in logged.splitlines() if TPL.lower() in ln.lower()]
+    assert not hits, "\n".join(hits[:10])
+    assert "[THREAD]" in out
+
+
+def test_a_refused_band_names_its_headings_to_the_user_not_the_log():
+    from template_shape import compute_shape
+    lines = []
+    grid = {"cells": {"0,0": {"value": f"Total {TPL}"}, "0,1": {"value": f"Tax {TPL}"}},
+            "colWidths": [], "merges": {}}
+    shape = compute_shape(grid, log=lines.append)
+    assert any(TPL in s for s in shape["coverage"]["skipped"])
+    assert not [ln for ln in lines if TPL in ln], lines

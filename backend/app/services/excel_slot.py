@@ -143,8 +143,9 @@ def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod, provenance=True):
     for i, (sig, g) in enumerate(groups.items()):
         sheet = ws if i == 0 else wb.create_sheet()
         sheet.title = _sheet_title(g["title"], i + 1)
+        # the sheet's title is a template or document title: its index only
         print(f"[EXPORT]   shape {sig}: {len(g['docs'])} document(s) "
-              f"-> sheet '{sheet.title}'", flush=True)
+              f"-> sheet {i + 1}", flush=True)
         _write_slot_excel(sheet, g["docs"], g["grid"], g["grid"].get("cells", {}),
                           openpyxl_mod, provenance=provenance)
     return True

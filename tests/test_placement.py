@@ -225,3 +225,15 @@ class TestTheW2ExtractsWhole:
                  for col, want in zip(W2_COLUMNS, truth)
                  if _plain(rows[name].get(col)) != want]
         assert wrong == [], wrong
+
+
+def test_the_placement_log_names_no_heading(stmt, capsys):
+    """Run 15 item 7: the band's headings are template text; the log line
+    says how many were placed, not which."""
+    text, *_ = stmt
+    _run(stmt, [_row(_source(text, "01/03"), "", "$15,000.00")])
+    place = [ln for ln in capsys.readouterr().out.splitlines() if "PLACE" in ln]
+    assert place, "the placement check did not run"
+    for ln in place:
+        for heading in ("Debit", "Credit", "Balance", "Description"):
+            assert heading not in ln, ln

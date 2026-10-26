@@ -132,8 +132,9 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         for k, r in raw_secs:
             sig = _content_sig(r)
             if sig and sig in _seen_sigs:
-                print(f"[EXPORT] layout: dropped section '{k}' — identical content "
-                      f"to '{_seen_sigs[sig]}'", flush=True)
+                # counts only: a section heading is the document's own text
+                print(f"[EXPORT] layout: dropped a section with {len(r)} row(s) "
+                      f"— identical content to an earlier one", flush=True)
                 continue
             if sig:
                 _seen_sigs[sig] = k
@@ -162,8 +163,9 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 if sc > best_score:
                     best, best_score = g, sc
             if best is not None and best_score >= 0.6:
-                print(f"[EXPORT] layout: semantic match '{sec_key}' -> group "
-                      f"'{best.get('section_label')}' (score {best_score:.2f}, "
+                # scores and columns only: both names are a firm's own text
+                print(f"[EXPORT] layout: semantic section match "
+                      f"(score {best_score:.2f}, "
                       f"cols {best.get('label_col_letter')}/"
                       f"{best.get('value_col_letter')})", flush=True)
                 return best
@@ -192,7 +194,7 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                         and len(l1 - l2) <= 1):         # k1 adds <=1 label (its subtotal)
                     drop.add(k1)        # k1 is the redundant superset -> drop it
         if drop:
-            print(f"[EXPORT] layout: dropped duplicate section(s) {sorted(drop)}", flush=True)
+            print(f"[EXPORT] layout: dropped {len(drop)} duplicate section(s)", flush=True)
         kept = [(k, r) for k, r in raw_secs if k not in drop]
 
         matched_to, used = {}, set()
@@ -225,8 +227,8 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                         cands.append(g)
                 if cands:
                     best = max(cands, key=lambda g: _sem_score(k, g.get("section_label")))
-                    print(f"[EXPORT] layout: S4 overflow section '{k}' -> parallel "
-                          f"group '{best.get('section_label')}' (cols "
+                    print(f"[EXPORT] layout: S4 overflow section -> parallel "
+                          f"group (cols "
                           f"{best.get('label_col_letter')}/{best.get('value_col_letter')}, "
                           f"parallel_group_id={best.get('parallel_group_id')}, "
                           f"sem={_sem_score(k, best.get('section_label')):.2f})", flush=True)
@@ -346,9 +348,9 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                     tpl_cell.get("mergeParent")
                     or (str(tpl_cell.get("value") or "").strip()
                         and not tpl_cell.get("extractTarget"))):
+                # the reference only: a template cell's text is the firm's own
                 print(f"[EXPORT] layout: SKIP extracted_fields {ref} -> static "
-                      f"template cell ('{str(tpl_cell.get('value') or '')[:30]}') "
-                      f"— never overwritten", flush=True)
+                      f"template cell — never overwritten", flush=True)
                 continue
             _set_num(ws.cell(row=out_row(rownum - 1) + 1, column=ci), value)
             sm.field(ws.cell(row=out_row(rownum - 1) + 1, column=ci), ed,

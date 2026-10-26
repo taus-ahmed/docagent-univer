@@ -531,12 +531,13 @@ def _build_vision_prompt(template_data: dict, doc_text: str = "",
           f"kv={len(regions.get('kv_pairs',[]))}", flush=True)
     if table_regions:
         for i, tr in enumerate(table_regions):
-            print(f"[PROMPT] table_{i+1}: '{tr.get('section_label','')}' "
-                  f"cols={tr.get('column_names',[])} "
+            # counts only: section labels and column names are template text
+            print(f"[PROMPT] table_{i+1}: "
+                  f"{len(tr.get('column_names', []) or [])} column(s) "
                   f"key={'table_'+str(i+1)+'_rows'}", flush=True)
-    # Log key section of output format to verify separate arrays are being sent
-    fmt_preview = output_format[:300].replace('\n',' ')
-    print(f"[PROMPT] output_format preview: {fmt_preview}", flush=True)
+    # The output format is part of the prompt (template text): its size only.
+    print(f"[PROMPT] output_format: {len(output_format)} chars (not logged)",
+          flush=True)
 
     return system_instruction, user_prompt
 

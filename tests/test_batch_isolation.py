@@ -322,6 +322,21 @@ class TestMixedBatchNoTemplate:
         assert ok is True
         assert len(wb.sheetnames) == 3, wb.sheetnames
 
+    def test_the_export_log_names_no_sheet_title(self, mixed):
+        """Run 15 item 7: a sheet's title is a template/document title."""
+        import openpyxl
+        from app.api.routes.extract import _write_inferred_sheets
+        docs = [_doc_result(mixed[s][0]) for s in MIXED]
+        wb = openpyxl.Workbook()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            _write_inferred_sheets(wb, wb.active, docs, openpyxl)
+        lines = [ln for ln in out.getvalue().splitlines() if "shape" in ln]
+        assert lines
+        for ln in lines:
+            for title in wb.sheetnames:
+                assert f"'{title}'" not in ln, ln
+
     def test_no_sheet_contains_another_documents_identifier(self, mixed):
         import openpyxl
         from app.api.routes.extract import _write_inferred_sheets
