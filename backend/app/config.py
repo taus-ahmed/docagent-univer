@@ -180,6 +180,14 @@ class Settings(BaseSettings):
     #: to every other firm. EMPTY BY DEFAULT = Drive closed to everyone.
     DRIVE_TENANT: str = ""
 
+    # ── Proxies ───────────────────────────────────────────────────────────────
+    #: How many proxies in front of the app each APPEND one X-Forwarded-For
+    #: entry (Railway's edge = 1). The login limiter trusts the entry the
+    #: farthest of them appended — the N-th from the right — and ignores every
+    #: entry before it, which the caller wrote. 0 = trust no header (the TCP
+    #: peer). Fewer entries than N also falls back to the peer.
+    TRUSTED_PROXY_COUNT: int = 1
+
     @property
     def max_upload_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024

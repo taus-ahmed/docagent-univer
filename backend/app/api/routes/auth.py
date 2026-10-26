@@ -80,18 +80,27 @@ def _record_success(key):
 
 
 def _get_client_ip(request: Request) -> str:
-    """The client's address as the nearest proxy saw it.
+    """The client's address as the farthest TRUSTED proxy saw it.
 
-    The LAST X-Forwarded-For entry is the one the platform's own proxy
-    appended (Railway's edge — VERIFY in docs/OPERATIONS.md); every entry
-    before it is whatever the caller chose to send. Reading the first one let
-    anyone rotate addresses past the limiter, or name someone else's."""
+    Each of the TRUSTED_PROXY_COUNT proxies in front of the app appends one
+    X-Forwarded-For entry (Railway's edge: one — VERIFY, docs/OPERATIONS.md),
+    so the client is the N-th entry from the right; everything before it is
+    whatever the caller chose to send. Reading the first entry let anyone
+    rotate addresses past the limiter, or name someone else's. With no
+    header, no trusted proxy, or fewer entries than trusted proxies, the TCP
+    peer is used: coarse, but not something a caller can choose."""
+    peer = request.client.host if request.client else "unknown"
+    try:
+        trusted = max(0, int(getattr(settings, "TRUSTED_PROXY_COUNT", 1)))
+    except (TypeError, ValueError):
+        trusted = 1
     forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
-        if parts:
-            return parts[-1]
-    return request.client.host if request.client else "unknown"
+    if not trusted or not forwarded:
+        return peer
+    parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+    if len(parts) < trusted:
+        return peer
+    return parts[-trusted]
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────

@@ -44,6 +44,7 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `MAX_FILES_PER_BATCH` | `100` | | per upload |
 | `TENANT_MONTHLY_PAGE_LIMIT` | `2000` | | pages per firm per calendar month; `0` = unlimited (default) |
 | `DATA_RETENTION_DAYS` | `90` | | delete jobs this many days after they finish, daily; `0` = off (default) |
+| `TRUSTED_PROXY_COUNT` | `1` | | proxies in front of the backend that each append one `X-Forwarded-For` entry; the login limiter trusts the N-th entry from the right (§9). `0` = ignore the header |
 | `DRIVE_TENANT` | `smith_cpa` | | the one firm whose Google Drive the server's Drive credential is; empty = Drive off (default) |
 | `DEMO_CLIENT_IDS`, `DEMO_MAX_MB`, `DEMO_MAX_UPLOADS`, `DEMO_UPLOADS_ENABLED`, `DEMO_HISTORY_CUTOFF` | `pearx_demo`, `10`, `20`, `true`, empty | | the investor demo; empty `DEMO_CLIENT_IDS` = no demo |
 | `DOCAGENT_BOOTSTRAP_ADMIN_USERNAME`, `…_PASSWORD`, `…_DISPLAY_NAME` | | S | creates the first platform admin on an empty database; **remove the password variable right after** |
@@ -166,11 +167,17 @@ deleting the commit.
 - **One backend instance.** The login limiter, the job threads, the restart
   recovery and the retention task live in the process. Running two would
   double the purge and split the limiter (needs Redis/Celery, Phase 4).
-- **The login limiter trusts the last `X-Forwarded-For` entry** as the address
-  Railway's edge saw (**VERIFY** that Railway appends the client address as
-  the last entry). If the frontend calls through the Next.js proxy, every user
-  shares Vercel's address; the limit is per (address, username), so a lockout
-  still only affects one username.
+- **The login limiter trusts the `X-Forwarded-For` entry appended by the
+  farthest trusted proxy**: with `TRUSTED_PROXY_COUNT=1` (default) the last
+  entry, the address Railway's edge saw (**VERIFY** that Railway appends the
+  client address as the last entry, and that nothing else between the edge
+  and the app appends one). Put another proxy in front (a CDN, a load
+  balancer) and raise it by one per proxy that appends an entry. Every entry
+  to the left is whatever the caller sent and is ignored. With no header, or
+  fewer entries than trusted proxies, the TCP peer is used. If the frontend
+  calls through the Next.js proxy, every user shares Vercel's address; the
+  limit is per (address, username), so a lockout still only affects one
+  username.
 - Login lockout: 5 failures → 15 minutes, per (address, username), in memory
   (reset by a restart).
 
