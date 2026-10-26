@@ -30,6 +30,10 @@ from tests.harness import bootstrap as bs
 
 bs.bootstrap()
 
+from app.api.routes import drive as _drive_mod  # noqa: E402
+
+_REAL_WATCH_CHECK = _drive_mod._do_watch_check    # before _inert stubs it
+
 A, B = "isoAfirm", "isoBfirm"
 MISSING = "999999"
 A_MARKERS = ("isoAfirm", "isoA-template-marker", "isoA-secret-invoice",
@@ -228,8 +232,7 @@ def _inert(monkeypatch):
     monkeypatch.setattr("app.api.routes.drive._get_drive", lambda: _FakeDrive())
     monkeypatch.setattr("app.api.routes.drive._run_drive_extraction", lambda *a, **k: None)
     monkeypatch.setattr("app.api.routes.drive._do_watch_check", lambda *a, **k: None)
-    if "DRIVE_TENANT" in type(settings).model_fields:
-        monkeypatch.setattr(settings, "DRIVE_TENANT", A)
+    monkeypatch.setattr(settings, "DRIVE_TENANT", A)
     monkeypatch.setattr(settings, "DEMO_CLIENT_IDS", "")
 
 
@@ -278,17 +281,11 @@ def _scan_bytes(content: bytes) -> list[str]:
 
 ID_ROUTES = sorted(k for k, v in ROUTES.items() if v == "id")
 
-#: LEAK, fixed in the next commit: the server's one Drive credential is open to
-#: every firm. Strict, so the fix is forced to remove this.
-_DRIVE_LEAK = pytest.mark.xfail(strict=True, reason="Drive open to every firm")
 
-
-def _p(route):
-    return pytest.param(route, marks=_DRIVE_LEAK) if "/drive/" in route[1] else route
 B_ROLES = ("admin", "reviewer", "user")
 
 
-@pytest.mark.parametrize("route", [_p(r) for r in ID_ROUTES], ids=lambda r: f"{r[0]} {r[1]}")
+@pytest.mark.parametrize("route", ID_ROUTES, ids=lambda r: f"{r[0]} {r[1]}")
 @pytest.mark.parametrize("role", B_ROLES)
 def test_firm_a_ids_answer_firm_b_exactly_like_missing_ids(client, firms, route, role):
     method, path = route
@@ -468,7 +465,6 @@ def test_admin_user_creation_cannot_target_firm_a(client, firms, role):
 
 # ── Drive: one server-wide credential ────────────────────────────────────────
 
-@_DRIVE_LEAK
 @pytest.mark.parametrize("role", B_ROLES)
 def test_drive_is_closed_to_a_firm_it_does_not_belong_to(client, firms, db, role):
     """The server's Drive credential is firm A's (DRIVE_TENANT). Firm B must
@@ -485,20 +481,56 @@ def test_drive_is_closed_to_a_firm_it_does_not_belong_to(client, firms, db, role
     r = client.post("/api/watch", headers=hdr,
                     json={"folder_id": firms[A].folder, "folder_name": "x", "client_id": A})
     assert r.status_code == 403, r.text[:200]
-    assert not db.query(WatchFolder).filter(WatchFolder.client_id == B).count()
+    assert not db.query(WatchFolder).filter(WatchFolder.folder_id == firms[A].folder,
+                                            WatchFolder.client_id == B).count()
     assert client.post("/api/watch/check", headers=hdr).status_code == 403
 
 
-def test_drive_stays_open_to_its_own_firm(client, firms):
+def test_drive_stays_open_to_its_own_firm(client, firms, db):
+    from app.models.models import ExtractionJob, WatchFolder
     r = client.get("/api/drive/folders/root", headers=firms[A].hdr["user"])
     assert r.status_code == 200 and "isoA-drive-file" in r.text
+    r = client.post("/api/drive/extract", headers=firms[A].hdr["user"],
+                    params={"folder_id": "f", "client_id": B})
+    assert r.status_code == 202, r.text
+    assert db.get(ExtractionJob, r.json()["job_id"]).client_id == A
+    r = client.post("/api/watch", headers=firms[A].hdr["admin"],
+                    json={"folder_id": "isoAnew", "folder_name": "n", "client_id": B})
+    assert r.status_code == 201, r.text
+    assert db.get(WatchFolder, r.json()["id"]).client_id == A
 
 
-@_DRIVE_LEAK
+def test_drive_status_says_not_configured_to_another_firm(client, firms):
+    r = client.get("/api/drive/auth/status", headers=firms[B].hdr["admin"])
+    assert r.status_code == 200
+    assert (r.json()["is_configured"], r.json()["is_authenticated"]) == (False, False)
+    r = client.get("/api/drive/auth/status", headers=firms[A].hdr["admin"])
+    assert r.json()["is_configured"] is True
+
+
+def test_the_watcher_never_processes_another_firms_folder(firms, db, monkeypatch):
+    """A watch row naming firm B (left from before DRIVE_TENANT) is never
+    handed to the watcher, even when firm B's own user triggers the check."""
+    import sys
+    import types
+    from app.models.models import WatchFolder
+    stale = WatchFolder(user_id=firms[B].users["admin"].id, folder_id="isoBold",
+                        folder_name="old", client_id=B)
+    db.add(stale); db.commit()
+    seen = []
+    fake = types.ModuleType("drive_watcher")
+    fake.check_watched_folders = lambda fdb, verbose=False: seen.extend(fdb.get_watch_folders())
+    monkeypatch.setitem(sys.modules, "drive_watcher", fake)
+    url = str(db.bind.url)
+    _REAL_WATCH_CHECK(firms[B].users["admin"].id, url)
+    assert seen == []
+    _REAL_WATCH_CHECK(firms[A].users["admin"].id, url)
+    assert {w["client_id"] for w in seen} == {A}
+
+
 def test_drive_is_closed_to_everyone_when_no_firm_owns_it(client, firms, monkeypatch):
     from app.config import settings
-    if "DRIVE_TENANT" in type(settings).model_fields:
-        monkeypatch.setattr(settings, "DRIVE_TENANT", "")
+    monkeypatch.setattr(settings, "DRIVE_TENANT", "")
     for f in (A, B):
         assert client.get("/api/drive/folders/root",
                           headers=firms[f].hdr["admin"]).status_code == 403

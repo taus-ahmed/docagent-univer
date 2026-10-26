@@ -56,6 +56,34 @@ router = APIRouter(prefix="/api", tags=["drive"],
                    dependencies=[Depends(_drive_not_in_the_demo)])
 
 
+def drive_tenant() -> str:
+    from app.config import settings
+    return (getattr(settings, "DRIVE_TENANT", "") or "").strip()
+
+
+def drive_open_to(user) -> bool:
+    """Is the server's Drive credential this user's firm's?
+
+    Drive is ONE server-wide OAuth token (`gdrive.py`), so browsing it shows
+    that token's Drive to whoever asks, and a job or watch folder built from it
+    processes that Drive's files under the caller's firm. It is therefore open
+    only to the firm named by DRIVE_TENANT (and the platform admin, acting for
+    that firm); empty means closed to everyone.
+    """
+    from app.core.permissions import PLATFORM_ADMIN, role_of
+    owner = drive_tenant()
+    if not owner or user is None:
+        return False
+    return role_of(user) == PLATFORM_ADMIN or getattr(user, "client_id", None) == owner
+
+
+def _drive_owner_only(current_user: User = Depends(get_current_user)) -> User:
+    if not drive_open_to(current_user):
+        raise HTTPException(status_code=403,
+                            detail="Google Drive is not available for this account.")
+    return current_user
+
+
 def _get_drive():
     """Load the Google Drive connector from the engine.
 
@@ -82,8 +110,11 @@ def _get_drive():
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 
 @router.get("/drive/auth/status", response_model=DriveAuthStatus)
-def drive_auth_status(_: User = Depends(get_current_user)):
-    """Check Google Drive authentication status."""
+def drive_auth_status(current_user: User = Depends(get_current_user)):
+    """Check Google Drive authentication status (not configured, for a firm
+    the server's Drive credential does not belong to)."""
+    if not drive_open_to(current_user):
+        return DriveAuthStatus(is_configured=False, is_authenticated=False)
     try:
         drive = _get_drive()
         return DriveAuthStatus(
@@ -95,7 +126,7 @@ def drive_auth_status(_: User = Depends(get_current_user)):
 
 
 @router.post("/drive/auth")
-def drive_auth(current_user: User = Depends(get_current_user)):
+def drive_auth(current_user: User = Depends(_drive_owner_only)):
     """
     Initiate Google Drive OAuth flow.
     Returns instructions — user must complete OAuth in browser.
@@ -128,7 +159,7 @@ def drive_auth(current_user: User = Depends(get_current_user)):
 @router.get("/drive/folders/{folder_id}", response_model=DriveFolderContents)
 def list_drive_folder(
     folder_id: str = "root",
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_drive_owner_only),
 ):
     """List files and subfolders in a Drive folder."""
     try:
@@ -172,7 +203,7 @@ def extract_from_drive(
     client_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_drive_owner_only),
     storage=Depends(get_storage),
 ):
     """Download files from a Drive folder and run extraction.
@@ -188,8 +219,9 @@ def extract_from_drive(
         raise HTTPException(status_code=401, detail="Google Drive not authenticated")
 
     # Same rule as /api/extract/upload: the tenant comes from the token.
-    from app.api.routes.extract import resolve_client_id
-    client_id = resolve_client_id(current_user, client_id)
+    # The Drive's files are the Drive firm's, whoever asks and whatever the
+    # request names.
+    client_id = drive_tenant()
 
     schema_path = storage.get_schema_path(client_id)
     if not schema_path:
@@ -302,14 +334,13 @@ def list_watch_folders(
 def add_watch_folder(
     payload: WatchFolderCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_drive_owner_only),
     storage=Depends(get_storage),
 ):
     """Add a new watch folder."""
     # A watch folder feeds extraction jobs, so it is tagged with the tenant the
     # token authorises, not the one the body names.
-    from app.api.routes.extract import resolve_client_id
-    client_id = resolve_client_id(current_user, payload.client_id)
+    client_id = drive_tenant()      # the Drive firm's, whatever the body names
 
     # Verify schema exists. Only the existence is needed, so an object-store
     # temp copy is handed straight back.
@@ -363,7 +394,7 @@ def remove_watch_folder(
 def manual_watch_check(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_drive_owner_only),
 ):
     """Manually trigger a watch folder check."""
     background_tasks.add_task(_do_watch_check, current_user.id, str(db.bind.url))
@@ -387,7 +418,11 @@ def _do_watch_check(user_id, db_url):
         class FakeDB:
             """Adapter between v2 models and legacy watcher."""
             def get_watch_folders(self):
-                wfs = session.query(WatchFolder).filter_by(is_active=True, user_id=user_id).all()
+                # only the Drive firm's folders: a row left from before
+                # DRIVE_TENANT (or naming another firm) is never processed
+                wfs = session.query(WatchFolder).filter_by(
+                    is_active=True, user_id=user_id,
+                    client_id=drive_tenant() or None).all()
                 return [{"id": w.id, "folder_id": w.folder_id, "folder_name": w.folder_name,
                          "client_id": w.client_id, "processed_file_ids": w.get_processed_ids()} for w in wfs]
 

@@ -216,8 +216,11 @@ class TestRoutes:
         assert r.status_code == 404, r.text
         assert _copies(with_s3) == []
 
-    def test_adding_a_watch_folder_leaves_no_copy(self, client, auth, with_s3, db):
+    def test_adding_a_watch_folder_leaves_no_copy(self, client, auth, with_s3, db,
+                                                  monkeypatch):
+        from app.config import settings
         from app.models.models import WatchFolder
+        monkeypatch.setattr(settings, "DRIVE_TENANT", "acme_001")   # acme's Drive
         r = client.post("/api/watch", headers=auth["acme"],
                         json={"folder_id": "tmpcopy-1", "folder_name": "f",
                               "client_id": "acme_001"})

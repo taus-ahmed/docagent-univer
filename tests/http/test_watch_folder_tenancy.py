@@ -128,6 +128,8 @@ class TestCreate:
         schema.write_text("x: 1", encoding="utf-8")
         monkeypatch.setattr(storage_mod.get_storage(), "get_schema_path",
                             lambda cid: schema)
+        from app.config import settings
+        monkeypatch.setattr(settings, "DRIVE_TENANT", "acme_001")   # acme's Drive
         fid = "create-" + uuid.uuid4().hex[:8]
         r = client.post("/api/watch", headers=auth["acme"], json={
             "folder_id": fid, "folder_name": fid, "client_id": "other_002"})

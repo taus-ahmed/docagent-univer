@@ -163,6 +163,13 @@ class Settings(BaseSettings):
     #: touched, and a non-demo tenant never sees this filter at all.
     DEMO_HISTORY_CUTOFF: str = ""
 
+    # ── Google Drive ──────────────────────────────────────────────────────────
+    #: The ONE firm (client_id) the server's Google Drive credential belongs
+    #: to. Drive is a single server-wide OAuth token, so whoever can browse it
+    #: sees that Drive: every Drive route, Drive job and watch folder is closed
+    #: to every other firm. EMPTY BY DEFAULT = Drive closed to everyone.
+    DRIVE_TENANT: str = ""
+
     @property
     def max_upload_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
