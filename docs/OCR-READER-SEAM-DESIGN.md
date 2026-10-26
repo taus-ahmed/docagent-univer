@@ -716,6 +716,7 @@ everything carries `False` and `[]`.
 | `minor_units_mismatch` | an amount carries a fraction its currency does not have (ISO 4217 minor units): a yen amount with decimals, a dollar amount with three | none — it requires review |
 | `date_ambiguous` | a numeric date whose day and month could swap (both 12 or below, and different) with no evidence of the order — no template or firm locale, no other date on the record that settles it (engine/dates.py). The verbatim text is kept | none — it requires review |
 | `date_unreadable` | a date written in digits of another script (Devanagari, Arabic-Indic, full-width, …); not converted | none — it requires review |
+| `non_english_text` | the value has letters of a non-Latin script, or was read from a page whose text is in another script or (by function words) another Latin-script language (engine/scripts.py). The engine's prompts and checks are English: nothing is translated, and the value was not checked by them. Page languages are in `validation.page_languages` | none — it requires review |
 
 Document-level facts that have no single value to sit on are reported in
 `validation` and `flagged_fields` and set `needs_review` directly: a MICR

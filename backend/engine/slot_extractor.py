@@ -1379,7 +1379,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     for res in run_checks(default_doc_type, CheckContext(
             slots["fields"], extracted_fields, pages,
             tables=slots["tables"], rows=tables_out, incomplete=incomplete,
-            locale=locale)):
+            locale=locale,
+            value_pages={ref: (field_prov.get(ref) or {}).get("page")
+                         for ref in extracted_fields},
+            page_numbers=page_numbers)):
         for ref, ev in res.evidence.items():
             if ref in field_prov:
                 field_prov[ref].update(ev)

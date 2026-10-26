@@ -677,3 +677,18 @@ anyone who saw the old behaviour should know it changed.
 | **Merging, centring, shading and borders were lost on export.** | The formatting you drew comes back with the values. |
 | **Tick-boxes in proper fillable forms were guessed at.** | Read from the file itself. |
 | **A label used twice lost one of its values.** A template with one label against two value columns showed a single value in the results grid and in the field-list downloads; the second was overwritten with no message, so the sheet looked complete. | Both values are there, the second named by its column heading or its cell. The template download always held both. |
+
+## Documents in another language or script are flagged, not read
+
+**PARTIAL (Part 1.4).** The engine's prompts, labels, prose checks and
+number words are English. A value with letters of a non-Latin script
+(Devanagari, Arabic, CJK, Cyrillic, …), or read from a page whose text is in
+another script or — judged by function words — another Latin-script language
+(German, French, Spanish, Italian, Dutch, Portuguese), carries
+`non_english_text` and needs review; the page's language is in
+`validation.page_languages`. Nothing is translated or guessed. Numbers and
+dates in any locale are read (`number_ambiguous` / `date_ambiguous` when the
+locale cannot be told); amounts in words are English only; a date in another
+script's digits is `date_unreadable`. Tesseract has only English
+(`eng`, `osd`) installed, so a scanned page in another script reads as noise:
+[proposals/ocr-languages.md](proposals/ocr-languages.md).

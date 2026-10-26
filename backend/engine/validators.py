@@ -47,6 +47,11 @@ class CheckContext:
     #: the template's locale, else the firm's (`locale:` in its YAML); None =
     #: let the document's own numbers decide (engine/amounts.py)
     locale: object = None
+    #: {field ref: file page} where known; a row carries its own `_page`
+    value_pages: dict = field(default_factory=dict)
+    #: the FILE page number of each entry of `pages`, when the record is a
+    #: slice of a file; None = pages are 1, 2, 3, …
+    page_numbers: object = None
 
     def texts(self):
         """Every extracted value of the record, fields and table cells."""
@@ -142,6 +147,7 @@ def _load():
         _loaded = True
         import notation_validators  # noqa: F401
         import date_validators  # noqa: F401
+        import language_validators  # noqa: F401
         import cheque_validators  # noqa: F401
         import invoice_validators  # noqa: F401
         import bank_validators  # noqa: F401

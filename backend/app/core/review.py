@@ -124,6 +124,9 @@ REASONS: dict[str, tuple[str, str]] = {
     "date_unreadable": (
         "Date in another script",
         "The date uses digits the engine does not read. Check it against the document."),
+    "non_english_text": (
+        "Not English — not checked",
+        "This value was read from text in another language or script. The engine's checks only understand English, so compare it with the document."),
 }
 
 
