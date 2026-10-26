@@ -383,12 +383,14 @@ model call. A model call already in flight finishes (a few seconds) and its
 answer is thrown away. Files that had finished keep their results; every other
 file is listed as *cancelled*, and the job says how far it got.
 
-## Deleting a job's data is per job, by an administrator
+## Deleting data is per job; whole-firm deletion is manual
 
-**PARTIAL.** A firm's administrator can delete one job's files, page images and
-extracted values (*Delete data* on the History page); the job stays in the
-history, marked deleted. There is no automatic deletion after a retention
-period and no "delete everything for this firm" yet (docs/proposals/retention.md).
+**PARTIAL.** The job's own user or the firm's administrator can delete one
+job's files, page images and extracted values (*Delete data* on the History
+page, confirmed); the job stays in the history, marked deleted. With
+`DATA_RETENTION_DAYS` set, finished jobs older than that are deleted daily —
+one period for every firm. Deleting a whole firm in one step, per-firm periods
+and an audit trail need a migration (docs/proposals/retention-v2.md).
 
 ## Templates: a table with no column headings is refused
 

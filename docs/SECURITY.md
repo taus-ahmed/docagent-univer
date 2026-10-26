@@ -23,21 +23,49 @@ names the code that implements it.
   bulk migration. A user who never logs in again keeps the old hash. An
   unknown username spends one dummy bcrypt verify, so response time does not
   reveal which usernames exist.
-- **Login rate limit**: 5 failed attempts per IP locks that IP out for 15
-  minutes (`routes/auth.py`). It is in memory, so it resets on restart and does
-  not span instances. `X-Forwarded-For` is trusted (Railway's proxy).
+- **Login rate limit**: 5 failed attempts for one username from one address
+  lock that (address, username) out for 15 minutes (`routes/auth.py`). Keyed
+  by the pair so nobody can lock out another firm's users: failures against a
+  username lock only that username, only from that address. The address is
+  the LAST `X-Forwarded-For` entry — the one Railway's proxy appends (⚠
+  VERIFY); earlier entries are the caller's to choose and are ignored. In
+  memory: resets on restart and does not span instances. A per-username lock
+  across all addresses was rejected: it lets anyone lock a named user out.
+- **One-time passwords**: an account created for someone else (onboarding,
+  `scripts/create_tenant.py`, `POST /api/admin/tenants`, or a user created or
+  reset with `must_change_password`) has its hash behind an `otp$` marker.
+  It signs in, and every route but `GET /api/auth/me`, `POST
+  /api/auth/change-password` and logout answers 403 until the user chooses a
+  new password (at least 12 characters, proving the current one). No column:
+  the marker lives in the hash it describes. The one-time password is shown
+  once (script stdout or the create response) and never logged.
+- **Firms**: created only by the platform admin (`POST /api/admin/tenants`) or
+  the script, which refuses unless `--confirm-database` names the database's
+  host class and never prints the database URL. Deactivating a firm
+  deactivates every user (tokens stop working at once: `get_current_user`
+  checks `is_active`); data stays.
 
 ## Tenancy
 
 - Every data table carries `client_id`. The tenant a request acts as comes from
   the **token, never the request body** (`extract.py::resolve_client_id`, via `permissions.role_of`); a
   super-administrator (role `admin`, no `client_id`) must name the client.
-- Hard delete: `DELETE /api/jobs/{id}/data` (tenant admin of the job's firm,
-  platform admin) removes the job's stored files (sources, outputs; local or
+- Hard delete: `DELETE /api/jobs/{id}/data?confirm=true` (the job's user, a
+  tenant admin of the job's firm, platform admin) removes the job's stored files (sources, outputs; local or
   object store, verified gone before anything else changes), the review
   screen's cached page/OCR images and temp copies, and every result row; the
   job record stays with a `deleted` mark. Running jobs must be cancelled first
-  (409). Logged as job id and counts only.
+  (409). Logged as job id and counts only. Since round 14 the job's own user
+  may do it too, and `?confirm=true` is required.
+- Owner delete and retention (round 14): the job's own user may also
+  hard-delete it; `?confirm=true` is required, without it nothing happens
+  (400). `DATA_RETENTION_DAYS` > 0 starts a daily task that purges finished
+  jobs older than the period through the same `purge_job`, one firm at a time
+  with every query naming the firm (`core/retention.py`); 0 (default) starts
+  nothing. Logged as job ids and counts. Per-firm periods and an audit table
+  need a migration: `proposals/retention-v2.md`.
+- Cost control: `TENANT_MONTHLY_PAGE_LIMIT` / a firm's `monthly_page_limit`
+  (`core/usage.py`); refused before anything is stored (429).
 - Cancel: `DELETE /api/jobs/{id}` — the owner, or an admin in scope; the job
   thread stops at its next checkpoint and lists unfinished files as cancelled
   (docs/ENGINE-RESULT-CONTRACT.md §1.2). Logged as job and user ids.
@@ -165,4 +193,6 @@ template, or — with no template — field names the model chose from the page
 |---|---|---|
 | A password change does not invalidate issued tokens | `auth.py` | needs a token version or deny list |
 | Rate limiter is per process | `routes/auth.py` | needs a shared store before running more than one instance |
+| Page-limit check is atomic per process only | `core/usage.py` | two instances could both admit the last pages |
+| One retention period for every firm; no audit trail | `core/retention.py` | `proposals/retention-v2.md` (migration) |
 | Platform admin is derived (`admin` with no `client_id`), not stored | `permissions.role_of` | one `UPDATE … SET client_id = NULL` makes a tenant admin a platform admin; explicit role needs a migration (`proposals/roles.md` step 3) |
