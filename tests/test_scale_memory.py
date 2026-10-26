@@ -45,9 +45,14 @@ def _scan(tmp_path):
 
 
 def test_past_the_memory_limit_a_page_is_a_named_failure(tmp_path, monkeypatch):
+    import core.preprocessor as pre
     monkeypatch.setenv("OCR_WORKERS", "1")
-    # the budget is what THIS document adds; any allocation passes 0.01 MB
-    monkeypatch.setenv("OCR_MEMORY_LIMIT_MB", "0.01")
+    monkeypatch.setenv("OCR_MEMORY_LIMIT_MB", "50")
+    # The budget is what THIS document adds. The reading is substituted (the
+    # baseline, then 60 MB more): real memory can FALL during a document when
+    # earlier tests' garbage is collected, which made this order-dependent.
+    readings = iter([100.0])
+    monkeypatch.setattr(pre, "memory_mb", lambda: next(readings, 160.0))
     with contextlib.redirect_stdout(io.StringIO()):
         doc = preprocess_file(_scan(tmp_path))
     assert doc.ocr_failed_pages == [1]
