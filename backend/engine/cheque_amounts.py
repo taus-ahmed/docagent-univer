@@ -15,8 +15,14 @@ A caller should treat "mismatch" as a reason to mark BOTH values low (reason cod
 ("amount_unreadable"), and "match" as supporting evidence only.
 Anything we are not certain about is "unreadable", never guessed.
 
-Scope: English words, US/Canadian style (dollars and cents). European number
-notation (1.234,56) is deliberately reported as "unreadable" (roadmap item C11).
+Scope (Part 1.2): English number words in any common currency — dollars and
+cents, pounds and pence, euros and cents, rupees and paise, dirhams and fils,
+yen (no subunit), francs, riyals, dinars — on the short scale (thousand,
+million, billion), the Indian scale (lakh, crore) and, on request
+(`long_scale=True`), the long scale (milliard 10^9, billion 10^12). The two
+systems never mix in one amount ("one million two lakh" is unreadable).
+Figures in any locale go through the shared parser (engine/amounts.py). Words
+in another language are unreadable, never translated.
 """
 from __future__ import annotations
 
@@ -35,9 +41,24 @@ _TENS = {
     "twenty": 20, "thirty": 30, "forty": 40, "fourty": 40, "fifty": 50,
     "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
 }
-_SCALES = {"thousand": 1_000, "million": 1_000_000, "billion": 1_000_000_000}
-_FILLER = {"only", "and", "dollars", "dollar", "usd", "us", "exactly", "the", "of"}
-_CENT_WORDS = {"cent", "cents"}
+_SCALES = {"thousand": 1_000, "million": 1_000_000, "billion": 1_000_000_000,
+           "milliard": 1_000_000_000}
+_LONG_SCALES = {"thousand": 1_000, "million": 1_000_000,
+                "milliard": 1_000_000_000, "billion": 1_000_000_000_000}
+#: the Indian system: lakh 10^5, crore 10^7 (a crore's multiplier may itself
+#: be any number below a crore: "one hundred crore", "five lakh crore")
+_INDIAN = {"thousand": 1_000, "lakh": 100_000, "lakhs": 100_000, "lac": 100_000,
+           "lacs": 100_000}
+_CRORE = {"crore", "crores"}
+#: main-unit and subunit names (both are filler to the number itself)
+_MAIN_UNITS = {"dollars", "dollar", "pounds", "pound", "sterling", "euros",
+               "euro", "rupees", "rupee", "rs", "dirhams", "dirham", "yen",
+               "francs", "franc", "riyals", "riyal", "rials", "rial", "dinars",
+               "dinar", "usd", "gbp", "eur", "inr", "aed", "jpy", "chf", "sar",
+               "cad", "aud", "sgd"}
+_FILLER = {"only", "and", "us", "exactly", "the", "of"} | _MAIN_UNITS
+_CENT_WORDS = {"cent", "cents", "penny", "pence", "paise", "paisa", "fils",
+               "centime", "centimes", "halala", "halalas", "rappen"}
 
 
 @dataclass
@@ -119,12 +140,41 @@ def _group_value(tokens: List[str], only_group: bool) -> Optional[int]:
     return None
 
 
-def _words_to_int(tokens: List[str]) -> Optional[int]:
+def _words_to_int(tokens: List[str], long_scale: bool = False) -> Optional[int]:
     """Convert number words (no cents, no filler) to an int, or None if unsure.
 
-    Scales (thousand, million, billion) must appear at most once each and in
-    strictly descending order; each scale needs a well formed group before it.
+    Scales must appear at most once each and in strictly descending order; each
+    scale needs a well formed group before it. Indian (lakh, crore) and
+    international (million, billion) scales never mix in one amount.
     """
+    if not tokens:
+        return None
+    indian = any(t in _INDIAN or t in _CRORE for t in tokens if t != "thousand")
+    western = any(t in ("million", "billion", "milliard") for t in tokens)
+    if indian and western:
+        return None
+    if indian:
+        return _indian_to_int(tokens)
+    return _scaled_to_int(tokens, _LONG_SCALES if long_scale else _SCALES)
+
+
+def _indian_to_int(tokens: List[str]) -> Optional[int]:
+    """[N crore] [lakh-part]: the multiplier of a crore is itself any number
+    below a crore; what follows the last crore is below a crore."""
+    if any(t in _CRORE for t in tokens):
+        i = max(k for k, t in enumerate(tokens) if t in _CRORE)
+        left, right = tokens[:i], tokens[i + 1:]
+        mult = _scaled_to_int(left, _INDIAN) if left else None   # no crore of crores
+        if not mult:
+            return None
+        rest = _scaled_to_int(right, _INDIAN) if right else 0
+        if rest is None or rest >= 10_000_000:
+            return None
+        return mult * 10_000_000 + rest
+    return _scaled_to_int(tokens, _INDIAN)
+
+
+def _scaled_to_int(tokens: List[str], scales: dict) -> Optional[int]:
     if not tokens:
         return None
     total = 0
@@ -132,8 +182,8 @@ def _words_to_int(tokens: List[str]) -> Optional[int]:
     last_scale: Optional[int] = None
     saw_scale = False
     for tok in tokens:
-        if tok in _SCALES:
-            scale = _SCALES[tok]
+        if tok in scales:
+            scale = scales[tok]
             if last_scale is not None and scale >= last_scale:
                 return None
             val = _group_value(group, only_group=False)
@@ -158,10 +208,13 @@ def _words_to_int(tokens: List[str]) -> Optional[int]:
 _FRACTION_RE = re.compile(r"(?:^|\s)(xx|no|zero|\d{1,2})\s*/\s*100(?:ths?)?(?=\s|$)")
 
 
-def parse_words_amount(text: str) -> ParsedAmount:
-    """Parse 'One thousand two hundred thirty-four and 56/100 dollars' etc.
+def parse_words_amount(text: str, long_scale: bool = False) -> ParsedAmount:
+    """Parse 'One thousand two hundred thirty-four and 56/100 dollars',
+    'Rupees One Lakh Twenty Thousand and Paise Fifty Only', etc.
 
-    Understood cents forms: '56/100', 'xx/100', 'no/100', 'and fifty-six cents'.
+    Understood subunit forms: '56/100', 'xx/100', 'no/100', 'and fifty-six
+    cents' (pence, paise, fils, …), and the subunit word BEFORE its number
+    ('and paise fifty').
     Any unknown token, missing dollar part with no cents, or other fraction makes
     the result unreadable (value=None).
     """
@@ -184,13 +237,26 @@ def parse_words_amount(text: str) -> ParsedAmount:
         return ParsedAmount(None, ["unsupported_fraction"])
 
     tokens = t.split()
+    numberish = set(_UNITS) | set(_TENS) | {"hundred"}
+    if cents is None and any(tok in _CENT_WORDS for tok in tokens):
+        idx = max(i for i, tok in enumerate(tokens) if tok in _CENT_WORDS)
+        after = [x for x in tokens[idx + 1:] if x not in _FILLER]
+        if after and all(x in numberish for x in after):
+            # "... and paise fifty only": the subunit word comes first
+            c = _words_to_int(after)
+            if c is None or c > 99:
+                return ParsedAmount(None, ["unreadable_cents"])
+            cents = c
+            tokens = tokens[:idx]
+            while tokens and tokens[-1] == "and":
+                tokens = tokens[:-1]
     if cents is None and any(tok in _CENT_WORDS for tok in tokens):
         idx = max(i for i, tok in enumerate(tokens) if tok in _CENT_WORDS)
         before = tokens[:idx]
         # dollars part ends at the last 'dollar(s)' token if present
         split_at = None
         for i, tok in enumerate(before):
-            if tok in ("dollar", "dollars"):
+            if tok in _MAIN_UNITS:
                 split_at = i
         if split_at is None:
             # find the 'and' that separates dollars from cents
@@ -217,7 +283,7 @@ def parse_words_amount(text: str) -> ParsedAmount:
     if not tokens:
         # e.g. "56/100" alone is not a full written amount
         return ParsedAmount(None, ["no_dollar_words"])
-    dollars = _words_to_int(tokens)
+    dollars = _words_to_int(tokens, long_scale)
     if dollars is None:
         return ParsedAmount(None, ["unreadable_words"])
     if cents is None:
