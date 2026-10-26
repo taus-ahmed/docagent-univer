@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { templatesApi, type ShapePreview } from "@/lib/api";
+import { editKey, gridOwnsKey, selectKey } from "@/lib/gridKeys";
 
 interface CellStyle {
   bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean;
@@ -349,7 +350,19 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       const nc = Math.max(0, Math.min(COLS - 1, savedC + dc));
       setSelR(nr); setSelC(nc); setRng({ r1: nr, c1: nc, r2: nr, c2: nc });
     }
+    refocusGrid();
   }, [editR, editC, editVal, cells, ph, upd]);
+
+  // The cell input unmounts when an edit ends; focus would fall to the page
+  // body and every key after it would be lost. Give it back to the grid.
+  const refocusGrid = () => setTimeout(() => gridRef.current?.focus({ preventScroll: true }), 0);
+  const cancelEdit = () => { setEditR(null); setEditC(null); setEditVal(""); refocusGrid(); };
+  const onEditKey = (e: React.KeyboardEvent, inCell: boolean) => {
+    e.stopPropagation();
+    const a = editKey({ key: e.key, shift: e.shiftKey });
+    if (a.kind === "commit") { e.preventDefault(); commitEdit(inCell ? a.dr : 0, a.dc); }
+    else if (a.kind === "cancel") { e.preventDefault(); cancelEdit(); }
+  };
 
   const startEdit = useCallback((r: number, c: number, initChar?: string) => {
     setEditR(r); setEditC(c);
@@ -393,10 +406,16 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const a = document.activeElement as HTMLElement;
-      // If focus is in any input outside the grid, ignore
+      // A7: the grid takes keys only when focus is IN it and no dialog sits on
+      // top (lib/gridKeys.ts). It used to take them from the whole window.
+      const grid = gridRef.current;
+      const focusInGrid = !!grid && !!a && (a === grid || grid.contains(a));
+      const dialogOpen = !!document.querySelector('[role="dialog"], [aria-modal="true"]');
+      if (!gridOwnsKey({ focusInGrid, dialogOpen, editing: editR !== null })) return;
       if (a && (a.tagName === "INPUT" || a.tagName === "SELECT" || a.tagName === "TEXTAREA") && !a.dataset.grid) return;
-      // If we're editing a cell, the cell input handles keys
-      if (editR !== null) return;
+      const t = selectKey({ key: e.key, shift: e.shiftKey, col: selC, cols: COLS });
+      if (t.kind === "move") { e.preventDefault(); nav(t.dr, t.dc); setCtrlSel(new Set()); return; }
+      if (t.kind === "leave") return;     // let focus leave the grid: no trap
 
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "z") { e.preventDefault(); doUndo(); return; }
@@ -775,11 +794,8 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
               commitEdit(0, 0);
             }
           }}
-          onKeyDown={e => {
-            e.stopPropagation();
-            if (e.key === "Enter") { e.preventDefault(); commitEdit(0, 0); }
-            if (e.key === "Escape") { e.preventDefault(); setEditR(null); setEditC(null); setEditVal(""); }
-          }}
+          aria-label="Formula bar: the selected cell's text"
+          onKeyDown={e => onEditKey(e, false)}
           style={{ flex: 1, height: "100%", border: "none", outline: "none", padding: "0 10px", fontSize: 12, color: "#374151", background: "transparent", fontFamily: "inherit" }}
           placeholder="Click a cell to edit..."
         />
@@ -796,7 +812,10 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
       </div>
 
       {/* GRID */}
-      <div ref={gridRef} style={{ flex: 1, overflow: "auto" }} onMouseUp={() => { mouseDown.current = false; }}>
+      <div ref={gridRef} style={{ flex: 1, overflow: "auto" }} onMouseUp={() => { mouseDown.current = false; }}
+        tabIndex={0} role="grid" aria-label="Template grid: arrow keys move, Enter or typing edits, Tab moves right"
+        className="da-grid-focus"
+        onMouseDown={e => { if (!(e.target as HTMLElement).closest("input")) gridRef.current?.focus({ preventScroll: true }); }}>
         <table style={{ borderCollapse: "collapse", tableLayout: "fixed", minWidth: "max-content" }}>
           <thead>
             <tr>
@@ -886,12 +905,8 @@ export default function DocAgentSpreadsheet({ initialColumns = [], initialData, 
                             value={editVal}
                             onChange={e => setEditVal(e.target.value)}
                             onBlur={() => commitEdit(0, 0)}
-                            onKeyDown={e => {
-                              e.stopPropagation();
-                              if (e.key === "Enter") { e.preventDefault(); commitEdit(1, 0); }
-                              else if (e.key === "Tab") { e.preventDefault(); commitEdit(0, 1); }
-                              else if (e.key === "Escape") { e.preventDefault(); setEditR(null); setEditC(null); setEditVal(""); }
-                            }}
+                            aria-label="Cell value"
+                            onKeyDown={e => onEditKey(e, true)}
                             style={{ width: "100%", height: `${DRH}px`, maxHeight: `${DRH}px`, border: "none", outline: "none", padding: "0 6px", fontFamily: ff, fontSize: `${fs}px`, fontWeight: fw, fontStyle: s.italic ? "italic" : "normal", background: "transparent", color: fc, textAlign: s.align ?? "left", overflow: "hidden" }}
                           />
                         ) : (

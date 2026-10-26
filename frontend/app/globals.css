@@ -253,3 +253,9 @@ select.input { appearance: none; cursor: pointer; }
   text-transform: uppercase; letter-spacing: 0.05em;
 }
 .ag-theme-alpine .ag-row { border-bottom: 1px solid var(--border) !important; }
+
+/* A7: a visible focus ring on the template grid and on every control that
+   takes keyboard focus. */
+.da-grid-focus:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
