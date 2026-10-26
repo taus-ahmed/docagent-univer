@@ -28,8 +28,11 @@ from app.schemas.schemas import (
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # ── Login rate limiter ────────────────────────────────────────────────────────
-# In-memory: per IP address, max 5 failed attempts → 15 minute lockout
-# Resets on successful login. No Redis needed — works on single instance.
+# In-memory, per (client IP, username): MAX_ATTEMPTS failed attempts lock THAT
+# username from THAT address for LOCKOUT_MINUTES. Keyed by the pair so that
+# nobody can lock out another firm's users: failures against one username lock
+# only that username, and only from the address they came from. Resets on a
+# successful login. Single instance; a shared store is needed beyond one.
 _lock            = Lock()
 _fail_counts:  dict = defaultdict(int)
 _lockout_until: dict = {}
@@ -38,10 +41,14 @@ MAX_ATTEMPTS    = 5
 LOCKOUT_MINUTES = 15
 
 
-def _check_rate_limit(ip: str):
-    """Raise 429 if IP is locked out."""
+def _key(ip: str, username: str) -> tuple:
+    return (ip, (username or "").strip().casefold())
+
+
+def _check_rate_limit(key):
+    """Raise 429 if this (IP, username) is locked out."""
     with _lock:
-        locked_until = _lockout_until.get(ip)
+        locked_until = _lockout_until.get(key)
         if locked_until and datetime.utcnow() < locked_until:
             wait = int((locked_until - datetime.utcnow()).total_seconds() / 60) + 1
             raise HTTPException(
@@ -50,32 +57,40 @@ def _check_rate_limit(ip: str):
             )
         # Clear expired lockout
         if locked_until and datetime.utcnow() >= locked_until:
-            del _lockout_until[ip]
-            _fail_counts[ip] = 0
+            del _lockout_until[key]
+            _fail_counts[key] = 0
 
 
-def _record_failure(ip: str):
+def _record_failure(key):
     """Increment failure count and lock out if threshold reached."""
     with _lock:
-        _fail_counts[ip] += 1
-        if _fail_counts[ip] >= MAX_ATTEMPTS:
-            _lockout_until[ip] = datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
-            print(f"[AUTH] IP {ip} locked out for {LOCKOUT_MINUTES}m "
-                  f"after {MAX_ATTEMPTS} failed attempts", flush=True)
+        _fail_counts[key] += 1
+        if _fail_counts[key] >= MAX_ATTEMPTS:
+            _lockout_until[key] = datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+            # the address only: a username is not logged
+            print(f"[AUTH] IP {key[0]} locked out of one account for "
+                  f"{LOCKOUT_MINUTES}m after {MAX_ATTEMPTS} failed attempts", flush=True)
 
 
-def _record_success(ip: str):
+def _record_success(key):
     """Clear failure count on successful login."""
     with _lock:
-        _fail_counts.pop(ip, None)
-        _lockout_until.pop(ip, None)
+        _fail_counts.pop(key, None)
+        _lockout_until.pop(key, None)
 
 
 def _get_client_ip(request: Request) -> str:
-    """Get real client IP, respecting X-Forwarded-For from Railway proxy."""
+    """The client's address as the nearest proxy saw it.
+
+    The LAST X-Forwarded-For entry is the one the platform's own proxy
+    appended (Railway's edge — VERIFY in docs/OPERATIONS.md); every entry
+    before it is whatever the caller chose to send. Reading the first one let
+    anyone rotate addresses past the limiter, or name someone else's."""
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+        if parts:
+            return parts[-1]
     return request.client.host if request.client else "unknown"
 
 
@@ -87,7 +102,8 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     ip = _get_client_ip(request)
 
     # Check rate limit before touching the database
-    _check_rate_limit(ip)
+    key = _key(ip, payload.username)
+    _check_rate_limit(key)
 
     user = db.query(User).filter(
         User.username == payload.username,
@@ -97,7 +113,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     if not user:
         verify_unknown_user(payload.password)
     if not user or not verify_password(payload.password, user.password_hash):
-        _record_failure(ip)
+        _record_failure(key)
         # The activity trail, for a demo tenant only. A wrong password on a
         # known demo account is a row; an attempt on a username that does not
         # exist is NOT, because nothing identifies which tenant it was aimed
@@ -113,7 +129,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         )
 
     # Successful login — clear failure count
-    _record_success(ip)
+    _record_success(key)
 
     # A legacy (salted SHA-256) hash is replaced now, while the password is in
     # hand, in the same commit as the login. A failure to rehash never fails
