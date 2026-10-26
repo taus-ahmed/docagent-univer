@@ -60,6 +60,16 @@ def test_scan_pages_that_cannot_be_read_are_recognised():
     assert image_obscured(_png(10)) == "page"            # near-black
     assert image_obscured(_png(128)) == "page"           # no contrast
     assert image_obscured(_png(None, bar=(300, 400, 700, 460))) == "regions"
+    assert image_obscured(_png(255)) is None             # a blank separator page
+
+
+def test_a_sparse_page_is_not_obscured():
+    from PIL import Image, ImageDraw
+    img = Image.new("L", (850, 1100), 255)
+    ImageDraw.Draw(img).text((60, 80), "CASH SALE  Item: Tea  Amount: $8.00", fill=0)
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, "JPEG")
+    assert image_obscured(base64.b64encode(buf.getvalue()).decode()) is None
 
 
 @pytest.fixture

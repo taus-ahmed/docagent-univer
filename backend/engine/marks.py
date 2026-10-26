@@ -115,7 +115,10 @@ def image_obscured(b64):
     img = img.resize((w, max(1, int(img.height * w / max(1, img.width)))))
     st = ImageStat.Stat(img)
     mean, std = st.mean[0], st.stddev[0]
-    if mean < 40 or std < 8:
+    # A BLANK white page (a separator, a sparse receipt) has no contrast
+    # either, and is not obscured: only a page that is dark, or a grey wash,
+    # is. Found by scripts/run_local_corpus.py on the blank-separator stack.
+    if mean < 40 or (std < 8 and mean < 220):
         return "page"
     # 8 x 8 blocks at 400 px wide (~ 11 pt on a letter page): a block that is
     # entirely dark is not a character; three in a row is a bar.
