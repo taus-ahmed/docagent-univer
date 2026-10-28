@@ -89,9 +89,14 @@ def test_every_order_reads_by_role_or_not_at_all(main):
 
 @pytest.mark.parametrize("main", sorted(_MAIN_UNITS))
 def test_the_standard_order_reads_for_every_currency_word(main):
+    from cheque_amounts import UNIT_FAMILIES
     for sub in sorted(_CENT_WORDS):
         text = f"twenty three {main} and ninety nine {sub}"
-        assert parse_words_amount(text).value == Decimal("23.99"), text
+        r = parse_words_amount(text)
+        if sub in UNIT_FAMILIES[main]:          # its own subunit (Recheck R3)
+            assert r.value == Decimal("23.99"), text
+        else:
+            assert r.value is None and "unit_mix" in r.reasons, text
 
 
 @pytest.mark.parametrize("main", ["dollars", "pounds", "rupees", "euros"])

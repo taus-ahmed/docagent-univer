@@ -60,6 +60,35 @@ _FILLER = {"only", "and", "us", "exactly", "the", "of"} | _MAIN_UNITS
 _CENT_WORDS = {"cent", "cents", "penny", "pence", "paise", "paisa", "fils",
                "centime", "centimes", "halala", "halalas", "rappen"}
 
+#: the subunit words each main-unit word may be followed by (Recheck R3): a
+#: cent is not a hundredth of a rupee, so "ten rupees fifty cents" is
+#: unreadable (`unit_mix`), never 10.50. Yen has no subunit in use.
+_CENTS = frozenset({"cent", "cents"})
+_PENCE = frozenset({"penny", "pence"})
+_PAISE = frozenset({"paise", "paisa"})
+_FILS = frozenset({"fils"})
+_HALALA = frozenset({"halala", "halalas"})
+_SWISS = frozenset({"centime", "centimes", "rappen"})
+UNIT_FAMILIES = {
+    **{w: _CENTS for w in ("dollars", "dollar", "usd", "cad", "aud", "sgd",
+                           "euros", "euro", "eur")},
+    **{w: _PENCE for w in ("pounds", "pound", "sterling", "gbp")},
+    **{w: _PAISE for w in ("rupees", "rupee", "rs", "inr")},
+    **{w: _FILS for w in ("dirhams", "dirham", "aed", "dinars", "dinar",
+                          "rials", "rial")},
+    **{w: _HALALA for w in ("riyals", "riyal", "sar")},
+    **{w: _SWISS for w in ("francs", "franc", "chf")},
+    "yen": frozenset(), "jpy": frozenset(),
+}
+
+
+def _unit_mix(tokens) -> bool:
+    """True when a subunit word does not belong to the main unit named."""
+    mains = [t for t in tokens if t in _MAIN_UNITS]
+    subs = [t for t in tokens if t in _CENT_WORDS]
+    return bool(mains and subs) and any(
+        s not in UNIT_FAMILIES.get(m, frozenset()) for m in mains for s in subs)
+
 
 @dataclass
 class ParsedAmount:
@@ -269,6 +298,8 @@ def parse_words_amount(text: str, long_scale: bool = False) -> ParsedAmount:
         return ParsedAmount(None, ["unsupported_fraction"])
 
     tokens = t.split()
+    if _unit_mix(tokens):
+        return ParsedAmount(None, ["unit_mix"])
     if _unit_order_problem(tokens):
         return ParsedAmount(None, ["unit_order"])
     numberish = set(_UNITS) | set(_TENS) | {"hundred"}

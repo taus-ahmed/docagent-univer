@@ -26,6 +26,12 @@ before the fix.
   must be in the facts or a common summary word, so a lowercase name
   ("went to alice") is rejected. Over-rejection falls back to the plain
   facts summary. `tests/test_summary_names.py`.
+- **R3 mixed unit families** — `cheque_amounts.UNIT_FAMILIES` names the
+  subunit words each main-unit word may take (cents for dollars/euros, pence
+  for pounds, paise for rupees, fils, halalas, centimes/rappen; none for yen).
+  "ten rupees fifty cents" and "five dollars fifty paise" are now unreadable
+  (`unit_mix`) instead of 10.50 / 5.50. `tests/test_amount_unit_family.py`;
+  the F1 every-pair test now expects `unit_mix` for a foreign subunit.
 
 ## Review-3 fixes
 
