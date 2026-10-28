@@ -11,23 +11,48 @@ a path or a version: the page is public to the platform's prober.
 """
 from __future__ import annotations
 
-import concurrent.futures
+import threading
 import uuid
 
 #: seconds a single readiness check may take
 CHECK_TIMEOUT = 5.0
 
+#: checks whose last probe is still running, by name
+_INFLIGHT: dict = {}
+_LOCK = threading.Lock()
+
 
 def _bounded(fn):
-    ex = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    try:
-        return ex.submit(fn).result(timeout=CHECK_TIMEOUT)
-    except concurrent.futures.TimeoutError:
+    """`fn()` on a DAEMON thread, given CHECK_TIMEOUT seconds.
+
+    Review-3 F9: this used a ThreadPoolExecutor, whose workers are joined at
+    interpreter exit — so one probe stuck on a hung dependency (a database
+    that accepts the connection and never answers) kept the process from
+    exiting, and a deploy's SIGTERM waited on it. A daemon thread is
+    abandoned at exit. A probe that is still stuck when the next one arrives
+    is not joined by another thread: that check answers `fail:busy`, so a
+    prober polling every few seconds cannot pile up threads."""
+    name = getattr(fn, "__name__", "check")
+    with _LOCK:
+        prev = _INFLIGHT.get(name)
+        if prev is not None and prev.is_alive():
+            return "fail:busy"
+    box = {}
+
+    def run():
+        try:
+            box["v"] = fn()
+        except Exception as e:
+            box["v"] = f"fail:{type(e).__name__}"
+
+    t = threading.Thread(target=run, name=f"readiness-{name}", daemon=True)
+    with _LOCK:
+        _INFLIGHT[name] = t
+    t.start()
+    t.join(CHECK_TIMEOUT)
+    if t.is_alive():
         return "fail:timeout"
-    except Exception as e:
-        return f"fail:{type(e).__name__}"
-    finally:
-        ex.shutdown(wait=False, cancel_futures=True)
+    return box.get("v", "fail:unknown")
 
 
 def check_database():

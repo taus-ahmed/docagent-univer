@@ -84,3 +84,9 @@ One commit per item, each with a regression test that fails before the fix.
   reload (order-dependence the new HSTS test exposed).
   **Deploy check:** confirm Railway sets `ENVIRONMENT` explicitly.
   `tests/test_environment_normalisation.py`.
+- **F9 readiness exit** — `_bounded` used a ThreadPoolExecutor, whose
+  workers are joined at interpreter exit, so a check hung on a dependency
+  kept the process alive after the probe had timed out (measured: the
+  before-fix subprocess never exited; killed at 30 s). Checks now run on a
+  daemon thread; a check whose previous probe is still stuck answers
+  `fail:busy` instead of stacking another thread. `tests/test_readiness_exit.py`.
