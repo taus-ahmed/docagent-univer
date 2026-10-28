@@ -12,6 +12,7 @@ a path or a version: the page is public to the platform's prober.
 from __future__ import annotations
 
 import threading
+import time
 import uuid
 
 #: seconds a single readiness check may take
@@ -22,8 +23,8 @@ _INFLIGHT: dict = {}
 _LOCK = threading.Lock()
 
 
-def _bounded(fn):
-    """`fn()` on a DAEMON thread, given CHECK_TIMEOUT seconds.
+def _start(fn):
+    """`fn()` started on a DAEMON thread: (thread, box), or "fail:busy".
 
     Review-3 F9: this used a ThreadPoolExecutor, whose workers are joined at
     interpreter exit — so one probe stuck on a hung dependency (a database
@@ -33,10 +34,6 @@ def _bounded(fn):
     is not joined by another thread: that check answers `fail:busy`, so a
     prober polling every few seconds cannot pile up threads."""
     name = getattr(fn, "__name__", "check")
-    with _LOCK:
-        prev = _INFLIGHT.get(name)
-        if prev is not None and prev.is_alive():
-            return "fail:busy"
     box = {}
 
     def run():
@@ -45,14 +42,30 @@ def _bounded(fn):
         except Exception as e:
             box["v"] = f"fail:{type(e).__name__}"
 
-    t = threading.Thread(target=run, name=f"readiness-{name}", daemon=True)
-    with _LOCK:
+    with _LOCK:                    # one check-and-claim, so two probes cannot both start
+        prev = _INFLIGHT.get(name)
+        if prev is not None and prev.is_alive():
+            return "fail:busy"
+        t = threading.Thread(target=run, name=f"readiness-{name}", daemon=True)
         _INFLIGHT[name] = t
     t.start()
-    t.join(CHECK_TIMEOUT)
+    return t, box
+
+
+def _finish(started, deadline):
+    """The answer of a `_start`ed check, waiting no later than `deadline`."""
+    if isinstance(started, str):
+        return started
+    t, box = started
+    t.join(max(0.0, deadline - time.monotonic()))
     if t.is_alive():
         return "fail:timeout"
     return box.get("v", "fail:unknown")
+
+
+def _bounded(fn):
+    """`fn()` on a daemon thread, given CHECK_TIMEOUT seconds."""
+    return _finish(_start(fn), time.monotonic() + CHECK_TIMEOUT)
 
 
 def check_database():
@@ -105,12 +118,13 @@ def check_migrations(application):
 def readiness(application) -> tuple[bool, dict]:
     import importlib
     importlib.import_module("app.services.paths")   # engine on sys.path
-    checks = {
-        "database": _bounded(check_database),
-        "storage": _bounded(check_storage),
-        "tesseract": _bounded(check_tesseract),
-        "pdftoppm": _bounded(check_pdftoppm),
-        "migrations": check_migrations(application),
-    }
+    # Recheck R7: the four start together and share ONE deadline. One after
+    # another, four hung dependencies held /ready for 4 x CHECK_TIMEOUT.
+    fns = {"database": check_database, "storage": check_storage,
+           "tesseract": check_tesseract, "pdftoppm": check_pdftoppm}
+    started = {k: _start(fn) for k, fn in fns.items()}
+    deadline = time.monotonic() + CHECK_TIMEOUT
+    checks = {k: _finish(v, deadline) for k, v in started.items()}
+    checks["migrations"] = check_migrations(application)
     ok = all(v in ("ok", "skipped") for v in checks.values())
     return ok, checks

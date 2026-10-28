@@ -66,3 +66,33 @@ def test_the_process_exits_with_a_check_still_hung():
         pytest.fail("the interpreter did not exit: the hung check's thread was joined")
     assert r.stdout.decode().strip() == "fail:timeout", r.stderr.decode()[-1500:]
     assert time.perf_counter() - t < 25
+
+
+def test_the_four_checks_run_in_parallel_under_one_deadline(monkeypatch):
+    """Recheck R7: the checks ran one after another, each with its own
+    CHECK_TIMEOUT, so four hung dependencies held /ready for 4 x 5 s = 20 s
+    — past most probers' own timeout. They now start together and share one
+    deadline: four hung checks answer in about one CHECK_TIMEOUT."""
+    from types import SimpleNamespace
+    monkeypatch.setattr(readiness, "CHECK_TIMEOUT", 0.5)
+    gate = threading.Event()
+
+    def hung(name):
+        def f():
+            gate.wait(10)
+            return "ok"
+        f.__name__ = name
+        return f
+
+    for n in ("check_database", "check_storage", "check_tesseract", "check_pdftoppm"):
+        monkeypatch.setattr(readiness, n, hung(f"r7_{n}"))
+    app = SimpleNamespace(state=SimpleNamespace(migrations={"failed": []}))
+    try:
+        t = time.perf_counter()
+        ok, checks = readiness.readiness(app)
+        took = time.perf_counter() - t
+    finally:
+        gate.set()
+    assert not ok
+    assert [checks[k] for k in ("database", "storage", "tesseract", "pdftoppm")] == ["fail:timeout"] * 4
+    assert took < 0.5 * 1.8, took                 # one deadline, not four

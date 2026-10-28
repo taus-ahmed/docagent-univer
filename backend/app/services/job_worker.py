@@ -822,6 +822,17 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         session = Session()
     except Exception as e:
         print(f"[THREAD] DB session failed: {exc_brief(e)}", flush=True); return
+    except BaseException as e:
+        # Recheck R7: the same rule as the main try below — a job is never
+        # left pending by an interrupted thread. There is no session yet, so
+        # the job is marked on a fresh engine of its own (best effort).
+        print(f"[THREAD] INTERRUPTED: {type(e).__name__}", flush=True)
+
+        def _fresh():
+            ca = {"check_same_thread": False} if "sqlite" in db_url else {}
+            return sessionmaker(bind=sa_engine(db_url, connect_args=ca))()
+        _fail_interrupted_job(_fresh, job_id, e)
+        raise
 
     try:
         job = session.query(ExtractionJob).filter_by(id=job_id).first()

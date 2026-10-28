@@ -84,3 +84,35 @@ def test_a_job_already_cancelled_is_left_cancelled(s3, db, users, _db_url, monke
     _fail_interrupted_job(sessionmaker(bind=create_engine(_db_url)), job.id, SystemExit())
     db.expire_all()
     assert db.get(ExtractionJob, job.id).status == "cancelled"
+
+
+@pytest.mark.parametrize("exc", [KeyboardInterrupt(), SystemExit(4)],
+                         ids=lambda e: type(e).__name__)
+def test_a_base_exception_while_the_engine_is_created_fails_the_job(
+        exc, s3, db, users, _db_url, monkeypatch):
+    """Recheck R7: the job thread's own database engine is created before the
+    main try; a BaseException there (`job_worker.py` "DB session failed")
+    went past `except Exception` and the job stayed `pending`."""
+    import sqlalchemy
+    from app.api.routes import extract as extract_mod
+    from app.models.models import ExtractionJob
+
+    job = _job(db, users)
+    s3.save_schema("client_id: acme_001\n", "acme_001")
+    keys = [s3.save_upload(b"%PDF-1.7", "a.pdf", job.id, client_id="acme_001")[0]]
+    real, calls = sqlalchemy.create_engine, []
+
+    def first_call_dies(*a, **k):
+        calls.append(1)
+        if len(calls) == 1:
+            raise exc
+        return real(*a, **k)
+
+    monkeypatch.setattr(sqlalchemy, "create_engine", first_call_dies)
+    monkeypatch.setattr("app.services.job_worker.get_storage", lambda: s3)
+    with pytest.raises(type(exc)):
+        _run_worker(extract_mod, s3, job, keys, s3.get_schema_path("acme_001"), _db_url)
+    db.expire_all()
+    j = db.get(ExtractionJob, job.id)
+    assert j.status == "failed" and j.error_message.startswith("Interrupted"), (j.status, j.error_message)
+    assert type(exc).__name__ in j.error_message

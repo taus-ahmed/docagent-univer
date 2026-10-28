@@ -48,6 +48,16 @@ before the fix.
   are `new-password` now. `frontend/lib/passwordFields.test.ts` scans every
   password input in app/ and components/: none may be `off`, each must be
   `new-password` or `current-password`.
+- **R7 worker and readiness** — a BaseException while the job thread
+  creates its own database engine (before the main try) went past
+  `except Exception` and left the job `pending`; it now ends `failed /
+  Interrupted` on a fresh engine and re-raises, like the main try.
+  `/ready` started its four checks one after another, each with its own
+  5 s, so four hung dependencies held it 20 s; they now start together
+  under ONE deadline (four hung checks at a 0.5 s timeout: 2.0 s → about
+  0.5 s), and a check is claimed under one lock so two probes cannot both
+  start it. `tests/http/test_worker_base_exception.py`,
+  `tests/test_readiness_exit.py`.
 
 ## Review-3 fixes
 
