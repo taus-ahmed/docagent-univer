@@ -233,8 +233,70 @@ def coerce_cell_value(value, label="", decimal_hint=None):
     from amounts import parse_amount
     a = parse_amount(txt, decimal_hint)
     if a.ok and not a.percent:
-        return float(a.value)
+        n = excel_number(a.value)
+        return txt if n is None else n
     return txt
+
+
+#: Excel holds a number as an IEEE double and shows at most 15 significant
+#: digits; anything longer is silently rounded when the file is opened.
+EXCEL_MAX_DIGITS = 15
+PRECISION_NOTE = ("Kept as text: this number has more than "
+                  f"{EXCEL_MAX_DIGITS} significant digits, and Excel would "
+                  "round it if it were stored as a number.")
+
+
+def excel_number(value):
+    """A Decimal as the number Excel will hold, or None when it cannot hold it.
+
+    Up to 15 significant digits a double round-trips to exactly the decimal
+    that was printed, so the float IS the exact value as far as Excel is
+    concerned. Beyond that `float()` rounds — 123456789012345.67 became
+    123456789012345.7 — so the caller writes the printed text instead and
+    flags it (`precision_flag`). Never a rounded number.
+    """
+    from decimal import Decimal, InvalidOperation
+    try:
+        d = value if isinstance(value, Decimal) else Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+    if not d.is_finite():
+        return None
+    digits = d.normalize().as_tuple().digits
+    if len(digits) > EXCEL_MAX_DIGITS:
+        return None
+    return float(d)
+
+
+def exceeds_excel_precision(value, decimal_hint=None) -> bool:
+    """True when `value` reads as a number Excel cannot hold exactly."""
+    if value is None:
+        return False
+    txt = str(value).strip()
+    if not txt or re.fullmatch(r"\d+", txt) and (txt[0] == "0" or len(txt) >= 9):
+        return False                       # an identifier, text anyway
+    from amounts import parse_amount
+    a = parse_amount(txt, decimal_hint)
+    return bool(a.ok and not a.percent and excel_number(a.value) is None)
+
+
+def precision_flag(cell, value, decimal_hint=None):
+    """Flag a cell whose number was kept as text for precision: a comment
+    saying so, kept ahead of any comment a writer adds later."""
+    if not exceeds_excel_precision(value, decimal_hint):
+        return False
+    from openpyxl.comments import Comment
+    text = PRECISION_NOTE + (f"\n\n{cell.comment.text}" if cell.comment else "")
+    w, h = provenance_note_size(text)
+    cell.comment = Comment(text, "DocAgent", width=w, height=h)
+    return True
+
+
+def keep_precision_note(cell, text):
+    """`text` with the cell's precision note in front, when it carries one."""
+    if cell.comment and cell.comment.text.startswith(PRECISION_NOTE):
+        return f"{PRECISION_NOTE}\n\n{text}"
+    return text
 
 
 #: Excel number formats, by the notation the document actually used. Money
@@ -415,7 +477,10 @@ def _add_charts_sheet(wb, doc_results):
             ws.cell(row=row + 1, column=2, value=f"Amount ({cur})")
             for k, (label, amount) in enumerate(series, start=row + 2):
                 ws.cell(row=k, column=1, value=label)
-                ws.cell(row=k, column=2, value=float(amount))
+                n = excel_number(amount)
+                c = ws.cell(row=k, column=2, value=str(amount) if n is None else n)
+                if n is None:
+                    precision_flag(c, str(amount))
             last = row + 1 + len(series)
             ch = kind()
             ch.title = f"{title} ({cur})"

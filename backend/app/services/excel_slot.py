@@ -15,6 +15,8 @@ from app.services.excel_legacy import _write_mixed_excel
 from app.services.excel_legacy import _write_table_excel
 from app.services.excel_cells import cell_format
 from app.services.excel_cells import coerce_cell_value
+from app.services.excel_cells import keep_precision_note
+from app.services.excel_cells import precision_flag
 from app.services.excel_cells import provenance_edited_note
 from app.services.excel_cells import provenance_note
 from app.services.excel_cells import provenance_note_size
@@ -265,6 +267,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             fmt = cell_format(value, label, doc_hint[0])
             if fmt:
                 cell.number_format = fmt
+            precision_flag(cell, value, doc_hint[0])
             return cell
         return None
 
@@ -328,6 +331,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             else:
                 text = provenance_note(source, page, filename, grounded=grounded,
                                        confidence=confidence)
+            text = keep_precision_note(cell, text)
             w, h = provenance_note_size(text)
             cell.comment = Comment(text, "DocAgent", width=w, height=h)
             if out_r is not None:

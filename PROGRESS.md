@@ -12,3 +12,12 @@ One commit per item, each with a regression test that fails before the fix.
   give `unit_order` (unreadable, flagged). `tests/test_amount_unit_order.py`
   enumerates all 24 orders of number/unit/number/subunit for every main-unit
   and subunit word the parser knows and reads each by role.
+- **F2 export precision** — `coerce_cell_value` turned the shared parser's
+  Decimal into a float, so 123456789012345.67 exported as ...345.7.
+  `excel_cells.excel_number` gives the float only when the value has at most
+  15 significant digits (where a double round-trips to exactly the printed
+  decimal); beyond that the printed text is written and `precision_flag`
+  puts a comment on the cell, kept ahead of the provenance comment. The
+  charts sheet uses the same rule for its totals. The flat, combined and
+  per-file writers already wrote text and are pinned unrounded.
+  `tests/test_export_precision.py` runs every writer.
