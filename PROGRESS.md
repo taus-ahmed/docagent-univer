@@ -116,3 +116,13 @@ One commit per item, each with a regression test that fails before the fix.
   (measured: the no-Poppler run fails in 5 s, was 600 s).
   `tests/http/test_worker_base_exception.py` (SystemExit, KeyboardInterrupt,
   ReplayEnvironmentError, a custom BaseException).
+- **F12 small** — removed the two blank lines at the end of
+  `tests/test_summary.py`. Reproduced the console crash: with
+  `PYTHONIOENCODING=cp1252`, `Orchestrator.__init__` (the first thing every
+  job thread does) raised UnicodeEncodeError on the Rich panel's emoji, so
+  every job failed before its first document. `log_safety.safe_stdio()`
+  makes a non-UTF-8 stdout/stderr replace instead of raise (called at app
+  start and at worker start — the worker's `os.environ["PYTHONUTF8"]` only
+  ever reached child processes), and the orchestrator's Rich console writes
+  through `log_safety.ReplacingStdout`. UTF-8 streams are untouched.
+  `tests/test_cp1252_console.py`.

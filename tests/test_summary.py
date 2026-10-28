@@ -93,5 +93,3 @@ def test_the_model_failing_shows_the_deterministic_summary():
     ed = _post_summarize(dict(ED), SimpleNamespace(llm=SimpleNamespace(extract=boom)), "x",
                          narrative=True, allow_call=lambda: True)
     assert ed["summary"]["narrative"] is None and ed["summary"]["text"]
-
-

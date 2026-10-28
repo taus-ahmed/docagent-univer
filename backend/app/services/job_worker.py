@@ -803,6 +803,10 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
     for p in [engine_dir, backend_dir, project_dir]:
         if p not in sys.path:
             sys.path.insert(0, p)
+    # PYTHONUTF8 above only reaches child processes; THIS process's stdout
+    # keeps its code page, so make it replace rather than raise (F12).
+    from log_safety import safe_stdio
+    safe_stdio()
 
     try:
         from sqlalchemy import create_engine as sa_engine

@@ -28,7 +28,12 @@ from connectors.base import LLMResponse
 from storage.database import Database
 from config import settings
 
-console = Console()
+# Rich writes through a proxy that replaces what the stream cannot encode:
+# the startup panel's box drawing and emoji crashed worker startup on a CP1252
+# console (Review-3 F12).
+from log_safety import ReplacingStdout  # noqa: E402
+
+console = Console(file=ReplacingStdout())
 
 
 @dataclass

@@ -30,6 +30,8 @@ logger = logging.getLogger("docagent")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup + shutdown tasks."""
+    from log_safety import safe_stdio
+    safe_stdio()                      # a CP1252 console never crashes output
     logger.info(f"Starting DocAgent v{settings.APP_VERSION} ({settings.ENVIRONMENT})")
     from app.core import lifecycle
     lifecycle.reset()                 # a new process (or test app) is not draining

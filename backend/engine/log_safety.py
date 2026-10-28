@@ -19,6 +19,68 @@ import traceback
 from pathlib import PurePath
 
 
+def _utf8(stream) -> bool:
+    enc = (getattr(stream, "encoding", None) or "").lower().replace("-", "").replace("_", "")
+    return enc in ("utf8", "utf8sig")
+
+
+def safe_stdio() -> None:
+    """Make stdout/stderr REPLACE what they cannot encode instead of raising
+    (Review-3 F12).
+
+    On a Windows console (or a pipe) with a CP1252 code page, printing the
+    orchestrator's startup panel — box drawing and an emoji — raised
+    UnicodeEncodeError and took worker startup down with it, so every job
+    failed before its first document. Output is for people; a character it
+    cannot show becomes `?`, it never stops the work. A UTF-8 stream is left
+    alone. Idempotent; a stream without `reconfigure` (a test's capture) is
+    left as it is."""
+    for stream in (sys.stdout, sys.stderr):
+        if stream is None or _utf8(stream) or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError, OSError):
+            continue
+
+
+class ReplacingStdout:
+    """A file for Rich: writes to whatever `sys.stdout` is NOW, replacing any
+    character its encoding cannot hold. Rich keeps a reference to its file,
+    so this proxy is what lets the orchestrator's module-level Console survive
+    a non-UTF-8 stream (and a test swapping sys.stdout)."""
+
+    @property
+    def _s(self):
+        return sys.stdout
+
+    @property
+    def encoding(self):
+        return getattr(self._s, "encoding", None) or "utf-8"
+
+    def write(self, text):
+        s = self._s
+        if s is None:
+            return 0
+        if not _utf8(s):
+            enc = getattr(s, "encoding", None) or "ascii"
+            text = text.encode(enc, "replace").decode(enc, "replace")
+        return s.write(text)
+
+    def flush(self):
+        if self._s is not None:
+            self._s.flush()
+
+    def isatty(self):
+        try:
+            return bool(self._s.isatty())
+        except Exception:
+            return False
+
+    def fileno(self):
+        return self._s.fileno()
+
+
 def doc_ref(name) -> str:
     """`doc-1a2b3c4d5e` for a file name, path or storage key."""
     if not name:
