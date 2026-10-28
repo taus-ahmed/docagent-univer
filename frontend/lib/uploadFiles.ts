@@ -12,7 +12,8 @@
  * a reset).
  *
  * Passwords live in React state only — never localStorage, sessionStorage,
- * the URL or history — and the page leaves the field's autocomplete off.
+ * the URL or history — and the field is marked autocomplete="new-password"
+ * (Chrome ignores "off" on a password field, Recheck R5).
  */
 
 export interface PendingFile {

@@ -866,7 +866,7 @@ export default function ExtractPage() {
                       <span className="file-name">{f.name}</span>
                       <span className="file-size">{(f.size / 1024).toFixed(0)} KB</span>
                       {f.name.toLowerCase().endsWith(".pdf") && (
-                        <input type="password" autoComplete="off" placeholder="PDF password"
+                        <input type="password" autoComplete="new-password" placeholder="PDF password"
                           name={`pdf-password-${id}`} data-lpignore="true" data-1p-ignore="true"
                           aria-label={`Password for ${f.name} (not saved)`}
                           title="Only if the PDF is password-protected. Used once to open it; not saved."

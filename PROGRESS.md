@@ -42,6 +42,12 @@ before the fix.
   for a digit fails even when mod 97 agrees. Other EU VAT numbers stay
   format-only (docs/LOCALES-AND-FAMILIES.md). `tests/test_identifier_checksums.py`;
   two older tests now use a checksum-valid GB number.
+- **R5 password fields** — the PDF password box said `autoComplete="off"`,
+  which Chrome ignores on a password input, and the admin's password box for
+  another user had no hint (Chrome could fill the admin's own password). Both
+  are `new-password` now. `frontend/lib/passwordFields.test.ts` scans every
+  password input in app/ and components/: none may be `off`, each must be
+  `new-password` or `current-password`.
 
 ## Review-3 fixes
 

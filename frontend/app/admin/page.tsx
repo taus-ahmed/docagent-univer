@@ -137,7 +137,7 @@ function UserFormModal({
 
           <div>
             <label className="form-label">{isCreate ? "Password" : "New password (leave blank to keep)"}</label>
-            <input className="input" type="password" placeholder={isCreate ? "Min 6 chars" : "Leave blank to keep"}
+            <input className="input" type="password" autoComplete="new-password" placeholder={isCreate ? "Min 6 chars" : "Leave blank to keep"}
               value={form.password} onChange={set("password")} />
             <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, marginTop: 6 }}>
               <input type="checkbox" checked={form.must_change_password}

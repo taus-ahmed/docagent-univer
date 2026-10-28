@@ -65,9 +65,10 @@ test("the page keys the list by entry id and wipes passwords on submit, cancel a
   assert.match(page, /function reset\(\) \{\s*setPending\(\[\]\)/);
 });
 
-test("the password field has autocomplete off and is never stored or put in a URL", () => {
+test("the password field is never autofilled, stored or put in a URL", () => {
   const input = page.slice(page.indexOf('type="password"') - 20, page.indexOf('type="password"') + 600);
-  assert.match(input, /autoComplete="off"/);
+  // "new-password", not "off": Chrome ignores off on a password (Recheck R5)
+  assert.match(input, /autoComplete="new-password"/);
   for (const line of page.split("\n")) {
     if (/password|pending/i.test(line)) {
       assert.doesNotMatch(line, /localStorage|sessionStorage|router\.(push|replace)|history\.|searchParams|location\./, line);
