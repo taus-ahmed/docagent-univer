@@ -90,3 +90,14 @@ One commit per item, each with a regression test that fails before the fix.
   before-fix subprocess never exited; killed at 30 s). Checks now run on a
   daemon thread; a check whose previous probe is still stuck answers
   `fail:busy` instead of stacking another thread. `tests/test_readiness_exit.py`.
+- **F10 frontend PDF passwords** — passwords were a map keyed by file NAME,
+  apart from the file list: removing a file kept its password and re-adding
+  the same name restored it. `frontend/lib/uploadFiles.ts` gives every listed
+  file an id and its own password; removing the entry removes the password,
+  a re-added file starts empty, and all passwords are wiped when the upload
+  request is made, on cancel and on reset (React state only — gone on
+  navigation). Confirmed by a source check in the test: no
+  localStorage/sessionStorage/router/history/URL use on any password line;
+  the field keeps `autoComplete="off"` (plus password-manager ignore
+  attributes and a per-entry `name`). `frontend/lib/uploadFiles.test.ts`
+  (in `npm test`).

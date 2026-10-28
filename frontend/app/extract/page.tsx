@@ -17,6 +17,9 @@ import {
   type ColumnTemplate, type JobStatus, type DocumentResult,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import {
+  type PendingFile, addFiles, clearPasswords, filesOf, passwordsOf, removeFile, setPassword,
+} from "@/lib/uploadFiles";
 import { mayCancel } from "@/lib/permissions";
 import { DEMO_OPTION_UNAVAILABLE, apiErrorText, jobErrorText } from "@/lib/demo-error";
 import Link from "next/link";
@@ -430,10 +433,11 @@ export default function ExtractPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<ColumnTemplate | null>(null);
   const [templateSearch, setTemplateSearch] = useState("");
   const [activeTab, setActiveTab] = useState<SourceTab>("upload");
-  const [files, setFiles] = useState<File[]>([]);
-  // PDF passwords by file name: kept in this page's memory only, sent with
-  // the upload, never stored (the server does not keep them either).
-  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  // The files to upload, each with its own id and PDF password
+  // (lib/uploadFiles.ts): in this page's memory only, sent with the upload,
+  // wiped after it, never stored (the server does not keep them either).
+  const [pending, setPending] = useState<PendingFile[]>([]);
+  const files = filesOf(pending);
   const [folderPath, setFolderPath] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeJobId, setActiveJobId] = useState<number | null>(null);
@@ -490,10 +494,7 @@ export default function ExtractPage() {
   if (jobStatus?.status) prevStatus.current = jobStatus.status;
 
   const onDrop = useCallback((accepted: File[]) => {
-    setFiles(prev => {
-      const names = new Set(prev.map(f => f.name));
-      return [...prev, ...accepted.filter(f => !names.has(f.name))];
-    });
+    setPending(prev => addFiles(prev, accepted));
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -533,8 +534,10 @@ export default function ExtractPage() {
     setResults([]);
     prevStatus.current = "";
     try {
-      const res = await extractApi.upload(files, clientId, templateId, selectedOptions, selectedPages,
-        files.map(f => passwords[f.name] || null));
+      const pw = passwordsOf(pending);
+      // Used once: wiped from the page as soon as the request is made.
+      setPending(clearPasswords);
+      const res = await extractApi.upload(files, clientId, templateId, selectedOptions, selectedPages, pw);
       setActiveJobId(res.job_id);
       toast.success(`Extraction started — ${res.total_files} file(s)`);
     } catch (e: any) {
@@ -587,7 +590,7 @@ export default function ExtractPage() {
   }
 
   function reset() {
-    setFiles([]); setPasswords({}); setResults([]); setActiveJobId(null);
+    setPending([]); setResults([]); setActiveJobId(null);
     prevStatus.current = ""; setIsExtracting(false);
   }
 
@@ -600,6 +603,7 @@ export default function ExtractPage() {
   const handleCancel = async () => {
     if (!activeJobId || !confirm("Cancel this extraction? Files that already finished keep their results; the rest are listed as cancelled.")) return;
     setCancelling(true);
+    setPending(clearPasswords);
     try { await extractApi.cancelJob(activeJobId); toast.success("Cancelling…"); }
     catch (e: any) { toast.error(e?.response?.data?.detail || "Cancel failed"); }
     finally { setCancelling(false); }
@@ -856,21 +860,22 @@ export default function ExtractPage() {
                       Best results with digital PDFs. Try the sample documents first.
                     </p>
                   )}
-                  {files.map(f => (
-                    <div key={f.name} className="file-item">
+                  {pending.map(({ id, file: f, password }) => (
+                    <div key={id} className="file-item">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                       <span className="file-name">{f.name}</span>
                       <span className="file-size">{(f.size / 1024).toFixed(0)} KB</span>
                       {f.name.toLowerCase().endsWith(".pdf") && (
                         <input type="password" autoComplete="off" placeholder="PDF password"
+                          name={`pdf-password-${id}`} data-lpignore="true" data-1p-ignore="true"
                           aria-label={`Password for ${f.name} (not saved)`}
                           title="Only if the PDF is password-protected. Used once to open it; not saved."
-                          value={passwords[f.name] || ""}
-                          onChange={e => setPasswords(p => ({ ...p, [f.name]: e.target.value }))}
+                          value={password}
+                          onChange={e => { const v = e.target.value; setPending(p => setPassword(p, id, v)); }}
                           style={{ width: 110, fontSize: 11, padding: "2px 6px",
                                    border: "1px solid var(--border)", borderRadius: 4 }} />
                       )}
-                      <button onClick={() => setFiles(p => p.filter(x => x.name !== f.name))}
+                      <button aria-label={`Remove ${f.name}`} onClick={() => setPending(p => removeFile(p, id))}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       </button>
