@@ -126,3 +126,10 @@ One commit per item, each with a regression test that fails before the fix.
   ever reached child processes), and the orchestrator's Rich console writes
   through `log_safety.ReplacingStdout`. UTF-8 streams are untouched.
   `tests/test_cp1252_console.py`.
+- **demo acceptance script** — `scripts/demo_acceptance.py` was never
+  written (no branch, worktree or commit has it; only the browser spec
+  `frontend/e2e/demo-acceptance.spec.cjs`, 92156b6). Written now, stdlib
+  only on smoke_test's client: sign in, upload a generated two-invoice PDF,
+  wait, results, review queue, mark a document reviewed, export (checks the
+  workbook holds INV-9001 and INV-9002), sign out. Run against
+  `scripts/e2e/stack.py` (stub model): 8 passed, 0 failed in 16.8 s.
