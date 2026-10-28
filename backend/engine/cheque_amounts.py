@@ -205,6 +205,35 @@ def _scaled_to_int(tokens: List[str], scales: dict) -> Optional[int]:
     return total
 
 
+def _is_number_word(tok: str) -> bool:
+    return (tok in _UNITS or tok in _TENS or tok == "hundred" or tok in _SCALES
+            or tok in _LONG_SCALES or tok in _INDIAN or tok in _CRORE
+            or tok.isdigit())
+
+
+def _unit_order_problem(tokens: List[str]) -> bool:
+    """True when the subunit is not the LAST part of the amount.
+
+    Accepted: '<n> dollars [and] <n> cents', 'dollars <n> and <n> cents',
+    '<n> rupees and paise <n>'. Refused: any main-unit word after the subunit
+    word ('fifty cents one dollar' is not 50.01), more than one subunit word,
+    and a subunit word with a number on BOTH sides of it ('fifty cents one'):
+    which number it counts is not knowable, so it is unreadable, never guessed.
+    """
+    subs = [i for i, tok in enumerate(tokens) if tok in _CENT_WORDS]
+    if not subs:
+        return False
+    if len(subs) > 1:
+        return True
+    i = subs[0]
+    if any(tok in _MAIN_UNITS for tok in tokens[i + 1:]):
+        return True
+    after = [x for x in tokens[i + 1:] if x not in _FILLER]
+    if after and i > 0 and _is_number_word(tokens[i - 1]):
+        return True
+    return False
+
+
 _FRACTION_RE = re.compile(r"(?:^|\s)(xx|no|zero|\d{1,2})\s*/\s*100(?:ths?)?(?=\s|$)")
 
 
@@ -232,11 +261,16 @@ def parse_words_amount(text: str, long_scale: bool = False) -> ParsedAmount:
     if m:
         raw = m.group(1)
         cents = 0 if raw in ("xx", "no", "zero") else int(raw)
+        # The fraction closes the amount: '56/100 one dollar' is not 1.56.
+        if any(_is_number_word(x) for x in t[m.end():].split()):
+            return ParsedAmount(None, ["unit_order"])
         t = (t[:m.start()] + " " + t[m.end():]).strip()
     elif re.search(r"/", t):
         return ParsedAmount(None, ["unsupported_fraction"])
 
     tokens = t.split()
+    if _unit_order_problem(tokens):
+        return ParsedAmount(None, ["unit_order"])
     numberish = set(_UNITS) | set(_TENS) | {"hundred"}
     if cents is None and any(tok in _CENT_WORDS for tok in tokens):
         idx = max(i for i, tok in enumerate(tokens) if tok in _CENT_WORDS)
