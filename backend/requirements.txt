@@ -22,5 +22,8 @@ pdf2image==1.17.0
 pytesseract==0.3.10
 
 pdfplumber==0.11.9
+# Linear-time regex engine for user-written rule and category patterns
+# (engine/safe_regex.py, Recheck R1). Wheels: win_amd64, manylinux_2_28 x86_64.
+google-re2==1.1.20251105
 pdfminer.six==20251230
 pypdf==6.21.2

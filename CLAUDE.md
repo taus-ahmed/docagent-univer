@@ -656,9 +656,14 @@ balance cannot be declared. Guide: `docs/ADDING-A-DOCUMENT-FAMILY.md`.
 ⚠ **A `regex` (and a category rule's regex) must be in the SAFE SUBSET**
 (`engine/safe_regex.py`, Review-3 F4): no varying quantifier inside a
 repeated group (`(a+)+`), no alternation inside one (`(a|ab)+`), no
-backreference, at most 3 open-ended quantifiers; values over 512 characters
-and a rule past its 2 s budget are UNREADABLE. Python's `re` holds the GIL,
-so a timeout thread could not stop a runaway match — the subset is the bound.
+backreference or lookaround, at most 3 VARIABLE-length quantifiers (`?`,
+`{0,9}` and `*` all count), and it must pass a save-time test match against
+adversarial strings; values over 512 characters and a rule past its 2 s
+budget are UNREADABLE. Every match runs on **RE2** (`google-re2`, Recheck R1),
+which is linear in the text, so no admitted pattern can run long DURING a
+match — Python's `re` holds the GIL and the subset alone let
+`a{0,100}`×5 run 30 s. RE2's `\d`/`\w`/`` are ASCII. No RE2 installed ⇒
+every pattern refused, never a fallback to `re`.
 `tolerance`/`min`/`max` must be finite; a tolerance must be 0–1000. A rule
 that raises is UNREADABLE on its own; the others still run.
 

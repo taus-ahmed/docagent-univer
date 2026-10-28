@@ -29,6 +29,11 @@ BAD = {
     "malformed": {"rules": ["junk"]},
     "not_a_list": {"rules": {"name": "x"}},
     "bad_category": {"categories": [{"category": "Travel", "regex": ["(a|aa)+"]}]},
+    # Recheck R1: Codex's patterns the old subset admitted (~30 s and ~18 s)
+    "slow_bounded": {"rules": [{"name": "x", "type": "regex", "value": "Total",
+                                "pattern": "a{0,100}a{0,100}a{0,100}a{0,100}a{0,100}b"}]},
+    "slow_category": {"categories": [{"category": "Travel",
+                                      "regex": [r"\d?\d*\d*\d*x"]}]},
 }
 
 

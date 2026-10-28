@@ -1,5 +1,23 @@
 # Progress
 
+## Recheck fixes
+
+Codex rechecked `4407f13` and returned REVISE (R1, R2 must-fix; R3-R7
+should-fix). One commit per item, each with a regression test that fails
+before the fix.
+
+- **R1 regex safety** — every user pattern now runs on RE2
+  (`google-re2==1.1.20251105`; wheels for win_amd64 and manylinux_2_28
+  x86_64, pinned in requirements and constraints). The subset check stays:
+  every variable-length quantifier counts (bounded or not, max 3),
+  lookaround is refused (RE2 has none), and a pattern is test-matched
+  against adversarial 512-character strings at save (`PROBE_SEC` 0.25 s).
+  Measured on 512 characters, worst of fullmatch/search: Codex's
+  `a{0,100}`×5 30 s → 6.3 ms, `\d*\d*\d*x` 18.5 s → 0.03 ms; `(a+)+$`,
+  `(a|a)*b`, `(.*a){12}$` ≤ 0.24 ms. Both of Codex's patterns now answer
+  422 at template save. `tests/test_regex_linear.py`,
+  `tests/http/test_template_rules_on_save.py`.
+
 ## Review-3 fixes
 
 Codex reviewed `3343071` (integration/ocr-hardening) and returned REVISE.
