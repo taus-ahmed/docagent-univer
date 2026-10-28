@@ -42,3 +42,14 @@ One commit per item, each with a regression test that fails before the fix.
   raises is UNREADABLE (review), the others still run; `rules_of` keeps
   malformed entries so they are reported. `tests/test_rules_safety.py` runs
   the catastrophic cases in a subprocess with a timeout.
+- **F5 save-time rule validation** — `rule_problems` ran only in the shape
+  preview. `templates.template_rule_problems` now checks a grid's declared
+  `rules` (against the slots its own shape yields) and its `categories`
+  (`categorize.validate_rules`), and `POST /api/templates` and
+  `PUT /api/templates/{id}` (when the grid changes) refuse with 422
+  `template_rules_invalid` (in the detail and an `X-Error-Code` header)
+  before anything is written. Those are the only routes that write a
+  template: Duplicate and "save this inferred template" post to create.
+  Not covered: a firm YAML's `categories` (schema upload) — refused patterns
+  there are still never run (F4) and are named on each row.
+  `tests/http/test_template_rules_on_save.py`.

@@ -170,6 +170,7 @@ def create_template(
             status_code=409,
             detail=f"Template '{payload.name}' already exists for {payload.document_type}",
         )
+    _refuse_unrunnable_rules(payload.description)
 
     columns_with_order = [
         {"name": col.name, "type": col.type, "order": i}
@@ -206,6 +207,7 @@ def update_template(
     if payload.document_type is not None:
         tpl.document_type = payload.document_type
     if payload.description is not None:
+        _refuse_unrunnable_rules(payload.description)
         tpl.description = payload.description
     if payload.columns is not None:
         columns_with_order = [
@@ -253,6 +255,58 @@ def template_shape_of(tpl: ColumnTemplate):
         return None
 
 
+
+
+#: the error code a save refused for its rules carries (detail and header)
+RULES_INVALID = "template_rules_invalid"
+
+
+def template_rule_problems(description) -> list[str]:
+    """Every problem with the declared rules (engine/rules.py) and category
+    rules (engine/categorize.py) a template's grid carries ([] = fine, or no
+    grid at all).
+
+    Review-3 F5: `rule_problems` ran only in the shape PREVIEW, which the
+    editor consults and an API caller need not — so a rule naming nothing, a
+    pattern that can hang the worker or a NaN tolerance could be saved, and
+    every document extracted with it then went to review "not checked".
+    """
+    try:
+        grid = json.loads(description) if description else None
+    except (TypeError, ValueError):
+        return []
+    if not (isinstance(grid, dict) and "cells" in grid):
+        return []
+    import app.services.paths  # noqa: F401  (engine on sys.path)
+    problems: list[str] = []
+    if grid.get("rules") not in (None, [], ""):
+        from app.api.routes.extract import _compute_shape_for_grid
+        from rules import rule_problems
+        from slot_extractor import slots_from_shape
+        try:
+            sl = slots_from_shape(_compute_shape_for_grid(grid) or {})
+        except Exception:
+            sl = {"fields": [], "tables": []}
+        problems += rule_problems(grid.get("rules"), sl.get("fields") or [],
+                                  sl.get("tables") or [])
+    if grid.get("categories") not in (None, [], ""):
+        from categorize import validate_rules
+        problems += [f"category {p}" for p in validate_rules(grid.get("categories"))]
+    return problems
+
+
+def _refuse_unrunnable_rules(description):
+    """422 `template_rules_invalid` naming every problem, before anything is
+    written. Called by every route that writes a template's grid: create
+    (which Duplicate and "save the inferred template" also use) and update."""
+    problems = template_rule_problems(description)
+    if problems:
+        raise HTTPException(
+            status_code=422,
+            detail=(f"This template's rules cannot run ({RULES_INVALID}): "
+                    + "; ".join(problems[:10])
+                    + (f"; and {len(problems) - 10} more" if len(problems) > 10 else "")),
+            headers={"X-Error-Code": RULES_INVALID})
 
 
 def _get_template_or_403(template_id: int, current_user: User, db: Session) -> ColumnTemplate:
