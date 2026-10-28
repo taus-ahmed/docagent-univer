@@ -168,8 +168,113 @@ def _verify(text: str, f: dict) -> tuple:
         n = _norm_num(m)
         if n and n not in nums and n.rstrip("0").rstrip(".") not in nums:
             problems.append(f"the number {m} is not in the data")
+    problems += _number_words(rest, blob, nums)
     problems += _unknown_names(rest, blob, known_dates)
+    problems += _unknown_after_triggers(rest, blob)
     return (not problems), problems
+
+
+#: number words and what they stand for (Recheck R2). English only, as the
+#: amount-in-words parser is. A run of them is read as one figure where it
+#: parses ("twelve thousand" = 12000); either the figure or every word of the
+#: run must be in the facts.
+_ORDINALS = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
+             "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10}
+_MULTIPLES = {"half": "0.5", "halves": "0.5", "quarter": "0.25", "quarters": "0.25",
+              "dozen": "12", "dozens": "12", "double": "2", "doubled": "2",
+              "twice": "2", "thrice": "3", "triple": "3", "tripled": "3",
+              "once": "1", "percent": None, "per": None}
+
+
+def _number_word_value(run):
+    from cheque_amounts import _words_to_int
+    if len(run) == 1 and run[0] in _ORDINALS:
+        return str(_ORDINALS[run[0]])
+    if len(run) == 1 and run[0] in _MULTIPLES:
+        return _MULTIPLES[run[0]]
+    try:
+        n = _words_to_int([w for w in run if w != "and"])
+    except Exception:
+        n = None
+    return None if n is None else str(n)
+
+
+def _is_number_word(w):
+    from cheque_amounts import _CRORE, _INDIAN, _SCALES, _TENS, _UNITS
+    return (w in _UNITS or w in _TENS or w == "hundred" or w in _SCALES
+            or w in _INDIAN or w in _CRORE or w == "trillion"
+            or w in _ORDINALS or (w in _MULTIPLES and _MULTIPLES[w]))
+
+
+def _number_words(text: str, blob: str, nums) -> list:
+    """Every spelled-out number not grounded by the facts (Recheck R2):
+    "Courier cost twelve thousand dollars." passed because only digits were
+    read as numbers."""
+    low = blob.casefold()
+    words = [w.casefold() for w in re.findall(r"[A-Za-z]+", text)]
+    out, run = [], []
+
+    def close():
+        if not run:
+            return
+        val = _number_word_value(run)
+        grounded = (val is not None and (val in nums or f"{val}.00" in nums)) or all(
+            re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", low)
+            for w in run if w != "and")
+        if not grounded:
+            out.append(f"the number {' '.join(run)!r} is not in the data")
+        run.clear()
+
+    for w in words:
+        if _is_number_word(w) or (w == "and" and run):
+            run.append(w)
+        else:
+            if run and run[-1] == "and":
+                run.pop()
+            close()
+    if run and run[-1] == "and":
+        run.pop()
+    close()
+    return list(dict.fromkeys(out))
+
+
+#: words after which a summary names someone or something (Recheck R2);
+#: "on behalf of" is matched as one trigger
+_TRIGGERS = frozenset("to by from for with at signed approved paid issued".split())
+#: words that may follow a trigger without being a name
+_DETERMINERS = frozenset("the a an his her their its this that these those each "
+                         "every all our your my some any no".split())
+
+
+def _unknown_after_triggers(text: str, blob: str) -> list:
+    """A lowercase name — "the rent went to alice" — has no capital to mark it.
+    The word after a trigger (past any determiner) must be in the facts, a
+    common summary word, or a number/date the other checks have read. A word
+    that is itself a trigger is checked at its own turn ("approved by jsmith")."""
+    low = blob.casefold()
+    words = [re.sub(r"['’][sS]$", "", w) for w in _WORD.findall(text)]
+    keys = [w.casefold() for w in words]
+    out = []
+    for i, k in enumerate(keys):
+        if keys[i:i + 3] == ["on", "behalf", "of"]:
+            j = i + 3
+        elif k in _TRIGGERS:
+            j = i + 1
+        else:
+            continue
+        while j < len(keys) and keys[j] in _DETERMINERS:
+            j += 1
+        if j >= len(keys):
+            continue
+        key = keys[j]
+        if (key in _TRIGGERS or key in _STARTERS or key in _MONTHS or key in _DAYS
+                or _is_number_word(key) or key == "on"):
+            continue
+        parts = [p for p in re.split(r"[-&]", key) if p]
+        if all(re.search(r"(?<!\w)" + re.escape(p) + r"(?!\w)", low) for p in parts):
+            continue
+        out.append(f"the name {words[j]!r} is not in the data")
+    return list(dict.fromkeys(out))
 
 
 def _name_like(word: str) -> bool:

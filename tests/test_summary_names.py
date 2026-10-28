@@ -96,3 +96,51 @@ def test_the_worker_shows_the_facts_summary_instead():
     s = ed["summary"]
     assert s["narrative"] is None and "discarded" in s["notice"]
     assert s["text"] == deterministic_text(facts({}))
+
+
+# ── Recheck R2: spelled-out numbers and lowercase names ─────────────────────
+#
+# Codex: "Courier cost twelve thousand dollars." and "went to alice" both
+# passed — a number written in words was never read as a number, and only a
+# capital marked a name. A number word must now be grounded by the facts
+# (the word itself, or its figure); an unknown word right after to / by /
+# from / for / with / at / on behalf of / signed / approved / paid / issued
+# is a name unless the facts hold it. Over-rejecting only costs the plainer
+# facts summary.
+
+@pytest.mark.parametrize("prose", [
+    "Courier cost twelve thousand dollars.",
+    "Courier is half the total.",
+    "Stationery cost a dozen euros.",
+    "The courier was paid twice.",
+    "Rent doubled, a quarter of the spending.",
+    "The rent went to alice.",
+    "The rent went to bob smith and mark.",
+    "The rent was approved by jsmith.",
+    "Stationery was paid on behalf of acme.",
+    "The courier signed kowalski.",
+    "Payments were issued for globex.",
+])
+def test_spelled_numbers_and_lowercase_names_are_rejected(prose):
+    ok, problems = verify_narrative(prose, F)
+    assert not ok, (prose, problems)
+
+
+@pytest.mark.parametrize("prose", ["Rent was paid three times.", "Rent was paid once a month.",
+                                   "The first payment was rent.", "Rent was eleven percent."])
+def test_a_number_word_whose_figure_is_not_in_the_facts_is_rejected(prose):
+    ok, problems = verify_narrative(prose, EMPTY)
+    assert not ok and any("number" in p for p in problems), (prose, problems)
+
+
+@pytest.mark.parametrize("prose", [
+    "Ficus Bank shows three items in March.",
+    "The statement has three rows.",
+    "Rent was paid to Ficus Bank for office rent.",
+    "Payments run from 2024-03-04 to 2024-03-15.",
+    "Most of the spending was paid for the rent.",
+    "Jane Q. Example paid the courier 17.50.",
+])
+def test_grounded_number_words_and_known_names_still_pass(prose):
+    ok, problems = verify_narrative(prose, F)
+    assert ok, (prose, problems)

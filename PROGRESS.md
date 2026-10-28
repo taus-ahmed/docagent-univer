@@ -17,6 +17,15 @@ before the fix.
   `(a|a)*b`, `(.*a){12}$` ≤ 0.24 ms. Both of Codex's patterns now answer
   422 at template save. `tests/test_regex_linear.py`,
   `tests/http/test_template_rules_on_save.py`.
+- **R2 summaries** — `verify_narrative` now reads spelled-out numbers
+  (English, as the amount parser: one..ninety, hundred..trillion, lakh,
+  crore, half, quarter, dozen, double, twice, thrice, once, first..tenth): a
+  run must be grounded by its figure ("twelve thousand" = 12000) or by every
+  word being in the facts. The word after to / by / from / for / with / at /
+  on behalf of / signed / approved / paid / issued (past any determiner)
+  must be in the facts or a common summary word, so a lowercase name
+  ("went to alice") is rejected. Over-rejection falls back to the plain
+  facts summary. `tests/test_summary_names.py`.
 
 ## Review-3 fixes
 
