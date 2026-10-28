@@ -101,3 +101,18 @@ One commit per item, each with a regression test that fails before the fix.
   the field keeps `autoComplete="off"` (plus password-manager ignore
   attributes and a per-entry `name`). `frontend/lib/uploadFiles.test.ts`
   (in `npm test`).
+- **F11 worker robustness** — CONFIRMED Codex's cause: with no `pdftoppm`
+  on PATH the replay cache's preflight raises `ReplayEnvironmentError` (a
+  BaseException by design) inside the worker thread on the first model call;
+  the worker caught only `Exception`, the thread died and the job stayed
+  `processing` until the test's 600 s poll timeout. Reproduced here by
+  removing Poppler from PATH. The job thread now catches `BaseException` at
+  the level that marks the job: on a fresh session it sets `failed`,
+  "Interrupted: … (<ExceptionType>)" (type only, never the message) and
+  `status_reason=Interrupted`, leaves a cancelled job alone, and re-raises;
+  per-file temp copies were already released in the per-file `finally`, the
+  schema copy in `_run_extraction_sync`. `_await_job` in the batch e2e test
+  now fails within ~3 s of the worker thread ending with the job unfinished
+  (measured: the no-Poppler run fails in 5 s, was 600 s).
+  `tests/http/test_worker_base_exception.py` (SystemExit, KeyboardInterrupt,
+  ReplayEnvironmentError, a custom BaseException).

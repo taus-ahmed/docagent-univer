@@ -670,6 +670,53 @@ def _finish_cancelled(session, job, done, total, successful, failed,
     print(f"[THREAD] CANCELLED job {job.id}: {done}/{total} files finished", flush=True)
 
 
+#: what a job stopped by a BaseException says (Review-3 F11)
+INTERRUPTED_REASON = "Interrupted"
+
+
+def _fail_interrupted_job(session_factory, job_id, exc) -> None:
+    """Mark a job FAILED when the job thread is being torn down by a
+    BaseException — SystemExit, KeyboardInterrupt, a test harness's replay
+    abort, or anything else `except Exception` does not catch.
+
+    Review-3 F11: such an exception went straight past the worker's handlers,
+    the thread died, and the job row stayed `processing` for ever — the UI
+    polling it every two seconds, and a test waiting out its full timeout.
+    Only boot (`_release_stranded_jobs`) would ever have released it, and only
+    on a restart. This runs on a FRESH session (the job's own may be mid-
+    transaction), touches only a job still pending/processing, names the
+    exception type and never its message, and swallows its own failure so the
+    original exception is the one re-raised."""
+    try:
+        from app.models.models import ExtractionJob
+        s = session_factory()
+    except BaseException:
+        return
+    try:
+        job = s.query(ExtractionJob).filter_by(id=job_id).first()
+        if job is not None and job.status in ("pending", "processing"):
+            msg = (f"{INTERRUPTED_REASON}: the extraction stopped before it "
+                   f"finished ({type(exc).__name__}). Files that had finished "
+                   f"are kept; upload the rest again.")
+            job.status = "failed"
+            job.error_message = job.progress_message = msg
+            job.completed_at = datetime.utcnow()
+            job.set_mark("status_reason", INTERRUPTED_REASON)
+            s.commit()
+    except BaseException as e:
+        try:
+            s.rollback()
+        except BaseException:
+            pass
+        print(f"[THREAD] could not mark job {job_id} interrupted: "
+              f"{type(e).__name__}", flush=True)
+    finally:
+        try:
+            s.close()
+        except BaseException:
+            pass
+
+
 def _release_copy(storage, path):
     """Hand a temp copy back to storage (`StorageService.release`). A no-op for
     the local store's own files and for a storage without temp copies; never
@@ -1187,5 +1234,17 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 session.commit()
         except Exception:
             pass
+    except BaseException as e:
+        # SystemExit, KeyboardInterrupt, a replay abort: the thread is going
+        # down, but the job must not be stranded in `processing`. The per-file
+        # `finally` above has already released that file's temp copies, and
+        # `_run_extraction_sync` releases the schema copy.
+        print(f"[THREAD] INTERRUPTED: {type(e).__name__}", flush=True)
+        try:
+            session.rollback()
+        except BaseException:
+            pass
+        _fail_interrupted_job(Session, job_id, e)
+        raise
     finally:
         session.close()

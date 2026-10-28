@@ -135,8 +135,10 @@ def _await_job(client, auth, job_id):
     A job that never leaves `processing` is finding #4 in the runbook's
     known-unfixed list, so the timeout is an assertion, not a convenience.
     """
+    from app.core.lifecycle import active_jobs
     deadline = time.time() + POLL_TIMEOUT_SEC
     seen = []
+    started = gone = None
     while time.time() < deadline:
         r = client.get(f"/api/jobs/{job_id}", headers=auth["acme"])
         assert r.status_code == 200, r.text
@@ -144,6 +146,20 @@ def _await_job(client, auth, job_id):
         seen.append(job["status"])
         if job["status"] not in ("pending", "processing"):
             return job
+        # FAIL FAST (Review-3 F11): a job whose thread has ended while the row
+        # still says pending/processing is stranded, and waiting out the
+        # timeout only hides why. A few seconds' grace covers the last commit.
+        now = time.time()
+        if job_id in active_jobs():
+            started, gone = started or now, None
+        elif started is not None:
+            gone = gone or now
+            if now - gone > 3:
+                pytest.fail(f"job {job_id}'s worker thread ended with the job still "
+                            f"{job['status']!r} — stranded (a BaseException in the "
+                            f"worker?). statuses seen: {sorted(set(seen))}")
+        elif now - (deadline - POLL_TIMEOUT_SEC) > 60:
+            pytest.fail(f"job {job_id}'s worker thread never started in 60s")
         time.sleep(0.25)
     pytest.fail(f"job {job_id} never left processing in {POLL_TIMEOUT_SEC}s "
                 f"— stranded. statuses seen: {sorted(set(seen))}")
