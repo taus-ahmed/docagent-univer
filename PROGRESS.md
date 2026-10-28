@@ -58,6 +58,18 @@ before the fix.
   0.5 s), and a check is claimed under one lock so two probes cannot both
   start it. `tests/http/test_worker_base_exception.py`,
   `tests/test_readiness_exit.py`.
+- **R6 demo acceptance** — `scripts/demo_acceptance.py` now requires the
+  file to split into TWO documents and the export to hold BOTH invoice
+  numbers (it passed with either). A second pass signs in as a demo tenant:
+  the throwaway stack (`scripts/e2e/stack.py`) now creates `e2e_demo`
+  (its DEMO_CLIENT_IDS) and seeds the shared `demo_001` schema the way boot
+  does, because boot seeds it only into an empty schema table. The pass asks
+  for all five options and checks none ran, exports, and reads the activity
+  trail with `demo_activity_report.py` from the stack's database (login,
+  upload with no options, export); against a deployment the trail is
+  reported SKIPPED. Run against the stack: 18 passed, 0 failed (5.5 s). A
+  control — the demo checks run as a non-demo user asking for options —
+  fails "no additional option ran", as it should.
 
 ## Review-3 fixes
 

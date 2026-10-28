@@ -7,7 +7,10 @@ Backend: the stub model (PRIMARY_LLM=stub, no network), ENVIRONMENT=development,
 a NEW SQLite file and local storage inside --workdir — never any other
 database. Two firms are created (e2e_a, e2e_b), each with an admin; their
 passwords are written to <workdir>/creds.json for the specs, and e2e_a also has
-a user left on a one-time password (the forced-change flow). Frontend: `next
+a user left on a one-time password (the forced-change flow). A third firm,
+e2e_demo, is the stack's DEMO tenant (DEMO_CLIENT_IDS=e2e_demo) with one user,
+for scripts/demo_acceptance.py's demo pass; creds.json also names the SQLite
+URL so that script can read the demo activity trail. Frontend: `next
 dev` with BACKEND_URL / NEXT_PUBLIC_API_URL pointing at the backend, set in the
 process environment so they win over any .env file.
 
@@ -54,7 +57,7 @@ def backend_env(work: Path, web_port: int) -> dict:
         "LOCAL_UPLOAD_DIR": str(storage / "uploads"), "LOCAL_OUTPUT_DIR": str(storage / "outputs"),
         "LOCAL_SCHEMAS_DIR": str(storage / "schemas"),
         "ALLOWED_ORIGINS": f"http://localhost:{web_port}", "OCR_WORKERS": "1",
-        "RATE_LIMIT_DELAY": "0", "DEMO_CLIENT_IDS": "", "BCRYPT_ROUNDS": "4",
+        "RATE_LIMIT_DELAY": "0", "DEMO_CLIENT_IDS": "e2e_demo", "BCRYPT_ROUNDS": "4",
         "PYTHONIOENCODING": "utf-8",
     })
     return env
@@ -81,6 +84,23 @@ db.add(User(username="e2e_a_new", display_name="New User", role="client",
             is_active=True))
 db.commit()
 out["one_time"] = {"username": "e2e_a_new", "password": "Temp-Pass-123456"}
+create_tenant(db, "e2e_demo", "E2E Demo", "e2e_demo_admin")
+# A demo user extracts with the shared demo_001 schema. Boot seeds it only into
+# an EMPTY schema table (main._seed_demo_schema), which the firms above are not,
+# so it is added here the same way; boot's _materialise_schemas writes it out.
+import yaml
+from pathlib import Path as _P
+from app.models.models import ClientSchema
+_y = _P("engine/demo_accounting.yaml").read_text(encoding="utf-8")
+_d = yaml.safe_load(_y)
+db.add(ClientSchema(client_id=_d["client_id"], client_name=_d["client_name"], yaml_content=_y,
+                    document_types=json.dumps(list((_d.get("document_types") or {}).keys()))))
+db.add(User(username="e2e_demo_user", display_name="Demo User", role="client",
+            client_id="e2e_demo", password_hash=hash_password("Pw-e2e_demo-123456"),
+            is_active=True))
+db.commit()
+out["demo"] = {"username": "e2e_demo_user", "password": "Pw-e2e_demo-123456",
+               "client_id": "e2e_demo"}
 print(json.dumps(out))
 '''
 
@@ -106,6 +126,7 @@ def main():
     if seed.returncode:
         sys.exit("seeding failed:\n" + seed.stderr.decode("utf-8", "replace")[-2000:])
     creds = json.loads(seed.stdout.decode("utf-8").strip().splitlines()[-1])
+    creds["db"] = env["DATABASE_URL"]
     creds["api"] = f"http://localhost:{a.api_port}"
     creds["web"] = f"http://localhost:{a.web_port}"
     (work / "creds.json").write_text(json.dumps(creds, indent=2), encoding="utf-8")
