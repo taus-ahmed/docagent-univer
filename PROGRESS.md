@@ -21,3 +21,12 @@ One commit per item, each with a regression test that fails before the fix.
   charts sheet uses the same rule for its totals. The flat, combined and
   per-file writers already wrote text and are pinned unrounded.
   `tests/test_export_precision.py` runs every writer.
+- **F3 legacy export** — the layout, table, form, mixed and table-rows
+  fallback writers each stripped `$`/`,` and called float(), so an ambiguous
+  "1,234" became a number. Every number write now goes through
+  `excel_cells.put_extracted` → `coerce_cell_value` (the shared parser with
+  the document's own hint): ambiguous amounts and identifiers stay text,
+  long numbers stay text and are flagged, numbers carry the printed notation
+  as a number format. The mixed writer's "only amount labels become numbers"
+  rule is kept (`numeric=False` otherwise). `_document_hint_of` moved to
+  `excel_cells.document_hint_of` (excel_slot keeps the name).

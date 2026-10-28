@@ -11,6 +11,7 @@ from app.services.template_parsing import _col_letter
 from app.services.excel_cells import _find_template_dimensions
 from app.services.excel_cells import _marks_or_off
 from app.services.excel_cells import _review_status_unknown
+from app.services.excel_cells import put_extracted
 import re
 # --imports-end--
 
@@ -34,21 +35,10 @@ def _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                                "_confidence": (row or {}).get("confidence")}, "value")
 
     def _set_num(cell, raw):
-        # STEP 7 — normalize: strip currency symbols + thousands separators, convert
-        # accounting negatives (500) -> -500; numeric -> float/int, else keep text.
-        s = str(raw).strip()
-        for sym in ("$", "£", "€", "₹", "¥", ","):
-            s = s.replace(sym, "")
-        s = s.strip()
-        if s.startswith("(") and s.endswith(")"):
-            s = "-" + s[1:-1].strip()
-        try:
-            if s and re.match(r'^-?[0-9]+\.?[0-9]*$', s):
-                cell.value = float(s) if "." in s else int(s)
-                return
-        except (ValueError, TypeError):
-            pass
-        cell.value = str(raw)
+        # STEP 7 — the shared parser decides (Review-3 F3): a number in any
+        # locale, accounting negatives included; ambiguous or not a number ->
+        # the text as printed.
+        put_extracted(cell, raw, ed=ed)
 
     def _nrm(s):
         return re.sub(r'[^a-z0-9]+', '', str(s or "").lower())
@@ -448,10 +438,7 @@ def _write_table_excel(ws, doc_results, sheet_data, cells_tpl, template_regions,
                 xl_cell = ws.cell(row=current_row, column=c_idx + 1)
                 if isinstance(xl_cell, MergedCell):
                     continue
-                try:
-                    xl_cell.value = (float(val) if "." in str(val) else int(val)) if val else val
-                except (ValueError, TypeError):
-                    xl_cell.value = val
+                put_extracted(xl_cell, val, col_name, extracted)
                 sm.row_cell(xl_cell, extracted, row_data, col_name)
             current_row += 1
 
@@ -521,16 +508,11 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                     filled = filled.get("value", "")
                 filled = filled if filled is not None else ""
 
-                # Try to store as number for formula calculation
-                try:
-                    num_val = float(filled.replace(",","")) if filled else None
-                    if num_val is not None:
-                        xl_cell.value = num_val
-                        cell_values[ref] = num_val
-                    else:
-                        xl_cell.value = filled
-                except (ValueError, AttributeError):
-                    xl_cell.value = filled
+                # Stored as a number for formula calculation when the shared
+                # parser reads one.
+                num_val = put_extracted(xl_cell, filled, tpl_value, extracted_data)
+                if num_val is not None:
+                    cell_values[ref] = num_val
                 # The review mark (it replaces the old low-confidence tint).
                 if extracted_fields.get(ref):
                     sm.field(xl_cell, extracted_data, ref=ref, value=filled)
@@ -543,13 +525,9 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 if isinstance(kv_filled, dict):
                     kv_filled = kv_filled.get("value", "")
                 kv_filled = kv_filled or ""
-                try:
-                    num_val = float(str(kv_filled).replace(",", "")) if kv_filled else None
-                    xl_cell.value = num_val if num_val is not None else kv_filled
-                    if num_val is not None:
-                        cell_values[ref] = num_val
-                except (ValueError, AttributeError):
-                    xl_cell.value = kv_filled
+                num_val = put_extracted(xl_cell, kv_filled, "", extracted_data)
+                if num_val is not None:
+                    cell_values[ref] = num_val
                 sm.field(xl_cell, extracted_data, ref=ref, value=kv_filled)
 
             elif tpl_value.startswith("="):
@@ -643,15 +621,9 @@ def _write_form_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c, open
                 continue
             _val = ef_val.get("value", "") if isinstance(ef_val, dict) else str(ef_val or "")
             _val = _val if _val is not None else ""
-            try:
-                _clean = str(_val).replace(",", "").replace("$", "").strip() if _val else ""
-                if _clean and re.match(r'^-?[0-9]+\.?[0-9]*$', _clean):
-                    _xl.value = float(_clean)
-                    cell_values[ef_ref] = float(_clean)
-                else:
-                    _xl.value = _val or ""
-            except (ValueError, AttributeError):
-                _xl.value = _val or ""
+            _num = put_extracted(_xl, _val, "", extracted_data)
+            if _num is not None:
+                cell_values[ef_ref] = _num
             sm.field(_xl, extracted_data, ref=ef_ref, value=_val)
             _dyn_written += 1
 
@@ -701,13 +673,8 @@ def _write_table_rows_fallback(ws, extracted_data, start_row, openpyxl_mod,
             xl = ws.cell(row=out_row, column=c_idx + 1)
             if isinstance(xl, MergedCell):
                 continue
-            sval = "" if val is None else str(val)
-            clean = sval.replace(",", "").replace("$", "").replace("£", "") \
-                        .replace("€", "").replace("₹", "").strip()
-            if clean and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
-                xl.value = float(clean) if "." in clean else int(clean)
-            elif sval:
-                xl.value = sval
+            if val is not None and str(val).strip():
+                put_extracted(xl, val, key, extracted_data)
             sm.row_cell(xl, extracted_data, row, key)
         written += 1
     if written:
@@ -873,21 +840,16 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 filled = extracted_fields.get(ref) or label_to_value.get(tpl_value, "")
                 if isinstance(filled, dict):
                     filled = filled.get("value", "")
-                try:
-                    clean_filled = str(filled).replace(",", "").strip() if filled else ""
-                    # Only convert to float for financial amount fields
-                    # Never convert IDs, codes, reference numbers, routing numbers
-                    amount_labels = {"amount","total","subtotal","balance","price",
-                                    "cost","tax","freight","fee","charge","payment",
-                                    "salary","gross","net","deduction","rate"}
-                    label_lower = tpl_value.lower() if tpl_value else ""
-                    is_amount = any(kw in label_lower for kw in amount_labels)
-                    if filled and is_amount and re.match(r'^-?[0-9]+\.?[0-9]*$', clean_filled):
-                        xl_cell.value = float(clean_filled)
-                    else:
-                        xl_cell.value = filled or ""
-                except (ValueError, TypeError):
-                    xl_cell.value = filled or ""
+                # Only a financial amount field becomes a number — never an
+                # ID, code, reference or routing number — and then only as
+                # the shared parser reads it.
+                amount_labels = {"amount","total","subtotal","balance","price",
+                                "cost","tax","freight","fee","charge","payment",
+                                "salary","gross","net","deduction","rate"}
+                label_lower = tpl_value.lower() if tpl_value else ""
+                is_amount = any(kw in label_lower for kw in amount_labels)
+                put_extracted(xl_cell, filled, tpl_value, extracted_data,
+                              numeric=is_amount)
                 if extracted_fields.get(ref):
                     sm.field(xl_cell, extracted_data, ref=ref, value=filled)
                 else:
@@ -898,14 +860,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 if isinstance(kv_filled, dict):
                     kv_filled = kv_filled.get("value", "")
                 kv_filled = kv_filled or ""
-                try:
-                    clean_kv = str(kv_filled).replace(",", "").strip() if kv_filled else ""
-                    if clean_kv and re.match(r'^-?[0-9]+\.?[0-9]*$', clean_kv):
-                        xl_cell.value = float(clean_kv)
-                    else:
-                        xl_cell.value = kv_filled
-                except (ValueError, TypeError):
-                    xl_cell.value = kv_filled
+                put_extracted(xl_cell, kv_filled, "", extracted_data)
                 sm.field(xl_cell, extracted_data, ref=ref, value=kv_filled)
             elif tpl_value.startswith("="):
                 try:
@@ -985,19 +940,13 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 xl_cell = ws.cell(row=current_row, column=c_idx + 1)
                 if isinstance(xl_cell, MergedCell):
                     continue
-                try:
-                    clean = val.replace(",", "").replace("$", "").replace("£", "").strip()
-                    amount_labels = {"amount","total","subtotal","balance","price",
-                                    "cost","tax","freight","fee","charge","payment",
-                                    "salary","gross","net","deduction","rate","qty","quantity"}
-                    col_lower = col_name.lower()
-                    is_amount = any(kw in col_lower for kw in amount_labels)
-                    if clean and clean not in ("", "-") and is_amount and re.match(r'^-?[0-9]+\.?[0-9]*$', clean):
-                        xl_cell.value = float(clean)
-                    else:
-                        xl_cell.value = val or ""
-                except (ValueError, TypeError):
-                    xl_cell.value = val
+                amount_labels = {"amount","total","subtotal","balance","price",
+                                "cost","tax","freight","fee","charge","payment",
+                                "salary","gross","net","deduction","rate","qty","quantity"}
+                col_lower = col_name.lower()
+                is_amount = any(kw in col_lower for kw in amount_labels)
+                put_extracted(xl_cell, val, col_name, extracted_data,
+                              numeric=is_amount)
                 if val:
                     sm.row_cell(xl_cell, extracted_data, row_data, col_name)
             current_row += 1
@@ -1147,14 +1096,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
                 continue
             _val = ef_val.get("value", "") if isinstance(ef_val, dict) else str(ef_val or "")
             _val = _val if _val is not None else ""
-            try:
-                _clean = str(_val).replace(",", "").replace("$", "").strip() if _val else ""
-                if _clean and re.match(r'^-?[0-9]+\.?[0-9]*$', _clean):
-                    _xl.value = float(_clean)
-                else:
-                    _xl.value = _val or ""
-            except (ValueError, AttributeError):
-                _xl.value = _val or ""
+            put_extracted(_xl, _val, "", extracted_data)
             sm.field(_xl, extracted_data, ref=ef_ref, value=_val)
             _dyn_written_m += 1
 

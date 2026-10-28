@@ -155,15 +155,8 @@ def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod, provenance=True):
 
 def _document_hint_of(ed):
     """The decimal separator a stored result's own numbers agree on, or None."""
-    from amounts import document_hint
-    if not isinstance(ed, dict):
-        return None
-    texts = list((ed.get("extracted_fields") or {}).values())
-    for k, rows in ed.items():
-        if k.endswith("_rows") and isinstance(rows, list):
-            texts += [v for r in rows if isinstance(r, dict)
-                      for c, v in r.items() if not str(c).startswith("_")]
-    return document_hint(texts, ed.get("locale"))
+    from app.services.excel_cells import document_hint_of
+    return document_hint_of(ed)
 
 
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,

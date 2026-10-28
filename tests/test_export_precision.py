@@ -179,3 +179,94 @@ def test_combined_and_per_file(per_file):
                           needs_review=0, total_time_sec=1.0)
     data = _build_excel(job, [_doc(_result("slot"))], None, per_file=per_file)
     assert _numbers_ok(openpyxl.load_workbook(io.BytesIO(data)))["long"]
+
+
+# ── Review-3 F3: the legacy writers go through the shared parser too ─────────
+#
+# Each had its own guess (strip `$` and `,`, call float()), so an ambiguous
+# "1,234" became 1234 and a long number was rounded. Now an ambiguous amount
+# exports as its text, exactly like the slot writer.
+
+AMBIGUOUS = "1,234"
+
+
+def _legacy_result(template_type, ambiguous=False):
+    """LONG / FITS values, or (ambiguous=True) a document whose only numbers
+    are "1,234": nothing on it says which notation it uses, so the document
+    hint cannot resolve it — any number written for it would be a guess."""
+    ed = _result(template_type)
+    if ambiguous:
+        ed["extracted_fields"] = {k: AMBIGUOUS for k in ed["extracted_fields"]}
+        ed["table_rows"] = [{"Item": "a", "Amount": AMBIGUOUS, "_confidence": "high"}]
+    return ed
+
+
+def _ambiguous_is_text(wb):
+    hits = [c for ws in wb.worksheets for row in ws.iter_rows() for c in row
+            if c.value == AMBIGUOUS]
+    assert hits, "the ambiguous amount was not written as its text"
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                assert c.value != 1234 and c.value != 1.234, (ws.title, c.coordinate)
+
+
+_AMOUNT_GRID = {"cells": {"0,0": {"value": "Total Amount"}, "0,1": {"value": "", "extractTarget": True},
+                          "1,0": {"value": "Subtotal"}, "1,1": {"value": "", "extractTarget": True},
+                          "2,0": {"value": "Fee"}, "2,1": {"value": "", "extractTarget": True},
+                          "10,0": {"value": "Item"}, "10,1": {"value": "Amount"}},
+                "colWidths": [], "merges": {}}
+
+LEGACY = {
+    "form_kv": ("labeled", _grid(True), {"primary_mode": "form_kv"}),
+    "table": ("labeled", {"cells": {"0,0": {"value": "Item"}, "0,1": {"value": "Amount"}},
+                          "colWidths": [], "merges": {}},
+              {"primary_mode": "table", "table_regions": [
+                  {"header_row": 0, "start_col": 0, "column_names": ["Item", "Amount"]}]}),
+    "mixed": ("labeled", _AMOUNT_GRID,
+              {"primary_mode": "mixed", "table_regions": [
+                  {"header_row": 10, "start_col": 0, "column_names": ["Item", "Amount"],
+                   "section_label": ""}]}),
+}
+
+
+@pytest.mark.parametrize("mode", sorted(LEGACY))
+def test_legacy_writers(mode):
+    ttype, grid, regions = LEGACY[mode]
+    wb = _roundtrip(_excel(_legacy_result(ttype), grid, regions))
+    found = _numbers_ok(wb)
+    # The mixed writer keeps a field whose label names no amount as text by
+    # its own rule — never a number, so nothing to flag; its table's Amount
+    # column (rows below 10) is where a number would have been written.
+    _flagged([c for c in found["long"] if mode != "mixed" or c.row > 11])
+    _ambiguous_is_text(_excel(_legacy_result(ttype, ambiguous=True), grid, regions))
+
+
+def test_legacy_layout_writer():
+    ed = _result("structural")
+    ed["extracted_fields"] = {}
+    ed["layout_sections"] = {"Assets": {"rows": [
+        {"label": "Cash", "value": LONG, "confidence": "high",
+         "row": 2, "label_col": "A", "value_col": "B"},
+        {"label": "Misc", "value": FITS, "confidence": "high",
+         "row": 4, "label_col": "A", "value_col": "B"}]}}
+    grid = {"cells": {"0,0": {"value": "Assets"}}, "colWidths": [], "merges": {}}
+    wb = _roundtrip(_excel(ed, grid))
+    found = _numbers_ok(wb)
+    _flagged(found["long"])
+    assert found["fits"]
+    ed["table_rows"] = []
+    ed["layout_sections"]["Assets"]["rows"] = [
+        {"label": "Bank", "value": AMBIGUOUS, "confidence": "high",
+         "row": 3, "label_col": "A", "value_col": "B"}]
+    _ambiguous_is_text(_excel(ed, grid))
+
+
+def test_legacy_writers_still_write_plain_amounts_as_numbers():
+    ttype, grid, regions = LEGACY["table"]
+    ed = _result(ttype)
+    ed["table_rows"] = [{"Item": "a", "Amount": "$1,234.50", "_confidence": "high"},
+                        {"Item": "b", "Amount": "(500.00)", "_confidence": "high"}]
+    wb = _excel(ed, grid, regions)
+    vals = [c.value for row in wb.active.iter_rows() for c in row]
+    assert 1234.5 in vals and -500.0 in vals

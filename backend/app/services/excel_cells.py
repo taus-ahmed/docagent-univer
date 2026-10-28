@@ -292,6 +292,48 @@ def precision_flag(cell, value, decimal_hint=None):
     return True
 
 
+def put_extracted(cell, value, label="", ed=None, numeric=True):
+    """Write one extracted value the way every writer does (Review-3 F3).
+
+    The legacy writers each had their own number guess — strip `$` and `,`
+    and call float() — so "1.234,56" or an ambiguous "1,234" became a number
+    nobody had printed. Now the shared parser decides, through
+    `coerce_cell_value`: an ambiguous or unparseable amount and an identifier
+    stay the text they were, a number past 15 significant digits stays text and
+    is flagged, and a number keeps its printed notation as a number format.
+    `numeric=False` keeps a writer's own "text unless it is an amount" rule.
+    Returns the number written, or None when the cell holds text.
+    """
+    if value is None or str(value).strip() == "":
+        cell.value = ""
+        return None
+    hint = document_hint_of(ed)
+    out = coerce_cell_value(value, label, hint) if numeric else None
+    if isinstance(out, float):
+        cell.value = out
+        fmt = cell_format(value, label, hint)
+        if fmt:
+            cell.number_format = fmt
+        return out
+    cell.value = value if isinstance(value, str) else str(value)
+    if numeric:
+        precision_flag(cell, value, hint)
+    return None
+
+
+def document_hint_of(ed):
+    """The decimal separator a stored result's own numbers agree on, or None."""
+    from amounts import document_hint
+    if not isinstance(ed, dict):
+        return None
+    texts = list((ed.get("extracted_fields") or {}).values())
+    for k, rows in ed.items():
+        if k.endswith("_rows") and isinstance(rows, list):
+            texts += [v for r in rows if isinstance(r, dict)
+                      for c, v in r.items() if not str(c).startswith("_")]
+    return document_hint(texts, ed.get("locale"))
+
+
 def keep_precision_note(cell, text):
     """`text` with the cell's precision note in front, when it carries one."""
     if cell.comment and cell.comment.text.startswith(PRECISION_NOTE):
