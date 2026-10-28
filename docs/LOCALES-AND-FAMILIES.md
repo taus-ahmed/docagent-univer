@@ -78,13 +78,13 @@ grounding and OCR origin rather than read correctly.
 | `id_type` | Check | Reason on failure |
 |---|---|---|
 | `aba` | US routing number checksum | `checksum_failed` |
-| `iban` | ISO 13616 mod-97 | `iban_invalid` |
+| `iban` | registry country and length, ISO 13616 mod-97, and the account part's per-country format (letters/digits by position) for every registry country — none is checksum-only | `iban_invalid` |
 | `bic` / `swift` | format | `swift_invalid` |
 | `uk_sort_code` | format | `sort_code_invalid` |
 | `gstin` | India GSTIN check character | `gstin_invalid` |
 | `pan` | India PAN format; must match its GSTIN | `pan_invalid`, `pan_gstin_mismatch` |
 | `ifsc` | India IFSC format | `ifsc_invalid` |
-| `vat` | EU and UK VAT formats | `vat_format_invalid` |
+| `vat` | EU and UK VAT formats; UK (GB/XI) also the HMRC check digits (mod 97, and the 97-55 scheme from 100 0000 up) and GD/HA ranges; other EU countries are format-only | `vat_format_invalid` |
 | `trn` | UAE TRN format | `trn_invalid` |
 | `ein` | US EIN format | `ein_invalid` |
 

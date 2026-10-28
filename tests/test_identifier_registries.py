@@ -57,7 +57,14 @@ def test_a_known_good_gstin_still_passes():
 
 
 def _iban(cc, length):
-    body = "0" * (length - 4)
+    """Good mod-97 check digits for `cc`, with an account part in the
+    country's own format (Recheck R4) when it has one, else all zeros."""
+    import re
+    from identifiers.banking import BBAN_FORMAT
+    fmt = BBAN_FORMAT.get(cc)
+    body = ("".join(("A" if k == "a" else "0") * int(n)
+                    for n, k in re.findall(r"(\d+)([nac])", fmt))
+            if fmt and length == IBAN_LENGTH.get(cc) else "0" * (length - 4))
     for chk in range(2, 99):
         s = f"{cc}{chk:02d}{body}"
         from identifiers.banking import iban_mod97
@@ -86,7 +93,7 @@ def test_real_ibans_still_pass():
 @pytest.mark.parametrize("vat, ok", [
     ("GBGD001", True), ("GBGD499", True), ("GBGD500", False), ("GBGD999", False),
     ("GBHA500", True), ("GBHA999", True), ("GBHA000", False), ("GBHA499", False),
-    ("XIGD100", True), ("XIHA100", False), ("GB123456789", True),
+    ("XIGD100", True), ("XIHA100", False), ("GB980780684", True),
 ])
 def test_uk_government_and_health_authority_ranges(vat, ok):
     assert bool(validate("vat", vat).ok) is ok

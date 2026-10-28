@@ -23,6 +23,19 @@ EU_VAT = {
 }
 
 
+def uk_vat_check_ok(body: str) -> bool:
+    """HMRC's check on a 9-digit UK VAT number (the first 9 of a 12-digit
+    branch number): weights 8..2 over the first seven digits plus the two
+    check digits as a number. Mod 97 must be 0; from 100 0000 upwards the
+    "97-55" scheme (+55, so 42 mod 97) is also issued, and python-stdnum
+    accepts 55 there too. Seven leading zeros is no number (Recheck R4)."""
+    d = body[:9]
+    if int(d[:7]) == 0:
+        return False
+    total = sum(w * int(c) for w, c in zip((8, 7, 6, 5, 4, 3, 2), d[:7])) + int(d[7:9])
+    return total % 97 in ((0, 42, 55) if int(d[:3]) >= 100 else (0,))
+
+
 @register("vat", "vat_format_invalid")
 def vat(norm):
     cc, body = norm[:2], norm[2:]
@@ -31,8 +44,11 @@ def vat(norm):
     pat = EU_VAT.get(cc)
     if not pat:
         return False, f"{norm[:2]!r} is not an EU (or GB) VAT prefix"
-    return (True, "") if re.fullmatch(pat, body) else \
-        (False, f"not the {cc} VAT number format")
+    if not re.fullmatch(pat, body):
+        return False, f"not the {cc} VAT number format"
+    if cc in ("GB", "XI") and body.isdigit() and not uk_vat_check_ok(body):
+        return False, "the UK VAT check digits do not match"
+    return True, ""
 
 
 @register("trn", "trn_invalid")

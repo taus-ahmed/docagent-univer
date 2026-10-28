@@ -32,6 +32,16 @@ before the fix.
   "ten rupees fifty cents" and "five dollars fifty paise" are now unreadable
   (`unit_mix`) instead of 10.50 / 5.50. `tests/test_amount_unit_family.py`;
   the F1 every-pair test now expects `unit_mix` for a foreign subunit.
+- **R4 identifiers** — UK VAT (GB/XI) now carries the HMRC check:
+  weights 8..2 over seven digits plus the check pair, 0 mod 97, or 42/55 for
+  numbers from 100 0000 (the 97-55 scheme, as python-stdnum); seven leading
+  zeros (`GB000000000`) is refused; GD/HA ranges kept. Random single-digit
+  mutations of a valid number: 14 of 500 survive (Codex: 269 of 1,575 with
+  no check). IBAN: `BBAN_FORMAT` gives the account part's shape for all 89
+  registry countries (held to `IBAN_LENGTH` by a test), so a letter typed
+  for a digit fails even when mod 97 agrees. Other EU VAT numbers stay
+  format-only (docs/LOCALES-AND-FAMILIES.md). `tests/test_identifier_checksums.py`;
+  two older tests now use a checksum-valid GB number.
 
 ## Review-3 fixes
 

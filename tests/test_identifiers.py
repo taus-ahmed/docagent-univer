@@ -32,7 +32,7 @@ GSTIN = "27" + PAN + "1Z" + gstin_check_char("27" + PAN + "1Z")
     ("vat", "DE123456789", True), ("vat", "FR12345678901", True),
     ("vat", "NL123456789B01", True), ("vat", "ATU12345678", True),
     ("vat", "DE12345678", False), ("vat", "US123456789", False),
-    ("vat", "GB123456789", True), ("vat", "EL123456789", True),
+    ("vat", "GB980780684", True), ("vat", "EL123456789", True),
     ("trn", "100123456789003", True), ("trn", "10012345678900", False),
     ("ein", "12-3456789", True), ("ein", "07-3456789", False), ("ein", "1234567", False),
 ])
