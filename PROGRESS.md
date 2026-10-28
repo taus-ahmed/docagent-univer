@@ -63,3 +63,11 @@ One commit per item, each with a regression test that fails before the fix.
   IFSC bank code (the RBI list changes monthly; a stale copy refuses real
   banks) and UAE TRN (no published checksum or ranges).
   `tests/test_identifier_registries.py`.
+- **F7 summary names** — only RUNS of 2+ capitalised words were checked, so
+  "Alice approved the payment" passed with empty facts. `verify_narrative`
+  now checks every word that is capitalised (any cased script), an acronym,
+  or in a caseless script (Devanagari, CJK, Arabic): it must be in the facts
+  as a whole word, or start a sentence and be on a closed list of common
+  summary words, or be the month/weekday of a date the facts hold.
+  Possessives are stripped, hyphenated names checked part by part, and a
+  check that raises fails closed. `tests/test_summary_names.py`.

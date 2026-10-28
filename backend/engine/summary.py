@@ -103,7 +103,33 @@ def deterministic_text(f: dict) -> str:
 
 
 _NUM = re.compile(r"\d[\d,.'’]*\d|\d")
-_NAME = re.compile(r"\b([A-Z][a-zA-Z&'-]+(?:\s+[A-Z][a-zA-Z&'-]+)+)")
+#: a word in any script: letters, joined by an apostrophe, hyphen or &
+_WORD = re.compile(r"[^\W\d_][^\W_]*(?:['’&-][^\W\d_][^\W_]*)*")
+#: words a sentence may START with in an ordinary summary. Only at the start
+#: of a sentence does a capital say nothing; anywhere else it marks a name.
+#: A starter outside this list is treated as a name — failing closed costs a
+#: plainer summary, failing open shows an invented person as fact.
+_STARTERS = frozenset("""
+a about across after all almost also although among an and another any are
+as at because before between both but by during each either every few for
+from given here however if in including it its last less many more most
+much neither no nor not of on one only other otherwise our over overall
+several since so some such than that the their then there these they this
+those though through throughout to two three four five under until up was
+were what when where whereas which while with within without yet you your
+we
+account accounts activity amount amounts balance balances charge charges
+cost costs credit credits debit debits deposit deposits document documents
+entries entry expense expenses fee fees figures income invoice invoices
+item items line lines payment payments purchase purchases receipt receipts
+rent revenue row rows sale sales spending spend statement statements sum
+summary tax taxes total totals transaction transactions transfer transfers
+value values withdrawal withdrawals largest smallest highest lowest biggest
+date dates dated period categories category field fields
+""".split())
+_MONTHS = ["january", "february", "march", "april", "may", "june", "july",
+           "august", "september", "october", "november", "december"]
+_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 _DATEISH = re.compile(r"\b\d{4}-\d{1,2}-\d{1,2}\b|\b\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\b|"
                       r"\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b|\b[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}\b")
 
@@ -113,9 +139,16 @@ def _norm_num(s):
 
 
 def verify_narrative(text: str, f: dict) -> tuple:
-    """(ok, problems): every date, number and multi-word capitalised name in
-    `text` must appear in the facts. Dates are read whole (a date is not
-    three numbers)."""
+    """(ok, problems): every date, number and name-like word in `text` must
+    appear in the facts. Dates are read whole (a date is not three numbers).
+    A check that cannot run fails CLOSED: the plain facts summary is shown."""
+    try:
+        return _verify(text, f)
+    except Exception as e:                       # never show unchecked prose
+        return False, [f"the summary could not be checked ({type(e).__name__})"]
+
+
+def _verify(text: str, f: dict) -> tuple:
     blob = json.dumps(f, ensure_ascii=False)
     known_dates = set(f.get("date_range") or [])
     known_dates |= {d.isoformat() for v in (f.get("fields") or {}).values()
@@ -135,11 +168,57 @@ def verify_narrative(text: str, f: dict) -> tuple:
         n = _norm_num(m)
         if n and n not in nums and n.rstrip("0").rstrip(".") not in nums:
             problems.append(f"the number {m} is not in the data")
-    low = blob.lower()
-    for m in _NAME.findall(rest):
-        if m.lower() not in low:
-            problems.append(f"the name {m!r} is not in the data")
+    problems += _unknown_names(rest, blob, known_dates)
     return (not problems), problems
+
+
+def _name_like(word: str) -> bool:
+    """Capitalised (any cased script), an acronym, or in a script with no
+    case at all (Devanagari, CJK, Arabic …) — where nothing marks a name, so
+    every word is treated as one."""
+    c = word[0]
+    return c.isupper() or (c.isalpha() and c.lower() == c.upper())
+
+
+def _sentence_start(text: str, at: int) -> bool:
+    before = text[:at].rstrip(" \t\"'“‘(«")
+    return not before.strip() or before[-1] in ".!?:;\n"
+
+
+def _unknown_names(text: str, blob: str, known_dates) -> list:
+    """Every name-like word that is not in the facts (Review-3 F7).
+
+    The old rule looked only at RUNS of two or more capitalised words, so
+    "Alice approved the payment" passed with no Alice anywhere in the data. A
+    word passes only if the facts hold it as a whole word (case ignored), or
+    it starts a sentence and is a common word, or it is the month or weekday
+    of a date the facts hold. A possessive is checked without its "'s", and a
+    hyphenated name part by part."""
+    from datetime import date
+    low = blob.casefold()
+    calendar = set()
+    for iso in known_dates:
+        try:
+            d = date.fromisoformat(iso)
+        except (TypeError, ValueError):
+            continue
+        calendar |= {_MONTHS[d.month - 1], _DAYS[d.weekday()]}
+    out = []
+    for m in _WORD.finditer(text):
+        word = re.sub(r"['’][sS]$", "", m.group(0))
+        if not word or not _name_like(word):
+            continue
+        key = word.casefold()
+        if _sentence_start(text, m.start()) and key in _STARTERS:
+            continue
+        if key == "i" or key in calendar:
+            continue
+        parts = [p for p in re.split(r"[-&]", word) if p]
+        if all(re.search(r"(?<!\w)" + re.escape(p.casefold()) + r"(?!\w)", low)
+               for p in parts):
+            continue
+        out.append(f"the name {word!r} is not in the data")
+    return list(dict.fromkeys(out))
 
 
 def narrative_prompt(f: dict) -> str:
