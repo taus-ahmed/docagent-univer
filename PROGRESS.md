@@ -30,3 +30,15 @@ One commit per item, each with a regression test that fails before the fix.
   as a number format. The mixed writer's "only amount labels become numbers"
   rule is kept (`numeric=False` otherwise). `_document_hint_of` moved to
   `excel_cells.document_hint_of` (excel_slot keeps the name).
+- **F4 declared rules and category regexes** — (a) `(a+)+$` hung the worker:
+  Python's `re` holds the GIL, so no thread timeout can stop it. New
+  `engine/safe_regex.py` admits a pattern only from a safe subset (no varying
+  quantifier or alternation inside a repeated group, no backreference, ≤3
+  open-ended quantifiers, ≤300 chars), caps the input at 512 chars and gives
+  each rule a 2 s budget; refused/over-budget is `rule_unreadable` with the
+  reason. Category regexes use the same subset; a refused one is never run
+  and is named in the row's note. (b) `tolerance`/`min`/`max` must be finite
+  numbers; tolerance 0–1000. (c) each rule runs in its own try: one that
+  raises is UNREADABLE (review), the others still run; `rules_of` keeps
+  malformed entries so they are reported. `tests/test_rules_safety.py` runs
+  the catastrophic cases in a subprocess with a timeout.

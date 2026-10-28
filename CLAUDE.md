@@ -653,6 +653,14 @@ carries `rules` through a save it cannot edit. Equality with the coded checks
 (`tests/test_rules_equality.py`): 14 of 16 locale fixtures mark exactly the
 same values low; the other two are caught both ways, differently — a running
 balance cannot be declared. Guide: `docs/ADDING-A-DOCUMENT-FAMILY.md`.
+⚠ **A `regex` (and a category rule's regex) must be in the SAFE SUBSET**
+(`engine/safe_regex.py`, Review-3 F4): no varying quantifier inside a
+repeated group (`(a+)+`), no alternation inside one (`(a|ab)+`), no
+backreference, at most 3 open-ended quantifiers; values over 512 characters
+and a rule past its 2 s budget are UNREADABLE. Python's `re` holds the GIL,
+so a timeout thread could not stop a runaway match — the subset is the bound.
+`tolerance`/`min`/`max` must be finite; a tolerance must be 0–1000. A rule
+that raises is UNREADABLE on its own; the others still run.
 
 ### Stamps and painted-over regions (Part 3.4, `engine/marks.py`)
 

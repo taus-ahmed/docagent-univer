@@ -49,7 +49,7 @@ quietly: it is UNREADABLE `rule_unreadable:<name>` with a note, and
 from __future__ import annotations
 
 import re
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from validators import ANY, FAIL, PASS, UNREADABLE, CheckResult, register
 
@@ -69,13 +69,43 @@ def _norm(s):
     return re.sub(r"\s+", " ", str(s or "")).strip().casefold()
 
 
+#: the largest tolerance a rule may state. A tolerance exists to absorb
+#: rounding; one wider than this would let unequal values pass, which is the
+#: rule failing open (Review-3 F4).
+MAX_TOLERANCE = Decimal(1000)
+
+
+def _number_problem(rule, key):
+    """Why `rule[key]` is not a usable number, or None. NaN raised inside a
+    comparison and Infinity passed every unequal pair, so both are refused
+    here, at save time, rather than met at run time."""
+    raw = rule.get(key)
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return f"{key} must be a number, not {raw!r}"
+    try:
+        d = Decimal(str(raw).strip())
+    except (InvalidOperation, ValueError):
+        return f"{key} must be a number, not {raw!r}"
+    if not d.is_finite():
+        return f"{key} must be a finite number, not {raw!r}"
+    if key == "tolerance" and d < 0:
+        return f"tolerance cannot be negative ({raw!r})"
+    if key == "tolerance" and d > MAX_TOLERANCE:
+        return f"tolerance {raw!r} is wider than {MAX_TOLERANCE} and would pass unequal values"
+    return None
+
+
 def rules_of(template_data):
     """The template's declared rules: `rules` on the template data, else on
     its grid (`layout`). Always a list."""
     td = template_data if isinstance(template_data, dict) else {}
     grid = td.get("layout") if isinstance(td.get("layout"), dict) else td
     rules = td.get("rules") or grid.get("rules") or []
-    return [r for r in rules if isinstance(r, dict)] if isinstance(rules, list) else []
+    # A malformed entry is KEPT so it is reported (rule_problems at save,
+    # UNREADABLE at run time), never dropped quietly (Review-3 F4).
+    return list(rules) if isinstance(rules, list) else [rules]
 
 
 # ── references ─────────────────────────────────────────────────────────────
@@ -129,6 +159,9 @@ def _resolve(spec, fields, tables):
 def _problems(rule, fields, tables):
     """What is wrong with one rule as the template states it ([] = fine)."""
     from identifiers import known_types
+    from safe_regex import pattern_problem
+    if not isinstance(rule, dict):
+        return [f"a rule must be an object with a name and a type, not {rule!r:.60}"]
     name = rule.get("name") or "(unnamed)"
     kind = rule.get("type")
     if kind not in TYPES:
@@ -149,10 +182,13 @@ def _problems(rule, fields, tables):
             _norm(t.get("name")) == _norm(rule["table"]) for t in tables or []):
         out.append(f"rule {name}: no table named {rule['table']!r}")
     if kind == "regex":
-        try:
-            re.compile(str(rule["pattern"]))
-        except re.error as e:
-            out.append(f"rule {name}: pattern does not compile ({e})")
+        why = pattern_problem(rule["pattern"])
+        if why:
+            out.append(f"rule {name}: {why}")
+    for k in ("tolerance", "min", "max"):
+        why = _number_problem(rule, k)
+        if why:
+            out.append(f"rule {name}: {why}")
     if kind == "id_type" and str(rule["id_type"]).lower() not in known_types():
         out.append(f"rule {name}: unknown id_type {rule['id_type']!r}")
     if kind == "range" and rule.get("min") is None and rule.get("max") is None:
@@ -166,8 +202,12 @@ def rule_problems(rules, fields, tables):
     """Every problem with a template's declared rules, for the template gate
     (`POST /api/templates/shape`) and the run itself."""
     out, names = [], set()
+    if rules is not None and not isinstance(rules, list):
+        return [f"rules must be a list of rules, not {type(rules).__name__}"]
     for r in rules or []:
         out += _problems(r, fields, tables)
+        if not isinstance(r, dict):
+            continue
         n = str(r.get("name") or "").strip()
         if n and n in names:
             out.append(f"rule {n}: two rules share this name (it is the reason code)")
@@ -362,10 +402,15 @@ def _range(rule, ctx, R):
 
 
 def _regex(rule, ctx, R):
-    pat = re.compile(str(rule["pattern"]))
+    from safe_regex import Budget, compile_safe, too_long
+    pat = compile_safe(rule["pattern"])
+    budget = Budget()
 
     def test(txt):
-        return (PASS, "") if pat.fullmatch(txt) else (FAIL, f"{txt!r} does not have the declared form")
+        if too_long(txt):
+            return UNREADABLE, "the value is too long to check against a pattern"
+        ok = budget.run(pat.fullmatch, txt)
+        return (PASS, "") if ok else (FAIL, f"{txt!r} does not have the declared form")
     return _single_value(rule, ctx, R, test)
 
 
@@ -463,7 +508,14 @@ _RUN = {"sum_equals": _sum_equals, "equals": _equals, "product": _product,
 def run_rules(rules, ctx):
     """Every declared rule's results for one record."""
     out = []
-    for rule in rules or []:
+    if not isinstance(rules, list):
+        rules = [rules] if rules else []
+    for rule in rules:
+        if not isinstance(rule, dict):
+            out.append(_result({"name": "(malformed)"}, UNREADABLE, [],
+                               "; ".join(_problems(rule, ctx.fields, ctx.tables))
+                               + " — not checked"))
+            continue
         name = str(rule.get("name") or "").strip() or "(unnamed)"
         rule = {**rule, "name": name}
         bad = _problems(rule, ctx.fields, ctx.tables)
@@ -473,7 +525,14 @@ def run_rules(rules, ctx):
 
         def R(spec):
             return _resolve(spec, ctx.fields, ctx.tables)
-        out += _RUN[rule["type"]](rule, ctx, R)
+        # ONE rule that cannot run never takes the others (or the record)
+        # down: it is UNREADABLE, said on the record, and the record goes to
+        # review — a time budget spent included.
+        try:
+            out += _RUN[rule["type"]](rule, ctx, R)
+        except Exception as exc:
+            out.append(_result(rule, UNREADABLE, [],
+                               f"could not run ({type(exc).__name__}: {exc}) — not checked"))
     return out
 
 

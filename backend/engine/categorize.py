@@ -30,6 +30,8 @@ from __future__ import annotations
 import json
 import re
 
+from safe_regex import MAX_INPUT
+
 UNCATEGORIZED = "Uncategorized"
 CATEGORY_UNCERTAIN = "category_uncertain"
 
@@ -71,18 +73,24 @@ def _row_text(row: dict) -> str:
     return " ".join(parts)
 
 
-def _compile(rules):
+def _compile(rules, refused=None):
+    """[(category, [pattern])]. A regex outside the safe subset
+    (engine/safe_regex.py) is refused in the editor; one that reaches a run
+    anyway is left out and named in `refused`, never run (Review-3 F4)."""
+    from safe_regex import UnsafePattern, compile_safe
     out = []
-    for r in rules or []:
+    for r in rules or [] if isinstance(rules, list) else []:
         if not isinstance(r, dict) or not str(r.get("category") or "").strip():
             continue
         pats = [re.compile(r"(?<!\w)" + re.escape(str(k).strip()) + r"(?!\w)", re.I)
                 for k in r.get("keywords") or [] if str(k).strip()]
         for rx in r.get("regex") or []:
             try:
-                pats.append(re.compile(str(rx), re.I))
-            except re.error:
-                continue                      # a bad regex is refused in the editor
+                pats.append(compile_safe(rx, re.I))
+            except (UnsafePattern, re.error) as e:
+                if refused is not None:
+                    refused.append(f"the category pattern {str(rx)[:60]!r} "
+                                   f"({r['category']}) was not used: {e}")
         if pats:
             out.append((str(r["category"]).strip(), pats))
     return out
@@ -90,7 +98,10 @@ def _compile(rules):
 
 def validate_rules(rules) -> list:
     """Plain-language problems with a rule list (for the editor)."""
+    from safe_regex import pattern_problem
     problems = []
+    if rules is not None and not isinstance(rules, list):
+        return ["category rules must be a list"]
     for i, r in enumerate(rules or [], 1):
         if not isinstance(r, dict) or not str(r.get("category") or "").strip():
             problems.append(f"rule {i}: give it a category name")
@@ -98,18 +109,18 @@ def validate_rules(rules) -> list:
         if not (r.get("keywords") or r.get("regex")):
             problems.append(f"rule {i} ({r['category']}): add at least one keyword or pattern")
         for rx in r.get("regex") or []:
-            try:
-                re.compile(str(rx))
-            except re.error as e:
-                problems.append(f"rule {i} ({r['category']}): the pattern {rx!r} is not valid ({e.msg})")
+            why = pattern_problem(rx)
+            if why:
+                problems.append(f"rule {i} ({r['category']}): the pattern {rx!r} is not valid: {why}")
     return problems
 
 
-def _match(text, layer):
+def _match(text, layer, budget=None):
     hits = {}
+    text = text[:MAX_INPUT]
     for cat, pats in layer:
         for p in pats:
-            m = p.search(text)
+            m = budget.run(p.search, text) if budget else p.search(text)
             if m:
                 hits.setdefault(cat, m.group(0))
                 break
@@ -122,8 +133,12 @@ def categorize_rows(rows, template_rules=None, firm_rules=None, model=None, allo
     `model(texts, categories) -> list[str] | None` is called once for the rows
     no rule decided, only when given. `allowed` is the category list a model
     answer must belong to (default: every category the rules name)."""
-    layers = [("template", _compile(template_rules)), ("firm", _compile(firm_rules)),
+    from safe_regex import Budget, BudgetExceeded
+    refused: list = []
+    layers = [("template", _compile(template_rules, refused)),
+              ("firm", _compile(firm_rules, refused)),
               ("default", _compile(DEFAULT_RULES))]
+    budget = Budget()
     cats = list(allowed or dict.fromkeys(
         c for _n, layer in layers for c, _p in layer))
     out, pending = [], []
@@ -133,8 +148,14 @@ def categorize_rows(rows, template_rules=None, firm_rules=None, model=None, allo
         text = _row_text(row)
         entry = {"row": i, "category": UNCATEGORIZED, "level": "unverified", "by": "none",
                  "rule": "", "matched": "", "reasons": [CATEGORY_UNCERTAIN]}
+        if refused:
+            entry["note"] = "; ".join(refused)
         for name, layer in layers:
-            hits = _match(text, layer)
+            try:
+                hits = _match(text, layer, budget)
+            except BudgetExceeded as e:
+                entry["note"] = f"category rules not applied: {e}"
+                break
             if len(hits) == 1:
                 (cat, word), = hits.items()
                 entry.update(category=cat, level="grounded", by="rule", rule=name,
