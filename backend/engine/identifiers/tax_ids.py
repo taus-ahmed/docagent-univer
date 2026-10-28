@@ -16,7 +16,10 @@ EU_VAT = {
     "LT": r"\d{9}|\d{12}", "LU": r"\d{8}", "LV": r"\d{11}", "MT": r"\d{8}",
     "NL": r"\d{9}B\d{2}", "PL": r"\d{10}", "PT": r"\d{9}", "RO": r"\d{2,10}",
     "SE": r"\d{12}", "SI": r"\d{8}", "SK": r"\d{10}",
-    "XI": r"\d{9}|\d{12}|GD\d{3}|HA\d{3}", "GB": r"\d{9}|\d{12}|GD\d{3}|HA\d{3}",
+    # GD000-GD499 are government departments, HA500-HA999 health
+    # authorities; the other halves of each range are not issued.
+    "XI": r"\d{9}|\d{12}|GD[0-4]\d{2}|HA[5-9]\d{2}",
+    "GB": r"\d{9}|\d{12}|GD[0-4]\d{2}|HA[5-9]\d{2}",
 }
 
 

@@ -53,3 +53,13 @@ One commit per item, each with a regression test that fails before the fix.
   Not covered: a firm YAML's `categories` (schema upload) — refused patterns
   there are still never run (F4) and are named on each row.
   `tests/http/test_template_rules_on_save.py`.
+- **F6 identifier registries** — a GSTIN starting `50` passed (state code
+  tested as 01-99). Now GSTN's list: 01-38, 97, 99 (`GST_STATE_CODES`).
+  The same class of gap in the other plug-ins: IBAN accepted any country
+  outside the registry on mod 97 alone (now refused; 18 newer registry
+  countries added to the length table); GB/XI VAT accepted GD500-999 and
+  HA000-499 (now the issued halves only). Already closed: EU VAT prefixes,
+  PAN entity letter, SWIFT country, EIN prefixes. Deliberately format-only:
+  IFSC bank code (the RBI list changes monthly; a stale copy refuses real
+  banks) and UAE TRN (no published checksum or ranges).
+  `tests/test_identifier_registries.py`.

@@ -19,6 +19,10 @@ IBAN_LENGTH = {
     "PT": 25, "QA": 29, "RO": 24, "RS": 22, "SA": 24, "SC": 31, "SE": 24,
     "SI": 19, "SK": 24, "SM": 27, "TN": 24, "TR": 26, "UA": 29, "VG": 24,
     "XK": 20,
+    # added to the registry since the table was first written
+    "BI": 27, "BY": 28, "DJ": 27, "FK": 18, "HN": 28, "LC": 32, "LY": 25,
+    "MN": 20, "NI": 28, "OM": 23, "RU": 33, "SD": 18, "SO": 23, "ST": 25,
+    "SV": 28, "TL": 23, "VA": 22, "YE": 30,
 }
 
 
@@ -32,7 +36,11 @@ def iban(norm):
     if not re.fullmatch(r"[A-Z]{2}\d{2}[A-Z0-9]{10,30}", norm):
         return False, "not shaped like an IBAN"
     want = IBAN_LENGTH.get(norm[:2])
-    if want and len(norm) != want:
+    if want is None:
+        # A country that issues no IBANs: the mod-97 check alone passes one
+        # string in 97, so it is no evidence (Review-3 F6).
+        return False, f"{norm[:2]} is not a country in the IBAN registry"
+    if len(norm) != want:
         return False, f"{norm[:2]} IBANs have {want} characters, this has {len(norm)}"
     if iban_mod97(norm) != 1:
         return False, "the check digits do not match (mod 97)"
