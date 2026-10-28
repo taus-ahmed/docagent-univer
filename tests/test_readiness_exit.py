@@ -40,7 +40,7 @@ def test_a_blocking_check_times_out(monkeypatch):
 
 def test_a_check_that_raises_names_the_exception_only():
     def boom():
-        raise ConnectionError("postgresql://user:secret@host/db")
+        raise ConnectionError("could not reach db.internal:5432 as user docagent")
     assert readiness._bounded(boom) == "fail:ConnectionError"
 
 
