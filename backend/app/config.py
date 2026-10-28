@@ -21,6 +21,19 @@ _PLACEHOLDER_SECRETS = frozenset({
     "your-secret-key-here",
 })
 
+ENVIRONMENTS = ("development", "staging", "production")
+_ENV_ALIASES = {"dev": "development", "prod": "production"}
+#: variables a hosting platform sets on every deployment. With one present an
+#: UNSET ENVIRONMENT is refused: defaulting to development there would boot a
+#: live deployment with every production check skipped.
+_HOSTED_MARKERS = ("RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID", "RAILWAY_SERVICE_ID",
+                   "RENDER", "FLY_APP_NAME", "DYNO", "K_SERVICE")
+
+
+def _hosted() -> Optional[str]:
+    import os
+    return next((m for m in _HOSTED_MARKERS if os.environ.get(m)), None)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -28,13 +41,19 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        # A refusal names the SETTING, never its value: without this pydantic
+        # appends `input_value=` — the value, or the whole settings dict for
+        # a model-level check — to every start-up error (Review-3 F8).
+        hide_input_in_errors=True,
     )
 
     # ── App ───────────────────────────────────────────────────────────────────
     APP_NAME: str = "DocAgent"
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
-    ENVIRONMENT: str = "development"  # development | staging | production
+    #: development | staging | production — NORMALISED once, by
+    #: `_normalise_environment`; everything else reads the stored value.
+    ENVIRONMENT: str = Field(default=None, validate_default=True)
 
     # ── Auth ──────────────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production-use-openssl-rand-hex-32"
@@ -209,6 +228,36 @@ class Settings(BaseSettings):
     def max_upload_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
+    @field_validator("ENVIRONMENT", mode="before")
+    @classmethod
+    def _normalise_environment(cls, v):
+        """ONE spelling of ENVIRONMENT, decided here (Review-3 F8).
+
+        `Production` and ` production ` passed the strict checks — which
+        lower-cased and stripped their own copy — while `is_production` and
+        the HSTS header compared the raw string, so a deployment could be
+        validated as production and then serve as something else. The value
+        is stripped and lower-cased once, `dev`/`prod` are spelled out, and
+        the normalised value is what is stored.
+
+        Unknown values refuse to start (the value is never echoed: a mistyped
+        variable can hold anything). Unset or empty means development on a
+        workstation, and refuses to start on a hosting platform."""
+        env = "" if v is None else str(v).strip().lower()
+        env = _ENV_ALIASES.get(env, env)
+        if not env:
+            marker = _hosted()
+            if marker:
+                raise ValueError(
+                    f"ENVIRONMENT is not set, and this is a hosted deployment "
+                    f"({marker} is set): set ENVIRONMENT to production or staging "
+                    f"(or development, deliberately). See docs/ENVIRONMENTS.md.")
+            return "development"
+        if env not in ENVIRONMENTS:
+            raise ValueError(f"ENVIRONMENT must be development, staging or production "
+                             f"(got an unknown value of {len(env)} characters)")
+        return env
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
@@ -233,12 +282,7 @@ class Settings(BaseSettings):
         DECISION (Part 2.4): the key length is now enforced in staging and
         production, reversing the earlier warn-only choice — check the live
         key's length before deploying (docs/RELEASE-CHECKLIST.md)."""
-        env = str(self.ENVIRONMENT or "").strip().lower()
-        if env == "dev":
-            env = "development"
-        if env not in ("development", "staging", "production"):
-            raise ValueError(f"ENVIRONMENT must be development, staging or production "
-                             f"(got an unknown value of {len(env)} characters)")
+        env = self.ENVIRONMENT                   # normalised by its validator
         if env == "development":
             return self
         problems = []
@@ -292,7 +336,7 @@ class Settings(BaseSettings):
         refuses to start (Part A1)."""
         names = {str(self.PRIMARY_LLM or "").strip().lower()} | {
             n.strip().lower() for n in str(self.LLM_FALLBACKS or "").split(",")}
-        env = str(self.ENVIRONMENT or "").strip().lower()
+        env = self.ENVIRONMENT
         if "stub" in names and env in ("staging", "production"):
             raise ValueError(
                 "PRIMARY_LLM/LLM_FALLBACKS names the 'stub' provider, which is "
@@ -318,7 +362,7 @@ class Settings(BaseSettings):
         currently working and secret, which is a worse failure than the one it
         prevents. Weak-but-secret is warned about; published is refused.
         """
-        if self.ENVIRONMENT != "production":
+        if not self.is_production:
             return self
         key = (self.SECRET_KEY or "").strip()
         if not key or key.casefold() in _PLACEHOLDER_SECRETS \

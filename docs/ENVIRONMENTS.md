@@ -7,7 +7,15 @@
 |---|---|
 | `development` (alias `dev`) | nothing refused: a fresh checkout runs on the defaults |
 | `staging` | every rule below; the backend **refuses to start** and lists every problem, naming the setting and never its value |
-| `production` | as staging, plus local storage is warned about and the API docs are hidden |
+| `production` (alias `prod`) | as staging, plus local storage is warned about and the API docs are hidden |
+
+The value is stripped and lower-cased once (`Production`, ` production ` and
+`prod` are all `production`) and stored that way, so every production-only
+behaviour sees the same value the checks did. Any other value refuses to
+start. **Unset or empty is `development` on a workstation and refuses to
+start on a hosting platform** (`RAILWAY_ENVIRONMENT`, `RAILWAY_PROJECT_ID`,
+`RAILWAY_SERVICE_ID`, `RENDER`, `FLY_APP_NAME`, `DYNO` or `K_SERVICE` set):
+before a deploy, confirm the platform sets `ENVIRONMENT` explicitly.
 
 **S** = secret (never in chat, tickets or code). "Required" = refused at start
 in staging and production when missing or weak.

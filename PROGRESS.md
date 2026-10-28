@@ -71,3 +71,16 @@ One commit per item, each with a regression test that fails before the fix.
   summary words, or be the month/weekday of a date the facts hold.
   Possessives are stripped, hyphenated names checked part by part, and a
   check that raises fails closed. `tests/test_summary_names.py`.
+- **F8 ENVIRONMENT normalisation** — `Production` / ` production ` passed the
+  strict checks (which normalised a private copy) while `is_production` and
+  HSTS compared the raw string. A field validator now strips, lower-cases and
+  expands `dev`/`prod` once and stores the result; every check reads it.
+  Unknown values refuse to start; unset/empty is development locally and
+  refuses on a hosting platform (Railway/Render/Fly/Heroku/Cloud Run
+  markers). `hide_input_in_errors=True`: a start-up error no longer echoes
+  the settings input (pydantic appended a truncated dump of it — the old
+  "never echoed" test passed only by truncation). Fixed
+  `tests/test_config_aliases.py` to restore `app.config.settings` after its
+  reload (order-dependence the new HSTS test exposed).
+  **Deploy check:** confirm Railway sets `ENVIRONMENT` explicitly.
+  `tests/test_environment_normalisation.py`.

@@ -514,7 +514,7 @@ def create_app() -> FastAPI:
         # HSTS only in production AND only when the request came over TLS
         # (directly, or as the trusted proxy says): over plain HTTP the header
         # means nothing, and in development it would pin localhost to HTTPS.
-        if settings.ENVIRONMENT == "production" and (
+        if settings.is_production and (
                 request.url.scheme == "https"
                 or request.headers.get("x-forwarded-proto", "").split(",")[-1].strip() == "https"):
             h.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")

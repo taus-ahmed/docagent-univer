@@ -24,7 +24,12 @@ def _build(monkeypatch, **env):
         monkeypatch.delenv(k, raising=False)
     for k, v in env.items():
         monkeypatch.setenv(k, v)
+    # The reload builds a NEW module-level `settings`; modules that imported
+    # the original keep it. Put it back so every module agrees (as
+    # test_boot_guards._build does).
+    original = cfg.settings
     importlib.reload(cfg)
+    cfg.settings = original
     return cfg.Settings(_env_file=None)
 
 
