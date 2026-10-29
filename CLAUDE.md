@@ -658,12 +658,16 @@ balance cannot be declared. Guide: `docs/ADDING-A-DOCUMENT-FAMILY.md`.
 repeated group (`(a+)+`), no alternation inside one (`(a|ab)+`), no
 backreference or lookaround, at most 3 VARIABLE-length quantifiers (`?`,
 `{0,9}` and `*` all count), and it must pass a save-time test match against
-adversarial strings; values over 512 characters and a rule past its 2 s
-budget are UNREADABLE. Every match runs on **RE2** (`google-re2`, Recheck R1),
-which is linear in the text, so no admitted pattern can run long DURING a
-match — Python's `re` holds the GIL and the subset alone let
-`a{0,100}`×5 run 30 s. RE2's `\d`/`\w`/`` are ASCII. No RE2 installed ⇒
-every pattern refused, never a fallback to `re`.
+adversarial strings and compile to at most 1,000 RE2 instructions; values
+over 512 characters are UNREADABLE. Every match runs on **RE2**
+(`google-re2`, Recheck R1), linear in the text — Python's `re` holds the GIL
+and the subset alone let `a{0,100}`×5 run 30 s. ⚠ **What is bounded is ONE
+VALUE's cost** (512 characters × 1,000 instructions, 8 MiB per pattern:
+measured worst ~4 ms, `PER_VALUE_MS`), **not wall-clock time**: nothing
+interrupts a running match, and the 2 s per-rule budget is SOFT — checked
+between values, so it overruns by at most one value (Recheck 2 S3). RE2's
+`\d`/`\w`/`\b` are ASCII. No RE2 installed ⇒ every pattern refused, never
+a fallback to `re`.
 `tolerance`/`min`/`max` must be finite; a tolerance must be 0–1000. A rule
 that raises is UNREADABLE on its own; the others still run.
 

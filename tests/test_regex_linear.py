@@ -119,3 +119,67 @@ def test_a_category_budget_running_out_leaves_the_row_uncategorized(monkeypatch)
     [e] = categorize_rows([{"Description": "UBER TRIP 123"}],
                           template_rules=[{"category": "Travel", "regex": [r"^UBER"]}])
     assert e["category"] == UNCATEGORIZED and "not applied" in e.get("note", ""), e
+
+
+# ── Recheck 2 S3: what is bounded, said and measured ────────────────────────
+#
+# Codex: the 2 s budget is checked before a call and charged after it, so
+# one call can exceed it, and the docs claimed a limit nothing enforced.
+# Nothing interrupts a match; what IS bounded is one value's cost — at most
+# MAX_INPUT characters against at most MAX_PROGRAM RE2 instructions — and
+# the budget's overrun is at most one value.
+
+def test_a_pattern_compiling_to_a_large_program_is_refused():
+    """Admitted by the subset (three variable quantifiers), and 19 ms a value
+    without the program cap; the slowest shape found ran 83 ms."""
+    for pattern in (r"\w{0,1000}\W{0,1000}\w{0,1000}$", r"[a ]{0,1000}[ab]{0,1000}[ a]{0,1000}$",
+                    r".{0,300}.{0,300}.{0,300}x"):
+        why = pattern_problem(pattern)
+        assert why and "too large" in why, (pattern, why)
+
+
+def test_the_measured_worst_case_under_the_limits_stays_bounded():
+    """The slowest admitted shape found under MAX_PROGRAM (size 964, case
+    folded): PER_VALUE_MS is its measured cost; the ceiling leaves room for
+    a slower CI machine and still fails a lost cap by an order of magnitude."""
+    pat = r"[a ]{0,120}[ab]{0,120}[ a]{0,120}$"
+    assert pattern_problem(pat) is None
+    p = compile_safe(pat, 2)
+    import random
+    import time
+    rnd = random.Random(3)
+    texts = ["".join(rnd.choice("a ") for _ in range(512)) for _ in range(20)] + ["a " * 256]
+    worst = 0.0
+    for t in texts:
+        for fn in (p.search, p.fullmatch):
+            s = time.perf_counter(); fn(t); worst = max(worst, time.perf_counter() - s)
+    assert worst * 1000 < 10 * safe_regex.PER_VALUE_MS, worst
+
+
+def test_a_value_over_the_input_cap_is_never_matched():
+    from safe_regex import MAX_INPUT, TextTooLong
+    p = compile_safe(r"a+")
+    assert p.fullmatch("a" * MAX_INPUT)
+    for fn in (p.search, p.fullmatch):
+        with pytest.raises(TextTooLong):
+            fn("a" * (MAX_INPUT + 1))
+
+
+def test_the_budget_overruns_by_at_most_one_value():
+    """Soft by design and documented as such: the call that crosses the
+    budget finishes; the NEXT one is refused."""
+    import time
+    from safe_regex import Budget, BudgetExceeded
+    b, calls = Budget(0.01), []
+
+    def slow(x):
+        calls.append(x); time.sleep(0.02)
+    b.run(slow, 1)
+    with pytest.raises(BudgetExceeded):
+        b.run(slow, 2)
+    assert calls == [1]
+
+
+def test_the_docs_do_not_claim_a_hard_wall_clock_limit():
+    doc = safe_regex.__doc__
+    assert "NOT guaranteed" in doc and "SOFT" in doc and "PER_VALUE_MS" in doc

@@ -30,10 +30,24 @@ depth, decided once from the parse tree before a pattern is admitted:
   * and the pattern is TEST-MATCHED against adversarial strings
     (`_probe_strings`): one that takes more than PROBE_SEC on them is refused.
 
-The text a pattern runs against is capped at MAX_INPUT characters. A caller
-also gets a `Budget`: once a rule has spent BUDGET_SEC over all of its
-matches it stops and says so, rather than grinding through a thousand-row
-table. ⚠ RE2's `\d`, `\w` and `\b` are ASCII, where Python's are
+WHAT IS GUARANTEED (Recheck 2 S3), and what is not:
+
+  * a match is linear in the text (RE2), and the text is at most MAX_INPUT
+    (512) characters — `SafePattern` refuses a longer one itself, so the
+    bound does not depend on every caller remembering `too_long`;
+  * a pattern is at most MAX_PATTERN characters AND compiles to at most
+    MAX_PROGRAM RE2 instructions (forward and reverse), and RE2 runs in at
+    most MAX_MEM bytes per compiled pattern. Together these bound ONE value's
+    worst case: measured at about PER_VALUE_MS ms (4.0 ms on the dev machine,
+    `[a ]{0,120}[ab]{0,120}[ a]{0,120}$` ignoring case, size 964). Without the
+    program cap `\w{0,1000}\W{0,1000}\w{0,1000}$` (size 20,004) took 19 ms
+    and the worst found 83 ms;
+  * `Budget` is a SOFT limit over all of one rule's values: it is checked
+    before each call and charged after it, so it stops the rule at the first
+    value after BUDGET_SEC is spent and says so. It overruns by at most one
+    value's cost.
+  * NOT guaranteed: a hard wall-clock limit. Nothing interrupts a match once
+    it has started; the bound above is what makes that acceptable. ⚠ RE2's `\d`, `\w` and `\b` are ASCII, where Python's are
 Unicode: `\d+` does not match Arabic-Indic digits. Write the characters
 out (`[0-9٠-٩]`) when a rule needs them.
 
@@ -58,6 +72,14 @@ except ImportError:                    # pragma: no cover - older Pythons
 MAX_PATTERN = 300
 MAX_INPUT = 512
 MAX_VARIABLE = 3
+#: RE2 instructions a compiled pattern may have (forward and reverse); with
+#: MAX_INPUT this is what bounds one value's cost (module docstring)
+MAX_PROGRAM = 1000
+#: RE2's memory budget per compiled pattern (its own default, stated here)
+MAX_MEM = 8 << 20
+#: the measured worst case of one match under the limits above, milliseconds
+#: (tests/test_regex_linear.py asserts a ceiling well above it)
+PER_VALUE_MS = 4.0
 BUDGET_SEC = 2.0
 #: seconds a pattern may take over all of the save-time probe strings
 PROBE_SEC = 0.25
@@ -132,6 +154,7 @@ def pattern_problem(pattern) -> Optional[str]:
                 f"{{m,n}}); at most {MAX_VARIABLE} are allowed")
     try:
         compiled = _compile_re2(pattern, 0)
+        _compile_re2(pattern, re.IGNORECASE)          # case folding grows it
     except UnsafePattern as e:
         return str(e)
     t = time.perf_counter()
@@ -156,19 +179,30 @@ def _probe_strings(literals) -> list:
     return out
 
 
+class TextTooLong(ValueError):
+    """A value over MAX_INPUT characters: never matched (the per-value bound
+    assumes the cap)."""
+
+
 class SafePattern:
-    """A compiled pattern with the two calls the rules use, both on RE2."""
+    """A compiled pattern with the two calls the rules use, both on RE2, on
+    at most MAX_INPUT characters."""
 
     engine = "re2"
 
     def __init__(self, compiled):
         self._p = compiled
 
+    def _checked(self, text):
+        if too_long(text):
+            raise TextTooLong(f"the value is longer than {MAX_INPUT} characters")
+        return text
+
     def search(self, text):
-        return self._p.search(text)
+        return self._p.search(self._checked(text))
 
     def fullmatch(self, text):
-        return self._p.fullmatch(text)
+        return self._p.fullmatch(self._checked(text))
 
 
 def _compile_re2(pattern, flags):
@@ -179,12 +213,18 @@ def _compile_re2(pattern, flags):
                             "installed, so no pattern can be checked")
     opts = re2.Options()
     opts.log_errors = False                # its log line would quote the pattern
+    opts.max_mem = MAX_MEM
     if flags & re.IGNORECASE:
         opts.case_sensitive = False
     try:
-        return re2.compile(pattern, opts)
+        compiled = re2.compile(pattern, opts)
     except re2.error as e:
         raise UnsafePattern(f"the pattern is not supported ({type(e).__name__})")
+    size = max(compiled.programsize, compiled.reverseprogramsize)
+    if size > MAX_PROGRAM:
+        raise UnsafePattern(f"the pattern is too large to check quickly ({size} steps; at "
+                            f"most {MAX_PROGRAM}): use smaller counts such as {{0,50}}")
+    return compiled
 
 
 def compile_safe(pattern, flags=0) -> SafePattern:
@@ -201,7 +241,9 @@ class BudgetExceeded(RuntimeError):
 
 
 class Budget:
-    """Wall time one rule may spend matching, over all of its values."""
+    """Wall time one rule may spend matching, over all of its values — a SOFT
+    limit: checked before each call, charged after it, never interrupting a
+    match, so it overruns by at most one value's cost (PER_VALUE_MS)."""
 
     def __init__(self, seconds: Optional[float] = None):
         self.left = BUDGET_SEC if seconds is None else seconds

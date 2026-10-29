@@ -26,6 +26,16 @@ before the fix.
   grounded only by n/d or its percentage with a % in the facts; any other
   hyphenated number compound ("two-day") must be in the facts whole.
   (c) A sentence-initial common word is not a name: "Paid to Alice." passes.
+- **S3** regex limits stated honestly (`safe_regex.py`, CLAUDE.md). What is
+  bounded is ONE value's cost: text <= 512 chars (now enforced inside
+  `SafePattern`, `TextTooLong`), pattern <= 300 chars AND <= 1,000 RE2
+  instructions forward and reverse (new `MAX_PROGRAM`, checked for both
+  case modes), RE2 `max_mem` 8 MiB. Measured worst under the limits: 4.0 ms
+  a value (`[a ]{0,120}[ab]{0,120}[ a]{0,120}$`, case folded, size 964);
+  without the cap `\w{0,1000}\W{0,1000}\w{0,1000}$` took 19 ms and the worst
+  found 83 ms (both now refused at save). NOT guaranteed: a hard wall-clock
+  limit; `Budget` is documented as soft (checked between values, overrun <=
+  one value) and a test pins that. The 1.5 s timing tests are kept.
 
 ## Recheck fixes
 
