@@ -59,10 +59,24 @@ def test_shutdown_waits_for_running_jobs_but_not_forever():
     lifecycle.job_finished(100)
 
 
-def test_the_app_shutdown_drains(app):
-    """The lifespan's shutdown sets the drain (TestClient exit = SIGTERM path)."""
+def test_the_app_shutdown_drains(app, _db_url, monkeypatch):
+    """The lifespan's shutdown sets the drain (TestClient exit = SIGTERM path).
+
+    The lifespan's STARTUP runs against the module-level engine, which is
+    whatever DATABASE_URL the machine has — a developer's database here, an
+    unreachable localhost:5432 in CI (Recheck 2: the only CI failure that was
+    not OCR or PostgreSQL setup). Pointed at the suite's scratch SQLite."""
+    import sqlalchemy as sa
+    from sqlalchemy.orm import sessionmaker
+    import app.models as models_pkg
+    from app.models import models as models_mod
     from fastapi.testclient import TestClient
     from app.core import lifecycle
+    engine = sa.create_engine(_db_url, connect_args={"check_same_thread": False})
+    session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    for mod in (models_mod, models_pkg):
+        monkeypatch.setattr(mod, "engine", engine)
+        monkeypatch.setattr(mod, "SessionLocal", session)
     with TestClient(app):
         assert not lifecycle.draining()
     assert lifecycle.draining()

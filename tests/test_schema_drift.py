@@ -70,6 +70,12 @@ def drift_database(tmp_path_factory):
         [initdb, "-D", str(data_dir), "--auth=trust", "--encoding=UTF8",
          "--no-locale", "--username=postgres"],
         check=True, capture_output=True, text=True)
+    # TCP only. The default Unix-socket directory (/var/run/postgresql on
+    # Debian/Ubuntu) belongs to the postgres user, so a cluster started by
+    # anyone else cannot take its lock file and never starts — every CI run
+    # errored here (Recheck 2).
+    with open(data_dir / "postgresql.conf", "a", encoding="utf-8") as conf:
+        conf.write("\nunix_socket_directories = ''\n")
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]

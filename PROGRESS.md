@@ -36,6 +36,38 @@ before the fix.
   found 83 ms (both now refused at save). NOT guaranteed: a hard wall-clock
   limit; `Budget` is documented as soft (checked between values, overrun <=
   one value) and a test pins that. The 1.5 s timing tests are kept.
+- **CI backend job** (run 40781064888; run 40677807147 before it failed the
+  same way, so this predates Recheck R1-R7): 4 failed, 4 errors.
+  Toolchain: CI ubuntu-24.04 Tesseract 5.3.4 / Poppler 24.02; production
+  image (bookworm, built here) Tesseract 5.3.0 / Poppler 22.12; this machine
+  Tesseract 5.4.0 / Poppler 23.13. tessdata is byte-identical (eng 4,113,088
+  and osd 10,562,727 bytes, 1:4.1.0) on all three.
+  * PostgreSQL (4 errors in `test_schema_drift.py`): `pg_ctl start` as a
+    non-root user cannot take `/var/run/postgresql/.s.PGSQL.*.lock`
+    (reproduced in a container). The cluster is now TCP only.
+  * `test_the_app_shutdown_drains`: the lifespan ran against the machine's
+    DATABASE_URL (localhost:5432 in CI). Now pointed at the scratch SQLite.
+  * OCR (3 failures): REPRODUCED in the production image, so the server
+    reads these scans as CI does. Fields found per scan fixture, Linux 5.3.0
+    vs Windows 5.4.0: identical on every page but two. Total 161/240 vs
+    164/240. `scan_hard_single` 1/8 vs 4/8 (on 5.3 psm 3 finds a few words,
+    so the zero-word retry never runs). `scan_batch_10pages` 9 vs 10 records
+    (page 8's MICR band reads `AG06474687A â€¦ 723430980500`, so pages 7+8 are
+    one record, which carries `possible_multiple_documents` and needs
+    review: fails closed). The 3 outcome tests are xfail(strict=True) below
+    5.4 only (`tests/harness/tesseract_gate.py`, measured table); new
+    unmarked tests assert on every reader that a multi-page record is
+    flagged, every payee is its own page's, and the hard scan's reading is
+    true, named and OCR origin. Linux image: 46 passed, 3 xfailed.
+    Not done (proposal): no engine change. Running the CI backend job inside
+    the built production image would make CI test the reader the server
+    runs; a newer Tesseract in the image is a reading change to measure on
+    its own.
+  * Accuracy harness: skipped BY DESIGN, not because tests failed. The
+    replay preflight fails (Ubuntu's Poppler renders CHQ-001847 p1 as
+    a0be150404de9776, the cache holds 51c162ac8cd244a9), so `ok=false` and
+    the step is not run (docs/proposals/replay-portability.md). It is meant
+    to run only on a runner that renders like the recording machine.
 
 ## Recheck fixes
 

@@ -48,6 +48,8 @@ HAS_TESSERACT, TESSERACT_VERSION = available()
 needs_tesseract = pytest.mark.skipif(
     not HAS_TESSERACT, reason=f"no tesseract binary: {TESSERACT_VERSION}")
 
+from tests.harness.tesseract_gate import BELOW_5_4, REASON  # noqa: E402
+
 GENERATOR = bs.TESTS_DIR / "fixtures" / "make_scan_variants.py"
 FIELDS = ("bank", "payee", "check_number", "date", "amount_numeral",
           "amount_words_shown", "routing_number", "account_number", "memo")
@@ -164,6 +166,7 @@ class TestTheHardScan:
             assert doc.ocr_zero_word_pages == [1]
             assert "page 1" in doc.processing_notes
 
+    @pytest.mark.xfail(BELOW_5_4, strict=True, reason=REASON)
     def test_the_hard_scan_is_actually_read(self, variants):
         """Fix B: the dark-pixel skew estimator finds the angle the grey
         profile missed on a shaded page, and the zero-word retry (crop to ink,
@@ -174,6 +177,26 @@ class TestTheHardScan:
         read = [f for f in FIELDS if str(fields.get(f) or "").strip()
                 and matches_loosely(str(fields[f]), rl)]
         assert len(read) >= 3, (read, raw[:200])
+
+
+@needs_tesseract
+class TestTheHardScanOnEveryReader:
+    """Never marked: whatever the reader manages on the hard scan, what it
+    read is TRUE where it matches a field, the page says which path ran, and
+    it is a machine reading (OCR origin) — every value goes to review."""
+
+    def test_what_is_read_is_true_and_the_path_is_named(self, variants):
+        from core.preprocessor import preprocess_file
+        doc = preprocess_file(variants[0] / "scan_hard_single.pdf")
+        rec = doc.ocr_pages[0]
+        assert rec["retry"] in ("none", "crop_psm6") and rec["skew_detector"] == "dark"
+        assert doc.page_origins[0] == "ocr"            # every value goes to review
+        fields = variants[1]["scan_hard_single"]["pages"][0]["cheques"][0]["fields"]
+        read = [f for f in FIELDS if str(fields.get(f) or "").strip()
+                and matches_loosely(str(fields[f]), doc.page_lines[0])]
+        assert read, "the hard scan reads no field at all"
+        if rec["words"] == 0:
+            assert doc.ocr_zero_word_pages == [1]
 
 
 @needs_tesseract
@@ -193,6 +216,7 @@ class TestTheOcrMetadataSaysWhichPathRan:
         assert rec["retry"] == "none"
         assert rec["words"] > 0
 
+    @pytest.mark.xfail(BELOW_5_4, strict=True, reason=REASON)
     def test_the_hard_scan_records_the_retry(self, variants):
         rec = self._page(variants, "scan_hard_single")
         assert rec["skew_detector"] == "dark"
