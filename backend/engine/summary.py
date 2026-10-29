@@ -184,6 +184,12 @@ _MULTIPLES = {"half": "0.5", "halves": "0.5", "quarter": "0.25", "quarters": "0.
               "dozen": "12", "dozens": "12", "double": "2", "doubled": "2",
               "twice": "2", "thrice": "3", "triple": "3", "tripled": "3",
               "once": "1", "percent": None, "per": None}
+#: fraction denominators: "two-thirds" / "two thirds" is ONE figure (Recheck 2 S2)
+_DENOMINATORS = {"half": 2, "halves": 2, "third": 3, "thirds": 3, "quarter": 4,
+                 "quarters": 4, "fourth": 4, "fourths": 4, "fifth": 5, "fifths": 5,
+                 "sixth": 6, "sixths": 6, "seventh": 7, "sevenths": 7, "eighth": 8,
+                 "eighths": 8, "ninth": 9, "ninths": 9, "tenth": 10, "tenths": 10,
+                 "hundredth": 100, "hundredths": 100}
 
 
 def _number_word_value(run):
@@ -211,8 +217,27 @@ def _number_words(text: str, blob: str, nums) -> list:
     "Courier cost twelve thousand dollars." passed because only digits were
     read as numbers."""
     low = blob.casefold()
-    words = [w.casefold() for w in re.findall(r"[A-Za-z]+", text)]
+    words = [w.casefold() for w in re.findall(r"[A-Za-z]+(?:-[A-Za-z]+)*", text)]
     out, run = [], []
+
+    def whole(w):
+        return re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", low)
+
+    def fraction(num_words, denom, shown):
+        """'two-thirds', 'two thirds', 'one quarter': grounded only as a
+        whole — the facts hold n/d, or its percentage with a % (Recheck 2
+        S2: "two-thirds" passed because "two" was)."""
+        n = _number_word_value(num_words)
+        d = _DENOMINATORS[denom]
+        ok = False
+        if n is not None and n.isdigit():
+            ok = bool(re.search(rf"(?<![\d.]){n}\s*/\s*{d}(?![\d])", low))
+            p = Decimal(int(n) * 100) / d
+            for q in {p.quantize(Decimal(1)), p.quantize(Decimal("0.1")), p.quantize(Decimal("0.01"))}:
+                s = format(q.normalize(), "f")
+                ok = ok or bool(re.search(rf"(?<![\d.]){re.escape(s)}0*\s*(?:%|percent)", low))
+        if not ok and not whole(shown):
+            out.append(f"the number {shown!r} is not in the data")
 
     def close():
         if not run:
@@ -226,7 +251,27 @@ def _number_words(text: str, blob: str, nums) -> list:
         run.clear()
 
     for w in words:
-        if _is_number_word(w) or (w == "and" and run):
+        parts = w.split("-")
+        if len(parts) > 1 and any(_is_number_word(p) or p in _DENOMINATORS for p in parts):
+            if all(_is_number_word(p) and p not in _ORDINALS for p in parts):
+                run.extend(parts)                  # 'twenty-five', read with its run
+                continue
+            if run and run[-1] == "and":
+                run.pop()
+            close()
+            if parts[-1] in _DENOMINATORS and all(_is_number_word(p) for p in parts[:-1]):
+                fraction(parts[:-1], parts[-1], w)
+            elif not whole(w):                     # 'two-day': whole, or not at all
+                out.append(f"the number {w!r} is not in the data")
+            continue
+        if w in _DENOMINATORS and run:
+            if run[-1] == "and":
+                run.pop()
+            num, shown = list(run), " ".join(run + [w])
+            run.clear()
+            fraction(num, w, shown)
+            continue
+        if _is_number_word(w) or w in _DENOMINATORS or (w == "and" and run):
             run.append(w)
         else:
             if run and run[-1] == "and":
@@ -308,19 +353,28 @@ def _unknown_names(text: str, blob: str, known_dates) -> list:
         except (TypeError, ValueError):
             continue
         calendar |= {_MONTHS[d.month - 1], _DAYS[d.weekday()]}
+    from common_words import is_common
     out = []
     for m in _WORD.finditer(text):
         word = re.sub(r"['’][sS]$", "", m.group(0))
-        if not word or not _name_like(word):
+        if not word:
             continue
         key = word.casefold()
-        if _sentence_start(text, m.start()) and key in _STARTERS:
-            continue
         if key == "i" or key in calendar:
             continue
         parts = [p for p in re.split(r"[-&]", word) if p]
         if all(re.search(r"(?<!\w)" + re.escape(p.casefold()) + r"(?!\w)", low)
                for p in parts):
+            continue
+        # Recheck 2 S2: a capital mid-sentence marks a name. Anywhere else —
+        # lowercase, or the first word of a sentence ("Paid to …") — the word
+        # must be a common word or a number word, so an uncapitalised
+        # "alice approved the payment." is a name like any other.
+        if _name_like(word) and not _sentence_start(text, m.start()):
+            out.append(f"the name {word!r} is not in the data")
+            continue
+        if all(p.casefold() in _STARTERS or is_common(p) or _is_number_word(p.casefold())
+               or p.casefold() in _DENOMINATORS for p in parts):
             continue
         out.append(f"the name {word!r} is not in the data")
     return list(dict.fromkeys(out))

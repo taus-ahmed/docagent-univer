@@ -144,3 +144,70 @@ def test_a_number_word_whose_figure_is_not_in_the_facts_is_rejected(prose):
 def test_grounded_number_words_and_known_names_still_pass(prose):
     ok, problems = verify_narrative(prose, F)
     assert ok, (prose, problems)
+
+
+# ── Recheck 2 S2: a closed vocabulary, fractions whole, sentence starts ────
+#
+# Codex: "alice approved the payment." passed (a lowercase invented name
+# that follows no trigger), "two-thirds" passed because "two" was grounded,
+# and "Paid to Alice." was REJECTED because a sentence-initial "Paid" was
+# read as a name. Every word must now be in the facts, a common word
+# (engine/common_words.py: NLTK's stopwords + summary vocabulary), a
+# grounded number word or a date's month/weekday.
+
+ALICE = facts({"slot_map": {"fields": [{"ref": "B1", "row_label": "Payee"}]},
+               "extracted_fields": {"B1": "Alice"}})
+
+
+@pytest.mark.parametrize("prose", [
+    "alice approved the payment.",
+    "the payment was approved and alice kept the receipt.",
+    "rent went up after zelda moved in.",
+    "Stationery was bought from globex.",
+    "Courier costs went up; mark was told.",
+])
+def test_a_lowercase_word_outside_the_facts_and_the_vocabulary_is_rejected(prose):
+    ok, problems = verify_narrative(prose, F)
+    assert not ok and any("name" in p for p in problems), (prose, problems)
+
+
+@pytest.mark.parametrize("prose", [
+    "Rent was two-thirds of the spending.",
+    "Rent was two thirds of the spending.",
+    "One quarter of the items was courier.",
+    "Three-quarters of the total was rent.",
+    "Courier was a two-day delivery.",
+])
+def test_a_fraction_is_grounded_as_a_whole(prose):
+    # the facts hold 1, 2 and 3, so every number word ALONE is grounded
+    f = facts({**ED, "extracted_fields": {**ED["extracted_fields"], "B3": "1 2 3"}})
+    ok, problems = verify_narrative(prose, f)
+    assert not ok and any("number" in p and ("-" in p or "thirds" in p or "quarter" in p)
+                          for p in problems), (prose, problems)
+
+
+def test_a_fraction_the_facts_hold_passes():
+    for share in ("2/3", "66.67%", "67%"):
+        f = facts({"slot_map": {"fields": [{"ref": "B1", "row_label": "Share"}]},
+                   "extracted_fields": {"B1": share}})
+        ok, problems = verify_narrative("Rent was two-thirds of the spending.", f)
+        assert ok, (share, problems)
+
+
+@pytest.mark.parametrize("prose", ["Paid to Alice.", "Approved by Alice.",
+                                   "Payment went to Alice.", "Shows a payment to Alice."])
+def test_a_common_word_starting_a_sentence_is_not_a_name(prose):
+    ok, problems = verify_narrative(prose, ALICE)
+    assert ok, (prose, problems)
+
+
+@pytest.mark.parametrize("prose", [
+    "The statement shows three items, and the largest was Office rent at 1,250.00.",
+    "Most of the spending was rent; the courier cost 17.50.",
+    "Ficus Bank holds the account of Jane Q. Example.",
+    "Payments were made between 2024-03-04 and 2024-03-15.",
+    "The total of the items is shown below.",
+])
+def test_clean_summaries_still_pass(prose):
+    ok, problems = verify_narrative(prose, F)
+    assert ok, (prose, problems)

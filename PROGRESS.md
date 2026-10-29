@@ -16,6 +16,16 @@ before the fix.
   Indian legal form the parser already supports. Property tests over every
   main-unit word in every position, repeats and mixed currencies
   (`tests/test_amount_main_unit.py`).
+- **S2** summaries (`summary.py`, new `engine/common_words.py`). (a) Every
+  word must be in the facts, a common word (NLTK's English stopwords minus
+  "will", plus ~470 summary words, plain inflections), a grounded number
+  word or a held date's month/weekday: "alice approved the payment." is now
+  rejected. The list leaves out words that are as often names (mark, bill,
+  will, may, page ...); over-rejecting falls back to the facts summary.
+  (b) "two-thirds" / "two thirds" / "three-quarters" are ONE figure,
+  grounded only by n/d or its percentage with a % in the facts; any other
+  hyphenated number compound ("two-day") must be in the facts whole.
+  (c) A sentence-initial common word is not a name: "Paid to Alice." passes.
 
 ## Recheck fixes
 
