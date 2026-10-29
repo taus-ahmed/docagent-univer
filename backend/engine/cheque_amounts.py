@@ -82,12 +82,48 @@ UNIT_FAMILIES = {
 }
 
 
+#: main-unit word -> the currency it names (dollars and euros share a subunit
+#: word, not a currency)
+CURRENCY_OF = {w: g[0] for g in (
+    ("dollars", "dollar", "usd"), ("euros", "euro", "eur"),
+    ("pounds", "pound", "sterling", "gbp"), ("rupees", "rupee", "rs", "inr"),
+    ("dirhams", "dirham", "aed"), ("dinars", "dinar"), ("rials", "rial"),
+    ("riyals", "riyal", "sar"), ("francs", "franc", "chf"), ("yen", "jpy"),
+    ("cad",), ("aud",), ("sgd",)) for w in g}
+
+
 def _unit_mix(tokens) -> bool:
     """True when a subunit word does not belong to the main unit named."""
     mains = [t for t in tokens if t in _MAIN_UNITS]
     subs = [t for t in tokens if t in _CENT_WORDS]
     return bool(mains and subs) and any(
         s not in UNIT_FAMILIES.get(m, frozenset()) for m in mains for s in subs)
+
+
+def _main_unit_problem(tokens) -> Optional[str]:
+    """Why the MAIN-unit words make the amount unreadable, or None (Recheck 2
+    S1). They were removed as filler unchecked, so "dollars two dollars" read
+    2.00 and "one dollar pound" 1.00.
+
+    One main unit per amount ('pounds sterling' is one); a second of the same
+    family is `unit_repeat`, of another family `unit_mix`. It either OPENS the
+    amount ('Rupees One Lakh … Only', the Indian legal form) or follows the
+    whole main number; a number after it that is not the subunit's ('one
+    thousand dollars two hundred') is `unit_order`.
+    """
+    mains = [i for i, t in enumerate(tokens) if t in _MAIN_UNITS
+             and not (t == "sterling" and i and tokens[i - 1] in ("pound", "pounds"))]
+    if not mains:
+        return None
+    if len(mains) > 1:
+        return "unit_repeat" if len({CURRENCY_OF[tokens[i]] for i in mains}) == 1 else "unit_mix"
+    i = mains[0]
+    if not any(_is_number_word(t) for t in tokens[:i]):
+        return None                                # the unit opens the amount
+    rest = tokens[i + 1:]
+    if any(_is_number_word(t) for t in rest) and not any(t in _CENT_WORDS for t in rest):
+        return "unit_order"
+    return None
 
 
 @dataclass
@@ -300,6 +336,9 @@ def parse_words_amount(text: str, long_scale: bool = False) -> ParsedAmount:
     tokens = t.split()
     if _unit_mix(tokens):
         return ParsedAmount(None, ["unit_mix"])
+    why = _main_unit_problem(tokens)
+    if why:
+        return ParsedAmount(None, [why])
     if _unit_order_problem(tokens):
         return ParsedAmount(None, ["unit_order"])
     numberish = set(_UNITS) | set(_TENS) | {"hundred"}

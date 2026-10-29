@@ -1,5 +1,22 @@
 # Progress
 
+## Recheck 2 fixes
+
+Codex re-checked `6f39d90` (S1-S3) and the CI backend job failed on the
+pushed branch. One commit per item, each with a regression test that fails
+before the fix.
+
+- **S1** main-unit words validated (`cheque_amounts._main_unit_problem`).
+  "dollars two dollars", "euros three euros", "one dollar pound" and "one
+  thousand dollars two hundred" read 2.00 / 3.00 / 1.00 / 1200.00; now
+  `unit_repeat` / `unit_mix` / `unit_order`. One main unit per amount
+  ('pounds sterling' is one), opening the amount or after its whole number.
+  Deviation from the brief: a unit BEFORE its number stays readable when it
+  opens the amount ("Rupees One Lakh ... Only", "US Dollars Five Only"), the
+  Indian legal form the parser already supports. Property tests over every
+  main-unit word in every position, repeats and mixed currencies
+  (`tests/test_amount_main_unit.py`).
+
 ## Recheck fixes
 
 Codex rechecked `4407f13` and returned REVISE (R1, R2 must-fix; R3-R7
