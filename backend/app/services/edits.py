@@ -138,9 +138,121 @@ def _reconcile_edits(stored, incoming):
     return ed
 
 
-def _save_edit(doc, ed, current_user, db):
+#: Keys of a stored result the SERVER owns. A whole-document save is built
+#: from whatever copy the browser had, and that copy can predate a review mark,
+#: a disposition or another edit; taking it whole silently undid them (Run A,
+#: A6: "I edit, save, accept, and the change does not stick"). These are always
+#: carried over from the stored row, never from the payload.
+SERVER_OWNED = ("review", "attention", "diagnostics", "document_state",
+                "failure_kind")
+
+
+def _edit_cell(ed, table, row, column, value):
+    """Write one table-cell edit into `ed` in place and mark it. Returns the
+    value it replaced. 404 for a table, row or column the result lacks."""
+    from app.core import review as R
+    key = dict(R.table_keys(ed)).get(str(table))
+    rows = ed.get(key) if key else None
+    if not isinstance(rows, list) or not 0 <= int(row) < len(rows) \
+            or not isinstance(rows[int(row)], dict):
+        raise HTTPException(status_code=404, detail="No such table row")
+    r = rows[int(row)]
+    col = str(column)
+    known = any(str(c.get("key") or c.get("header")) == col
+                for t in (ed.get("slot_map") or {}).get("tables") or []
+                if str(t.get("name")) == str(table)
+                for c in t.get("columns") or [])
+    if col.startswith("_") or (col not in r and not known):
+        raise HTTPException(status_code=404, detail=f"No column {col!r} in this table")
+    before = r.get(col, "")
+    edited = set(r.get("_edited") or [])
+    original = dict(r.get("_original") or {})
+    original.setdefault(col, before)
+    edited.add(col)
+    r[col] = value
+    r["_edited"] = sorted(edited)
+    r["_original"] = original
+    return before
+
+
+def _edit_events(stored, ed, who, at):
+    """One append-only event per value that changed between the stored row
+    and the one about to be saved: who, when, where, old, new. The machine's
+    original value is never lost: it is the first event's `old`."""
+    events = []
+    s_f = (stored or {}).get("extracted_fields") or {}
+    e_f = (ed or {}).get("extracted_fields") or {}
+    for ref in sorted(set(s_f) | set(e_f)):
+        if str(s_f.get(ref, "")) != str(e_f.get(ref, "")):
+            events.append({"by": who, "at": at, "kind": "field", "ref": ref,
+                           "old": s_f.get(ref, ""), "new": e_f.get(ref, ""),
+                           "reason": "edited in review"})
+    for key, rows in (ed or {}).items():
+        s_rows = (stored or {}).get(key)
+        if not (isinstance(key, str) and key.endswith("_rows")
+                and isinstance(rows, list)):
+            continue
+        if not isinstance(s_rows, list) or len(s_rows) != len(rows):
+            if s_rows != rows:
+                events.append({"by": who, "at": at, "kind": "rows",
+                               "table": key[:-5],
+                               "old": len(s_rows or []), "new": len(rows),
+                               "reason": "row count changed"})
+            continue
+        for i, (a, b) in enumerate(zip(s_rows, rows)):
+            if not (isinstance(a, dict) and isinstance(b, dict)):
+                continue
+            for col in sorted(set(a) | set(b)):
+                if str(col).startswith("_"):
+                    continue
+                if str(a.get(col, "")) != str(b.get(col, "")):
+                    events.append({"by": who, "at": at, "kind": "cell",
+                                   "table": key[:-5], "row": i, "column": col,
+                                   "old": a.get(col, ""), "new": b.get(col, ""),
+                                   "reason": "edited in review"})
+    return events
+
+
+def _keep_server_state(stored, ed):
+    """Carry what the server owns from `stored` into `ed`, in place: the
+    keys above, and every per-value review mark the payload's copy lacks."""
+    for k in SERVER_OWNED:
+        if k in (stored or {}):
+            ed[k] = stored[k]
+    s_prov = (stored or {}).get("field_provenance") or {}
+    e_prov = ed.setdefault("field_provenance", {})
+    for ref, p in s_prov.items():
+        if isinstance(p, dict) and p.get("reviewed") and ref in e_prov \
+                and isinstance(e_prov[ref], dict) and not e_prov[ref].get("reviewed"):
+            e_prov[ref]["reviewed"] = p["reviewed"]
+    for key, s_rows in (stored or {}).items():
+        rows = ed.get(key)
+        if isinstance(key, str) and key.endswith("_rows") and isinstance(s_rows, list) \
+                and isinstance(rows, list) and len(rows) == len(s_rows):
+            for a, b in zip(s_rows, rows):
+                if isinstance(a, dict) and isinstance(b, dict) \
+                        and a.get("_reviewed") and not b.get("_reviewed"):
+                    b["_reviewed"] = a["_reviewed"]
+
+
+def _save_edit(doc, ed, current_user, db, stored=None):
+    """Persist an edit. `stored` is the row as read before the edit: the
+    server-owned state comes from it, and the edit log is extended from it.
+
+    An edit no longer marks the document reviewed while a completeness
+    reason is open: typing one value does not settle a missing table."""
+    from datetime import datetime
+    from app.core import review as R
+    if stored is None:
+        stored = doc.get_extracted_data() or {}
+        stored = stored if isinstance(stored, dict) else {}
+    _keep_server_state(stored, ed)
+    at = datetime.utcnow().isoformat() + "Z"
+    ed["edit_log"] = list(stored.get("edit_log") or []) + _edit_events(
+        stored, ed, current_user.username, at)
     doc.set_extracted_data(ed)
-    doc.reviewed = True
+    open_ = bool(R.attention_open(ed))
+    doc.reviewed = not open_
     doc.reviewed_by = current_user.username
-    doc.needs_review = False
+    doc.needs_review = open_
     db.commit()

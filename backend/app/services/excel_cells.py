@@ -596,24 +596,47 @@ def _add_review_legend(wb, doc_results, demo=False):
     lg = wb.create_sheet("Legend")
     per_doc, total = [], {"values": 0, "needs_review": 0, "low": 0,
                           "unverified": 0, "empty_flagged": 0}
+    attention_docs, attention_open = 0, 0
     for d in doc_results:
         ed = d.get_extracted_data()
         s = _review.summarise(_review.export_values(ed if isinstance(ed, dict) else {}))
         failed = not isinstance(ed, dict) or not ed
+        opened = _review.attention_open(ed if isinstance(ed, dict) else {})
+        s["attention"] = len(opened)
+        attention_open += len(opened)
+        attention_docs += 1 if opened else 0
         per_doc.append((d, s, failed))
         for k in total:
             total[k] += s[k]
     n = total["needs_review"]
-    lg["A1"] = (f"{n} value{'' if n == 1 else 's'} need{'s' if n == 1 else ''} review"
-                if n else "Nothing needs review")
-    lg["A1"].font = Font(bold=True, size=13)
-    lg["A2"] = (f"{total['low']} low · {total['unverified']} unverified · "
-                f"{total['empty_flagged']} empty and flagged · "
-                f"{total['values']} values in all")
-    lg["A4"] = "Mark"
-    lg["B4"] = "Meaning"
-    lg["A4"].font = lg["B4"].font = Font(bold=True)
-    r = 5
+    # Run A, A5: a document whose extraction is known to be incomplete is a
+    # DRAFT, said on the first line of this sheet (never in the data area),
+    # and counted in the headline: "Nothing needs review" is never written
+    # while a completeness reason is open.
+    top = 1
+    if attention_open:
+        lg["A1"] = (f"DRAFT — {attention_docs} document"
+                    f"{'' if attention_docs == 1 else 's'} NEED ATTENTION: "
+                    f"{attention_open} completeness reason"
+                    f"{'' if attention_open == 1 else 's'} open (a table, section, "
+                    f"amount or page the extraction is missing). Settle each in "
+                    f"review before relying on this file.")
+        lg["A1"].font = Font(bold=True, size=13, color="FFC00000")
+        top = 2
+    head = (f"{n} value{'' if n == 1 else 's'} need{'s' if n == 1 else ''} review"
+            if n else ("No value needs review" if attention_open
+                       else "Nothing needs review"))
+    if attention_open:
+        head += (f" · {attention_open} completeness reason"
+                 f"{'' if attention_open == 1 else 's'} open")
+    lg.cell(row=top, column=1, value=head).font = Font(bold=True, size=13)
+    lg.cell(row=top + 1, column=1,
+            value=(f"{total['low']} low · {total['unverified']} unverified · "
+                   f"{total['empty_flagged']} empty and flagged · "
+                   f"{total['values']} values in all"))
+    lg.cell(row=top + 3, column=1, value="Mark").font = Font(bold=True)
+    lg.cell(row=top + 3, column=2, value="Meaning").font = Font(bold=True)
+    r = top + 4
     for name, fill, meaning in _review.LEGEND:
         lg.cell(row=r, column=1, value=name)
         if fill:
@@ -624,7 +647,8 @@ def _add_review_legend(wb, doc_results, demo=False):
                                    "status and the reasons.")
     r += 2
     for col, head in enumerate(("Document", "Values", "Need review", "Low",
-                                "Unverified", "Empty, flagged"), 1):
+                                "Unverified", "Empty, flagged",
+                                "Needs attention"), 1):
         lg.cell(row=r, column=col, value=head).font = Font(bold=True)
     for i, (d, s, failed) in enumerate(per_doc, 1):
         r += 1
@@ -632,11 +656,23 @@ def _add_review_legend(wb, doc_results, demo=False):
         if failed:
             name += " — FAILED, no values extracted"
         for col, v in enumerate((name, s["values"], s["needs_review"], s["low"],
-                                 s["unverified"], s["empty_flagged"]), 1):
+                                 s["unverified"], s["empty_flagged"],
+                                 s["attention"]), 1):
             lg.cell(row=r, column=col, value=v)
     lg.column_dimensions["A"].width = 40
     lg.column_dimensions["B"].width = 90
     return n
+
+
+def _is_draft(doc_results) -> bool:
+    """True when any document still has an open completeness reason (Run A,
+    A5): its export is a DRAFT and its file name says so."""
+    from app.core import review as _review
+    for d in doc_results or []:
+        ed = d.get_extracted_data()
+        if _review.attention_open(ed if isinstance(ed, dict) else {}):
+            return True
+    return False
 
 
 def _marks_or_off(ws, marks):

@@ -105,6 +105,17 @@ class JobStatus(BaseModel):
     deleted_at: Optional[str] = None
     #: Why the system ended the job (cancelled by whom, interrupted by restart).
     status_reason: Optional[str] = None
+    #: Run A, A4 — per-document state counts ({"READY": n, "NEEDS_REVIEW": n,
+    #: "NEEDS_ATTENTION": n, "FAILED": n}), computed from the stored results on
+    #: every read. A completed job holding a NEEDS_ATTENTION document is not a
+    #: clean success, and the UI says so beside the status.
+    document_states: dict = {}
+    needs_attention: int = 0
+    #: Run A, A8 — pages that ended processed / processed-empty, of all pages
+    #: the documents cover. None for jobs stored before the page ledger.
+    pages_processed: Optional[int] = None
+    pages_total: Optional[int] = None
+    pages_failed: list = []
 
 class JobListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -125,6 +136,17 @@ class JobListItem(BaseModel):
     deleted_at: Optional[str] = None
     #: Why the system ended the job (cancelled by whom, interrupted by restart).
     status_reason: Optional[str] = None
+    #: Run A, A4 — per-document state counts ({"READY": n, "NEEDS_REVIEW": n,
+    #: "NEEDS_ATTENTION": n, "FAILED": n}), computed from the stored results on
+    #: every read. A completed job holding a NEEDS_ATTENTION document is not a
+    #: clean success, and the UI says so beside the status.
+    document_states: dict = {}
+    needs_attention: int = 0
+    #: Run A, A8 — pages that ended processed / processed-empty, of all pages
+    #: the documents cover. None for jobs stored before the page ledger.
+    pages_processed: Optional[int] = None
+    pages_total: Optional[int] = None
+    pages_failed: list = []
 
 
 # ─── Documents ────────────────────────────────────────────────────────────────
@@ -154,6 +176,12 @@ class DocumentUpdateRequest(BaseModel):
 
 class FieldEditRequest(BaseModel):
     """PATCH /api/jobs/{id}/docs/{doc_id}/fields/{ref} — one field slot, by address."""
+    value: str
+
+
+class CellEditRequest(BaseModel):
+    """PATCH /api/jobs/{id}/docs/{doc_id}/rows/{table}/{row} — one table cell."""
+    column: str
     value: str
 
 

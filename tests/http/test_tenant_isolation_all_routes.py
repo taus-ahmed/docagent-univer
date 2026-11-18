@@ -75,6 +75,7 @@ ROUTES = {
     ("GET", "/api/jobs/{job_id}/inferred-templates"): "id",
     ("PUT", "/api/jobs/{job_id}/docs/{doc_id}"): "id",
     ("PATCH", "/api/jobs/{job_id}/docs/{doc_id}/fields/{ref}"): "id",
+    ("PATCH", "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}/{row}"): "id",
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/approve"): "id",
     ("DELETE", "/api/jobs/{job_id}"): "id",
     ("DELETE", "/api/jobs/{job_id}/data"): "id",
@@ -116,6 +117,8 @@ ROUTES = {
 BODIES = {
     ("PUT", "/api/jobs/{job_id}/docs/{doc_id}"): {"extracted_data": {"B2": {"value": "x"}}},
     ("PATCH", "/api/jobs/{job_id}/docs/{doc_id}/fields/{ref}"): {"value": "x"},
+    ("PATCH", "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}/{row}"):
+        {"column": "Amount", "value": "x"},
     ("PUT", "/api/templates/{template_id}"): {"name": "hijacked"},
     ("PUT", "/api/admin/users/{user_id}"): {"display_name": "hijacked"},
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/review"): {"scope": "document"},
@@ -253,12 +256,14 @@ def _fill(path, ids):
 
 def _a_ids(firms):
     a = firms[A]
-    return {"job_id": a.job, "doc_id": a.doc, "ref": "B2", "template_id": a.tpl,
+    return {"job_id": a.job, "doc_id": a.doc, "ref": "B2", "table": "table", "row": 0,
+            "template_id": a.tpl,
             "client_id": A, "folder_id": a.folder, "watch_id": a.watch,
             "user_id": a.users["user"].id, "page": 1}
 
 
 MISSING_IDS = {"job_id": MISSING, "doc_id": MISSING, "ref": "B2",
+               "table": "table", "row": 0,
                "template_id": MISSING, "client_id": "noSuchFirm",
                "folder_id": "noSuchFolder", "watch_id": MISSING,
                "user_id": MISSING, "page": 1}

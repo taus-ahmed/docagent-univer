@@ -130,10 +130,14 @@ def job_review(job_id: int, db: Session = Depends(get_db),
             "pages": _pages_of(ed),
             "needs_review": bool(d.needs_review),
             "document_reviewed": R.document_reviewed(ed),
-            "failed": not ed,
+            "failed": not ed or ed.get("document_state") == "FAILED",
             "error": d.validation_errors or "",
             "values": values,
             "summary": R.summarise(values),
+            # Run A, A4/A5: the completeness reasons and the state they set
+            "attention": R.attention_items(ed),
+            "document_state": R.document_state(ed, failed=not ed),
+            "pages_ledger": (ed.get("diagnostics") or {}).get("pages") or {},
             # Part A3: informational, counted, never a level
             "anomalies": [a for a in (ed.get("anomalies") or []) if isinstance(a, dict)],
         })
@@ -141,7 +145,12 @@ def job_review(job_id: int, db: Session = Depends(get_db),
     s["documents"] = len(out)
     s["anomalies"] = sum(len(o["anomalies"]) for o in out)
     s["documents_needing_review"] = sum(1 for o in out if o["summary"]["needs_review"]
-                                        or (o["failed"] and not o["document_reviewed"]))
+                                        or (o["failed"] and not o["document_reviewed"])
+                                        or o["document_state"] == "NEEDS_ATTENTION")
+    s["documents_needing_attention"] = sum(1 for o in out
+                                           if o["document_state"] == "NEEDS_ATTENTION")
+    s["attention_open"] = sum(len([a for a in o["attention"] if not a.get("disposition")])
+                              for o in out)
     return {"job_id": job_id, "summary": s, "documents": out}
 
 
@@ -153,6 +162,10 @@ class ReviewMark(BaseModel):
     scope: str = Field("values", pattern="^(values|document)$")
     values: list[dict] = []
     reviewed: bool = True
+    #: Run A, A5 — one per NEEDS_ATTENTION reason being settled:
+    #: {"id": "att-1", "choice": "confirmed_absent" | "entered_manually",
+    #:  "note": "..."}. Applied before the marks.
+    dispositions: list[dict] = []
 
 
 def _apply_marks(ed: dict, payload: ReviewMark, stamp: dict) -> dict:
@@ -243,9 +256,27 @@ def mark_reviewed(job_id: int, doc_id: int, payload: ReviewMark,
         if not isinstance(stored, dict):
             raise HTTPException(status_code=422,
                                 detail="This document has no stored result")
+        missing = R.apply_dispositions(stored, payload.dispositions, stamp)
+        if missing:
+            raise HTTPException(status_code=404,
+                                detail=f"No open reason {', '.join(missing)} on this "
+                                       f"document, or an unknown choice (use "
+                                       f"{' / '.join(R.DISPOSITIONS)})")
+        open_reasons = R.attention_open(stored)
+        if payload.scope == "document" and payload.reviewed and open_reasons:
+            # REVIEW CAN NEVER ERASE A MISSING SECTION. A single click used
+            # to set needs_review false on a document whose table came back
+            # empty, and the export then said nothing needed review.
+            raise HTTPException(status_code=409, detail={
+                "message": (f"{len(open_reasons)} completeness reason(s) are still "
+                            f"open on this document. Say for each one whether it "
+                            f"is confirmed absent or entered by hand before "
+                            f"marking the document reviewed."),
+                "open": [{"id": a.get("id"), "text": a.get("text")}
+                         for a in open_reasons]})
         ed = _apply_marks(stored, payload, stamp)
         values = R.document_values(ed)
-        open_ = R.summarise(values)["needs_review"]
+        open_ = R.summarise(values)["needs_review"] + len(R.attention_open(ed))
         # The document is reviewed when nothing in it is still owed a look.
         cols = {"extraction_json": json.dumps(ed, default=str),
                 "reviewed": open_ == 0,
@@ -254,7 +285,9 @@ def mark_reviewed(job_id: int, doc_id: int, payload: ReviewMark,
             cols.update(reviewed_at=datetime.utcnow(), needs_review=False)
         if _swap(db, doc.id, old, cols):
             return {"doc_id": doc_id, "summary": R.summarise(values),
-                    "values": values, "document_reviewed": R.document_reviewed(ed)}
+                    "values": values, "document_reviewed": R.document_reviewed(ed),
+                    "attention": R.attention_items(ed),
+                    "document_state": R.document_state(ed)}
     raise HTTPException(status_code=409,
                         detail="This document was changed by someone else at the "
                                "same moment; nothing was marked. Try again.")

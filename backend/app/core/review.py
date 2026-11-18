@@ -461,6 +461,69 @@ def summarise(values: list[dict]) -> dict:
             "empty_flagged": sum(1 for v in unresolved if v["status"] == "empty_flagged")}
 
 
+# ── completeness: attention reasons and the document state (Run A, A4/A5) ──
+#
+# `ed["attention"]` holds one item per NEEDS_ATTENTION reason the engine found
+# (a table that came back empty while the page shows rows, an amount on the
+# page that is in no cell, a page that could not be read). Each is a plain
+# sentence and a `disposition`, None until a reviewer says what is true:
+#
+#   confirmed_absent  — the reviewer checked: the document really lacks it
+#   entered_manually  — the reviewer has entered (or will enter) it by hand
+#
+# Marking the DOCUMENT reviewed never sets an attention reason aside: it is
+# refused while any is open. A value-level mark never touches them either.
+
+DISPOSITIONS = {
+    "confirmed_absent": "Confirmed absent from the document",
+    "entered_manually": "Entered by hand",
+}
+
+
+def attention_items(ed: Any) -> list[dict]:
+    if not isinstance(ed, dict):
+        return []
+    return [a for a in (ed.get("attention") or []) if isinstance(a, dict)]
+
+
+def attention_open(ed: Any) -> list[dict]:
+    return [a for a in attention_items(ed) if not a.get("disposition")]
+
+
+def document_state(ed: Any, failed: bool = False) -> str:
+    """READY / NEEDS_REVIEW / NEEDS_ATTENTION / FAILED for one stored result.
+
+    Derived on every read from what is stored, so a disposition or an edit
+    moves it at once. A stored result from before Run A has no `attention`
+    and is NEEDS_REVIEW or READY on its values alone."""
+    if failed or not isinstance(ed, dict) or not ed             or ed.get("document_state") == "FAILED":
+        return "FAILED"
+    if attention_open(ed):
+        return "NEEDS_ATTENTION"
+    if summarise(export_values(ed))["needs_review"]:
+        return "NEEDS_REVIEW"
+    return "READY"
+
+
+def apply_dispositions(ed: dict, items: Iterable[dict], stamp: dict) -> list[str]:
+    """Record a reviewer's disposition per attention item, in place. Returns
+    the ids it could not find (the caller answers 404). A disposition is
+    stored with who and when; nothing is deleted."""
+    by_id = {str(a.get("id")): a for a in attention_items(ed)}
+    missing = []
+    for it in items or []:
+        aid = str((it or {}).get("id") or "")
+        choice = str((it or {}).get("choice") or "")
+        a = by_id.get(aid)
+        if a is None or choice not in DISPOSITIONS:
+            missing.append(aid or "?")
+            continue
+        a["disposition"] = {"choice": choice,
+                            "note": str((it or {}).get("note") or "")[:500],
+                            **stamp}
+    return missing
+
+
 # ── export marks ─────────────────────────────────────────────────────────────
 #: Fill per status in an exported sheet (ARGB). A value that owes nothing has
 #: no fill; every other status is coloured AND explained in a cell comment, so

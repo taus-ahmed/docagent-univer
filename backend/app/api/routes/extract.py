@@ -47,6 +47,7 @@ from app.models import get_db, User, ExtractionJob, DocumentResult, ColumnTempla
 from app.schemas.schemas import (
     JobStatus, JobListItem, DocumentResultResponse,
     DocumentUpdateRequest, ExtractUploadResponse, FieldEditRequest,
+    CellEditRequest,
 )
 
 router = APIRouter(prefix="/api", tags=["extract"])
@@ -63,6 +64,7 @@ if str(_engine_dir) not in sys.path:
 from log_safety import exc_brief  # noqa: E402
 # --split-reexports--
 from app.services.edits import (  # noqa: E402,F401  moved, re-exported
+    _edit_cell,
     _edit_field,
     _field_refs,
     _reconcile_edits,
@@ -699,8 +701,10 @@ def export_job_excel(
     wb.save(buf)
     buf.seek(0)
 
+    from app.services.excel_cells import _is_draft
+    draft = "_DRAFT" if _is_draft(doc_results) else ""
     return StreamingResponse(buf, headers={
-        "Content-Disposition": f'attachment; filename="job_{job_id}_results.xlsx"',
+        "Content-Disposition": f'attachment; filename="job_{job_id}_results{draft}.xlsx"',
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     })
 
@@ -762,6 +766,7 @@ def export_job_zip(
             print(f"[EXPORT] Template load error: {exc_brief(e)}", flush=True)
 
     zip_buf = io.BytesIO()
+    any_draft = False
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for doc in doc_results:
             wb = openpyxl.Workbook()
@@ -779,18 +784,21 @@ def export_job_zip(
             # Use the original filename without extension as the Excel filename
             # — except for a demo, where the stored name is a temp name and
             # would become the name of the file the investor downloads.
+            from app.services.excel_cells import _is_draft
+            draft = "_DRAFT" if _is_draft([doc]) else ""
+            any_draft = any_draft or bool(draft)
             if demo:
-                excel_name = f"document_{len(zf.namelist()) + 1}_extracted.xlsx"
+                excel_name = f"document_{len(zf.namelist()) + 1}_extracted{draft}.xlsx"
             else:
                 base = doc.filename.rsplit(".", 1)[0] if "." in doc.filename else doc.filename
-                excel_name = f"{base}_extracted.xlsx"
+                excel_name = f"{base}_extracted{draft}.xlsx"
 
             excel_buf = io.BytesIO()
             wb.save(excel_buf)
             zf.writestr(excel_name, excel_buf.getvalue())
 
     zip_buf.seek(0)
-    safe_name = f"job_{job_id}_documents.zip"
+    safe_name = f"job_{job_id}_documents{'_DRAFT' if any_draft else ''}.zip"
     return StreamingResponse(zip_buf, headers={
         "Content-Disposition": f'attachment; filename="{safe_name}"',
         "Content-Type": "application/zip",
@@ -821,11 +829,43 @@ def list_jobs(limit: int=50, offset: int=0, status_filter: Optional[str]=None,
     q = filter_demo_history(current_user, q)
     if status_filter:
         q = q.filter(ExtractionJob.status == status_filter)
-    return q.offset(offset).limit(limit).all()
+    jobs = q.offset(offset).limit(limit).all()
+    return [JobListItem.model_validate(j).model_copy(update=_job_states(db, j.id))
+            for j in jobs]
+
+
+def _job_states(db, job_id) -> dict:
+    """Run A, A4/A8: the document states and the page ledger of one job,
+    derived from its stored results (nothing is stored on the job row)."""
+    from app.core import review as R
+    states = {"READY": 0, "NEEDS_REVIEW": 0, "NEEDS_ATTENTION": 0, "FAILED": 0}
+    processed = total = 0
+    failed_pages, ledgered = [], False
+    for d in db.query(DocumentResult).filter(DocumentResult.job_id == job_id).all():
+        ed = d.get_extracted_data()
+        ed = ed if isinstance(ed, dict) else {}
+        st = R.document_state(ed, failed=not ed)
+        states[st] = states.get(st, 0) + 1
+        pages = (ed.get("diagnostics") or {}).get("pages")
+        if isinstance(pages, dict) and pages:
+            ledgered = True
+            for n, p_state in pages.items():
+                total += 1
+                if p_state in ("processed", "processed_empty"):
+                    processed += 1
+                else:
+                    failed_pages.append(f"{d.filename} p.{n}")
+    return {"document_states": states,
+            "needs_attention": states["NEEDS_ATTENTION"],
+            "pages_processed": processed if ledgered else None,
+            "pages_total": total if ledgered else None,
+            "pages_failed": failed_pages[:50]}
+
 
 @router.get("/jobs/{job_id}", response_model=JobStatus)
 def get_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
-    return _get_job_or_404(job_id, current_user, db)
+    job = _get_job_or_404(job_id, current_user, db)
+    return JobStatus.model_validate(job).model_copy(update=_job_states(db, job.id))
 
 @router.get("/jobs/{job_id}/results", response_model=list[DocumentResultResponse])
 def get_job_results(job_id: int, doc_type: Optional[str]=None, needs_review: Optional[bool]=None,
@@ -919,9 +959,9 @@ def update_document(job_id: int, doc_id: int, payload: DocumentUpdateRequest,
     doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
     stored = doc.get_extracted_data() or {}
-    ed = _reconcile_edits(stored if isinstance(stored, dict) else {},
-                          payload.extracted_data)
-    _save_edit(doc, ed, current_user, db)
+    stored = stored if isinstance(stored, dict) else {}
+    ed = _reconcile_edits(stored, payload.extracted_data)
+    _save_edit(doc, ed, current_user, db, stored=stored)
     return {"message": "Updated", "doc_id": doc_id, "extracted_data": ed}
 
 
@@ -939,8 +979,31 @@ def edit_field(job_id: int, doc_id: int, ref: str, payload: FieldEditRequest,
                             detail=f"This document has no field at {ref!r}")
     ed = copy.deepcopy(stored)
     _edit_field(ed, stored, ref, payload.value)
-    _save_edit(doc, ed, current_user, db)
+    _save_edit(doc, ed, current_user, db, stored=stored)
     return {"message": "Updated", "doc_id": doc_id, "ref": ref, "extracted_data": ed}
+
+
+@router.patch("/jobs/{job_id}/docs/{doc_id}/rows/{table}/{row}")
+def edit_cell(job_id: int, doc_id: int, table: str, row: int, payload: CellEditRequest,
+              db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+    """Edit ONE table cell, addressed by table name, row index and column.
+
+    Run A, A6: the review panel used to save a cell by sending back its whole
+    copy of the document, and the server took that copy as the base, so a
+    review mark or another edit made since the copy was fetched was silently
+    undone. This reads the STORED row and changes one cell of it."""
+    import copy
+    _get_job_or_404(job_id, current_user, db, "job.review")
+    doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
+    if not doc: raise HTTPException(status_code=404, detail="Document not found")
+    stored = doc.get_extracted_data() or {}
+    if not isinstance(stored, dict):
+        raise HTTPException(status_code=404, detail="This document has no stored result")
+    ed = copy.deepcopy(stored)
+    _edit_cell(ed, table, row, payload.column, payload.value)
+    _save_edit(doc, ed, current_user, db, stored=stored)
+    return {"message": "Updated", "doc_id": doc_id, "table": table, "row": row,
+            "column": payload.column, "extracted_data": ed}
 
 @router.post("/jobs/{job_id}/docs/{doc_id}/approve")
 def approve_document(job_id: int, doc_id: int,
@@ -948,6 +1011,14 @@ def approve_document(job_id: int, doc_id: int,
     _get_job_or_404(job_id, current_user, db, "job.review")
     doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
+    from app.core import review as R
+    open_ = R.attention_open(doc.get_extracted_data() or {})
+    if open_:
+        # Run A, A5: approval can never set a completeness reason aside.
+        raise HTTPException(status_code=409, detail={
+            "message": (f"{len(open_)} completeness reason(s) are still open on "
+                        f"this document; settle each one in review first."),
+            "open": [{"id": a.get("id"), "text": a.get("text")} for a in open_]})
     doc.reviewed=True; doc.reviewed_by=current_user.username; doc.needs_review=False
     db.commit()
     return {"message": "Approved", "doc_id": doc_id}
