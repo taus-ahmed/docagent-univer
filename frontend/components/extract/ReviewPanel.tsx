@@ -13,8 +13,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { extractApi, reviewApi, type DocumentResult, type PageMeta } from "@/lib/api";
 import {
-  badgeFor, boxToPercent, reasonText, recordLabel, stepOpen,
-  type ReasonMap, type ReviewDoc, type ReviewValue,
+  badgeFor, boxToPercent, detailText, reasonText, recordLabel, stepOpen,
+  type AttentionItem, type ReasonMap, type ReviewDoc, type ReviewValue,
 } from "@/lib/review";
 
 interface Props {
@@ -54,6 +54,7 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
   const [busy, setBusy] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const current = values[sel];
+  const openAttention = (doc.attention ?? []).filter(a => !a.disposition);
 
   // the page follows the selected value (a page button can still move away)
   const selPage = current?.page ?? null;
@@ -98,7 +99,7 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
       toast.success("Marked reviewed");
       onChanged();
     } catch (e: any) {
-      toast.error(e?.response?.data?.detail ?? "Could not save the review mark");
+      toast.error(detailText(e, "Could not save the review mark"));
     } finally { setBusy(false); }
   }, [busy, jobId, doc.doc_id, onChanged]);
 
@@ -108,12 +109,12 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
       let saved: { extracted_data: Record<string, any> };
       if (v.kind === "field" && v.ref) {
         saved = await extractApi.editField(jobId, doc.doc_id, v.ref, text);
-      } else if (result?.extracted_data && v.table != null && v.row != null && v.column) {
-        const ed = JSON.parse(JSON.stringify(result.extracted_data));
-        const rows = ed[`${v.table}_rows`];
-        if (!Array.isArray(rows) || !rows[v.row]) throw new Error("row not found");
-        rows[v.row][v.column] = text;
-        saved = await extractApi.updateDocument(jobId, doc.doc_id, ed);
+      } else if (v.table != null && v.row != null && v.column) {
+        // ONE cell, changed on the server's stored copy. Sending this page's
+        // whole copy back used to undo every review mark made since it was
+        // loaded — "I edit, save, accept, and the change does not stick".
+        saved = await extractApi.editCell(jobId, doc.doc_id, String(v.table),
+                                          Number(v.row), String(v.column), text);
       } else {
         throw new Error("This value cannot be edited here");
       }
@@ -123,9 +124,22 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
       setEditing(null);
       onChanged();
     } catch (e: any) {
-      toast.error(e?.response?.data?.detail ?? e?.message ?? "Save failed");
+      toast.error(`Not saved: ${detailText(e, "Save failed")}`);
     } finally { setBusy(false); }
   }, [jobId, doc.doc_id, result, onChanged]);
+
+  const settle = useCallback(async (a: AttentionItem,
+                                    choice: "confirmed_absent" | "entered_manually") => {
+    setBusy(true);
+    try {
+      await reviewApi.mark(jobId, doc.doc_id, { dispositions: [{ id: a.id, choice }] });
+      toast.success(choice === "confirmed_absent" ? "Recorded: confirmed absent"
+                                                  : "Recorded: entered by hand");
+      onChanged();
+    } catch (e: any) {
+      toast.error(`Not saved: ${detailText(e, "Could not record the decision")}`);
+    } finally { setBusy(false); }
+  }, [jobId, doc.doc_id, onChanged]);
 
   const markDocument = useCallback(async () => {
     setBusy(true);
@@ -133,7 +147,10 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
       await reviewApi.mark(jobId, doc.doc_id, { scope: "document" });
       toast.success("Document marked reviewed");
       onChanged();
-    } catch { toast.error("Could not save the review mark"); }
+    } catch (e: any) {
+      // 409 while a completeness reason is open: the server names them
+      toast.error(detailText(e, "Could not save the review mark"));
+    }
     finally { setBusy(false); }
   }, [jobId, doc.doc_id, onChanged]);
 
@@ -185,14 +202,19 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
               {recordLabel(doc)}
             </div>
             <div style={{ fontSize: 11, color: "var(--text3)" }}>
+              {openAttention.length
+                ? `NEEDS ATTENTION — ${openAttention.length} completeness reason${openAttention.length === 1 ? "" : "s"} open · `
+                : ""}
               {doc.summary.needs_review
                 ? `${doc.summary.needs_review} value${doc.summary.needs_review === 1 ? "" : "s"} need review`
+                : openAttention.length ? "no value needs review"
                 : "Nothing in this document needs review"}
               {" · "}j/k next/previous · a accept · e edit · Esc close
             </div>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={markDocument}
-                  disabled={busy || doc.document_reviewed}>
+                  title={openAttention.length ? "Settle each completeness reason first" : undefined}
+                  disabled={busy || doc.document_reviewed || openAttention.length > 0}>
             {doc.document_reviewed ? "Document reviewed" : "Mark document reviewed"}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Close">×</button>
@@ -241,6 +263,39 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
 
           {/* values */}
           <div ref={listRef} style={{ overflow: "auto", padding: 8 }}>
+            {(doc.attention ?? []).length > 0 && (
+              <div role="region" aria-label="Completeness"
+                   style={{ border: "1px solid var(--red)", borderRadius: 6, padding: 8,
+                            marginBottom: 8, background: "rgba(220,38,38,0.05)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--red)", marginBottom: 4 }}>
+                  The page holds something this extraction does not
+                </div>
+                {(doc.attention ?? []).map(a => (
+                  <div key={a.id} style={{ fontSize: 12, padding: "4px 0",
+                                           borderTop: "1px solid var(--border)" }}>
+                    <div style={{ color: "var(--text1)" }}>{a.text}</div>
+                    {a.disposition ? (
+                      <div style={{ fontSize: 11, color: "var(--text3)" }}>
+                        {a.disposition.choice === "confirmed_absent"
+                          ? "Confirmed absent" : "Entered by hand"}
+                        {a.disposition.by ? ` — ${a.disposition.by}` : ""}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                        <button className="btn btn-secondary btn-sm" disabled={busy}
+                                onClick={() => settle(a, "confirmed_absent")}>
+                          Confirmed absent
+                        </button>
+                        <button className="btn btn-secondary btn-sm" disabled={busy}
+                                onClick={() => settle(a, "entered_manually")}>
+                          I entered it by hand
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {doc.failed && (
               <p role="alert" style={{ fontSize: 12, color: "var(--red)", padding: 8 }}>
                 Extraction failed for this document{doc.error ? `: ${doc.error}` : ""}. Nothing was extracted.

@@ -132,6 +132,13 @@ export interface JobStatus {
   status_reason?: string | null;
   progress_message?: string | null;
   schema_id: string | null;
+  /** Run A: per-document states, derived from the stored results. A finished
+   *  job holding a NEEDS_ATTENTION document is NOT a clean success. */
+  document_states?: Record<string, number>;
+  needs_attention?: number;
+  pages_processed?: number | null;
+  pages_total?: number | null;
+  pages_failed?: string[];
 }
 
 export interface DocumentResult {
@@ -501,6 +508,18 @@ export const extractApi = {
     return res.data as { ref: string; extracted_data: Record<string, any> };
   },
 
+  /** Edit ONE table cell by table name, row index and column. The server
+   *  changes its STORED copy, so nothing marked since this page loaded is
+   *  undone (a whole-document save used to undo review marks). */
+  editCell: async (jobId: number, docId: number, table: string, row: number,
+                   column: string, value: string) => {
+    const res = await api.patch(
+      `/api/jobs/${jobId}/docs/${docId}/rows/${encodeURIComponent(table)}/${row}`,
+      { column, value },
+    );
+    return res.data as { extracted_data: Record<string, any> };
+  },
+
   approveDocument: async (jobId: number, docId: number) => {
     const res = await api.post(`/api/jobs/${jobId}/docs/${docId}/approve`);
     return res.data;
@@ -564,6 +583,8 @@ export const reviewApi = {
     scope?: "values" | "document";
     values?: ({ ref: string } | { table: string; row: number })[];
     reviewed?: boolean;
+    /** Run A: settle completeness reasons, one choice per reason id. */
+    dispositions?: { id: string; choice: "confirmed_absent" | "entered_manually"; note?: string }[];
   }) => {
     const res = await api.post(`/api/jobs/${jobId}/docs/${docId}/review`, body);
     return res.data as { summary: ReviewSummary; values: ReviewValue[]; document_reviewed: boolean };

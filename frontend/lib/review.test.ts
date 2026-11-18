@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  BADGES, badgeFor, boxToPercent, exportWarning, fieldColumns, filterDocs,
+  BADGES, badgeFor, boxToPercent, detailText, exportWarning, fieldColumns, filterDocs,
   reasonText, recordLabel, stepOpen, type ReviewDoc, type ReviewValue,
 } from "./review.ts";
 
@@ -98,4 +98,14 @@ test("a declared rule's reason names the rule", () => {
   const map = { rule_failed: { label: "Template rule failed", tooltip: "t" } };
   assert.equal(reasonText("rule_failed:lines_sum", map).label, "Template rule failed (lines_sum)");
   assert.match(reasonText("other:thing", map).label, /^Needs review/);
+});
+
+// Run A: a save or mark that fails says WHY, whatever shape the server's
+// detail takes (a 409 for open completeness reasons is an object).
+test("detailText reads a string detail, an object's message, or falls back", () => {
+  assert.equal(detailText({ response: { data: { detail: "No such table row" } } }, "x"),
+               "No such table row");
+  assert.equal(detailText({ response: { data: { detail: { message: "2 reasons open", open: [] } } } }, "x"),
+               "2 reasons open");
+  assert.equal(detailText({}, "Save failed"), "Save failed");
 });

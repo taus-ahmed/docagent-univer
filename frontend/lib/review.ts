@@ -36,6 +36,26 @@ export interface ReviewSummary {
   empty_flagged: number;
   documents?: number;
   documents_needing_review?: number;
+  documents_needing_attention?: number;
+  attention_open?: number;
+}
+
+/** Run A: a completeness reason — the page holds something the extraction
+ *  does not. Open until a reviewer gives a disposition. */
+export interface AttentionItem {
+  id: string;
+  text: string;
+  disposition: null | { choice: string; note?: string; by?: string; at?: string };
+}
+
+export type DocumentState = "READY" | "NEEDS_REVIEW" | "NEEDS_ATTENTION" | "FAILED";
+
+/** A server error's `detail`, as text: a string, or an object's message. */
+export function detailText(e: any, fallback: string): string {
+  const d = e?.response?.data?.detail;
+  if (typeof d === "string") return d;
+  if (d && typeof d.message === "string") return d.message;
+  return e?.message ?? fallback;
 }
 
 export interface ReviewDoc {
@@ -52,6 +72,9 @@ export interface ReviewDoc {
   error: string;
   values: ReviewValue[];
   summary: ReviewSummary;
+  attention?: AttentionItem[];
+  document_state?: DocumentState;
+  pages_ledger?: Record<string, string>;
 }
 
 export interface JobReview {
@@ -174,6 +197,13 @@ export function boxToPercent(box: number[], widthPt: number, heightPt: number) {
 
 /** The sentence the export dialog shows before a download with open values. */
 export function exportWarning(s: ReviewSummary | undefined): string | null {
+  const att = s?.attention_open ?? 0;
+  if (s && att > 0) {
+    // Run A: an export of a document known to be incomplete is a DRAFT.
+    return `${att} completeness reason${att === 1 ? " is" : "s are"} still open ` +
+           `(a table, amount or page the extraction is missing). The file will be ` +
+           `named _DRAFT and say so on its Legend sheet. Export anyway?`;
+  }
   if (!s || s.needs_review === 0) return null;
   const n = s.needs_review;
   return `${n} value${n === 1 ? "" : "s"} still need${n === 1 ? "s" : ""} review ` +

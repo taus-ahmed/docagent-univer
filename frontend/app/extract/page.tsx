@@ -962,6 +962,15 @@ export default function ExtractPage() {
                   <span className="job-stat"><b>{jobStatus.total_docs}</b> docs</span>
                   {jobStatus.successful > 0 && <span className="job-stat" style={{ color: "var(--green)" }}><b>{jobStatus.successful}</b> ok</span>}
                   {jobStatus.failed > 0 && <span className="job-stat" style={{ color: "var(--red)" }}><b>{jobStatus.failed}</b> failed</span>}
+                  {(jobStatus.needs_attention ?? 0) > 0 && (
+                    <span className="job-stat" style={{ color: "var(--red)" }}
+                          title="The page holds something the extraction does not (a table, an amount, a page). Settle each reason in review.">
+                      <b>{jobStatus.needs_attention}</b> need attention
+                    </span>
+                  )}
+                  {jobStatus.pages_total != null && (
+                    <span className="job-stat">pages <b>{jobStatus.pages_processed}</b> of {jobStatus.pages_total}</span>
+                  )}
                   {isDone && <span className="job-stat"><b>{(jobStatus.total_time_sec ?? 0).toFixed(1)}s</b></span>}
                 </div>
               )}

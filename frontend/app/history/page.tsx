@@ -22,6 +22,19 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`badge ${map[status] ?? "badge-gray"}`}>{status}</span>;
 }
 
+/** Run A: shown BESIDE the status, so a completed job holding a document the
+ *  extraction is known to be incomplete for never reads as a clean success. */
+function AttentionBadge({ job }: { job: { needs_attention?: number; pages_failed?: string[] } }) {
+  const n = job.needs_attention ?? 0;
+  if (!n) return null;
+  return (
+    <span className="badge badge-red" title={job.pages_failed?.length
+      ? `Pages not read: ${job.pages_failed.join(", ")}` : undefined}>
+      {n} need{n === 1 ? "s" : ""} attention
+    </span>
+  );
+}
+
 function StatusIcon({ status }: { status: string }) {
   if (status === "completed") return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
   if (status === "partial")   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
@@ -475,6 +488,7 @@ export default function HistoryPage() {
                     <div className="job-id-row">
                       <span className="job-id">Job #{job.id}</span>
                       <StatusBadge status={job.status} />
+                      <AttentionBadge job={job} />
                       {job.deleted_at && <span className="badge badge-gray">deleted</span>}
                       {job.schema_id && (
                         <span style={{ fontSize: 9, padding: "1px 5px", background: "var(--accent-dim)", color: "var(--accent)", borderRadius: 3, fontWeight: 600 }}>TPL</span>
@@ -506,6 +520,12 @@ export default function HistoryPage() {
                 <div className="detail-header">
                   <span className="detail-title">Job #{selectedJob.id}</span>
                   <StatusBadge status={selectedJob.status} />
+                  <AttentionBadge job={selectedJob} />
+                  {selectedJob.pages_total != null && (
+                    <span className="badge badge-gray">
+                      pages processed {selectedJob.pages_processed} of {selectedJob.pages_total}
+                    </span>
+                  )}
                   {/* N1: show download buttons for any job with extracted docs —
                       template or not (no-template jobs export via the flat-table writer).
                       A "partial" job has real output for the documents that

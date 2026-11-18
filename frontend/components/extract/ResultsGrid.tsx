@@ -327,11 +327,20 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
         <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text1)" }}>
             {results.length} document{results.length !== 1 ? "s" : ""}
+            {s && (s.documents_needing_attention ?? 0) > 0 && (
+              <span role="alert" style={{ fontSize: 12, marginLeft: 8, fontWeight: 600,
+                                          color: "var(--red,#dc2626)" }}>
+                · {s.documents_needing_attention} document{s.documents_needing_attention === 1 ? "" : "s"} NEED
+                {s.documents_needing_attention === 1 ? "S" : ""} ATTENTION ({s.attention_open} open
+                reason{s.attention_open === 1 ? "" : "s"}: a table, amount or page is missing)
+              </span>
+            )}
             {s && (
               <span style={{ fontSize: 12, marginLeft: 8, fontWeight: 400,
                              color: s.needs_review ? "var(--amber,#b45309)" : "var(--green,#15803d)" }}>
                 · {s.needs_review
                     ? `${s.needs_review} value${s.needs_review === 1 ? "" : "s"} need review, ${s.low} low`
+                    : (s.documents_needing_attention ?? 0) > 0 ? "no value needs review"
                     : "nothing needs review"}
               </span>
             )}
