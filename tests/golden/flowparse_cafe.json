@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "run_id": "flowparse_cafe",
+  "file": "receipt_pdf/flowparse_cafe.pdf",
+  "template_name": "Receipt - Itemized",
+  "document_type": "receipt",
+  "headers": {
+    "Merchant": {"value": "FERN & COPPER CAFÉ", "type": "text"},
+    "Merchant Address": {"value": "212 Alder Street, Portland, OR", "type": "text"},
+    "Receipt Number": {"value": "R-48213", "type": "identifier"},
+    "Date Time": {"value": "2026-10-21 09:48", "type": "datetime"},
+    "Payment Method": {"value": "VISA", "type": "text"},
+    "Card Last 4": {"value": "4242", "type": "identifier"}
+  },
+  "tables": [{
+    "name": "Items",
+    "row_count": 4,
+    "key_rows": [
+      {"Description": "Flat white", "Quantity": 2, "Amount": 8.40},
+      {"Description": "Chicken pesto sandwich", "Amount": 9.80},
+      {"Description": "Carrot cake slice", "Amount": 4.60},
+      {"Description": "Sparkling water", "Amount": 1.80}
+    ]
+  }],
+  "totals": {
+    "Subtotal": {"value": 24.60, "type": "money"},
+    "Sales Tax": {"value": 2.03, "type": "money"},
+    "Tip": {"value": 3.00, "type": "money"},
+    "Total": {"value": 29.63, "type": "money"}
+  },
+  "absent_slots": ["Cashier", "Purchase Order Number"]
+}

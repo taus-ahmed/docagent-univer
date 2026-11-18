@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "run_id": "irs_w2_mod11",
+  "file": "w2/irs_w2_mod11.pdf",
+  "template_name": "Tax - W-2 Full",
+  "document_type": "w2",
+  "headers": {
+    "Tax Year": {"value": "2014", "type": "identifier"},
+    "Box a Employee SSN": {"value": "222-00-2314", "type": "identifier"},
+    "Box b Employer EIN": {"value": "10-8763214", "type": "identifier"},
+    "Box c Employer Name": {"value": "R AND R FARM", "type": "text"},
+    "Employer Address": {"value": "21 BEECH TREE FARM, ANYTOWN, US 10111", "type": "text"},
+    "Box e Employee Name": {"value": "SETH W. WIGGINS", "type": "text"},
+    "Box f Employee Address": {"value": "2611 NORTH ASH DRIVE, ANYTOWN, US 10012", "type": "text"},
+    "Box 1 Wages Tips Other Compensation": {"value": 10535.00, "type": "money"},
+    "Box 2 Federal Income Tax Withheld": {"value": 368.00, "type": "money"},
+    "Box 3 Social Security Wages": {"value": 10535.00, "type": "money"},
+    "Box 4 Social Security Tax Withheld": {"value": 653.17, "type": "money"},
+    "Box 5 Medicare Wages and Tips": {"value": 10535.00, "type": "money"},
+    "Box 6 Medicare Tax Withheld": {"value": 152.76, "type": "money"}
+  },
+  "tables": [],
+  "totals": {},
+  "absent_slots": ["Box d Control Number", "Box 7 Social Security Tips", "Box 8 Allocated Tips", "Box 10 Dependent Care Benefits", "Box 11 Nonqualified Plans", "Box 12 Codes", "Box 14 Other", "State and Local"]
+}

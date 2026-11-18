@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "run_id": "long_digital_25pg",
+  "file": "long_docs/long_digital_25pg.pdf",
+  "template_name": "Bundle - Multi Document",
+  "document_type": "multi_document_bundle",
+  "headers": {
+    "Document Count": {"value": 5, "type": "number"},
+    "Total Pages": {"value": 26, "type": "number"}
+  },
+  "tables": [{
+    "name": "Document Ledger",
+    "row_count": 5,
+    "key_rows": [
+      {"Document": "Carson bank", "Pages": "1-6"},
+      {"Document": "Fiserv merchant", "Pages": "7-11"},
+      {"Document": "City of Mobile", "Pages": "12-19"},
+      {"Document": "Stanford receipts", "Pages": "20-24"},
+      {"Document": "WSU invoice", "Pages": "25-26"}
+    ]
+  }],
+  "totals": {},
+  "absent_slots": ["Single Document Type"]
+}

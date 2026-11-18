@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "run_id": "irs6744_w2_mcguire",
+  "file": "w2/irs6744_w2_mcguire.pdf",
+  "template_name": "Tax - W-2 Full",
+  "document_type": "w2",
+  "headers": {
+    "Tax Year": {"value": "2026", "type": "identifier"},
+    "Box a Employee SSN": {"value": "128-00-XXXX", "type": "identifier"},
+    "Box b Employer EIN": {"value": "25-7XXXXXX", "type": "identifier"},
+    "Box c Employer Name": {"value": "Fashionista", "type": "text"},
+    "Employer Address": {"value": "210 Main St.", "type": "text"},
+    "Box e Employee Name": {"value": "Kim McGuire", "type": "text"},
+    "Box f Employee Address": {"value": "410 Broadway Drive", "type": "text"},
+    "Box 1 Wages Tips Other Compensation": {"value": 28000.00, "type": "money"},
+    "Box 2 Federal Income Tax Withheld": {"value": 2800.00, "type": "money"},
+    "Box 3 Social Security Wages": {"value": 28000.00, "type": "money"},
+    "Box 4 Social Security Tax Withheld": {"value": 1736.00, "type": "money"},
+    "Box 5 Medicare Wages and Tips": {"value": 28000.00, "type": "money"},
+    "Box 6 Medicare Tax Withheld": {"value": 406.00, "type": "money"}
+  },
+  "tables": [
+    {"name": "Box 12 Codes", "row_count": 1, "key_rows": [{"Code": "DD", "Amount": 2500.00}]},
+    {"name": "State and Local", "row_count": 1, "key_rows": [{"State": "YS", "Employer State ID": "25-7XXXXXX", "State Wages": 28000.00}]}
+  ],
+  "totals": {},
+  "absent_slots": ["Box d Control Number", "Box 7 Social Security Tips", "Box 8 Allocated Tips", "Box 10 Dependent Care Benefits", "Box 11 Nonqualified Plans", "Box 14 Other"]
+}

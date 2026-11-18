@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "run_id": "mammoth_2pg",
+  "file": "bank_statement/mammoth_2pg.pdf",
+  "template_name": "Bank - Monthly Reconciliation",
+  "document_type": "bank_statement",
+  "headers": {
+    "Bank Name": {"value": "EXAMPLE COMMUNITY BANK", "type": "text"},
+    "Account Number Last 4": {"value": "0000", "type": "identifier"},
+    "Statement Period Start": {"value": "08/01/2026", "type": "date"},
+    "Statement Period End": {"value": "08/31/2026", "type": "date"},
+    "Opening Balance": {"value": 4210.55, "type": "money"},
+    "Closing Balance": {"value": 14269.35, "type": "money"}
+  },
+  "tables": [{
+    "name": "Transactions",
+    "row_count": 48,
+    "repeated_header_pages": [2],
+    "key_rows": [
+      {"Date": "08/02/2026", "Description": "UTILITY ELECTRIC CO", "Debit": 124.82, "Balance": 4085.73},
+      {"Date": "09/04/2026", "Description": "SUBSCRIPTION STREAMING", "Debit": 294.77, "Balance": 14269.35}
+    ]
+  }],
+  "totals": {},
+  "absent_slots": ["Account Holder", "GL Account", "Memo"]
+}

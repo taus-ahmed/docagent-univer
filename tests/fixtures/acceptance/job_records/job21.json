@@ -1,0 +1,324 @@
+[
+    {
+        "id": 30,
+        "job_id": 21,
+        "filename": "irs_w2_mod11.pdf",
+        "original_filename": "irs_w2_mod11.pdf",
+        "document_type": "w2",
+        "overall_confidence": "high",
+        "extracted_data": {
+            "document_type": "w2",
+            "overall_confidence": "high",
+            "extraction_method": "slot_directed",
+            "layout_sections": {},
+            "extracted_fields": {
+                "B1": "2014"
+            },
+            "field_provenance": {
+                "B1": {
+                    "source": "W-2 Wage and Tax 2014 Department of the Treasury—Internal Revenue Service",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                }
+            },
+            "extracted_data": {
+                "Tax Year": {
+                    "value": "2014",
+                    "confidence": "high",
+                    "ref": "B1"
+                }
+            },
+            "table_rows": [],
+            "slot_map": {
+                "fields": [
+                    {
+                        "slot_id": "F1",
+                        "ref": "B1",
+                        "row_label": "Tax Year",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F2",
+                        "ref": "B2",
+                        "row_label": "Box a Employee SSN",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F3",
+                        "ref": "B3",
+                        "row_label": "Box b Employer EIN",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F4",
+                        "ref": "B4",
+                        "row_label": "Box c Employer Name",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F5",
+                        "ref": "B5",
+                        "row_label": "Employer Address",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F6",
+                        "ref": "B6",
+                        "row_label": "Box d Control Number",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F7",
+                        "ref": "B7",
+                        "row_label": "Box e Employee Name",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F8",
+                        "ref": "B8",
+                        "row_label": "Box f Employee Address",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F9",
+                        "ref": "B9",
+                        "row_label": "Box 1 Wages Tips Other Compensation",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F10",
+                        "ref": "B10",
+                        "row_label": "Box 2 Federal Income Tax Withheld",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F11",
+                        "ref": "B11",
+                        "row_label": "Box 3 Social Security Wages",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F12",
+                        "ref": "B12",
+                        "row_label": "Box 4 Social Security Tax Withheld",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F13",
+                        "ref": "B13",
+                        "row_label": "Box 5 Medicare Wages and Tips",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F14",
+                        "ref": "B14",
+                        "row_label": "Box 6 Medicare Tax Withheld",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F15",
+                        "ref": "B15",
+                        "row_label": "Box 7 Social Security Tips",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F16",
+                        "ref": "B16",
+                        "row_label": "Box 8 Allocated Tips",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F17",
+                        "ref": "B17",
+                        "row_label": "Box 10 Dependent Care Benefits",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F18",
+                        "ref": "B18",
+                        "row_label": "Box 11 Nonqualified Plans",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F19",
+                        "ref": "B19",
+                        "row_label": "Box 13 Statutory Employee",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F20",
+                        "ref": "B20",
+                        "row_label": "Box 13 Retirement Plan",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F21",
+                        "ref": "B21",
+                        "row_label": "Box 13 Third-Party Sick Pay",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F22",
+                        "ref": "B22",
+                        "row_label": "Box 14 Other",
+                        "section": ""
+                    }
+                ],
+                "tables": [
+                    {
+                        "name": "Box 12 Codes",
+                        "header_row": 24,
+                        "start_row": 25,
+                        "end_row": 29,
+                        "columns": [
+                            {
+                                "col": 0,
+                                "header": "Box 12 Code",
+                                "key": "Box 12 Code",
+                                "role": "label"
+                            },
+                            {
+                                "col": 1,
+                                "header": "Box 12 Amount",
+                                "key": "Box 12 Amount",
+                                "role": "value"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "State and Local",
+                        "header_row": 31,
+                        "start_row": 32,
+                        "end_row": 41,
+                        "columns": [
+                            {
+                                "col": 0,
+                                "header": "State",
+                                "key": "State",
+                                "role": "value"
+                            },
+                            {
+                                "col": 1,
+                                "header": "Employer State ID",
+                                "key": "Employer State ID",
+                                "role": "value"
+                            },
+                            {
+                                "col": 2,
+                                "header": "State Wages",
+                                "key": "State Wages",
+                                "role": "value"
+                            },
+                            {
+                                "col": 3,
+                                "header": "State Income Tax",
+                                "key": "State Income Tax",
+                                "role": "value"
+                            },
+                            {
+                                "col": 4,
+                                "header": "Local Wages",
+                                "key": "Local Wages",
+                                "role": "value"
+                            },
+                            {
+                                "col": 5,
+                                "header": "Local Income Tax",
+                                "key": "Local Income Tax",
+                                "role": "value"
+                            },
+                            {
+                                "col": 6,
+                                "header": "Locality Name",
+                                "key": "Locality Name",
+                                "role": "value"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "validation": {
+                "flagged_count": 1,
+                "flagged_fields": [
+                    {
+                        "ref": "template columns",
+                        "value": "'Box 12 Amount'",
+                        "reason": "these column headings do not appear in the document, so nothing but position decided which source column filled them"
+                    }
+                ],
+                "confidence_map": {
+                    "B1": "high"
+                },
+                "ungrounded_count": 0,
+                "misplaced_count": 0,
+                "routing_checksum": null,
+                "dropped_row_count": 0,
+                "empty_row_count": 0,
+                "total_row_count": 0,
+                "off_schema_key_count": 0,
+                "regions": [],
+                "unbound_row_count": 0,
+                "merged_column_count": 0,
+                "overprinted_count": 0,
+                "unwitnessed_count": 0,
+                "low_confidence_cells": 0,
+                "graded_cells": 1,
+                "low_confidence_ratio": 0.0,
+                "document_needs_review": false,
+                "grounded_count": 1,
+                "page_origins": {
+                    "1": "native"
+                },
+                "page_gates": {
+                    "1": {
+                        "origin": "native",
+                        "graded_cells": 1,
+                        "low_confidence_cells": 0,
+                        "low_confidence_ratio": 0.0,
+                        "review_gate": false,
+                        "text_floor": false
+                    }
+                },
+                "ocr_pages": [],
+                "ocr_failed_pages": [],
+                "ocr_zero_word_pages": [],
+                "thin_text_layer_pages": []
+            },
+            "validation_notes": [
+                "1 template column heading(s) are not printed anywhere in this document ('Box 12 Amount') — values under them were placed by position, not by what the heading means",
+                "21 field slot(s) returned no value: Box a Employee SSN, Box b Employer EIN, Box c Employer Name, Employer Address, Box d Control Number, Box e Employee Name, Box f Employee Address, Box 1 Wages Tips Other Compensation"
+            ],
+            "needs_review": true,
+            "template_type": "slot",
+            "template_regions": {
+                "primary_mode": "slot"
+            },
+            "inferred_template": null,
+            "inferred_grid": null,
+            "shape_signature": null,
+            "inferred_label_provenance": null,
+            "raw_llm_responses": [
+                "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"2014\",\n      \"source\": \"W-2 Wage and Tax 2014 Department of the Treasury—Internal Revenue Service\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F3\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F4\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F5\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F6\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F7\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F8\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F9\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F10\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F11\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F12\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F13\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F14\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F15\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F16\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F17\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F18\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F19\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F20\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F21\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F22\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    }\n  },\n  \"tables\": {\n    \"Box 12 Codes\": [],\n    \"State and Local\": []\n  }\n}"
+            ],
+            "Box 12 Codes_rows": [],
+            "State and Local_rows": [],
+            "review": {
+                "document_reviewed": true,
+                "by": "Luq",
+                "at": "2026-11-18T12:45:15.862803Z"
+            }
+        },
+        "validation_errors": "",
+        "validation_warnings": "template columns: 'Box 12 Amount' (these column headings do not appear in the document, so nothing but position decided which source column filled them)",
+        "needs_review": false,
+        "reviewed": true,
+        "reviewed_by": "Luq",
+        "model_used": "gemini-2.5-flash",
+        "tokens_used": 2473,
+        "latency_ms": 16572.0,
+        "created_at": "2026-11-18T12:45:03.337812"
+    }
+]

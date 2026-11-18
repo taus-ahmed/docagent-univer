@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "shell_mastercard",
+  "file": "receipt_photo/shell_mastercard.jpg",
+  "template_name": "Receipt - Fuel",
+  "document_type": "receipt",
+  "headers": {
+    "Station": {"value": "SHELL", "type": "text"},
+    "Address": {"value": "2029 S SAGINAW, MIDLAND MI 48640", "type": "text"},
+    "Date Time": {"value": "06/21/06 4:01 PM", "type": "datetime"},
+    "Pump": {"value": "04", "type": "identifier"},
+    "Product": {"value": "UNLD", "type": "text"},
+    "Price Per Gallon": {"value": 2.969, "type": "money"},
+    "Gallons": {"value": 6.736, "type": "number"}
+  },
+  "tables": [],
+  "totals": {"Fuel Total": {"value": 20.00, "type": "money"}},
+  "absent_slots": ["Invoice Number", "Authorization Number", "Account Number"],
+  "notes": ["The three identifiers are visibly redacted in the supplied image and must remain empty or flagged."]
+}

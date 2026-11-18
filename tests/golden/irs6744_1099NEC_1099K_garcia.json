@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "run_id": "irs6744_1099NEC_1099K_garcia",
+  "file": "1099/irs6744_1099NEC_1099K_garcia.pdf",
+  "template_name": "Tax - 1099-NEC and MISC Organizer",
+  "document_type": "form_1099",
+  "headers": {
+    "Tax Year": {"value": "2026", "type": "identifier"},
+    "Payer Name": {"value": "FAST EATS", "type": "text"},
+    "Payer TIN": {"value": "63-400XXXX", "type": "identifier"},
+    "Recipient Name": {"value": "MARTA GARCIA", "type": "text"},
+    "Recipient TIN": {"value": "605-00-XXXX", "type": "identifier"},
+    "NEC Box 1": {"value": 1000.00, "type": "money"},
+    "1099-K Gross Amount": {"value": 8525.00, "type": "money"}
+  },
+  "tables": [],
+  "totals": {},
+  "absent_slots": ["Account Number", "Federal Income Tax Withheld", "State Tax Withheld"]
+}

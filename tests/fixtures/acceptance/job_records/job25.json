@@ -1,0 +1,220 @@
+[
+    {
+        "id": 34,
+        "job_id": 25,
+        "filename": "irs_1099nec_ellis.pdf",
+        "original_filename": "irs_1099nec_ellis.pdf",
+        "document_type": "form_1099",
+        "overall_confidence": "high",
+        "extracted_data": {
+            "document_type": "form_1099",
+            "overall_confidence": "high",
+            "extraction_method": "slot_directed",
+            "layout_sections": {},
+            "extracted_fields": {
+                "B1": "1099-NEC"
+            },
+            "field_provenance": {
+                "B1": {
+                    "source": "Form 1099-NEC",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                }
+            },
+            "extracted_data": {
+                "Form Type": {
+                    "value": "1099-NEC",
+                    "confidence": "high",
+                    "ref": "B1"
+                }
+            },
+            "table_rows": [],
+            "slot_map": {
+                "fields": [
+                    {
+                        "slot_id": "F1",
+                        "ref": "B1",
+                        "row_label": "Form Type",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F2",
+                        "ref": "B2",
+                        "row_label": "Tax Year",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F3",
+                        "ref": "B3",
+                        "row_label": "Payer Name",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F4",
+                        "ref": "B4",
+                        "row_label": "Payer Address",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F5",
+                        "ref": "B5",
+                        "row_label": "Payer TIN",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F6",
+                        "ref": "B6",
+                        "row_label": "Recipient Name",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F7",
+                        "ref": "B7",
+                        "row_label": "Recipient Address",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F8",
+                        "ref": "B8",
+                        "row_label": "Recipient TIN",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F9",
+                        "ref": "B9",
+                        "row_label": "Account Number",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F10",
+                        "ref": "B10",
+                        "row_label": "Box 1 Nonemployee Compensation",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F11",
+                        "ref": "B11",
+                        "row_label": "Box 1 Rents",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F12",
+                        "ref": "B12",
+                        "row_label": "Box 2 Royalties",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F13",
+                        "ref": "B13",
+                        "row_label": "Box 3 Other Income",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F14",
+                        "ref": "B14",
+                        "row_label": "Box 4 Federal Tax Withheld",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F15",
+                        "ref": "B15",
+                        "row_label": "Box 5 State Tax Withheld",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F16",
+                        "ref": "B16",
+                        "row_label": "State",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F17",
+                        "ref": "B17",
+                        "row_label": "State ID Number",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F18",
+                        "ref": "B18",
+                        "row_label": "Box 7 State Income",
+                        "section": ""
+                    }
+                ],
+                "tables": []
+            },
+            "validation": {
+                "flagged_count": 0,
+                "flagged_fields": [],
+                "confidence_map": {
+                    "B1": "high"
+                },
+                "ungrounded_count": 0,
+                "misplaced_count": 0,
+                "routing_checksum": null,
+                "dropped_row_count": 0,
+                "empty_row_count": 0,
+                "total_row_count": 0,
+                "off_schema_key_count": 0,
+                "regions": [],
+                "unbound_row_count": 0,
+                "merged_column_count": 0,
+                "overprinted_count": 0,
+                "unwitnessed_count": 0,
+                "low_confidence_cells": 0,
+                "graded_cells": 1,
+                "low_confidence_ratio": 0.0,
+                "document_needs_review": false,
+                "grounded_count": 1,
+                "page_origins": {
+                    "1": "native"
+                },
+                "page_gates": {
+                    "1": {
+                        "origin": "native",
+                        "graded_cells": 1,
+                        "low_confidence_cells": 0,
+                        "low_confidence_ratio": 0.0,
+                        "review_gate": false,
+                        "text_floor": false
+                    }
+                },
+                "ocr_pages": [],
+                "ocr_failed_pages": [],
+                "ocr_zero_word_pages": [],
+                "thin_text_layer_pages": []
+            },
+            "validation_notes": [
+                "17 field slot(s) returned no value: Tax Year, Payer Name, Payer Address, Payer TIN, Recipient Name, Recipient Address, Recipient TIN, Account Number"
+            ],
+            "needs_review": true,
+            "template_type": "slot",
+            "template_regions": {
+                "primary_mode": "slot"
+            },
+            "inferred_template": null,
+            "inferred_grid": null,
+            "shape_signature": null,
+            "inferred_label_provenance": null,
+            "raw_llm_responses": [
+                "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"1099-NEC\",\n      \"source\": \"Form 1099-NEC\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"\",\n      \"source\": \"For calendar year\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"\",\n      \"source\": \"PAYER’S name, street address, city or town, state or province, country, ZIP OMB No. 1545-0116 or foreign postal code, and telephone no.\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"\",\n      \"source\": \"PAYER’S name, street address, city or town, state or province, country, ZIP OMB No. 1545-0116 or foreign postal code, and telephone no.\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"\",\n      \"source\": \"PAYER’S TIN\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"\",\n      \"source\": \"RECIPIENT’S name\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"\",\n      \"source\": \"Street address (including apt. no.)\\nCity or town, state or province, country, and ZIP or foreign postal code\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"\",\n      \"source\": \"RECIPIENT’S TIN\",\n      \"page\": 1\n    },\n    \"F9\": {\n      \"value\": \"\",\n      \"source\": \"Account number (see instructions)\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"\",\n      \"source\": \"1 Nonemployee compensation\",\n      \"page\": 1\n    },\n    \"F11\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F12\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F13\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F14\": {\n      \"value\": \"\",\n      \"source\": \"4 Federal income tax withheld\",\n      \"page\": 1\n    },\n    \"F15\": {\n      \"value\": \"\",\n      \"source\": \"5 State tax withheld\",\n      \"page\": 1\n    },\n    \"F16\": {\n      \"value\": \"\",\n      \"source\": \"6 State/Payer’s state no.\",\n      \"page\": 1\n    },\n    \"F17\": {\n      \"value\": \"\",\n      \"source\": \"6 State/Payer’s state no.\",\n      \"page\": 1\n    },\n    \"F18\": {\n      \"value\": \"\",\n      \"source\": \"7 State income\",\n      \"page\": 1\n    }\n  }\n}"
+            ],
+            "review": {
+                "document_reviewed": true,
+                "by": "Luq",
+                "at": "2026-11-18T12:52:41.515268Z"
+            }
+        },
+        "validation_errors": "",
+        "validation_warnings": "",
+        "needs_review": false,
+        "reviewed": true,
+        "reviewed_by": "Luq",
+        "model_used": "gemini-2.5-flash",
+        "tokens_used": 2090,
+        "latency_ms": 29933.0,
+        "created_at": "2026-11-18T12:52:32.286049"
+    }
+]

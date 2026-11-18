@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "run_id": "irs6744_brokerage_1099DIV_MISC_INT_B",
+  "file": "1099/irs6744_brokerage_1099DIV_MISC_INT_B.pdf",
+  "template_name": "Tax - 1099-INT and DIV Organizer",
+  "document_type": "form_1099",
+  "headers": {
+    "Tax Year": {"value": "2026", "type": "identifier"},
+    "Payer Name": {"value": "XYZ Investments", "type": "text"},
+    "Payer TIN": {"value": "40-200XXXX", "type": "identifier"},
+    "Recipient Name": {"value": "Marta Garcia", "type": "text"},
+    "Recipient TIN": {"value": "605-00-XXXX", "type": "identifier"},
+    "Account Number": {"value": "111-222", "type": "identifier"},
+    "INT Box 1 Interest Income": {"value": 70.00, "type": "money"},
+    "INT Box 2 Early Withdrawal Penalty": {"value": 0.00, "type": "money"},
+    "INT Box 3 US Savings Bond Interest": {"value": 0.00, "type": "money"},
+    "INT Box 4 Federal Income Tax Withheld": {"value": 0.00, "type": "money"},
+    "INT Box 8 Tax Exempt Interest": {"value": 0.00, "type": "money"},
+    "DIV 1a Ordinary Dividends": {"value": 300.00, "type": "money"},
+    "DIV 1b Qualified Dividends": {"value": 225.00, "type": "money"},
+    "DIV 2a Capital Gain Distributions": {"value": 350.00, "type": "money"},
+    "DIV Box 4 Federal Income Tax Withheld": {"value": 0.00, "type": "money"},
+    "DIV Box 5 Section 199A Dividends": {"value": 48.00, "type": "money"},
+    "DIV Box 7 Foreign Tax Paid": {"value": 0.00, "type": "money"}
+  },
+  "tables": [],
+  "totals": {},
+  "absent_slots": ["INT Box 7 Foreign Country", "INT Box 14 Tax Exempt Bond CUSIP"]
+}

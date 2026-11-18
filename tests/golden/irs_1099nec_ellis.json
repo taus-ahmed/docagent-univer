@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "irs_1099nec_ellis",
+  "file": "1099/irs_1099nec_ellis.pdf",
+  "template_name": "Tax - 1099-NEC and MISC Organizer",
+  "document_type": "form_1099",
+  "headers": {
+    "Form Type": {"value": "1099-NEC", "type": "identifier"},
+    "Payer Name": {"value": "Printing Corporation", "type": "text"},
+    "Payer Address": {"value": "1 Oak Creek Avenue, Anytown, US 10000", "type": "text"},
+    "Payer TIN": {"value": "10-XXXXXXX", "type": "identifier"},
+    "Recipient Name": {"value": "Nancy Ellis", "type": "text"},
+    "Recipient Address": {"value": "12 W Pine Street, Anytown, US 10000", "type": "text"},
+    "Recipient TIN": {"value": "XXX-XX-XXXX", "type": "identifier"},
+    "Box 1 Nonemployee Compensation": {"value": 15250.00, "type": "money"}
+  },
+  "tables": [],
+  "totals": {},
+  "absent_slots": ["Account Number", "Box 3 Excess Golden Parachute Payments", "Box 4 Federal Income Tax Withheld", "State Tax Withheld", "State Income"]
+}

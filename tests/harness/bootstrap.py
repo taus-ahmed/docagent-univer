@@ -5,9 +5,9 @@ Everything that touches the extraction pipeline must call ``bootstrap()``
 BEFORE importing any ``app.*`` or engine module, because:
 
 - ``app.config.settings`` is built once at import time from os.environ plus a
-  CWD-relative ``.env`` file. We pre-load ``backend/.env`` into os.environ and
-  chdir to ``backend/`` so relative paths (``./storage``)
-  land where production's layout puts them.
+  CWD-relative ``.env`` file. Legacy runs may pre-load ``backend/.env``;
+  acceptance and CI runs set ``DOCAGENT_TEST_NO_DOTENV=1`` and use explicit
+  local test settings only.
 - Production runs ``PRIMARY_LLM=gemini`` and
   ``GEMINI_MODEL=gemini-2.5-flash-lite`` (audit 2026-08-17 §4). Local
   ``backend/.env`` does not set the model, so without this bootstrap the
@@ -62,14 +62,27 @@ def bootstrap(production_parity: bool = True) -> None:
     if _bootstrapped:
         return
 
-    # 1. backend/.env -> os.environ (existing environment wins)
-    try:
-        from dotenv import dotenv_values
-        for k, v in (dotenv_values(BACKEND_DIR / ".env") or {}).items():
-            if v is not None:
-                os.environ.setdefault(k, v)
-    except ImportError:
-        pass
+    # 1. Legacy opt-in: backend/.env -> os.environ (existing environment wins).
+    # Acceptance/CI set DOCAGENT_TEST_NO_DOTENV=1 so owner credentials are
+    # never read by a test run.
+    no_dotenv = os.environ.get("DOCAGENT_TEST_NO_DOTENV") == "1"
+    if no_dotenv:
+        # app.config uses pydantic-settings' DotEnvSettingsSource when it is
+        # imported later. Disable that source in this test process as well as
+        # skipping the explicit legacy preload above.
+        try:
+            from pydantic_settings.sources import DotEnvSettingsSource
+            DotEnvSettingsSource.__call__ = lambda self: {}
+        except ImportError:
+            pass
+    else:
+        try:
+            from dotenv import dotenv_values
+            for k, v in (dotenv_values(BACKEND_DIR / ".env") or {}).items():
+                if v is not None:
+                    os.environ.setdefault(k, v)
+        except ImportError:
+            pass
 
     # 2. Production-parity flags override whatever .env said, so the harness
     #    always measures the engine production actually runs.

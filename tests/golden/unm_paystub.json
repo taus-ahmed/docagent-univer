@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "run_id": "unm_paystub",
+  "file": "payslip/unm_paystub.pdf",
+  "template_name": "Payroll - Full Payslip",
+  "document_type": "payslip",
+  "headers": {
+    "Employee": {"value": "John Q. Doe", "type": "text"},
+    "Pay Period": {"value": "01/01/17 - 01/31/17", "type": "date_range"},
+    "Gross": {"value": 4313.54, "type": "money"},
+    "Net Amount": {"value": 2694.01, "type": "money"}
+  },
+  "tables": [{
+    "name": "Earnings",
+    "row_count": 2,
+    "key_rows": [
+      {"Description": "Regular Base Pay", "Current Amount": 3915.36},
+      {"Description": "Annual Leave", "Current Amount": 398.18}
+    ]
+  }],
+  "totals": {"Total Deductions": {"value": 1619.53, "type": "money"}},
+  "absent_slots": ["Employee Address", "Employer Tax ID"]
+}

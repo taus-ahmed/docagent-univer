@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "run_id": "calif_restaurant_2006",
+  "file": "receipt_photo/calif_restaurant_2006.jpg",
+  "template_name": "Receipt - Restaurant",
+  "document_type": "receipt",
+  "headers": {
+    "Restaurant": {"value": "BOULEVARD", "type": "text"},
+    "Address": {"value": "One Mission Street, San Francisco CA 94105", "type": "text"},
+    "Phone": {"value": "(415) 543-6084", "type": "identifier"},
+    "Date Time": {"value": "Feb 15 06 07:20 PM", "type": "datetime"},
+    "Check Number": {"value": "9458", "type": "identifier"},
+    "Table": {"value": "64/1", "type": "identifier"}
+  },
+  "tables": [{
+    "name": "Items",
+    "row_count": 17,
+    "key_rows": [
+      {"Description": "HENDRIKS", "Amount": 8.00},
+      {"Description": "TRIO", "Amount": 9.75}
+    ]
+  }],
+  "totals": {
+    "Subtotal": {"value": 230.25, "type": "money"},
+    "Tax": {"value": 19.57, "type": "money"},
+    "Total": {"value": 249.32, "type": "money"}
+  },
+  "absent_slots": ["Tip", "Payment Method"]
+}

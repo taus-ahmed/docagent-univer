@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "run_id": "flowparse_po",
+  "file": "purchase_order/flowparse_po.pdf",
+  "template_name": "PO - Purchase Order Full",
+  "document_type": "purchase_order",
+  "headers": {
+    "PO Number": {"value": "PO-2026-1147", "type": "identifier"},
+    "Order Date": {"value": "2026-10-05", "type": "date"},
+    "Delivery Date": {"value": "2026-10-19", "type": "date"},
+    "Buyer": {"value": "Harlow & Sons Ltd", "type": "text"},
+    "Supplier Name": {"value": "Ormond Storage Systems Ltd", "type": "text"},
+    "Payment Terms": {"value": "30 days from invoice", "type": "text"}
+  },
+  "tables": [{
+    "name": "Order Lines",
+    "row_count": 5,
+    "key_rows": [
+      {"Item Description": "Pallet racking upright 3000mm", "Quantity": 12, "Unit Price": 86.50, "Line Amount": 1038.00},
+      {"Item Description": "Installation labour (hours)", "Quantity": 16, "Unit Price": 38.00, "Line Amount": 608.00}
+    ]
+  }],
+  "totals": {
+    "Subtotal": {"value": 4356.80, "type": "money"},
+    "Tax": {"value": 871.36, "type": "money"},
+    "Order Total": {"value": 5228.16, "type": "money"}
+  },
+  "absent_slots": ["Supplier Address", "Ship To", "Bill To", "Contract or Reference"]
+}

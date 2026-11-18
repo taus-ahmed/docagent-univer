@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "run_id": "irs_1099int_mod3",
+  "file": "1099/irs_1099int_mod3.pdf",
+  "template_name": "Tax - 1099-INT and DIV Organizer",
+  "document_type": "form_1099",
+  "headers": {
+    "Form Type": {"value": "1099-INT", "type": "identifier"},
+    "Tax Year": {"value": "2014", "type": "identifier"},
+    "Payer Name": {"value": "FIRST FEDERAL BANK OF ANYTOWN", "type": "text"},
+    "Payer TIN": {"value": "10-0000002", "type": "identifier"},
+    "Recipient Name": {"value": "TASHA MILLER", "type": "text"},
+    "Recipient TIN": {"value": "222-00-2222", "type": "identifier"},
+    "INT Box 1 Interest Income": {"value": 43.00, "type": "money"}
+  },
+  "tables": [],
+  "totals": {},
+  "absent_slots": ["Account Number", "INT Box 2 Early Withdrawal Penalty", "INT Box 3 US Savings Bond Interest", "INT Box 4 Federal Income Tax Withheld", "INT Box 5 Investment Expenses", "INT Box 6 Foreign Tax Paid", "INT Box 7 Foreign Country", "INT Box 8 Tax Exempt Interest", "DIV 1a Ordinary Dividends", "DIV 1b Qualified Dividends", "DIV 2a Capital Gain Distributions", "DIV Box 4 Federal Income Tax Withheld", "DIV Box 5 Section 199A Dividends", "DIV Box 7 Foreign Tax Paid"]
+}

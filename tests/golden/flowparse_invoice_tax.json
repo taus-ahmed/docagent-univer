@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "run_id": "flowparse_invoice_tax",
+  "file": "invoice/flowparse_invoice_tax.pdf",
+  "template_name": "AP - Vendor Invoice Full",
+  "document_type": "invoice",
+  "headers": {
+    "Vendor Name": {"value": "Harwood Design Studio Ltd", "type": "text"},
+    "VAT ID": {"value": "GB374221983", "type": "identifier"},
+    "Invoice Number": {"value": "HD-2026-0142", "type": "identifier"},
+    "Issue Date": {"value": "14 Oct 2026", "type": "date"},
+    "Due Date": {"value": "13 Nov 2026", "type": "date"},
+    "Payment Terms": {"value": "Payment within 30 days", "type": "text"},
+    "Currency": {"value": "GBP", "type": "identifier"},
+    "Bill To": {"value": "Bright Harbour Ltd", "type": "text"},
+    "Account Number": {"value": "83319204", "type": "identifier"},
+    "Sort Code": {"value": "20-45-77", "type": "identifier"}
+  },
+  "tables": [{
+    "name": "Invoice Lines",
+    "row_count": 5,
+    "key_rows": [
+      {"Line": 1, "Description": "Brand identity refresh — logo, palette, typography", "Amount": 1840.00},
+      {"Line": 2, "Description": "Website landing page design (desktop + mobile)", "Amount": 640.00},
+      {"Line": 3, "Amount": 285.00},
+      {"Line": 4, "Amount": 290.00},
+      {"Line": 5, "Amount": 225.00}
+    ]
+  }],
+  "totals": {
+    "Subtotal": {"value": 3280.00, "type": "money"},
+    "VAT": {"value": 656.00, "type": "money"},
+    "Total Due": {"value": 3936.00, "type": "money"}
+  },
+  "absent_slots": ["Remit To Bank"]
+}

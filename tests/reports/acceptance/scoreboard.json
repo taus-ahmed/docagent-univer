@@ -1,0 +1,360 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "job": 15,
+      "run_id": "flowparse_bank_us",
+      "file": "bank_statement/flowparse_bank_us.pdf",
+      "state": "READY",
+      "expected": 29,
+      "correct": 7,
+      "wrong": 2,
+      "missing": 20,
+      "silent_defects": 16,
+      "false_flags": 0,
+      "approve_only": false,
+      "details": [
+        {
+          "key": "Account Number",
+          "outcome": "missing",
+          "expected": "7301558842",
+          "actual": null,
+          "flagged": true
+        },
+        {
+          "key": "Account Number Last 4",
+          "outcome": "wrong",
+          "expected": "8842",
+          "actual": "58842",
+          "flagged": true
+        },
+        {
+          "key": "Total Withdrawals and Debits",
+          "outcome": "missing",
+          "expected": 10309.62,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Total Deposits and Credits",
+          "outcome": "missing",
+          "expected": 12445.5,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Service Fees",
+          "outcome": "missing",
+          "expected": 45.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions row count",
+          "outcome": "wrong",
+          "expected": 12,
+          "actual": 0,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::PAYROLL RUN \u2014 3 EMPLOYEES::Date",
+          "outcome": "missing",
+          "expected": "09/15/2026",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::PAYROLL RUN \u2014 3 EMPLOYEES::Description",
+          "outcome": "missing",
+          "expected": "PAYROLL RUN \u2014 3 EMPLOYEES",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::PAYROLL RUN \u2014 3 EMPLOYEES::Withdrawal",
+          "outcome": "missing",
+          "expected": 5240.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::PAYROLL RUN \u2014 3 EMPLOYEES::Balance",
+          "outcome": "missing",
+          "expected": 17546.17,
+          "actual": null,
+          "flagged": true
+        },
+        {
+          "key": "Transactions::ACH DEBIT \u2014 EFTPS TAX PAYMENT::Date",
+          "outcome": "missing",
+          "expected": "09/23/2026",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::ACH DEBIT \u2014 EFTPS TAX PAYMENT::Description",
+          "outcome": "missing",
+          "expected": "ACH DEBIT \u2014 EFTPS TAX PAYMENT",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::ACH DEBIT \u2014 EFTPS TAX PAYMENT::Withdrawal",
+          "outcome": "missing",
+          "expected": 1118.37,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::ACH DEBIT \u2014 EFTPS TAX PAYMENT::Balance",
+          "outcome": "missing",
+          "expected": 19221.0,
+          "actual": null,
+          "flagged": true
+        },
+        {
+          "key": "Transactions::ZELLE PAYMENT RECEIVED \u2014 J ALVAREZ::Date",
+          "outcome": "missing",
+          "expected": "09/26/2026",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::ZELLE PAYMENT RECEIVED \u2014 J ALVAREZ::Description",
+          "outcome": "missing",
+          "expected": "ZELLE PAYMENT RECEIVED \u2014 J ALVAREZ",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::ZELLE PAYMENT RECEIVED \u2014 J ALVAREZ::Deposit",
+          "outcome": "missing",
+          "expected": 1200.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::ZELLE PAYMENT RECEIVED \u2014 J ALVAREZ::Balance",
+          "outcome": "missing",
+          "expected": 20421.0,
+          "actual": null,
+          "flagged": true
+        },
+        {
+          "key": "Transactions::MONTHLY SERVICE FEE::Date",
+          "outcome": "missing",
+          "expected": "09/30/2026",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::MONTHLY SERVICE FEE::Description",
+          "outcome": "missing",
+          "expected": "MONTHLY SERVICE FEE",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::MONTHLY SERVICE FEE::Withdrawal",
+          "outcome": "missing",
+          "expected": 45.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Transactions::MONTHLY SERVICE FEE::Balance",
+          "outcome": "missing",
+          "expected": 20376.0,
+          "actual": null,
+          "flagged": true
+        }
+      ]
+    },
+    {
+      "job": 19,
+      "run_id": "flowparse_po",
+      "file": "purchase_order/flowparse_po.pdf",
+      "state": "READY",
+      "expected": 18,
+      "correct": 18,
+      "wrong": 0,
+      "missing": 0,
+      "silent_defects": 0,
+      "false_flags": 1,
+      "approve_only": false,
+      "details": []
+    },
+    {
+      "job": 21,
+      "run_id": "irs_w2_mod11",
+      "file": "w2/irs_w2_mod11.pdf",
+      "state": "READY",
+      "expected": 13,
+      "correct": 1,
+      "wrong": 0,
+      "missing": 12,
+      "silent_defects": 12,
+      "false_flags": 1,
+      "approve_only": false,
+      "details": [
+        {
+          "key": "Box a Employee SSN",
+          "outcome": "missing",
+          "expected": "222-00-2314",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box b Employer EIN",
+          "outcome": "missing",
+          "expected": "10-8763214",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box c Employer Name",
+          "outcome": "missing",
+          "expected": "R AND R FARM",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Employer Address",
+          "outcome": "missing",
+          "expected": "21 BEECH TREE FARM, ANYTOWN, US 10111",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box e Employee Name",
+          "outcome": "missing",
+          "expected": "SETH W. WIGGINS",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box f Employee Address",
+          "outcome": "missing",
+          "expected": "2611 NORTH ASH DRIVE, ANYTOWN, US 10012",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box 1 Wages Tips Other Compensation",
+          "outcome": "missing",
+          "expected": 10535.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box 2 Federal Income Tax Withheld",
+          "outcome": "missing",
+          "expected": 368.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box 3 Social Security Wages",
+          "outcome": "missing",
+          "expected": 10535.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box 4 Social Security Tax Withheld",
+          "outcome": "missing",
+          "expected": 653.17,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box 5 Medicare Wages and Tips",
+          "outcome": "missing",
+          "expected": 10535.0,
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box 6 Medicare Tax Withheld",
+          "outcome": "missing",
+          "expected": 152.76,
+          "actual": null,
+          "flagged": false
+        }
+      ]
+    },
+    {
+      "job": 25,
+      "run_id": "irs_1099nec_ellis",
+      "file": "1099/irs_1099nec_ellis.pdf",
+      "state": "READY",
+      "expected": 8,
+      "correct": 1,
+      "wrong": 0,
+      "missing": 7,
+      "silent_defects": 7,
+      "false_flags": 0,
+      "approve_only": false,
+      "details": [
+        {
+          "key": "Payer Name",
+          "outcome": "missing",
+          "expected": "Printing Corporation",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Payer Address",
+          "outcome": "missing",
+          "expected": "1 Oak Creek Avenue, Anytown, US 10000",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Payer TIN",
+          "outcome": "missing",
+          "expected": "10-XXXXXXX",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Recipient Name",
+          "outcome": "missing",
+          "expected": "Nancy Ellis",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Recipient Address",
+          "outcome": "missing",
+          "expected": "12 W Pine Street, Anytown, US 10000",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Recipient TIN",
+          "outcome": "missing",
+          "expected": "XXX-XX-XXXX",
+          "actual": null,
+          "flagged": false
+        },
+        {
+          "key": "Box 1 Nonemployee Compensation",
+          "outcome": "missing",
+          "expected": 15250.0,
+          "actual": null,
+          "flagged": false
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "expected": 68,
+    "correct": 27,
+    "wrong": 2,
+    "missing": 39,
+    "silent_defects": 35,
+    "false_flags": 2,
+    "approve_only": 0
+  }
+}

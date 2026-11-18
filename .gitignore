@@ -48,3 +48,7 @@ frontend/out/
 .DS_Store
 Thumbs.db
 *.log
+
+# Owner-supplied acceptance material. Curated copies live under
+# tests/fixtures/acceptance; never commit the local staging dump itself.
+/local_docs/

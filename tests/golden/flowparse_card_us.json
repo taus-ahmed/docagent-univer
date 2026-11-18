@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "run_id": "flowparse_card_us",
+  "file": "credit_card/flowparse_card_us.pdf",
+  "template_name": "Card - Statement",
+  "document_type": "credit_card_statement",
+  "headers": {
+    "Issuer": {"value": "Meridian Card Services", "type": "text"},
+    "Cardholder": {"value": "Daniel Okafor", "type": "text"},
+    "Account Number Last 4": {"value": "7421", "type": "identifier"},
+    "Statement Period Start": {"value": "09/15/2026", "type": "date"},
+    "Statement Period End": {"value": "10/14/2026", "type": "date"},
+    "Payment Due": {"value": "11/08/2026", "type": "date"},
+    "Previous Balance": {"value": 1284.37, "type": "money"},
+    "Payments and Credits": {"value": -1284.37, "type": "money"},
+    "Purchases": {"value": 2146.88, "type": "money"},
+    "Fees Charged": {"value": 0.00, "type": "money"},
+    "Interest Charged": {"value": 0.00, "type": "money"},
+    "New Balance": {"value": 2146.88, "type": "money"},
+    "Minimum Payment Due": {"value": 64.00, "type": "money"},
+    "Credit Limit": {"value": 12000.00, "type": "money"},
+    "Available Credit": {"value": 9853.12, "type": "money"},
+    "Purchase APR": {"value": 21.99, "type": "percent"}
+  },
+  "tables": [{
+    "name": "Transactions",
+    "row_count": 13,
+    "key_rows": [
+      {"Date": "09/16/2026", "Description": "PAYMENT RECEIVED — THANK YOU", "Category": "Payment", "Amount": -1284.37},
+      {"Date": "10/09/2026", "Description": "VOLTEDGE ELECTRONICS", "Category": "Electronics", "Amount": 523.40}
+    ],
+    "ordered_categories": ["Payment", "Dining", "Groceries", "Travel", "Fuel", "Subscriptions", "Office", "Groceries", "Lodging", "Dining", "Electronics", "Fuel", "Insurance"]
+  }],
+  "totals": {},
+  "absent_slots": ["Posting Date"],
+  "forbidden_value_fragments": ["S A M P L E", "SAMPLE"]
+}

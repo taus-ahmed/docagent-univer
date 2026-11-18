@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "run_id": "tcnj_financials",
+  "file": "financial_statements/tcnj_financials.pdf",
+  "template_name": "FS - Income Statement",
+  "document_type": "financial_statement",
+  "headers": {
+    "Entity": {"value": "Sample Company", "type": "text"},
+    "Period End": {"value": "September 30, 2021", "type": "date"}
+  },
+  "tables": [{
+    "name": "Income Statement",
+    "row_count": 8,
+    "key_rows": [
+      {"Line": "Service revenue", "Amount": 2750.00},
+      {"Line": "Total operating expenses", "Amount": 1360.00},
+      {"Line": "Operating Income", "Amount": 1390.00},
+      {"Line": "Pretax income", "Amount": 1350.00},
+      {"Line": "Income tax expense", "Amount": 405.00},
+      {"Line": "Net income", "Amount": 945.00}
+    ]
+  }],
+  "totals": {"Net Income": {"value": 945.00, "type": "money"}},
+  "absent_slots": ["Currency Code"]
+}

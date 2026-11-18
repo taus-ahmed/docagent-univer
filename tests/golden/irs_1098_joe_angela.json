@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "run_id": "irs_1098_joe_angela",
+  "file": "1099/irs_1098_joe_angela.pdf",
+  "template_name": "Tax - 1098 Mortgage Interest",
+  "document_type": "form_1098",
+  "headers": {
+    "Tax Year": {"value": "2024", "type": "identifier"},
+    "Lender Name": {"value": "HOME MORTGAGE BANK", "type": "text"},
+    "Lender TIN": {"value": "36-8XXXXXXX", "type": "identifier"},
+    "Borrower Name": {"value": "JOE & ANGELA", "type": "text"},
+    "Borrower TIN": {"value": "XXX-XX-XXXX", "type": "identifier"},
+    "Box 1 Mortgage Interest": {"value": 2180.00, "type": "money"}
+  },
+  "tables": [],
+  "totals": {},
+  "absent_slots": ["Borrower Address", "Account Number", "Box 2 Outstanding Mortgage Principal", "Box 3 Mortgage Origination Date", "Box 4 Refund of Overpaid Interest", "Box 5 Mortgage Insurance Premiums", "Box 6 Points", "Box 8 Property Address", "Box 9 Number of Properties", "Box 10 Other", "Box 11 Mortgage Acquisition Date"]
+}

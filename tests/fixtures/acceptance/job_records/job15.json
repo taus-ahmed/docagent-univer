@@ -1,0 +1,402 @@
+[
+    {
+        "id": 24,
+        "job_id": 15,
+        "filename": "flowparse_bank_us.pdf",
+        "original_filename": "flowparse_bank_us.pdf",
+        "document_type": "bank_statement",
+        "overall_confidence": "low",
+        "extracted_data": {
+            "document_type": "bank_statement",
+            "overall_confidence": "low",
+            "extraction_method": "slot_directed",
+            "layout_sections": {},
+            "extracted_fields": {
+                "B1": "Lakeshore National Bank",
+                "B2": "Redwood Landscaping LLC",
+                "B3": "58842",
+                "B4": "Business Checking",
+                "B5": "09/01/2026",
+                "B6": "09/30/2026",
+                "B7": "$18,240.12",
+                "B8": "$20,376.00"
+            },
+            "field_provenance": {
+                "B1": {
+                    "source": "Lakeshore National Bank Statement period",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B2": {
+                    "source": "Redwood Landscaping LLC",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B3": {
+                    "source": "Routing 071000505 · Account 7301558842",
+                    "page": 1,
+                    "grounded": null,
+                    "origin": "native",
+                    "review_required": true,
+                    "review_reasons": [
+                        "grounding_failed"
+                    ]
+                },
+                "B4": {
+                    "source": "Business Checking Statement",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B5": {
+                    "source": "09/01/2026 – 09/30/2026",
+                    "page": 1,
+                    "grounded": true,
+                    "date_order": "MDY",
+                    "date_order_resolved_by": "document",
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B6": {
+                    "source": "09/01/2026 – 09/30/2026",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B7": {
+                    "source": "Beginning balance $18,240.12 $10,309.62 $12,445.50 $20,376.00",
+                    "page": 1,
+                    "grounded": false,
+                    "origin": "native",
+                    "review_required": true,
+                    "review_reasons": [
+                        "grounding_failed"
+                    ]
+                },
+                "B8": {
+                    "source": "Beginning balance $18,240.12 $10,309.62 $12,445.50 $20,376.00",
+                    "page": 1,
+                    "grounded": false,
+                    "origin": "native",
+                    "review_required": true,
+                    "review_reasons": [
+                        "grounding_failed"
+                    ]
+                }
+            },
+            "extracted_data": {
+                "Bank Name": {
+                    "value": "Lakeshore National Bank",
+                    "confidence": "high",
+                    "ref": "B1"
+                },
+                "Account Holder": {
+                    "value": "Redwood Landscaping LLC",
+                    "confidence": "high",
+                    "ref": "B2"
+                },
+                "Account Number Last 4": {
+                    "value": "58842",
+                    "confidence": "low",
+                    "ref": "B3"
+                },
+                "Account Type": {
+                    "value": "Business Checking",
+                    "confidence": "high",
+                    "ref": "B4"
+                },
+                "Statement Period Start": {
+                    "value": "09/01/2026",
+                    "confidence": "high",
+                    "ref": "B5"
+                },
+                "Statement Period End": {
+                    "value": "09/30/2026",
+                    "confidence": "high",
+                    "ref": "B6"
+                },
+                "Opening Balance": {
+                    "value": "$18,240.12",
+                    "confidence": "low",
+                    "ref": "B7"
+                },
+                "Closing Balance": {
+                    "value": "$20,376.00",
+                    "confidence": "low",
+                    "ref": "B8"
+                }
+            },
+            "table_rows": [],
+            "slot_map": {
+                "fields": [
+                    {
+                        "slot_id": "F1",
+                        "ref": "B1",
+                        "row_label": "Bank Name",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F2",
+                        "ref": "B2",
+                        "row_label": "Account Holder",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F3",
+                        "ref": "B3",
+                        "row_label": "Account Number Last 4",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F4",
+                        "ref": "B4",
+                        "row_label": "Account Type",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F5",
+                        "ref": "B5",
+                        "row_label": "Statement Period Start",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F6",
+                        "ref": "B6",
+                        "row_label": "Statement Period End",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F7",
+                        "ref": "B7",
+                        "row_label": "Opening Balance",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F8",
+                        "ref": "B8",
+                        "row_label": "Closing Balance",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F9",
+                        "ref": "B9",
+                        "row_label": "Total Deposits and Credits",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F10",
+                        "ref": "B10",
+                        "row_label": "Total Withdrawals and Debits",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F11",
+                        "ref": "B11",
+                        "row_label": "Service Fees",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F12",
+                        "ref": "B12",
+                        "row_label": "Interest Earned",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F13",
+                        "ref": "B13",
+                        "row_label": "Average Balance",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F14",
+                        "ref": "B61",
+                        "row_label": "Listed Withdrawals Total",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F15",
+                        "ref": "B62",
+                        "row_label": "Listed Deposits Total",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F16",
+                        "ref": "B63",
+                        "row_label": "Listed Ending Balance",
+                        "section": ""
+                    }
+                ],
+                "tables": [
+                    {
+                        "name": "table",
+                        "header_row": 14,
+                        "start_row": 15,
+                        "end_row": 59,
+                        "columns": [
+                            {
+                                "col": 0,
+                                "header": "Date",
+                                "key": "Date",
+                                "role": "value"
+                            },
+                            {
+                                "col": 1,
+                                "header": "Description",
+                                "key": "Description",
+                                "role": "value"
+                            },
+                            {
+                                "col": 2,
+                                "header": "Check Number",
+                                "key": "Check Number",
+                                "role": "value"
+                            },
+                            {
+                                "col": 3,
+                                "header": "Withdrawal",
+                                "key": "Withdrawal",
+                                "role": "value"
+                            },
+                            {
+                                "col": 4,
+                                "header": "Deposit",
+                                "key": "Deposit",
+                                "role": "value"
+                            },
+                            {
+                                "col": 5,
+                                "header": "Running Balance",
+                                "key": "Running Balance",
+                                "role": "value"
+                            },
+                            {
+                                "col": 6,
+                                "header": "GL Account",
+                                "key": "GL Account",
+                                "role": "value"
+                            },
+                            {
+                                "col": 7,
+                                "header": "Memo",
+                                "key": "Memo",
+                                "role": "value"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "validation": {
+                "flagged_count": 4,
+                "flagged_fields": [
+                    {
+                        "ref": "template columns",
+                        "value": "'Running Balance', 'Memo'",
+                        "reason": "these column headings do not appear in the document, so nothing but position decided which source column filled them"
+                    },
+                    {
+                        "ref": "Account Number Last 4",
+                        "value": "58842",
+                        "reason": "no run of words on the page spells this value — it was assembled from words that are not adjacent"
+                    },
+                    {
+                        "ref": "Opening Balance",
+                        "value": "$18,240.12",
+                        "reason": "value could not be grounded in the document"
+                    },
+                    {
+                        "ref": "Closing Balance",
+                        "value": "$20,376.00",
+                        "reason": "value could not be grounded in the document"
+                    }
+                ],
+                "confidence_map": {
+                    "B1": "high",
+                    "B2": "high",
+                    "B3": "low",
+                    "B4": "high",
+                    "B5": "high",
+                    "B6": "high",
+                    "B7": "low",
+                    "B8": "low"
+                },
+                "ungrounded_count": 2,
+                "misplaced_count": 0,
+                "routing_checksum": null,
+                "dropped_row_count": 0,
+                "empty_row_count": 0,
+                "total_row_count": 0,
+                "off_schema_key_count": 0,
+                "regions": [],
+                "unbound_row_count": 0,
+                "merged_column_count": 0,
+                "overprinted_count": 0,
+                "unwitnessed_count": 1,
+                "low_confidence_cells": 3,
+                "graded_cells": 8,
+                "low_confidence_ratio": 0.375,
+                "document_needs_review": true,
+                "grounded_count": 6,
+                "page_origins": {
+                    "1": "native"
+                },
+                "page_gates": {
+                    "1": {
+                        "origin": "native",
+                        "graded_cells": 8,
+                        "low_confidence_cells": 3,
+                        "low_confidence_ratio": 0.375,
+                        "review_gate": true,
+                        "text_floor": false
+                    }
+                },
+                "ocr_pages": [],
+                "ocr_failed_pages": [],
+                "ocr_zero_word_pages": [],
+                "thin_text_layer_pages": []
+            },
+            "validation_notes": [
+                "2 template column heading(s) are not printed anywhere in this document ('Running Balance', 'Memo') — values under them were placed by position, not by what the heading means",
+                "8 field slot(s) returned no value: Total Deposits and Credits, Total Withdrawals and Debits, Service Fees, Interest Earned, Average Balance, Listed Withdrawals Total, Listed Deposits Total, Listed Ending Balance",
+                "1 value(s) are spelled by no run of words on the page — they were assembled from words that are not adjacent",
+                "3 of 8 cells (38%) are low confidence — this document needs manual review"
+            ],
+            "needs_review": true,
+            "template_type": "slot",
+            "template_regions": {
+                "primary_mode": "slot"
+            },
+            "inferred_template": null,
+            "inferred_grid": null,
+            "shape_signature": null,
+            "inferred_label_provenance": null,
+            "raw_llm_responses": [
+                "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"Lakeshore National Bank\",\n      \"source\": \"Lakeshore National Bank Statement period\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"Redwood Landscaping LLC\",\n      \"source\": \"Redwood Landscaping LLC\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"58842\",\n      \"source\": \"Routing 071000505 · Account 7301558842\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Business Checking\",\n      \"source\": \"Business Checking Statement\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"09/01/2026\",\n      \"source\": \"09/01/2026 – 09/30/2026\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"09/30/2026\",\n      \"source\": \"09/01/2026 – 09/30/2026\",\n      \"page\": 1\n    },\n    \"F7\": {\n      \"value\": \"$18,240.12\",\n      \"source\": \"Beginning balance $18,240.12 $10,309.62 $12,445.50 $20,376.00\",\n      \"page\": 1\n    },\n    \"F8\": {\n      \"value\": \"$20,376.00\",\n      \"source\": \"Beginning balance $18,240.12 $10,309.62 $12,445.50 $20,376.00\",\n      \"page\": 1\n    }\n  }\n}"
+            ],
+            "review": {
+                "document_reviewed": true,
+                "by": "Luq",
+                "at": "2026-11-18T12:29:02.146168Z"
+            }
+        },
+        "validation_errors": "",
+        "validation_warnings": "template columns: 'Running Balance', 'Memo' (these column headings do not appear in the document, so nothing but position decided which source column filled them); Account Number Last 4: 58842 (no run of words on the page spells this value — it was assembled from words that are not adjacent); Opening Balance: $18,240.12 (value could not be grounded in the document); Closing Balance: $20,376.00 (value could not be grounded in the document)",
+        "needs_review": false,
+        "reviewed": true,
+        "reviewed_by": "Luq",
+        "model_used": "gemini-2.5-flash",
+        "tokens_used": 5157,
+        "latency_ms": 35253.0,
+        "created_at": "2026-11-18T12:27:51.712109"
+    }
+]

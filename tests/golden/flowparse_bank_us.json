@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "run_id": "flowparse_bank_us",
+  "file": "bank_statement/flowparse_bank_us.pdf",
+  "template_name": "Bank - Monthly Reconciliation",
+  "document_type": "bank_statement",
+  "headers": {
+    "Bank Name": {"value": "Lakeshore National Bank", "type": "text"},
+    "Account Holder": {"value": "Redwood Landscaping LLC", "type": "text"},
+    "Account Number": {"value": "7301558842", "type": "identifier"},
+    "Account Number Last 4": {"value": "8842", "type": "identifier"},
+    "Account Type": {"value": "Business Checking", "type": "text"},
+    "Statement Period Start": {"value": "09/01/2026", "type": "date"},
+    "Statement Period End": {"value": "09/30/2026", "type": "date"},
+    "Opening Balance": {"value": 18240.12, "type": "money"},
+    "Closing Balance": {"value": 20376.00, "type": "money"}
+  },
+  "tables": [{
+    "name": "Transactions",
+    "row_count": 12,
+    "exclude_rows": ["BEGINNING BALANCE"],
+    "key_rows": [
+      {"Date": "09/15/2026", "Description": "PAYROLL RUN — 3 EMPLOYEES", "Withdrawal": 5240.00, "Balance": 17546.17},
+      {"Date": "09/23/2026", "Description": "ACH DEBIT — EFTPS TAX PAYMENT", "Withdrawal": 1118.37, "Balance": 19221.00},
+      {"Date": "09/26/2026", "Description": "ZELLE PAYMENT RECEIVED — J ALVAREZ", "Deposit": 1200.00, "Balance": 20421.00},
+      {"Date": "09/30/2026", "Description": "MONTHLY SERVICE FEE", "Withdrawal": 45.00, "Balance": 20376.00}
+    ]
+  }],
+  "totals": {
+    "Total Withdrawals and Debits": {"value": 10309.62, "type": "money"},
+    "Total Deposits and Credits": {"value": 12445.50, "type": "money"},
+    "Service Fees": {"value": 45.00, "type": "money"}
+  },
+  "absent_slots": ["GL Account", "Memo"]
+}

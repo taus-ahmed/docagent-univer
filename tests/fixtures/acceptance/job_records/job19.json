@@ -1,0 +1,433 @@
+[
+    {
+        "id": 28,
+        "job_id": 19,
+        "filename": "flowparse_po.pdf",
+        "original_filename": "flowparse_po.pdf",
+        "document_type": "purchase_order",
+        "overall_confidence": "high",
+        "extracted_data": {
+            "document_type": "purchase_order",
+            "overall_confidence": "high",
+            "extraction_method": "slot_directed",
+            "layout_sections": {},
+            "extracted_fields": {
+                "B1": "PO-2026-1147",
+                "B2": "2026-10-05",
+                "B3": "2026-10-19",
+                "B4": "Harlow & Sons Ltd",
+                "B5": "Ormond Storage Systems Ltd",
+                "B9": "30 days from invoice",
+                "B33": "£4,356.80",
+                "B34": "£871.36",
+                "B35": "£5,228.16"
+            },
+            "field_provenance": {
+                "B1": {
+                    "source": "Harlow & Sons Ltd PURCHASE ORDER PO-2026-1147",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B2": {
+                    "source": "Ordered 2026-10-05 · Delivery by 2026-10-19",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B3": {
+                    "source": "Ordered 2026-10-05 · Delivery by 2026-10-19",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B4": {
+                    "source": "Harlow & Sons Ltd PURCHASE ORDER PO-2026-1147",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B5": {
+                    "source": "Supplier: Ormond Storage Systems Ltd",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B9": {
+                    "source": "Terms: 30 days from invoice",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B33": {
+                    "source": "£4,356.80 £871.36 £5,228.16",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B34": {
+                    "source": "£4,356.80 £871.36 £5,228.16",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                },
+                "B35": {
+                    "source": "£4,356.80 £871.36 £5,228.16",
+                    "page": 1,
+                    "grounded": true,
+                    "origin": "native",
+                    "review_required": false,
+                    "review_reasons": []
+                }
+            },
+            "extracted_data": {
+                "PO Number": {
+                    "value": "PO-2026-1147",
+                    "confidence": "high",
+                    "ref": "B1"
+                },
+                "Order Date": {
+                    "value": "2026-10-05",
+                    "confidence": "high",
+                    "ref": "B2"
+                },
+                "Delivery Date": {
+                    "value": "2026-10-19",
+                    "confidence": "high",
+                    "ref": "B3"
+                },
+                "Buyer": {
+                    "value": "Harlow & Sons Ltd",
+                    "confidence": "high",
+                    "ref": "B4"
+                },
+                "Supplier Name": {
+                    "value": "Ormond Storage Systems Ltd",
+                    "confidence": "high",
+                    "ref": "B5"
+                },
+                "Payment Terms": {
+                    "value": "30 days from invoice",
+                    "confidence": "high",
+                    "ref": "B9"
+                },
+                "Subtotal": {
+                    "value": "£4,356.80",
+                    "confidence": "high",
+                    "ref": "B33"
+                },
+                "Tax": {
+                    "value": "£871.36",
+                    "confidence": "high",
+                    "ref": "B34"
+                },
+                "Order Total": {
+                    "value": "£5,228.16",
+                    "confidence": "high",
+                    "ref": "B35"
+                }
+            },
+            "table_rows": [
+                {
+                    "Line": "",
+                    "Item Description": "Pallet racking upright 3000mm",
+                    "Quantity": "12",
+                    "Unit": "",
+                    "Unit Price": "86.50",
+                    "Line Amount": "1,038.00",
+                    "_confidence": "high",
+                    "_source": "Pallet racking upright 3000mm 12 86.50 1,038.00",
+                    "_page": 1,
+                    "_origin": "native",
+                    "_review_required": false,
+                    "_review_reasons": []
+                },
+                {
+                    "Line": "",
+                    "Item Description": "Pallet racking beam 2700mm (pair)",
+                    "Quantity": "36",
+                    "Unit": "",
+                    "Unit Price": "42.00",
+                    "Line Amount": "1,512.00",
+                    "_confidence": "high",
+                    "_source": "Pallet racking beam 2700mm (pair) 36 42.00 1,512.00",
+                    "_page": 1,
+                    "_origin": "native",
+                    "_review_required": false,
+                    "_review_reasons": []
+                },
+                {
+                    "Line": "",
+                    "Item Description": "Wire mesh decking panel",
+                    "Quantity": "48",
+                    "Unit": "",
+                    "Unit Price": "18.75",
+                    "Line Amount": "900.00",
+                    "_confidence": "high",
+                    "_source": "Wire mesh decking panel 48 18.75 900.00",
+                    "_page": 1,
+                    "_origin": "native",
+                    "_review_required": false,
+                    "_review_reasons": []
+                },
+                {
+                    "Line": "",
+                    "Item Description": "Column guard, galvanised",
+                    "Quantity": "12",
+                    "Unit": "",
+                    "Unit Price": "24.90",
+                    "Line Amount": "298.80",
+                    "_confidence": "high",
+                    "_source": "Column guard, galvanised 12 24.90 298.80",
+                    "_page": 1,
+                    "_origin": "native",
+                    "_review_required": false,
+                    "_review_reasons": []
+                },
+                {
+                    "Line": "",
+                    "Item Description": "Installation labour (hours)",
+                    "Quantity": "16",
+                    "Unit": "",
+                    "Unit Price": "38.00",
+                    "Line Amount": "608.00",
+                    "_confidence": "high",
+                    "_source": "Installation labour (hours) 16 38.00 608.00",
+                    "_page": 1,
+                    "_origin": "native",
+                    "_review_required": false,
+                    "_review_reasons": []
+                }
+            ],
+            "slot_map": {
+                "fields": [
+                    {
+                        "slot_id": "F1",
+                        "ref": "B1",
+                        "row_label": "PO Number",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F2",
+                        "ref": "B2",
+                        "row_label": "Order Date",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F3",
+                        "ref": "B3",
+                        "row_label": "Delivery Date",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F4",
+                        "ref": "B4",
+                        "row_label": "Buyer",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F5",
+                        "ref": "B5",
+                        "row_label": "Supplier Name",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F6",
+                        "ref": "B6",
+                        "row_label": "Supplier Address",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F7",
+                        "ref": "B7",
+                        "row_label": "Ship To",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F8",
+                        "ref": "B8",
+                        "row_label": "Bill To",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F9",
+                        "ref": "B9",
+                        "row_label": "Payment Terms",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F10",
+                        "ref": "B10",
+                        "row_label": "Contract or Reference",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F11",
+                        "ref": "B33",
+                        "row_label": "Subtotal",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F12",
+                        "ref": "B34",
+                        "row_label": "Tax",
+                        "section": ""
+                    },
+                    {
+                        "slot_id": "F13",
+                        "ref": "B35",
+                        "row_label": "Order Total",
+                        "section": ""
+                    }
+                ],
+                "tables": [
+                    {
+                        "name": "table",
+                        "header_row": 11,
+                        "start_row": 12,
+                        "end_row": 31,
+                        "columns": [
+                            {
+                                "col": 0,
+                                "header": "Line",
+                                "key": "Line",
+                                "role": "value"
+                            },
+                            {
+                                "col": 1,
+                                "header": "Item Description",
+                                "key": "Item Description",
+                                "role": "value"
+                            },
+                            {
+                                "col": 2,
+                                "header": "Quantity",
+                                "key": "Quantity",
+                                "role": "value"
+                            },
+                            {
+                                "col": 3,
+                                "header": "Unit",
+                                "key": "Unit",
+                                "role": "value"
+                            },
+                            {
+                                "col": 4,
+                                "header": "Unit Price",
+                                "key": "Unit Price",
+                                "role": "value"
+                            },
+                            {
+                                "col": 5,
+                                "header": "Line Amount",
+                                "key": "Line Amount",
+                                "role": "value"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "validation": {
+                "flagged_count": 1,
+                "flagged_fields": [
+                    {
+                        "ref": "template columns",
+                        "value": "'Item Description'",
+                        "reason": "these column headings do not appear in the document, so nothing but position decided which source column filled them"
+                    }
+                ],
+                "confidence_map": {
+                    "B1": "high",
+                    "B2": "high",
+                    "B3": "high",
+                    "B4": "high",
+                    "B5": "high",
+                    "B9": "high",
+                    "B33": "high",
+                    "B34": "high",
+                    "B35": "high"
+                },
+                "ungrounded_count": 0,
+                "misplaced_count": 0,
+                "routing_checksum": null,
+                "dropped_row_count": 0,
+                "empty_row_count": 0,
+                "total_row_count": 0,
+                "off_schema_key_count": 0,
+                "regions": [],
+                "unbound_row_count": 0,
+                "merged_column_count": 0,
+                "overprinted_count": 0,
+                "unwitnessed_count": 0,
+                "low_confidence_cells": 0,
+                "graded_cells": 14,
+                "low_confidence_ratio": 0.0,
+                "document_needs_review": false,
+                "grounded_count": 29,
+                "page_origins": {
+                    "1": "native"
+                },
+                "page_gates": {
+                    "1": {
+                        "origin": "native",
+                        "graded_cells": 14,
+                        "low_confidence_cells": 0,
+                        "low_confidence_ratio": 0.0,
+                        "review_gate": false,
+                        "text_floor": false
+                    }
+                },
+                "ocr_pages": [],
+                "ocr_failed_pages": [],
+                "ocr_zero_word_pages": [],
+                "thin_text_layer_pages": []
+            },
+            "validation_notes": [
+                "1 template column heading(s) are not printed anywhere in this document ('Item Description') — values under them were placed by position, not by what the heading means",
+                "4 field slot(s) returned no value: Supplier Address, Ship To, Bill To, Contract or Reference"
+            ],
+            "needs_review": true,
+            "template_type": "slot",
+            "template_regions": {
+                "primary_mode": "slot"
+            },
+            "inferred_template": null,
+            "inferred_grid": null,
+            "shape_signature": null,
+            "inferred_label_provenance": null,
+            "raw_llm_responses": [
+                "{\n  \"fields\": {\n    \"F1\": {\n      \"value\": \"PO-2026-1147\",\n      \"source\": \"Harlow & Sons Ltd PURCHASE ORDER PO-2026-1147\",\n      \"page\": 1\n    },\n    \"F2\": {\n      \"value\": \"2026-10-05\",\n      \"source\": \"Ordered 2026-10-05 · Delivery by 2026-10-19\",\n      \"page\": 1\n    },\n    \"F3\": {\n      \"value\": \"2026-10-19\",\n      \"source\": \"Ordered 2026-10-05 · Delivery by 2026-10-19\",\n      \"page\": 1\n    },\n    \"F4\": {\n      \"value\": \"Harlow & Sons Ltd\",\n      \"source\": \"Harlow & Sons Ltd PURCHASE ORDER PO-2026-1147\",\n      \"page\": 1\n    },\n    \"F5\": {\n      \"value\": \"Ormond Storage Systems Ltd\",\n      \"source\": \"Supplier: Ormond Storage Systems Ltd\",\n      \"page\": 1\n    },\n    \"F6\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F7\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F8\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F9\": {\n      \"value\": \"30 days from invoice\",\n      \"source\": \"Terms: 30 days from invoice\",\n      \"page\": 1\n    },\n    \"F10\": {\n      \"value\": \"\",\n      \"source\": \"\",\n      \"page\": 0\n    },\n    \"F11\": {\n      \"value\": \"£4,356.80\",\n      \"source\": \"£4,356.80 £871.36 £5,228.16\",\n      \"page\": 1\n    },\n    \"F12\": {\n      \"value\": \"£871.36\",\n      \"source\": \"£4,356.80 £871.36 £5,228.16\",\n      \"page\": 1\n    },\n    \"F13\": {\n      \"value\": \"£5,228.16\",\n      \"source\": \"£4,356.80 £871.36 £5,228.16\",\n      \"page\": 1\n    }\n  },\n  \"tables\": {\n    \"table\": [\n      {\n        \"cells\": {\n          \"Line\": \"\",\n          \"Item Description\": \"Pallet racking upright 3000mm\",\n          \"Quantity\": \"12\",\n          \"Unit\": \"\",\n          \"Unit Price\": \"86.50\",\n          \"Line Amount\": \"1,038.00\"\n        },\n        \"source\": \"Pallet racking upright 3000mm 12 86.50 1,038.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Line\": \"\",\n          \"Item Description\": \"Pallet racking beam 2700mm (pair)\",\n          \"Quantity\": \"36\",\n          \"Unit\": \"\",\n          \"Unit Price\": \"42.00\",\n          \"Line Amount\": \"1,512.00\"\n        },\n        \"source\": \"Pallet racking beam 2700mm (pair) 36 42.00 1,512.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Line\": \"\",\n          \"Item Description\": \"Wire mesh decking panel\",\n          \"Quantity\": \"48\",\n          \"Unit\": \"\",\n          \"Unit Price\": \"18.75\",\n          \"Line Amount\": \"900.00\"\n        },\n        \"source\": \"Wire mesh decking panel 48 18.75 900.00\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Line\": \"\",\n          \"Item Description\": \"Column guard, galvanised\",\n          \"Quantity\": \"12\",\n          \"Unit\": \"\",\n          \"Unit Price\": \"24.90\",\n          \"Line Amount\": \"298.80\"\n        },\n        \"source\": \"Column guard, galvanised 12 24.90 298.80\",\n        \"page\": 1\n      },\n      {\n        \"cells\": {\n          \"Line\": \"\",\n          \"Item Description\": \"Installation labour (hours)\",\n          \"Quantity\": \"16\",\n          \"Unit\": \"\",\n          \"Unit Price\": \"38.00\",\n          \"Line Amount\": \"608.00\"\n        },\n        \"source\": \"Installation labour (hours) 16 38.00 608.00\",\n        \"page\": 1\n      }\n    ]\n  }\n}"
+            ],
+            "review": {
+                "document_reviewed": true,
+                "by": "Luq",
+                "at": "2026-11-18T12:39:35.069670Z"
+            }
+        },
+        "validation_errors": "",
+        "validation_warnings": "template columns: 'Item Description' (these column headings do not appear in the document, so nothing but position decided which source column filled them)",
+        "needs_review": false,
+        "reviewed": true,
+        "reviewed_by": "Luq",
+        "model_used": "gemini-2.5-flash",
+        "tokens_used": 2653,
+        "latency_ms": 9604.0,
+        "created_at": "2026-11-18T12:39:17.456440"
+    }
+]

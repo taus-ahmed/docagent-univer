@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "run_id": "bancofcal_xyz",
+  "file": "financial_statements/bancofcal_xyz.pdf",
+  "template_name": "FS - Cash Flow",
+  "document_type": "financial_statement",
+  "headers": {
+    "Entity": {"value": "XYZ Company", "type": "text"},
+    "Period End": {"value": "12/31/21", "type": "date"}
+  },
+  "tables": [{
+    "name": "Cash Flow",
+    "row_count": 5,
+    "key_rows": [
+      {"Line": "Cash at Beginning of Year", "Amount": 32345.00},
+      {"Line": "Net Cash Flow from Operations", "Amount": 379949.00},
+      {"Line": "Net Cash Flow from Investing Activities", "Amount": 9968.00},
+      {"Line": "Net Cash Flow from Financing Activities", "Amount": -296438.00},
+      {"Line": "Cash at End of Year", "Amount": 125824.00}
+    ]
+  }],
+  "totals": {"Net Increase in Cash": {"value": 93479.00, "type": "money"}},
+  "absent_slots": ["Currency Code"]
+}
