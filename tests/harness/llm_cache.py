@@ -144,6 +144,16 @@ def _img_sig(image_b64: Any) -> list:
 DEFAULT_TEMPERATURE = 0.1
 
 
+def _optional_call() -> bool:
+    """Is the model call being made the engine's optional targeted second
+    request (`llm_contract.CALL_SECTION` names a retry section)?"""
+    try:
+        import llm_contract
+        return str(llm_contract.CALL_SECTION.get() or "").startswith("retry:")
+    except Exception:
+        return False
+
+
 def request_key(method: str, *, text: str = "", image_b64: Any = "",
                 prompt: str = "", system_instruction: str = "",
                 model: Optional[str] = None,
@@ -440,6 +450,20 @@ class LLMCache:
                     return self._to_response(cached)
             self._trace(key, alias, False)
 
+        if self.mode == "replay" and _optional_call():
+            # Run A, A2: the TARGETED SECOND REQUEST (a slot or table the
+            # first answer left out) is optional by design — the engine
+            # handles its failure by marking the document NEEDS_ATTENTION.
+            # A recorded corpus predates it, so in replay it is answered as
+            # a failed call and counted, never as an abort and never as a
+            # fabricated answer.
+            self.stats["retry_misses"] = self.stats.get("retry_misses", 0) + 1
+            self.calls.append((method, key, "retry_miss"))
+            from connectors.base import LLMResponse
+            return LLMResponse(raw_text="", success=False,
+                               error="replay: no recorded answer for a "
+                                     "targeted second request",
+                               error_kind="replay_miss")
         if self.mode == "replay":
             self.stats["misses"] += 1
             if self._render_ok is False:
@@ -492,11 +516,14 @@ class LLMCache:
 
         def extract(router, text: str = "", image_b64="", prompt: str = "",
                     system_instruction: str = "", model: str = None,
-                    temperature: float = DEFAULT_TEMPERATURE):
+                    temperature: float = DEFAULT_TEMPERATURE, **options):
+            # `options` (response schema, output cap, thinking budget) are
+            # passed to a live call and are NOT part of the key: the schema
+            # is derived from the slots, which the prompt already carries.
             return cache._dispatch("extract", cache._orig["extract"], router, {
                 "text": text, "image_b64": image_b64, "prompt": prompt,
                 "system_instruction": system_instruction, "model": model,
-                "temperature": temperature})
+                "temperature": temperature, **options})
 
         def classify(router, text: str = "", image_b64: str = "",
                      prompt: str = ""):

@@ -75,6 +75,36 @@ class Settings(BaseSettings):
 
     GEMINI_MODEL: str = "gemini-2.5-flash"  # 2.0-flash retired (404); use a live model
 
+    # ── Model-call contract (engine/llm_contract.py) ──────────────────────────
+    # Per-attempt HTTP timeout, the overall retry budget for one logical call
+    # (sleeps + attempts), the first backoff step, and the attempt cap for
+    # transient failures (timeout, 429 rate limit, 5xx).
+    LLM_CALL_TIMEOUT_S: float = 120.0
+    LLM_RETRY_BUDGET_S: float = 180.0
+    LLM_BACKOFF_BASE_S: float = 1.0
+    LLM_MAX_ATTEMPTS: int = 3
+    # Output cap for one extraction call. On gemini-2.5 THINKING TOKENS COUNT
+    # AGAINST THIS CAP; a MAX_TOKENS answer is retried once with a larger cap
+    # and a smaller thinking budget. GEMINI_THINKING_BUDGET: empty = the model's
+    # own default, an integer = that budget (0 turns thinking off where the
+    # model allows it).
+    GEMINI_MAX_OUTPUT_TOKENS: int = 8192
+    GEMINI_THINKING_BUDGET: Optional[int] = None
+    # USD per 1M tokens keyed by model-name prefix, as JSON, overriding the
+    # built-in table: {"gemini-2.5-flash": {"input": 0.30, "output": 2.50}}.
+    # Thinking tokens are billed as output.
+    LLM_PRICE_TABLE: str = ""
+    # Heavy documents (engine/slot_extractor.py, Run A A8): a document of at
+    # least PAGE_CALL_MIN_PAGES pages with a table asks for its table rows one
+    # PAGE at a time (only pages that print the table's headings or continue
+    # it), at most PAGE_CALL_CONCURRENCY calls at once; a failed page is
+    # retried alone. 0 turns page-at-a-time calls off.
+    PAGE_CALL_MIN_PAGES: int = 6
+    PAGE_CALL_CONCURRENCY: int = 3
+    # Pages rendered as images for the model (200 DPI, then at most 2048 px on
+    # the long side). Was a fixed 20.
+    PAGE_IMAGE_LIMIT: int = 40
+
     BATCH_SIZE: int = 5
     RATE_LIMIT_DELAY: float = 2.0
     MAX_RETRIES: int = 3

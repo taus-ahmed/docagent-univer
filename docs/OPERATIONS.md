@@ -32,6 +32,11 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | | the model (production runs flash-lite) |
 | `PRIMARY_LLM` / `LLM_FALLBACKS` | `gemini` / empty | | provider order; only Gemini is a real provider. `stub` is a DEV-ONLY offline fake ([OFFLINE-DEMO.md](OFFLINE-DEMO.md)); the backend refuses to start with it when `ENVIRONMENT` is `staging` or `production` |
 | `BATCH_SIZE`, `RATE_LIMIT_DELAY`, `MAX_RETRIES` | `5`, `2.0`, `3` | | pacing of model calls |
+| `LLM_CALL_TIMEOUT_S`, `LLM_RETRY_BUDGET_S`, `LLM_BACKOFF_BASE_S`, `LLM_MAX_ATTEMPTS` | `120`, `180`, `1.0`, `3` | | per-attempt timeout, overall retry budget, first backoff step, attempt cap for timeouts / 429 / 5xx (Retry-After honoured; quota, 400, 401/403 and policy blocks never retried) |
+| `GEMINI_MAX_OUTPUT_TOKENS`, `GEMINI_THINKING_BUDGET` | `8192`, empty | | base output cap (raised from the page inventory) and thinking budget (empty = model default); on gemini-2.5 thinking counts against the cap, and a MAX_TOKENS answer is retried once with twice the cap and thinking off |
+| `LLM_PRICE_TABLE` | empty | | JSON `{"model-prefix": {"input": usd_per_1M, "output": usd_per_1M}}` overriding the built-in prices; `cost_estimate` uses the model the API says answered |
+| `PAGE_CALL_MIN_PAGES`, `PAGE_CALL_CONCURRENCY` | `6`, `3` | | documents of at least this many pages ask for table rows one page at a time (only pages printing the table), this many calls at once; `0` turns it off |
+| `PAGE_IMAGE_LIMIT` | `40` | | pages rendered as images for the model (was a fixed 20) |
 | `DEBUG` | `false` | | verbose errors; keep `false` in production |
 | `STORAGE_BACKEND` | `s3` | E | `local` (ephemeral disk) or `s3` (R2) |
 | `LOCAL_UPLOAD_DIR`, `LOCAL_OUTPUT_DIR`, `LOCAL_SCHEMAS_DIR` | `./storage/uploads`, … | | where `local` storage writes (relative to `backend/`) |

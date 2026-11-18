@@ -109,9 +109,14 @@ class LLMRouter:
     def extract(self, text: str = "", image_b64: str = "",
                 prompt: str = "",
                 system_instruction: str = "", model: str = None,
-                temperature: float = 0.1) -> LLMResponse:
+                temperature: float = 0.1, **options) -> LLMResponse:
         """
         Route an extraction request, falling back in order.
+
+        options (all optional, passed to the provider untouched):
+          response_schema   — structured-output schema (llm_contract)
+          max_output_tokens — output cap for this call
+          thinking_budget   — thinking budget for this call
 
         system_instruction: the registry expert persona (stable, doc-type specific).
           Passed to Gemini as system_instruction — billed at reduced rate and
@@ -129,17 +134,18 @@ class LLMRouter:
           ever falls back mid-batch the naming can still move.
         """
         use_vision = bool(image_b64) and not text
+        last = None
 
         for name, provider in self.providers:
             try:
                 result = (
                     provider.extract_data_vision(
                         image_b64, prompt, system_instruction, model=model,
-                        temperature=temperature)
+                        temperature=temperature, **options)
                     if use_vision else
                     provider.extract_data(
                         text, prompt, system_instruction, model=model,
-                        temperature=temperature)
+                        temperature=temperature, **options)
                 )
 
                 if result.success:
@@ -147,13 +153,21 @@ class LLMRouter:
                     return result
 
                 logger.warning(f"Extraction {name} failed (provider error, {len(result.error or '')} chars, not logged)")
+                last = result
 
             except Exception as e:
                 logger.warning(f"Extraction {name} exception: {exc_brief(e)}")
 
         self.stats["failures"] += 1
+        # The provider's typed failure travels on: a MAX_TOKENS answer and a
+        # quota error are handled differently by the caller.
         return LLMResponse(raw_text="", success=False,
-                           error="All providers failed for extraction")
+                           error="All providers failed for extraction",
+                           error_kind=getattr(last, "error_kind", None),
+                           finish_reason=getattr(last, "finish_reason", None),
+                           model_used=getattr(last, "model_used", "") or "",
+                           tokens_used=getattr(last, "tokens_used", 0) or 0,
+                           attempts=list(getattr(last, "attempts", None) or []))
 
     def _track(self, name: str):
         self.stats[f"{name}_calls"] = self.stats.get(f"{name}_calls", 0) + 1

@@ -48,3 +48,6 @@ frontend/out/
 .DS_Store
 Thumbs.db
 *.log
+
+# Owner test material (PDFs, job records, answer sheet): never committed
+local_docs/

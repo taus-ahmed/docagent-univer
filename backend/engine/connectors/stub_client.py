@@ -101,11 +101,11 @@ class StubClient:
         return _resp({"document_type": "other"})
 
     def extract_data_vision(self, image_b64, prompt, system_instruction="",
-                            model=None, temperature=0.1):
+                            model=None, temperature=0.1, **options):
         return self.extract_data("", prompt, system_instruction, model, temperature)
 
     def extract_data(self, text, prompt, system_instruction="", model=None,
-                     temperature=0.1):
+                     temperature=0.1, **options):
         p = prompt or ""
         if "Assign a business category" in p:
             n = len(re.findall(r"^Row \d+:", p, re.M))
