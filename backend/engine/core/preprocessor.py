@@ -23,7 +23,8 @@ from PIL import Image
 import pdfplumber
 from pypdf import PdfReader
 
-from text_layer import SHARD_SHRED, acroform_widgets, read_page
+from text_layer import (SHARD_SHRED, acroform_field_values, acroform_widgets,
+                        read_page)
 from log_safety import doc_ref, exc_brief
 from cancellation import Cancelled, checkpoint
 import external_tools
@@ -40,6 +41,9 @@ class ProcessedDocument:
     has_meaningful_text: bool = False
     page_images_b64: list[str] = field(default_factory=list)
     page_texts: list[str] = field(default_factory=list)
+    # {file page: [value, ...]} of every FILLED form field (AcroForm /Tx, /Ch)
+    # — written into page_texts too; kept here for the source inventory.
+    widget_values: dict = field(default_factory=dict)
     # Positional evidence: one list of words per page, each carrying x0/x1/top,
     # grouped into visual lines. This is what lets validation ask which COLUMN
     # a value sits in — a flat string cannot be asked that. See
@@ -166,6 +170,18 @@ def page_needs_ocr(text: str) -> bool:
     return len((text or "").strip()) < MIN_TEXT_LENGTH
 
 
+def _all_widgets(path) -> dict:
+    """{page index: checkbox widgets + filled text/choice fields}.
+
+    A fillable form's typed-in values are widget annotations that
+    pdfplumber's text does not include (Run A, A1); `read_page` writes both
+    kinds into the page's words where they sit."""
+    boxes = acroform_widgets(path) or {}
+    values = acroform_field_values(path) or {}
+    return {p: list(boxes.get(p) or []) + list(values.get(p) or [])
+            for p in set(boxes) | set(values)}
+
+
 def text_layer_pages(file_path: str | Path) -> tuple[list[int], int]:
     """(the 1-based pages `_process_pdf` would send to OCR, the page count).
 
@@ -185,7 +201,7 @@ def text_layer_pages(file_path: str | Path) -> tuple[list[int], int]:
     file is corrupt" as "this file is fine".
     """
     path = Path(file_path)
-    widgets = acroform_widgets(path) or {}
+    widgets = _all_widgets(path)
     missing: list[int] = []
     total = 0
     with pdfplumber.open(path) as pdf:
@@ -775,11 +791,16 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
             # A fillable form's checkboxes are widget annotations carrying no
             # text at all, so the selection state — the whole content of the
             # field — never reaches the model. It is in the file; read it.
-            widgets = acroform_widgets(file_path)
+            widgets = _all_widgets(file_path)
             if widgets:
-                print(f"[TEXTLAYER] {sum(len(v) for v in widgets.values())} "
-                      f"form checkbox(es) found — writing their state into "
+                n_val = sum(1 for v in widgets.values() for w in v if "value" in w)
+                n_box = sum(len(v) for v in widgets.values()) - n_val
+                print(f"[TEXTLAYER] {n_box} form checkbox(es) and {n_val} "
+                      f"filled form field(s) found — writing them into "
                       f"the text", flush=True)
+                doc.widget_values = {p + 1: [w["value"] for w in v if "value" in w]
+                                     for p, v in widgets.items()
+                                     if any("value" in w for w in v)}
             # PASS 1 — the text layer, every page. Nothing is recorded on
             # `doc` yet: the fold below records each page in order, so the
             # pages needing OCR can be read in between, all at once.
@@ -975,7 +996,18 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
 def _pdf_pages_to_images(file_path: Path, doc: ProcessedDocument):
     """Convert PDF pages to base64 images."""
     try:
-        last = min(doc.total_pages, 20)
+        # Run A, A7: every page of a long scan needs its image (the model
+        # cannot read OCR'd small print from text alone). Was a fixed 20, so
+        # pages 21+ of a 26-page scan reached the model as OCR text only.
+        try:
+            from config import settings as _s
+            cap = int(getattr(_s, "PAGE_IMAGE_LIMIT", 40) or 40)
+        except Exception:
+            cap = 40
+        last = min(doc.total_pages, cap)
+        if doc.total_pages > cap:
+            doc.processing_notes += (f"only the first {cap} of {doc.total_pages} "
+                                     f"pages were rendered as images. ")
         images = external_tools.render(
             file_path,
             pages=last,

@@ -823,6 +823,93 @@ def acroform_widgets(path):
     return out
 
 
+def acroform_field_values(path):
+    """{page index: [{x0, x1, top, bottom, value}]} for every FILLED text or
+    choice widget (`/FT /Tx` or `/Ch` with a non-empty `/V`).
+
+    Run A, A1: a fillable form's typed-in values are widget annotations, not
+    page text. pdfplumber's `extract_text()` does not return them, so the
+    text the model was asked to quote from carried every label and no value:
+    `irs_w2_mod11.pdf` gave 21 of 22 slots back empty and
+    `irs_1099nec_ellis.pdf` quoted `PAYER'S TIN` as the source of an empty
+    answer. The values are in the file the whole time — pypdf reads `/V` —
+    and in the rendered page image. Writing them into the text where the
+    widget sits makes the model, `verify_span` and the source inventory all
+    read the same page a person sees.
+
+    A value's own line breaks (`\\r`, `\\n`) become separate lines inside the
+    widget's rectangle. Rects are PDF user space; y is flipped here, as in
+    `acroform_widgets`.
+    """
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        return {}
+    try:
+        reader = PdfReader(str(path))
+    except Exception:
+        return {}
+    out = {}
+    for i, page in enumerate(reader.pages):
+        try:
+            height = float(page.mediabox.height)
+        except Exception:
+            continue
+        items = []
+        for ref in (page.get("/Annots") or []):
+            try:
+                obj = ref.get_object()
+                if str(obj.get("/Subtype")) != "/Widget":
+                    continue
+                parent = obj.get("/Parent").get_object() \
+                    if obj.get("/Parent") is not None else None
+                ft = obj.get("/FT") or (parent.get("/FT") if parent else None)
+                if str(ft) not in ("/Tx", "/Ch"):
+                    continue
+                value = obj.get("/V")
+                if value is None and parent is not None:
+                    value = parent.get("/V")
+                if isinstance(value, (list, tuple)):
+                    value = " ".join(str(v) for v in value)
+                value = str(value or "").strip()
+                if not value or value in ("None", "/Off"):
+                    continue
+                if str(obj.get("/F", 0)).isdigit() and int(obj.get("/F", 0)) & 2:
+                    continue                      # hidden widget
+                rect = [float(v) for v in obj.get("/Rect")]
+            except Exception:
+                continue
+            x0, x1 = min(rect[0], rect[2]), max(rect[0], rect[2])
+            y0, y1 = min(rect[1], rect[3]), max(rect[1], rect[3])
+            items.append({"x0": x0, "x1": x1, "top": height - y1,
+                          "bottom": height - y0, "value": value})
+        if items:
+            out[i] = items
+    return out
+
+
+def _field_value_lines(w):
+    """The words of one filled widget, laid out inside its rectangle: one
+    visual line per line of the value, words spread left to right."""
+    parts = [p.strip() for p in re.split(r"[\r\n]+", str(w["value"])) if p.strip()]
+    if not parts:
+        return []
+    h = max(1.0, (float(w["bottom"]) - float(w["top"])) / len(parts))
+    size = max(4.0, min(h * 0.8, 10.0))
+    out = []
+    for k, part in enumerate(parts):
+        top = float(w["top"]) + k * h
+        x = float(w["x0"]) + 1.0
+        line = []
+        for tok in part.split():
+            width = max(size * 0.5 * len(tok), 1.0)
+            line.append({"text": tok, "x0": x, "x1": x + width, "top": top,
+                         "bottom": top + size, "widget": True})
+            x += width + size * 0.3
+        out.append(line)
+    return out
+
+
 def inject_markers(lines, widgets):
     """Put a `[X]` / `[ ]` word where each checkbox actually sits.
 
@@ -837,6 +924,44 @@ def inject_markers(lines, widgets):
     out = [list(ln) for ln in lines]
     placed = 0
     for w in widgets:
+        if "value" in w:
+            # A filled text/choice field (`acroform_field_values`): its
+            # words, placed on the visual line each sits on.
+            for vline in _field_value_lines(w):
+                mid = (vline[0]["top"] + vline[0]["bottom"]) / 2.0
+                target = None
+                for ln in out:
+                    if not ln:
+                        continue
+                    top = min(float(x["top"]) for x in ln)
+                    bottom = max(float(x.get("bottom", x["top"] + 10)) for x in ln)
+                    if top - LINE_TOL <= mid <= bottom + LINE_TOL:
+                        target = ln
+                        break
+                vx0 = float(vline[0]["x0"])
+                vx1 = float(vline[-1]["x1"])
+                if target is not None and any(
+                        float(x["x0"]) < vx1 and float(x["x1"]) > vx0
+                        for x in target):
+                    # The widget's box shares its band of y with printed
+                    # words over the same x (a label printed INSIDE the box,
+                    # as on every IRS form). Merging would interleave them —
+                    # "Nancy RECIPIENT'S Ellis name" — so the value becomes
+                    # its own line, just below the line it overlaps.
+                    shift = max(float(x.get("bottom", x["top"] + 10))
+                                for x in target) + 0.5 - float(vline[0]["top"])
+                    if shift > 0:
+                        for x in vline:
+                            x["top"] = float(x["top"]) + shift
+                            x["bottom"] = float(x["bottom"]) + shift
+                    target = None
+                if target is None:
+                    out.append(list(vline))
+                else:
+                    target.extend(vline)
+                    target.sort(key=lambda x: float(x["x0"]))
+            placed += 1
+            continue
         mid = (w["top"] + w["bottom"]) / 2.0
         word = {"text": "[X]" if w["on"] else "[ ]",
                 "x0": w["x0"], "x1": w["x1"],
