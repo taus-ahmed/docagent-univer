@@ -116,7 +116,7 @@ def _all_text(ed):
     def walk(o):
         if isinstance(o, dict):
             for k, v in o.items():
-                if str(k).startswith("_") or k in ("raw_llm_responses",
+                if str(k).startswith("_") or k in ("raw_llm_responses", "diagnostics",
                                                    "slot_map", "inferred_grid",
                                                    "inferred_template"):
                     continue

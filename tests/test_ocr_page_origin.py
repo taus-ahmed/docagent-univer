@@ -1114,7 +1114,12 @@ class TestItem10WhatTheSlotCallSends:
             provider.append(kw)
             if fail_vision and kw.get("image_b64"):
                 return _Resp(None, success=False)
-            return _Resp({"fields": {}})
+            # A contract-complete answer (Run A): every requested slot id is
+            # present, so no targeted second request is made and this test
+            # sees exactly the first call's payload.
+            return _Resp({"fields": {"F1": {"value": "Priya Patel",
+                                            "source": "Pay to the order of: Priya Patel",
+                                            "page": 1}}})
 
         grid = {"cells": {"0,0": {"value": "Payee", "style": {}}},
                 "colWidths": [120] * 26, "merges": {}, "repeatRows": [],

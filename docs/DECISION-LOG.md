@@ -1658,6 +1658,56 @@ the UI asks for confirmation instead), and an API switch to export without
 marks (it would be the silent path back). `TestExportCarriesNoConfidence`
 became `TestExportMarksWhatNeedsReview`.
 
+## 24. Run A: completeness is decided by the page, not by the answer
+
+Four staging jobs passed as success while missing most of their data: job 15
+(a bank statement) came back as valid JSON with `fields` F1–F8 and no
+`tables` key, and the absence was read as "no rows"; jobs 21 and 25 (IRS
+fillable forms) came back empty because the form's typed-in values are
+AcroForm widgets that pdfplumber's text does not contain — the model was told
+to quote the text and the text held only labels. A single "mark reviewed"
+then set `needs_review` false and the export said nothing needed review.
+
+**What changed.** (1) Filled text/choice widgets are written into the page
+words where they sit (`text_layer.acroform_field_values`), so the model, the
+verifier and the inventory read the page a person sees. (2) The answer is
+untrusted until validated (`engine/llm_contract.py`): a response schema makes
+every slot id and table key required, typed failures replace defaults, and a
+missing slot (whose label the page prints) or table gets ONE targeted second
+request. (3) A deterministic source inventory (`engine/source_inventory.py`)
+counts widget values, candidate rows and amounts per page; the coverage gate
+compares the extraction with it and sets `document_state` NEEDS_ATTENTION
+with plain-sentence reasons. (4) Review cannot set a reason aside: the
+document-level mark and `/approve` are refused until each reason has a
+disposition; the export of an unsettled document is `_DRAFT`.
+
+**What it cost, measured.** 0 attention reasons and 0 empty-flagged slots
+on all 20 cached harness runs (10 documents × 2 modes). The rules that would
+have fired on correct documents were found and narrowed before landing: an
+amount in instruction prose beside a label ("Payer made direct sales totaling
+$5,000") — a same-line value must follow its label within three words;
+generic words in table headings — headings and labels are matched by
+different word lists; a dated BEGINNING BALANCE line — not a candidate row.
+
+**§12's region rule is relaxed, not dropped.** A band may now continue onto
+the next page when its rows on the current page do not end in a total, net or
+closing-balance line, the next page does NOT reprint the document's own
+heading block above the band (Berkshire prints "Fourth Quarter Full Year" /
+"2024 2023 2024 2023" over both of its tables), and every next-page row
+carries an amount where the rows before the break do (ENGIE's page-4
+glossary does not). That recovered exactly the rows §12 recorded as its cost
+— `BS-2024-Q1` equity (2) and `PAYSLIP-EMP-0007` deductions (1) — and moved
+the harness 97.2% → 98.7% templated, 96.7% → 98.2% no-template, with
+`test_round2_I1.py` unchanged. A statement whose continuation pages reprint
+their headings still keeps the strict rule; its loss is now VISIBLE through
+the row-shortfall reason rather than merged on a guess.
+
+**Rejected:** treating every unplaced amount on the page as a reason. A
+small template on a rich document leaves dozens of amounts unplaced by
+design; only amounts beside an EMPTY slot's printed label, and candidate rows
+of a band on a page that prints its headings, raise one. The rest are listed
+in `diagnostics.coverage.unplaced_amounts` as information.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

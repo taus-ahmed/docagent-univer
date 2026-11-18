@@ -251,7 +251,9 @@ def test_a_table_that_lost_rows_to_a_gate_is_not_summed(tmp_path):
 
 
 @pytest.mark.parametrize("doc_id,deductions", [
-    ("PAYSLIP-EMP-0007-APR2024", None),     # a deduction lost to the region rule
+    # The page-2 deduction is no longer lost to the region rule (Run A,
+    # DECISION-LOG §24): every deduction is present, so the check runs.
+    ("PAYSLIP-EMP-0007-APR2024", "pass"),
     ("PAYSLIP-EMP-0012-APR2024", "pass"),   # its Total line comes back as a row
 ])
 def test_the_gold_payslips_keep_every_level(doc_id, deductions, replay_cache,
