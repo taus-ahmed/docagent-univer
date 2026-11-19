@@ -33,7 +33,9 @@ from tests.template_layout.helpers import (
 
 
 PARSE_XFAIL = {
-    "F2": "F2: labels above slots are reinterpreted as adjacent horizontal pairs",
+    "F2": ("F2: `Invoice Date | _ | Approval Code` is F4's same-row-pair geometry; "
+           "the truth wants the cells below, F4's truth the cells right, and the "
+           "right cell is usable, so it is kept (Run D, D9 never guesses)"),
     "F3": "F3: separator columns do not extend the text-defined used range",
     "F6": "F6: a merged empty value range is not a slot",
     "F10": "F10: formula cells participate in label geometry",
@@ -56,7 +58,7 @@ PARSE_XFAIL = {
 
 
 WRITE_XFAIL = {
-    "F2": "F2: values are written beside labels instead of below them",
+    "F2": "F2: see the parse reason - values are written to the usable right-hand cells",
     "F3": "F3: values are written in adjacent cells instead of separated slots",
     "F6": "F6: merged value anchors receive no extracted values",
     "F9": "F9: number formats and dropdown validation are not in the grid contract",

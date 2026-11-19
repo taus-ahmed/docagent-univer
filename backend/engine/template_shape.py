@@ -1003,6 +1003,42 @@ def compute_shape(grid, log=None):
                 label_cols.add(lc)
                 value_cols.add(vc)
 
+    # ── Run D, D9: a label whose value sits BELOW it ─────────────────────────
+    # A label with no slot to its right — the right cell is another label,
+    # part of a band, covered by a merge, or past the edge — takes the empty
+    # cell directly beneath it, when that cell lies inside the template and is
+    # nobody else's slot. When the right cell IS usable it keeps the right
+    # one: two possible slots are never guessed between (the template check
+    # says so instead, `template_warnings`).
+    slotted = {(f["row"], f["col"]) for f in field_slots}
+    owners = set()
+    for f in field_slots:
+        left = [c for c in range(f["col"]) if (f["row"], c) in static]
+        if left:
+            owners.add((f["row"], max(left)))
+    for (r, c) in sorted(static):
+        if (r, c) in claimed or r in skip_rows or r in heading_rows:
+            continue
+        if (r, c) in wide:
+            continue                                  # a heading merged across columns
+        if (r, c) in owners:
+            continue                                  # it already owns a slot
+        right, below = (r, c + 1), (r + 1, c)
+        right_usable = (c + 1 <= max_col + 1 and right not in static
+                        and right not in claimed and (c + 1 > max_col or right in m))
+        if right_usable:
+            continue
+        if (below not in m or below in static or below in claimed
+                or below in slotted or below[0] in skip_rows):
+            continue
+        field_slots.append({
+            "slot_id": f"F{len(field_slots) + 1}", "ref": _ref(*below),
+            "row": below[0], "col": c, "row_label": m[(r, c)],
+            "col_header": "", "section": "", "below": True})
+        slotted.add(below)
+        label_cols.add(c)
+        value_cols.add(c)
+
     for b in bands:
         if b.get("orientation") == "columns":
             label_cols.add(b["header_col"])

@@ -7,7 +7,9 @@
     "ambiguities": []
   },
   "F10": {
-    "slot_descriptions": [],
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Tax\""
+    ],
     "ambiguities": [
       "Formula text participates in label geometry and can create unintended field slots."
     ]

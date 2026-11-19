@@ -35,7 +35,7 @@ truth file live under `tests/templates/`.
 
 | Scenario | Strict test(s) | Observed application gap |
 | --- | --- | --- |
-| F2 | parse, write | Label-above slots are changed to right-adjacent slots. |
+| F2 | parse, write | `Invoice Date \| _ \| Approval Code` has F4's same-row-pair geometry; F2's truth wants the cells below and F4's the cells right. Run D's D9 takes the cell below only when the right one is not usable, and here it is. |
 | F3 | parse, write | Empty separator columns do not survive the text-defined used range. |
 | F6 | parse, write | Empty merged value ranges produce no slot. |
 | F9 | write | Number formats and dropdown validation are outside the saved grid. |
