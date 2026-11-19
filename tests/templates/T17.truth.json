@@ -1,0 +1,100 @@
+{
+  "scenario": "T17",
+  "title": "several section bands with totals",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Total Revenue",
+      "label_cell": "A5",
+      "cell": "B5",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total COGS",
+      "label_cell": "A11",
+      "cell": "B11",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total Expenses",
+      "label_cell": "A17",
+      "cell": "B17",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "Revenue",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 2,
+      "first_data_row": 3,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Revenue",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total Revenue",
+          "cell": "B5"
+        }
+      ],
+      "write_rows": 2
+    },
+    {
+      "name": "COGS",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 8,
+      "first_data_row": 9,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "COGS",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total COGS",
+          "cell": "B11"
+        }
+      ],
+      "write_rows": 2
+    },
+    {
+      "name": "Expenses",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 14,
+      "first_data_row": 15,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Expenses",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total Expenses",
+          "cell": "B17"
+        }
+      ],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {
+    "merged_ranges": [
+      "A1:B1",
+      "A7:B7",
+      "A13:B13"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": []
+}

@@ -1,0 +1,42 @@
+{
+  "scenario": "T7",
+  "title": "bordered table",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Prepared by",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "table",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {
+    "bordered_ranges": [
+      "A1:C3"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": []
+}

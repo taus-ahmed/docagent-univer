@@ -1,0 +1,126 @@
+{
+  "scenario": "T10",
+  "title": "totals below, after a blank, to the right, and above",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Total direct",
+      "label_cell": "A5",
+      "cell": "B5",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total after blank",
+      "label_cell": "A11",
+      "cell": "B11",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total right",
+      "label_cell": "E14",
+      "cell": "F14",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total above",
+      "label_cell": "A18",
+      "cell": "B18",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "table_1",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 2,
+      "first_data_row": 3,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Direct",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total direct",
+          "cell": "B5"
+        }
+      ],
+      "write_rows": 2
+    },
+    {
+      "name": "table_2",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 7,
+      "first_data_row": 8,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Blank",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total after blank",
+          "cell": "B11"
+        }
+      ],
+      "write_rows": 2
+    },
+    {
+      "name": "table_3",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 13,
+      "first_data_row": 14,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Right",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total right",
+          "cell": "F14"
+        }
+      ],
+      "write_rows": 2
+    },
+    {
+      "name": "table_4",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 19,
+      "first_data_row": 20,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Above",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total above",
+          "cell": "B18"
+        }
+      ],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "Totals have no explicit ownership; the prompt treats any detected total as an independent field."
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "scenario": "F9",
+  "title": "formatted slots and dropdown validation",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Currency",
+      "label_cell": "A1",
+      "cell": "B1",
+      "sheet": "Template",
+      "value": "$1,234.50"
+    },
+    {
+      "label": "Date",
+      "label_cell": "A2",
+      "cell": "B2",
+      "sheet": "Template",
+      "value": "11/19/2026"
+    },
+    {
+      "label": "Rate",
+      "label_cell": "A3",
+      "cell": "B3",
+      "sheet": "Template",
+      "value": "12.5%"
+    },
+    {
+      "label": "Code",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template",
+      "value": "00123"
+    },
+    {
+      "label": "Status",
+      "label_cell": "A5",
+      "cell": "B5",
+      "sheet": "Template",
+      "value": "",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {
+    "number_formats": {
+      "B1": "$#,##0.00",
+      "B2": "mm/dd/yyyy",
+      "B3": "0.0%",
+      "B4": "@",
+      "B5": "General"
+    },
+    "validations": [
+      "B5"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": []
+}

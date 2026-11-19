@@ -1,0 +1,39 @@
+{
+  "scenario": "F12",
+  "title": "titles, instructions, notes, spacers, and hidden axes",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Invoice Number",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Date",
+      "label_cell": "A5",
+      "cell": "B5",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {
+    "merged_ranges": [
+      "A1:D1",
+      "A2:D2",
+      "A8:D8"
+    ],
+    "hidden_rows": [
+      5
+    ],
+    "hidden_columns": [
+      "D"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": []
+}

@@ -1,0 +1,36 @@
+{
+  "scenario": "F6",
+  "title": "merged label cells and merged slot cells",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Legal Name",
+      "label_cell": "A1",
+      "cell": "C1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Reporting Date",
+      "label_cell": "A3",
+      "cell": "C3",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {
+    "merged_ranges": [
+      "A1:B1",
+      "C1:D1",
+      "A3:B3",
+      "C3:D3"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": [
+    "Merged empty value ranges produce no field-slot prompt; only merge anchors can carry values."
+  ]
+}

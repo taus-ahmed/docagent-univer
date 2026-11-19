@@ -1,0 +1,58 @@
+{
+  "scenario": "F7",
+  "title": "duplicate labels in different sections",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Name",
+      "label_cell": "A2",
+      "cell": "B2",
+      "sheet": "Template"
+    },
+    {
+      "label": "Date",
+      "label_cell": "A3",
+      "cell": "B3",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Name",
+      "label_cell": "A7",
+      "cell": "B7",
+      "sheet": "Template"
+    },
+    {
+      "label": "Date",
+      "label_cell": "A8",
+      "cell": "B8",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total",
+      "label_cell": "A9",
+      "cell": "B9",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {
+    "merged_ranges": [
+      "A1:B1",
+      "A6:B6"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": [
+    "Both Name, Date, and Total pairs are described without Payer/Recipient section context."
+  ]
+}

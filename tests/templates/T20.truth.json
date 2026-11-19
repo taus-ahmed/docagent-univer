@@ -1,0 +1,49 @@
+{
+  "scenario": "T20",
+  "title": "table receiving 0, 1, 30, and 300 rows",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Total",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "Item",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total",
+          "cell": "B4"
+        }
+      ],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {
+    "row_variants": [
+      0,
+      1,
+      30,
+      300
+    ]
+  },
+  "prompt_ambiguities": []
+}

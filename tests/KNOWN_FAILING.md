@@ -23,6 +23,35 @@ as XPASS until its marker and this row are removed.
 Run B removed the A8.3 row (row sum versus printed total): `source_inventory.row_sum_checks`
 now produces a `row_sum_mismatch` reason and the strict marker came off in the same commit.
 
+## Template layout audit
+
+All entries below are exercised by `tests/test_template_layout_audit.py`; every
+listed failure is `xfail(strict=True)`. The paired workbook and independent
+truth file live under `tests/templates/`.
+
+| Scenario | Strict test(s) | Observed application gap |
+| --- | --- | --- |
+| F2 | parse, write | Label-above slots are changed to right-adjacent slots. |
+| F3 | parse, write | Empty separator columns do not survive the text-defined used range. |
+| F5 | parse, write | Scattered groups are pooled into one column-role block and valid slots disappear. |
+| F6 | parse, write | Empty merged value ranges produce no slot. |
+| F9 | write | Number formats and dropdown validation are outside the saved grid. |
+| F10 | parse, write | Formula strings participate in label geometry. |
+| F11 | parse, write | Placeholder text makes the intended slot static. |
+| F12 | write | Hidden row and column state is not preserved. |
+| T2 | parse | A header-only band is reported as ten reserved rows. |
+| T6 | parse, write | Gapped side-by-side header runs produce no bands. |
+| T9 | parse, write | A merged two-level header drops the row-label column. |
+| T10 | parse, write | Totals have no band ownership and nonstandard positions are misread. |
+| T11 | write | A subtotal inside a detected band is overwritten by extracted rows. |
+| T12 | parse, write | Transposed tables require an editor declaration. |
+| T13 | parse | A header-only flat list is reported as ten reserved rows. |
+| T14 | parse, write | Excel Table metadata is ignored and not recreated. |
+| T15 | parse, write | Scalar fields on table rows are excluded with the whole row. |
+| T18 | parse, write | Only the first workbook sheet enters the grid and output. |
+| T20 | write | Short bands do not contract unused reserved rows. |
+| T21 | write | Short repeated document blocks retain reserved-row gaps. |
+
 ## Reclassified naming problems
 
 - The guessed `app.services.completeness_gate` entry points did not exist.

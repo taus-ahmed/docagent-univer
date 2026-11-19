@@ -1,0 +1,27 @@
+{
+  "scenario": "F1",
+  "title": "label left, slot right",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Invoice Number",
+      "label_cell": "A1",
+      "cell": "B1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Auditor",
+      "label_cell": "A2",
+      "cell": "B2",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": []
+}

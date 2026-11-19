@@ -1,0 +1,39 @@
+{
+  "scenario": "T14",
+  "title": "Excel Format-as-Table object",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [],
+  "bands": [
+    {
+      "name": "AuditTable",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 1,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [],
+      "write_rows": 1
+    }
+  ],
+  "formulas": [],
+  "native_features": {
+    "tables": [
+      {
+        "name": "AuditTable",
+        "ref": "A1:C2"
+      }
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": [
+    "The Excel Table object is ignored; the prompt falls back to the ten-row edge-band heuristic."
+  ]
+}

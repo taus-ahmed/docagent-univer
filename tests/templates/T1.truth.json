@@ -1,0 +1,42 @@
+{
+  "scenario": "T1",
+  "title": "header plus five reserved rows",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Total",
+      "label_cell": "A7",
+      "cell": "B7",
+      "sheet": "Template"
+    }
+  ],
+  "bands": [
+    {
+      "name": "table",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 5,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total",
+          "cell": "B7"
+        }
+      ],
+      "write_rows": 5
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": []
+}

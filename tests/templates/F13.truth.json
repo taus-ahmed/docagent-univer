@@ -1,0 +1,39 @@
+{
+  "scenario": "F13",
+  "title": "abbreviated and non-English labels",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Inv. No.",
+      "label_cell": "A1",
+      "cell": "B1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Fecha",
+      "label_cell": "A2",
+      "cell": "B2",
+      "sheet": "Template"
+    },
+    {
+      "label": "Montant",
+      "label_cell": "A3",
+      "cell": "B3",
+      "sheet": "Template"
+    },
+    {
+      "label": "MwSt.",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": []
+}

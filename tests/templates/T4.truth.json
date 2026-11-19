@@ -1,0 +1,75 @@
+{
+  "scenario": "T4",
+  "title": "two tables stacked with no blank row",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Total A",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total B",
+      "label_cell": "A8",
+      "cell": "B8",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "table_1",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total A",
+          "cell": "B4"
+        }
+      ],
+      "write_rows": 2
+    },
+    {
+      "name": "table_2",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 5,
+      "first_data_row": 6,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Code",
+        "Hours",
+        "Cost"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total B",
+          "cell": "B8"
+        }
+      ],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {
+    "merged_ranges": [
+      "C4:D4",
+      "C8:D8"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": []
+}

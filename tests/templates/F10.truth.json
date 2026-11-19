@@ -1,0 +1,38 @@
+{
+  "scenario": "F10",
+  "title": "formula cells next to extracted fields",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Net Amount",
+      "label_cell": "A1",
+      "cell": "B1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Notes",
+      "label_cell": "A3",
+      "cell": "B3",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [
+    {
+      "cell": "D1",
+      "formula": "=B1*0.2"
+    },
+    {
+      "cell": "B2",
+      "formula": "=SUM(B1,D1)"
+    }
+  ],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "Formula text participates in label geometry and can create unintended field slots."
+  ]
+}
