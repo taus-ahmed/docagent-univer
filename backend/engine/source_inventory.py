@@ -639,6 +639,9 @@ def row_sum_checks(slots, tables_out, page_lines, page_numbers=None) -> list:
     """
     lines = [ln for page in (page_lines or []) for ln in (page or [])]
     texts = [(_line_text(ln), ln) for ln in lines]
+    numbers = list(page_numbers or range(1, len(page_lines or []) + 1))
+    page_of_line = {id(ln): numbers[k] if k < len(numbers) else None
+                    for k, page in enumerate(page_lines or []) for ln in (page or [])}
     out = []
     for t in slots.get("tables") or []:
         rows = (tables_out or {}).get(t["name"]) or []
@@ -648,10 +651,15 @@ def row_sum_checks(slots, tables_out, page_lines, page_numbers=None) -> list:
         for key, header in cols:
             if _RUNNING.search(header):
                 continue
-            vals = [amount_of(str(r.get(key, "") or "")) for r in rows]
-            vals = [v for v in vals if v is not None]
+            # Run D, D4: a row's amount is SIGNED — parentheses and a trailing
+            # minus through the amount parser, and a "Less ..." line is a
+            # deduction. `amount_of` is unsigned on purpose (it places page
+            # amounts), and summing it made 100.00 + (20.00) = 120.00.
+            pairs = [(r.get("_page"), signed_row_amount(r, key)) for r in rows]
+            pairs = [(p, v) for p, v in pairs if v is not None]
+            vals = [v for _p, v in pairs]
             if len(vals) >= 2:
-                summable.append((key, header, vals))
+                summable.append((key, header, vals, pairs))
         if not summable:
             continue
         row_text = {_norm_text(" ".join(str(v) for k, v in r.items()
@@ -660,24 +668,80 @@ def row_sum_checks(slots, tables_out, page_lines, page_numbers=None) -> list:
         total_lines = [(txt, ln) for txt, ln in texts
                        if _TOTAL_WORD.search(txt) and _norm_text(txt) not in row_text]
         name_stems = _head_stems(t.get("name", ""))
-        for key, header, vals in summable:
+        for key, header, vals, pairs in summable:
             stems = _head_stems(header) + name_stems
             named = [(txt, ln) for txt, ln in total_lines
                      if any(_word_matches(s, w) for s in stems
                             for w in re.findall(r"[a-z]+", txt.casefold()))]
             use = named or (total_lines if len(summable) == 1 else [])
-            printed = []
-            for _txt, ln in use:
-                printed += [a for a in (amount_of(w.get("text", "")) for w in _words(ln))
+
+            def printed_on(pages=None):
+                got = []
+                for _txt, ln in use:
+                    if pages is not None and page_of_line.get(id(ln)) not in pages:
+                        continue
+                    got += [a for a in (amount_of(w.get("text", "")) for w in _words(ln))
                             if a is not None]
+                return got
+
+            printed = printed_on()
             if not printed:
                 continue
             s = sum(vals, Decimal(0))
-            if any(p == s for p in printed):
+            if any(p == abs(s) for p in printed):
                 continue
+            # Run D, D5: a band whose rows run over several pages, each page
+            # closing with its OWN subtotal, is checked page by page — the
+            # rows of each page against that page's total lines — never as one
+            # flattened sum compared with each page's subtotal. A page that
+            # does not add up is still reported; and a "grand total" line,
+            # where the document prints one, must equal the rows' whole sum.
+            seg = {}
+            for p, v in pairs:
+                seg.setdefault(p, []).append(v)
+            if len(seg) >= 2 and None not in seg:
+                bad = []
+                for p, vs in sorted(seg.items()):
+                    here = printed_on({p})
+                    ss = sum(vs, Decimal(0))
+                    if not here or not any(x == abs(ss) for x in here):
+                        bad.append((p, ss, here))
+                grand = [a for txt, ln in use if _GRAND.search(txt)
+                         for a in (amount_of(w.get("text", "")) for w in _words(ln))
+                         if a is not None]
+                if not bad and (not grand or any(g == abs(s) for g in grand)):
+                    continue
+                if bad:
+                    for p, ss, here in bad:
+                        out.append({"table": t["name"], "column": header,
+                                    "rows": len(seg[p]), "row_sum": str(ss),
+                                    "printed": [str(x) for x in here], "page": p})
+                    continue
+                printed = grand
             out.append({"table": t["name"], "column": header, "rows": len(vals),
                         "row_sum": str(s), "printed": [str(p) for p in printed]})
     return out
+
+
+_GRAND = re.compile(r"\bgrand\s+total\b", re.I)
+_LESS = re.compile(r"^\s*less\b", re.I)
+
+
+def signed_row_amount(row, key) -> Optional[Decimal]:
+    """A table row's amount in column `key`, with its sign (Run D, D4):
+    parentheses and a trailing or leading minus are negative (the amount
+    parser), and a row whose description begins with "Less" is a deduction
+    however its amount is printed. None when the cell holds no amount."""
+    text = str(row.get(key, "") or "")
+    mag = amount_of(text)
+    if mag is None:
+        return None
+    a = parse_amount(_clean(text), ".")
+    neg = bool(a.ok and a.value < 0)
+    if not neg:
+        neg = any(_LESS.match(str(v)) for k, v in row.items()
+                  if k != key and not str(k).startswith("_") and isinstance(v, str))
+    return -mag if neg else mag
 
 
 def expected_rows(inventory, slots, page_lines=None, page_numbers=None) -> dict:

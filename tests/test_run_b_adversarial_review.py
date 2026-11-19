@@ -249,11 +249,6 @@ SUM_SLOTS = {"fields": [], "tables": [{"name": "table", "columns": [
 ]}]}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run B item B6: row_sum_checks takes the absolute value of a "
-            "parenthesized Less line and falsely flags a correct net total"),
-)
 def test_row_sum_respects_less_lines_and_parenthesized_negatives():
     rows = {"table": [{"Description": "Services", "Amount": "100.00"},
                       {"Description": "Less discount", "Amount": "(20.00)"}]}
@@ -262,11 +257,6 @@ def test_row_sum_respects_less_lines_and_parenthesized_negatives():
     assert SI.row_sum_checks(SUM_SLOTS, rows, page, [1]) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run B item B6: a multi-page band with a correct subtotal on each "
-            "page is compared as one grand sum and falsely flagged"),
-)
 def test_row_sum_accepts_per_page_subtotals_in_a_multi_page_band():
     rows = {"table": [
         {"Description": "A", "Amount": "40.00", "_page": 1},
