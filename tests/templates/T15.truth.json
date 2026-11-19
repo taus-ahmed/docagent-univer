@@ -1,0 +1,46 @@
+{
+  "scenario": "T15",
+  "title": "fields beside a table on the same rows",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Owner",
+      "label_cell": "E2",
+      "cell": "F2",
+      "sheet": "Template"
+    },
+    {
+      "label": "Reviewed",
+      "label_cell": "E3",
+      "cell": "F3",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "table",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 3,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [],
+      "write_rows": 3
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "Rows owned by a table are excluded wholesale from scalar-field inference, so side fields are absent."
+  ]
+}

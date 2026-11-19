@@ -1,0 +1,50 @@
+{
+  "scenario": "T6",
+  "title": "two tables side by side; left table grows",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [],
+  "bands": [
+    {
+      "name": "left",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Left A",
+        "Left B",
+        "Left C",
+        "Left D"
+      ],
+      "totals_cells": [],
+      "write_rows": 5
+    },
+    {
+      "name": "right",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "F",
+      "columns": [
+        "Right A",
+        "Right B",
+        "Right C",
+        "Right D"
+      ],
+      "totals_cells": [],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "The gapped header row yields no table slot descriptions, so neither side is addressable."
+  ]
+}

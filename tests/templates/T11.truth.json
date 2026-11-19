@@ -1,0 +1,49 @@
+{
+  "scenario": "T11",
+  "title": "subtotal row inside a table",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [],
+  "bands": [
+    {
+      "name": "table",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 5,
+      "start_col": "A",
+      "columns": [
+        "Date",
+        "Description",
+        "Qty",
+        "Rate",
+        "Amount"
+      ],
+      "totals_cells": [],
+      "write_rows": 5,
+      "interior_rows": [
+        {
+          "label_cell": "A4",
+          "formula_cell": "E4"
+        }
+      ]
+    }
+  ],
+  "formulas": [
+    {
+      "cell": "E4",
+      "formula": "=SUM(E2:E3)"
+    }
+  ],
+  "native_features": {
+    "merged_ranges": [
+      "A7:B7",
+      "C7:D7",
+      "E7:F7"
+    ]
+  },
+  "write": {},
+  "prompt_ambiguities": []
+}

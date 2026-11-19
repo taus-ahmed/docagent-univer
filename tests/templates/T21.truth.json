@@ -1,0 +1,49 @@
+{
+  "scenario": "T21",
+  "title": "three documents stacked with different line counts",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Total",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "Item",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Amount"
+      ],
+      "totals_cells": [
+        {
+          "label": "Total",
+          "cell": "B4"
+        }
+      ],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {
+    "documents": 3,
+    "document_row_counts": [
+      1,
+      4,
+      10
+    ]
+  },
+  "prompt_ambiguities": []
+}

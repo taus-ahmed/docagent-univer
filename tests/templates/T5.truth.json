@@ -1,0 +1,54 @@
+{
+  "scenario": "T5",
+  "title": "header row 1 and header row 3; first table grows to ten rows",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Prepared by",
+      "label_cell": "A6",
+      "cell": "B6",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "table_1",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 1,
+      "start_col": "A",
+      "columns": [
+        "A Item",
+        "A Qty",
+        "A Amount"
+      ],
+      "totals_cells": [],
+      "write_rows": 10
+    },
+    {
+      "name": "table_2",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 3,
+      "first_data_row": 4,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "B Item",
+        "B Qty",
+        "B Amount"
+      ],
+      "totals_cells": [],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": []
+}

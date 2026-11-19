@@ -27,6 +27,36 @@ JOB_TRUTH = {
     25: "irs_1099nec_ellis.json",
 }
 
+# Golden files use document-neutral names while a workbook template may use
+# an equally precise family-specific heading.  Score values, not harmless
+# wording differences.  Keep this list deliberately narrow: unlike the
+# extraction aliases, these pairs only reconcile committed golden truth with
+# committed template headings.
+_EQUIVALENT_LABEL_GROUPS = (
+    {"account number last 4", "card last 4"},
+    {"payment due", "payment due date"},
+    {"date", "transaction date"},
+    {"balance", "running balance"},
+)
+
+
+def _normal_label(value: Any) -> str:
+    return re.sub(r"[^0-9a-z]+", " ", str(value or "").casefold()).strip()
+
+
+def _same_label(left: Any, right: Any) -> bool:
+    a, b = _normal_label(left), _normal_label(right)
+    return a == b or any(a in group and b in group
+                         for group in _EQUIVALENT_LABEL_GROUPS)
+
+
+def _by_label(mapping: dict, wanted: str) -> Any:
+    if wanted in mapping:
+        return mapping[wanted]
+    matches = [value for label, value in mapping.items()
+               if _same_label(label, wanted)]
+    return matches[0] if len(matches) == 1 else None
+
 
 def _empty(value: Any) -> bool:
     return value is None or str(value).strip() == ""
@@ -128,7 +158,7 @@ def _table_rows(record: dict) -> list[dict]:
 
 def _actual_for(item: dict, record: dict) -> Any:
     if item["kind"] in {"headers", "totals"}:
-        return _actual_fields(record).get(item["label"])
+        return _by_label(_actual_fields(record), item["label"])
     rows = _table_rows(record)
     if item["kind"] == "row_count":
         return len(rows)
@@ -137,7 +167,7 @@ def _actual_for(item: dict, record: dict) -> Any:
     candidates = [row for row in rows if identity and identity in _normal_text(" ".join(
         str(v) for key, v in row.items() if not str(key).startswith("_")
     ))]
-    return candidates[0].get(column) if candidates else None
+    return _by_label(candidates[0], column) if candidates else None
 
 
 def _flags(record: dict) -> list[dict]:

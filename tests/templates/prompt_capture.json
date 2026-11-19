@@ -1,0 +1,335 @@
+{
+  "F1": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Invoice Number\"",
+      "F2: the value on the row labelled \"Auditor\""
+    ],
+    "ambiguities": []
+  },
+  "F10": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"=SUM(B1,D1)\"",
+      "F2: the value on the row labelled \"=SUM(B1,D1)\""
+    ],
+    "ambiguities": [
+      "Formula text participates in label geometry and can create unintended field slots."
+    ]
+  },
+  "F11": {
+    "slot_descriptions": [],
+    "ambiguities": [
+      "Placeholders are static labels under the one rule, so neither intended slot appears in the prompt."
+    ]
+  },
+  "F12": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Invoice Number\"",
+      "F2: the value on the row labelled \"Date\""
+    ],
+    "ambiguities": []
+  },
+  "F13": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Inv. No.\"",
+      "F2: the value on the row labelled \"Fecha\"",
+      "F3: the value on the row labelled \"Montant\"",
+      "F4: the value on the row labelled \"MwSt.\""
+    ],
+    "ambiguities": []
+  },
+  "F2": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Invoice Date\"",
+      "F2: the value on the row labelled \"Approval Code\""
+    ],
+    "ambiguities": [
+      "The engine describes horizontal slots B1/D1 instead of the intended cells below A1/C1."
+    ]
+  },
+  "F3": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Account\"",
+      "F2: the value on the row labelled \"Reference\""
+    ],
+    "ambiguities": [
+      "Empty separator columns are outside the text-defined used range, so the prompt invents adjacent slots."
+    ]
+  },
+  "F4": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Name\"",
+      "F2: the value on the row labelled \"Date\"",
+      "F3: the value on the row labelled \"Total\""
+    ],
+    "ambiguities": []
+  },
+  "F5": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Entity\"",
+      "F2: the value on the row labelled \"Period\"",
+      "F3: the value on the row labelled \"Owner\"",
+      "F4: the value on the row labelled \"Region\"",
+      "F5: the value on the row labelled \"Currency\"",
+      "F6: the value on the row labelled \"Threshold\""
+    ],
+    "ambiguities": []
+  },
+  "F6": {
+    "slot_descriptions": [],
+    "ambiguities": [
+      "Merged empty value ranges produce no field-slot prompt; only merge anchors can carry values."
+    ]
+  },
+  "F7": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Name\"",
+      "F2: the value on the row labelled \"Date\"",
+      "F3: the value on the row labelled \"Total\"",
+      "F4: the value on the row labelled \"Name\"",
+      "F5: the value on the row labelled \"Date\"",
+      "F6: the value on the row labelled \"Total\""
+    ],
+    "ambiguities": [
+      "Both Name, Date, and Total pairs are described without Payer/Recipient section context."
+    ]
+  },
+  "F8": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Invoice No.:\"",
+      "F2: the value on the row labelled \"Amount (USD)\"",
+      "F3: the value on the row labelled \"Tax*\"",
+      "F4: the value on the row labelled \"Weight (kg)\""
+    ],
+    "ambiguities": []
+  },
+  "F9": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Currency\"",
+      "F2: the value on the row labelled \"Date\"",
+      "F3: the value on the row labelled \"Rate\"",
+      "F4: the value on the row labelled \"Code\"",
+      "F5: the value on the row labelled \"Status\""
+    ],
+    "ambiguities": []
+  },
+  "T1": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Total\"",
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount"
+    ],
+    "ambiguities": []
+  },
+  "T10": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Total direct\"",
+      "F2: the value on the row labelled \"Total after blank\"",
+      "F3: the value on the row labelled \"End\"",
+      "F4: the value on the row labelled \"End\"",
+      "TABLE \"table_1\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Direct | Qty | Amount",
+      "TABLE \"table_2\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Blank | Qty | Amount",
+      "TABLE \"table_3\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Right | Qty | Amount",
+      "TABLE \"Total above\" — one object per row present in the document.",
+      "section: \"Total above\"",
+      "columns (use EXACTLY these keys): Above | Qty | Amount"
+    ],
+    "ambiguities": [
+      "Totals have no explicit ownership; the prompt treats any detected total as an independent field."
+    ]
+  },
+  "T11": {
+    "slot_descriptions": [
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Date | Description | Qty | Rate | Amount"
+    ],
+    "ambiguities": []
+  },
+  "T12": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Revenue\"",
+      "F2: the value on the row labelled \"Revenue\"",
+      "F3: the value on the row labelled \"Revenue\"",
+      "F4: the value on the row labelled \"COGS\"",
+      "F5: the value on the row labelled \"COGS\"",
+      "F6: the value on the row labelled \"COGS\"",
+      "F7: the value on the row labelled \"Profit\"",
+      "F8: the value on the row labelled \"Profit\"",
+      "F9: the value on the row labelled \"Profit\""
+    ],
+    "ambiguities": [
+      "Without an editor declaration, the transposed matrix is described as scalar fields rather than records."
+    ]
+  },
+  "T13": {
+    "slot_descriptions": [
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Document | Date | Entity | Total"
+    ],
+    "ambiguities": [
+      "The prompt claims ten reserved rows for a header-only flat list."
+    ]
+  },
+  "T14": {
+    "slot_descriptions": [
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount"
+    ],
+    "ambiguities": [
+      "The Excel Table object is ignored; the prompt falls back to the ten-row edge-band heuristic."
+    ]
+  },
+  "T15": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"End\"",
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount"
+    ],
+    "ambiguities": [
+      "Rows owned by a table are excluded wholesale from scalar-field inference, so side fields are absent."
+    ]
+  },
+  "T16": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Prepared by\"",
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Date | Description | Debit | Credit"
+    ],
+    "ambiguities": []
+  },
+  "T17": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Total Revenue\"",
+      "F2: the value on the row labelled \"Total COGS\"",
+      "F3: the value on the row labelled \"Total Expenses\"",
+      "TABLE \"Revenue\" — one object per row present in the document.",
+      "section: \"Revenue\"",
+      "columns (use EXACTLY these keys): Revenue | Amount",
+      "TABLE \"COGS\" — one object per row present in the document.",
+      "section: \"COGS\"",
+      "columns (use EXACTLY these keys): COGS | Amount",
+      "TABLE \"Expenses\" — one object per row present in the document.",
+      "section: \"Expenses\"",
+      "columns (use EXACTLY these keys): Expenses | Amount"
+    ],
+    "ambiguities": []
+  },
+  "T18": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Entity\"",
+      "F2: the value on the row labelled \"Date\""
+    ],
+    "ambiguities": [
+      "Only the first sheet reaches the grid; the Lines sheet has no prompt slots."
+    ]
+  },
+  "T19": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Prepared by\"",
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Date | Amount | Notes"
+    ],
+    "ambiguities": []
+  },
+  "T2": {
+    "slot_descriptions": [
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount"
+    ],
+    "ambiguities": [
+      "The prompt claims the header-only sheet has ten blank rows, although the workbook reserves none."
+    ]
+  },
+  "T20": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Total\"",
+      "TABLE \"Item\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Amount"
+    ],
+    "ambiguities": []
+  },
+  "T21": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Total\"",
+      "TABLE \"Item\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Amount"
+    ],
+    "ambiguities": []
+  },
+  "T3": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Total A\"",
+      "F2: the value on the row labelled \"Total B\"",
+      "TABLE \"table_1\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount",
+      "TABLE \"table_2\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Code | Hours | Cost"
+    ],
+    "ambiguities": []
+  },
+  "T4": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Total A\"",
+      "F2: the value on the row labelled \"Total B\"",
+      "TABLE \"table_1\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount",
+      "TABLE \"table_2\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Code | Hours | Cost"
+    ],
+    "ambiguities": []
+  },
+  "T5": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Prepared by\"",
+      "TABLE \"table_1\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): A Item | A Qty | A Amount",
+      "TABLE \"table_2\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): B Item | B Qty | B Amount"
+    ],
+    "ambiguities": []
+  },
+  "T6": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"End left\"",
+      "F2: the value on the row labelled \"End left\"",
+      "F3: the value on the row labelled \"End left\"",
+      "F4: the value on the row labelled \"End right\"",
+      "F5: the value on the row labelled \"End right\"",
+      "F6: the value on the row labelled \"End right\""
+    ],
+    "ambiguities": [
+      "The gapped header row yields no table slot descriptions, so neither side is addressable."
+    ]
+  },
+  "T7": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Prepared by\"",
+      "TABLE \"table\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount"
+    ],
+    "ambiguities": []
+  },
+  "T8": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"End bordered\"",
+      "F2: the value on the row labelled \"End plain\"",
+      "TABLE \"table_1\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Item | Qty | Amount",
+      "TABLE \"table_2\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Code | Hours | Cost"
+    ],
+    "ambiguities": []
+  },
+  "T9": {
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Prepared by\"",
+      "TABLE \"Debit\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Debit | Credit"
+    ],
+    "ambiguities": [
+      "The merged Item header is omitted; the prompt exposes only a two-column Debit/Credit band."
+    ]
+  }
+}

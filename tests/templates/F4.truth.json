@@ -1,0 +1,33 @@
+{
+  "scenario": "F4",
+  "title": "side-by-side key-value pairs",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Name",
+      "label_cell": "A1",
+      "cell": "B1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Date",
+      "label_cell": "C1",
+      "cell": "D1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Total",
+      "label_cell": "E1",
+      "cell": "F1",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": []
+}

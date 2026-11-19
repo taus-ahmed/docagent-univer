@@ -1,0 +1,29 @@
+{
+  "scenario": "F3",
+  "title": "label and slot separated by empty columns",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Account",
+      "label_cell": "A1",
+      "cell": "D1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Reference",
+      "label_cell": "A2",
+      "cell": "C2",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "Empty separator columns are outside the text-defined used range, so the prompt invents adjacent slots."
+  ]
+}

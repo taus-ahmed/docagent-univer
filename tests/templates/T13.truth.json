@@ -1,0 +1,33 @@
+{
+  "scenario": "T13",
+  "title": "one-row-per-document flat list",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [],
+  "bands": [
+    {
+      "name": "table",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 0,
+      "start_col": "A",
+      "columns": [
+        "Document",
+        "Date",
+        "Entity",
+        "Total"
+      ],
+      "totals_cells": [],
+      "write_rows": 1
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "The prompt claims ten reserved rows for a header-only flat list."
+  ]
+}

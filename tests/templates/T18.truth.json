@@ -1,0 +1,47 @@
+{
+  "scenario": "T18",
+  "title": "multiple sheets in one template",
+  "sheets": [
+    "Fields",
+    "Lines"
+  ],
+  "fields": [
+    {
+      "label": "Entity",
+      "label_cell": "A1",
+      "cell": "B1",
+      "sheet": "Fields"
+    },
+    {
+      "label": "Date",
+      "label_cell": "A2",
+      "cell": "B2",
+      "sheet": "Fields",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "table",
+      "sheet": "Lines",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "A",
+      "columns": [
+        "Item",
+        "Qty",
+        "Amount"
+      ],
+      "totals_cells": [],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "Only the first sheet reaches the grid; the Lines sheet has no prompt slots."
+  ]
+}

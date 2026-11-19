@@ -1,0 +1,29 @@
+{
+  "scenario": "F2",
+  "title": "label above, slot below",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Invoice Date",
+      "label_cell": "A1",
+      "cell": "A2",
+      "sheet": "Template"
+    },
+    {
+      "label": "Approval Code",
+      "label_cell": "C1",
+      "cell": "C2",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": [
+    "The engine describes horizontal slots B1/D1 instead of the intended cells below A1/C1."
+  ]
+}

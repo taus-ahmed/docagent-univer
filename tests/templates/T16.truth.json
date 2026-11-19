@@ -1,0 +1,39 @@
+{
+  "scenario": "T16",
+  "title": "table at the far right",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Prepared by",
+      "label_cell": "J4",
+      "cell": "K4",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [
+    {
+      "name": "table",
+      "sheet": "Template",
+      "orientation": "rows",
+      "header_row": 1,
+      "first_data_row": 2,
+      "reserved_rows": 2,
+      "start_col": "J",
+      "columns": [
+        "Date",
+        "Description",
+        "Debit",
+        "Credit"
+      ],
+      "totals_cells": [],
+      "write_rows": 2
+    }
+  ],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": []
+}

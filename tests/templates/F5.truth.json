@@ -1,0 +1,69 @@
+{
+  "scenario": "F5",
+  "title": "scattered field groups",
+  "sheets": [
+    "Template"
+  ],
+  "fields": [
+    {
+      "label": "Entity",
+      "label_cell": "A1",
+      "cell": "B1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Period",
+      "label_cell": "C1",
+      "cell": "D1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Status",
+      "label_cell": "H1",
+      "cell": "I1",
+      "sheet": "Template"
+    },
+    {
+      "label": "Owner",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Region",
+      "label_cell": "C4",
+      "cell": "D4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Currency",
+      "label_cell": "E4",
+      "cell": "F4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Rate",
+      "label_cell": "G4",
+      "cell": "H4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Threshold",
+      "label_cell": "I4",
+      "cell": "J4",
+      "sheet": "Template"
+    },
+    {
+      "label": "Reviewer",
+      "label_cell": "G5",
+      "cell": "H5",
+      "sheet": "Template",
+      "empty": true
+    }
+  ],
+  "bands": [],
+  "formulas": [],
+  "native_features": {},
+  "write": {},
+  "prompt_ambiguities": []
+}
