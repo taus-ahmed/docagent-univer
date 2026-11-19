@@ -1842,6 +1842,39 @@ $1,365,503 against $1,248,704 and is now flagged on both (true positive);
 those are the two correct cells the harness calibration now counts at `low`
 instead of `high`. Accuracy, export accuracy and structure are unchanged.
 
+## 27. Run D: five Run B defects, then template layouts read and written right
+
+No live calls; every shape change was checked against all 101 committed grids
+(gold, hand-drawn, production, round-2, the owner workbook, the 34 audit
+workbooks) and only the intended audit scenarios moved.
+
+**Part 1.** D1/D2: last-4 chooses candidates by the slot label; with no deciding
+label two different FULL account/card numbers make the value ambiguous, while a
+printed four-digit `ending NNNN` does not compete (the only rule satisfying both
+the new test and `test_run_b_quality`); a routing number is never a candidate.
+D3: only DIAGONAL runs can be watermarks, and only when oversized, repeated or
+faint; never with a digit; removed words are recorded per page. D4/D5: signed
+row sums; multi-page bands checked page by page; an explicit Grand Total must
+equal all rows.
+
+**Part 2.** D6 a blank row isolates field groups; a heading row must be
+contiguous. D7 header rows split into contiguous runs; bands sharing rows grow
+as one group by the largest change. D8 a band claims only its own columns. D9 a
+label with no usable right cell takes the cell below. D10 an empty merged box
+beside a merged label is its slot. D11 one placeholder list. D12 two-level merged headers flatten; a failed record keeps the template's
+geometry; a subtotal typed inside a table keeps its place. D13 the template
+check (`template_warnings`), on the shape route and every template response.
+
+**Audit truths that cannot all hold** (left strict-xfail, reasons in the tests):
+F2 has F4's geometry with the opposite truth; T6/T15/T10 give a closing `End |
+_` no slot where T1's `Total | _` has one; T10 also needs a spacer-vs-capacity
+and total-above-vs-title reading; T11 expects a record and the subtotal formula
+in E4; T9 expects text in a merge-covered A2; T21 expects 2 blank rows between
+documents where Run C's acceptance test requires 3; T2/T13 want 0 reserved rows
+under a header-only band while tests/test_prod_templates.py pins the same shape
+at >= 5 (zero rows was implemented, then reverted). Parse 19 → 23 of 34, write
+16 → 22 of 34. Out of scope and still xfail: F9, F10, F12, T14, T18 (and F3, T12).
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

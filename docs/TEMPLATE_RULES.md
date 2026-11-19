@@ -54,7 +54,29 @@ For each row-oriented table, overflow is `max(0, extracted_rows - reserved_rows)
 
 Transposed bands grow rightward and do not shift rows ([`excel_slot.py:221-231`](../backend/app/services/excel_slot.py#L221), [`excel_slot.py:464-488`](../backend/app/services/excel_slot.py#L464)). Multiple documents repeat the full template block and use exactly two blank rows between blocks ([`excel_slot.py:233-240`](../backend/app/services/excel_slot.py#L233), [`excel_slot.py:537-538`](../backend/app/services/excel_slot.py#L537)).
 
-## Scenario results
+## Run D changes (DECISION-LOG §27)
+
+The rules above describe the engine before Run D. Run D changed these, each
+checked against every committed grid:
+
+- A fully blank row ends a field block (F5); a block's heading row must have contiguous texts.
+- A header row's statics split into contiguous runs, each its own band (T6); bands sharing rows grow as one group by the largest change; a band ends only on statics in or left of its own columns.
+- A row band claims only its own columns; fields beside it on its rows are fields (T15); a pure label list on the right edge implies its value column.
+- A label with no usable right cell takes the empty cell below it; when both exist the right is kept (F2 itself is unchanged: its right cell is usable).
+- An empty merge just past a label's merge is its slot (F6).
+- Placeholder text (`____`, `[ ]`, `{{ }}`, `xxx`, `enter … here`, `TBD`) is an empty slot and is replaced on write (F11).
+- A header with nothing beneath it still reserves 10 rows: T2/T13 want 0, `tests/test_prod_templates.py` pins >= 5 for the same shape (owner's decision); since Run C the writer drops unused reserved rows either way.
+- A cell covered by a one-column merge from above takes that merge's heading (T9).
+- A subtotal typed inside a table keeps its place on write; records go around it.
+- Writer: bands are written with their actual row count (Run C); a failed record keeps the template geometry (T20).
+- `template_warnings` reports formulas read as labels, shared rows, implied-or-below slots, unlabelled merged boxes, header-only tables and merges over tables.
+
+After Run D: 23/34 scenarios parse exactly and 22/34 round-trip exactly.
+Still strict-xfail: parse F2, F3, F10, T2, T6, T10, T12, T13, T14, T15, T18; write F2,
+F3, F9, F10, F12, T9, T10, T11, T12, T14, T18, T21. The reasons are written
+on each marker in `tests/test_template_layout_audit.py`.
+
+## Scenario results (before Run D)
 
 “Parse” requires exact field cells, exact band geometry, and all workbook sheets. “Write” sends a deterministic mocked answer through `run_slot_extraction`, calls the real slot writer, saves the result, reopens it with openpyxl, and checks values, labels, blank answers, formulas, shifts, merges, styles, and applicable native features.
 
