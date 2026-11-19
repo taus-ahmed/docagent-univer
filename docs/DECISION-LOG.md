@@ -1767,6 +1767,81 @@ single line holds still reports ungrounded. The strict scorer compares golden
 labels to template labels verbatim, so `Balance` vs `Running Balance` reads
 as "missing" on live card/bank runs that are in fact correct.
 
+## 26. Run C: the downloaded file must be right
+
+No live calls; every new test runs on committed files and mocked answers.
+
+**C1 blocks.** A band is written with its actual row count, in both
+directions; reserved rows the document does not fill are not written; blank
+rows outside a band are kept. Each document is a block: header strip, thick
+bottom border, `GAP_BETWEEN_DOCS = 3`. The strip is the template's FIRST ROW
+(bold, a fill where the template gave none, thick top border, file name and
+document number in the rightmost free cell), not a row inserted above it:
+the acceptance suite pins a one-document export to the template's own
+addresses (`B3` is the ZIP), which an inserted row would move. The harness's
+sheet reader assumed a band owned its whole reserved area; with compaction the
+totals move into it, so the reader now also ends a band where the sheet reads
+like the template's own rows below it.
+
+**C2 clean default.** Source and Review status are audit columns
+(`include_audit`, default off). Fills, comments and the Legend stay. The
+writer-level default is `provenance=False, audit=None→provenance`, because
+the acceptance fixture expresses the opt-in as `provenance=True, marks=True`.
+There is no CSV export in the app; none was added.
+
+**C3 numbers.** The existing parser already decided by notation, not by
+confidence. Four label/shape gaps fixed: a lone `0` was held as text (the
+leading-zero rule), `Last 4` and `Check #` (`\b#\b` never matches after a
+space) and bare `Cheque` / `PO` labels became numbers. An ambiguous `1,234`
+with nothing on the document to settle the separator stays text, as before.
+
+**C4 totals.** The owner's missing invoice totals block was a SHAPE defect:
+`AP_Inv_Full` draws 20 reserved rows, then the five-line totals block, a
+blank row, then Remit To. R3's TRAILING rule is defeated by that one blank
+row, so the band ran to row 39 and the totals became row labels inside it —
+no slots, nothing written. New band-end rule AFTER: a static row below only
+blank reserved rows ends the band when the table does not continue beneath it
+(no two consecutive blank rows follow). Of 67 committed grids, four change,
+all in the owner workbook and all the same defect (`AP_Inv_Full`,
+`Rcpt_SalesTicket`, `Pay_Full`, `Invest_Stmt`); no gold, hand-drawn or
+production template moves. No model answer for that invoice is recorded, so
+the test's answer is written from the PDF's own text. Duplicate total rows:
+a band row whose label equals a total label directly under the band and whose
+amount equals that slot is dropped (note + `duplicate_total_row_count`, like
+Run B's opening line); differing amounts keep both, both low,
+`total_row_mismatch`.
+
+**C5.** The combined / per-file / flat exports now write table rows (under
+the document rows, marked and counted). §17b's strict xfail came off.
+
+**C6 review highlight.** Checked in the stated order: page numbers are file
+pages on both sides; HTR-043235 is 792×612 pt, rotation 0, cropbox = mediabox.
+The cause was matching: a box was drawn only when the quote's first line was
+a substring of exactly one printed line. Now the value itself is looked for
+(notation dropped, split words rejoined), among the quote's lines or the
+page; several candidates give the one nearest the label, said ambiguous; none
+gives "location not found for this value" with its reason.
+
+**C7 cheque bottom line.** `cheque_validators.bottom_line`:
+`routing_checksum_failed` (exactly 9 digits + ABA), `possible_swap` (both
+flagged, suggestion in the text, never moved), `cheque_number_missing`,
+`cheque_number_mismatch`. The prompt names the MICR fields by symbol and
+digit count — only for a cheque read by OCR, so no recorded prompt changes.
+On the 18 moderate photos with their true values: 0 false flags, both
+deliberately invalid routing numbers caught, 18/18 simulated swaps flagged,
+an empty cheque number flagged on 16/18. Found by the gold replay and fixed
+in the same run: the first "top-right number" rule took gold `CHQ-001847`'s
+`330 Madison Ave` and flagged its correct cheque number; the number must now
+follow a number label or end its line. This makes a wrong assignment
+visible; it does not make the reading right, and the prompt change is
+unmeasured (it needs live calls).
+
+**C8.** TOTAL ASSETS vs TOTAL LIABILITIES & EQUITY, flag only, one unit of
+the last printed place as rounding. Gold `BS-2024-Q1` really prints
+$1,365,503 against $1,248,704 and is now flagged on both (true positive);
+those are the two correct cells the harness calibration now counts at `low`
+instead of `high`. Accuracy, export accuracy and structure are unchanged.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

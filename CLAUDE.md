@@ -99,12 +99,11 @@ measurement and are ALLOWED to fail: if one moves, re-run
 `pytest.ini` deselects `-m live` by default. `-m known_bug` marks a reproduction of an
 unfixed bug; those are additionally `xfail(strict=True)`, so the default suite
 stays green AND the marker cannot go stale — the day the fix lands, the
-unexpected pass is reported as a FAILURE and forces the marker off. Three are
-open: the `selection_no_marker_in_text` scenario, round 2's absent-field
-answer (`test_round2_I1.py::TestRun9AbsentFieldsStayEmpty`), and the combined /
-per-file exports writing no table rows
-(`tests/http/test_export_params.py::TestTheFlatExportsDropEveryTableRow`,
-DECISION-LOG §17b). The old
+unexpected pass is reported as a FAILURE and forces the marker off. Two are
+open: the `selection_no_marker_in_text` scenario and round 2's absent-field
+answer (`test_round2_I1.py::TestRun9AbsentFieldsStayEmpty`). The combined /
+per-file exports' missing table rows (DECISION-LOG §17b) were fixed in Run C
+(§26) and their marker came off. The old
 `tests/test_extraction.py` (live server, zero asserts) was **deleted**; do not
 resurrect it. See `tests/README.md`.
 
@@ -1054,6 +1053,24 @@ find opens with "Not verified". A transposed table's records have no row of
 their own, so their provenance travels in comments only. Jobs stored before I2
 export without it. `GET /api/jobs/{id}/export?provenance=false` (and
 `/export/zip`) leaves provenance out.
+
+**The default download holds only the template's own fields (Run C, C2).**
+The `Source` and `Review status` columns are AUDIT columns, written only with
+`?include_audit=true` (the "Include source and review columns" checkbox); the
+fills, the comments and the Legend always travel. At the writer,
+`_write_slot_excel(audit=None)` follows `provenance`.
+
+**Blocks (Run C, C1).** A band is written with its ACTUAL row count: rows
+below it move up when the document has fewer rows than reserved (unused
+reserved rows are not written) and down when it has more; blank rows the
+template draws outside a band are kept. Each document is a block whose first
+row is a header strip (bold, a fill where the template gave none, thick top
+border, the file name and the document's own number in the rightmost free
+cell), closed by a thick bottom border; `GAP_BETWEEN_DOCS = 3` blank rows
+between blocks. The strip is the template's first row, not a row inserted
+above it, so a one-document export keeps the template's addresses.
+`tests/harness/sheet_reader.py` reads a compacted band by matching the
+template's own rows below it.
 
 **An export never presents a value a person still owes a look as a clean
 final value.** The classification is `app/core/review.py`, the same one the

@@ -1,6 +1,6 @@
 {
- "run_id": "2026-11-18 15:41:12",
- "git_commit": "bbad309",
+ "run_id": "2026-11-19 04:05:43",
+ "git_commit": "56e80ca",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -18986,16 +18986,16 @@
  },
  "calibration": {
   "grounded": {
-   "n": 437,
-   "correct": 383,
+   "n": 435,
+   "correct": 381,
    "wrong": 0,
    "missed": 0,
    "near": 3,
    "hallucinated": 51
   },
   "low": {
-   "n": 10,
-   "correct": 3,
+   "n": 12,
+   "correct": 5,
    "wrong": 0,
    "missed": 0,
    "near": 1,
@@ -19004,5 +19004,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-11-18 15:32:06"
+ "diff_against": "2026-11-19 03:33:32"
 }
