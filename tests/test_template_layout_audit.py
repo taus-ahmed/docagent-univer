@@ -39,7 +39,10 @@ PARSE_XFAIL = {
     "F10": "F10: formula cells participate in label geometry",
     "F11": "F11: placeholder text makes a slot static",
     "T2": "T2: a header-only band invents ten reserved rows",
-    "T6": "T6: side-by-side bands separated by a column are not detected",
+    "T6": ("T6: both side-by-side bands are detected (Run D, D7), but the truth "
+           "names them left/right, which nothing in the grid prints, and gives "
+           "the closing End left/End right labels no slot although T1's Total "
+           "in the same position has one"),
     "T9": "T9: a merged two-level header drops the row-label column",
     "T10": "T10: totals have no ownership and a blank before a total becomes band capacity",
     "T12": "T12: transposed bands require an editor declaration",
@@ -58,7 +61,6 @@ WRITE_XFAIL = {
     "F10": "F10: formula geometry creates wrong slots and misses intended values",
     "F11": "F11: placeholders remain static and cannot be cleared by an empty answer",
     "F12": "F12: hidden rows and columns are not preserved",
-    "T6": "T6: no side-by-side bands reach the writer",
     "T9": "T9: the Item column is outside the detected band",
     "T10": "T10: totals are not attached to bands and nonstandard positions are lost",
     "T11": "T11: a subtotal inside a band is overwritten by extracted rows",

@@ -292,10 +292,12 @@
   },
   "T6": {
     "slot_descriptions": [
-      "F1: the value on the row labelled \"Left D\"",
-      "F2: the value on the row labelled \"Right D\"",
-      "F3: the value on the row labelled \"End left\"",
-      "F4: the value on the row labelled \"End right\""
+      "F1: the value on the row labelled \"End left\"",
+      "F2: the value on the row labelled \"End right\"",
+      "TABLE \"table_1\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Left A | Left B | Left C | Left D",
+      "TABLE \"table_2\" — one object per row present in the document.",
+      "columns (use EXACTLY these keys): Right A | Right B | Right C | Right D"
     ],
     "ambiguities": [
       "The gapped header row yields no table slot descriptions, so neither side is addressable."

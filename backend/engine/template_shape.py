@@ -639,23 +639,37 @@ def compute_shape(grid, log=None):
     claimed_rows = {r for r, _ in claimed}
 
     # ── repeating bands: >= 2 adjacent static cells with empty rows beneath ──
-    header_candidates = {}
+    # Run D, D7: a row's static cells are split into CONTIGUOUS RUNS, and each
+    # run of two or more is a header candidate of its own. Two tables drawn
+    # side by side on the same rows (`Left A..D | _ | Right A..D`) used to be
+    # rejected as "not adjacent" — the gap invalidated the whole row and
+    # neither table was detected.
+    header_runs = []                                    # [(row, cols)]
     for r in rows:
         if r in claimed_rows:
             continue                                    # inside a declared table
         cols = sorted(c for c in range(max_col + 1) if (r, c) in static)
-        if len(cols) < 2:
-            continue
-        if cols != list(range(cols[0], cols[0] + len(cols))):
-            continue                                    # not adjacent
-        if any((r + 1, c) in static for c in cols):
-            continue                                    # a stack of labels
-        header_candidates[r] = cols
+        run = []
+        for c in cols + [None]:
+            if c is not None and (not run or c == run[-1] + 1):
+                run.append(c)
+                continue
+            if len(run) >= 2 and not any((r + 1, x) in static for x in run):
+                header_runs.append((r, run))            # not a stack of labels
+            run = [c] if c is not None else []
+    header_candidates = {}
+    for r, cols in header_runs:
+        header_candidates.setdefault(r, cols)
 
-    def _static_count(r):
-        return sum(1 for c in range(max_col + 1) if (r, c) in static)
+    def _static_count(r, cols=None):
+        """Statics on row r — up to a band's last column when given (D7/D8):
+        a field label to the RIGHT of a table, on its rows, does not end the
+        table, and a second table beside it does not either; a closing line
+        that starts left of the table's columns still does."""
+        span = range(max_col + 1) if cols is None else range(0, cols[-1] + 1)
+        return sum(1 for c in span if (r, c) in static)
 
-    for hr, cols in sorted(header_candidates.items()):
+    for hr, cols in header_runs:
         # ── WHERE THE BAND ENDS (R3) ──────────────────────────────────────
         # This used to be "the first row below the header holding ANY static
         # cell, minus one". One typed cell anywhere inside a table therefore
@@ -710,17 +724,20 @@ def compute_shape(grid, log=None):
         span = [r for r in rows if hr < r <= span_end]
         need = max(1, (len(cols) + 1) // 2)
 
+        def _sc(r, _cols=cols):
+            return _static_count(r, _cols)
+
         end = span_end
         for r in span:
-            if not _static_count(r):
+            if not _sc(r):
                 continue
-            full = _static_count(r) >= need
-            trailing = not any(rr > r and not _static_count(rr) for rr in span)
+            full = _sc(r) >= need
+            trailing = not any(rr > r and not _sc(rr) for rr in span)
             below = [rr for rr in span if rr > r]
-            continues = any(not _static_count(a) and not _static_count(a + 1)
+            continues = any(not _sc(a) and not _sc(a + 1)
                             and (a + 1) in span for a in below)
             after = (r - 1 > hr and not continues
-                     and not any(_static_count(rr) for rr in range(hr + 1, r)))
+                     and not any(_sc(rr) for rr in range(hr + 1, r)))
             if full or trailing or after:
                 end = r - 1
                 break
@@ -762,7 +779,7 @@ def compute_shape(grid, log=None):
             name = section
         elif is_label_value and headers_raw[0]:
             name = headers_raw[0]
-        elif len(header_candidates) == 1:
+        elif len(header_runs) == 1:
             name = "table"
         else:
             name = f"table_{len(bands) + 1}"

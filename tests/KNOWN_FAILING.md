@@ -43,7 +43,7 @@ truth file live under `tests/templates/`.
 | F11 | parse, write | Placeholder text makes the intended slot static. |
 | F12 | write | Hidden row and column state is not preserved. |
 | T2 | parse | A header-only band is reported as ten reserved rows. |
-| T6 | parse, write | Gapped side-by-side header runs produce no bands. |
+| T6 | parse | Both bands are detected and written (Run D); the truth's band names `left`/`right` are printed nowhere, and its closing `End left`/`End right` labels expect no slot while T1's `Total` in the same position expects one. |
 | T9 | parse, write | A merged two-level header drops the row-label column. |
 | T10 | parse, write | Totals have no band ownership and nonstandard positions are misread. |
 | T11 | write | A subtotal inside a detected band is overwritten by extracted rows. |

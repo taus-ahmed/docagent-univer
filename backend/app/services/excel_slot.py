@@ -453,13 +453,25 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         # document with two lines has two; nothing is invented to fill the
         # space. A transposed table never moves rows — it grows to the right —
         # so it contributes no shift.
-        shifts = []
+        #
+        # Run D, D7: bands that SHARE ROWS (two tables side by side) are one
+        # group. The rows below the group move by the group's LARGEST change,
+        # so when the left table grows and the right does not, both stay on
+        # their own rows and nothing below lands inside the longer one.
+        groups = []                     # [[first row, end row, delta]]
         for t in tables:
             if t.get("orientation") == "columns":
                 continue
             rows = ed.get(f"{t['name']}_rows") or []
             band = t["end_row"] - t["start_row"] + 1
-            shifts.append((t["end_row"], len(rows) - band))
+            top = t.get("header_row", t["start_row"])
+            g = next((g for g in groups if top <= g[1] and t["end_row"] >= g[0]), None)
+            if g is None:
+                groups.append([top, t["end_row"], len(rows) - band])
+            else:
+                g[0], g[1] = min(g[0], top), max(g[1], t["end_row"])
+                g[2] = max(g[2], len(rows) - band)
+        shifts = [(end, delta) for _top, end, delta in groups]
 
         def out_row(tr):
             return tr + sum(ov for end, ov in shifts if tr > end)
