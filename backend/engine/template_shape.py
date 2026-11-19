@@ -855,9 +855,16 @@ def compute_shape(grid, log=None):
     # blocks = maximal runs of CONSECUTIVE candidate rows. Roles are local to a
     # block so a key/value header area and a wide table lower down cannot pool
     # their columns and misclassify each other.
+    #
+    # Run D, D6: a fully BLANK row ends a block too. Scattered field groups —
+    # `Entity | _ | Period | _ … Status | _` on row 1, five pairs on row 4,
+    # `Reviewer | _` alone on row 5 — used to pool into one block, so `Status`
+    # in H1 made column H a label column for all of them and H4/H5 lost their
+    # slots (and `Threshold` in I4 took I1's). A blank spacer row is the
+    # user's own boundary between groups.
     blocks, run = [], []
     for r in rows:
-        if r in skip_rows:
+        if r in skip_rows or not _text_cols(r):
             if run:
                 blocks.append(run)
                 run = []
@@ -881,8 +888,13 @@ def compute_shape(grid, log=None):
             continue
 
         head, rest = None, non_blank[1:]
-        if rest and len(_text_cols(non_blank[0])) > max(len(_text_cols(r))
-                                                        for r in rest):
+        first = _text_cols(non_blank[0])
+        # Run D, D6: a heading row's texts are CONTIGUOUS (`Item | 2024 |
+        # 2023`). A row of label/value pairs (`Owner | _ | Region | _ …`)
+        # alternates text and blanks; on its own above a shorter row it used
+        # to read as a matrix heading and lose every one of its own slots.
+        contiguous = first == list(range(first[0], first[-1] + 1)) if first else False
+        if rest and contiguous and len(first) > max(len(_text_cols(r)) for r in rest):
             head = non_blank[0]
             heading_rows.add(head)
         body = [r for r in non_blank if r != head]

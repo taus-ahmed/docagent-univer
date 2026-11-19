@@ -7,10 +7,7 @@
     "ambiguities": []
   },
   "F10": {
-    "slot_descriptions": [
-      "F1: the value on the row labelled \"=SUM(B1,D1)\"",
-      "F2: the value on the row labelled \"=SUM(B1,D1)\""
-    ],
+    "slot_descriptions": [],
     "ambiguities": [
       "Formula text participates in label geometry and can create unintended field slots."
     ]
@@ -67,10 +64,13 @@
     "slot_descriptions": [
       "F1: the value on the row labelled \"Entity\"",
       "F2: the value on the row labelled \"Period\"",
-      "F3: the value on the row labelled \"Owner\"",
-      "F4: the value on the row labelled \"Region\"",
-      "F5: the value on the row labelled \"Currency\"",
-      "F6: the value on the row labelled \"Threshold\""
+      "F3: the value on the row labelled \"Status\"",
+      "F4: the value on the row labelled \"Owner\"",
+      "F5: the value on the row labelled \"Region\"",
+      "F6: the value on the row labelled \"Currency\"",
+      "F7: the value on the row labelled \"Rate\"",
+      "F8: the value on the row labelled \"Threshold\"",
+      "F9: the value on the row labelled \"Reviewer\""
     ],
     "ambiguities": []
   },
@@ -292,12 +292,10 @@
   },
   "T6": {
     "slot_descriptions": [
-      "F1: the value on the row labelled \"End left\"",
-      "F2: the value on the row labelled \"End left\"",
+      "F1: the value on the row labelled \"Left D\"",
+      "F2: the value on the row labelled \"Right D\"",
       "F3: the value on the row labelled \"End left\"",
-      "F4: the value on the row labelled \"End right\"",
-      "F5: the value on the row labelled \"End right\"",
-      "F6: the value on the row labelled \"End right\""
+      "F4: the value on the row labelled \"End right\""
     ],
     "ambiguities": [
       "The gapped header row yields no table slot descriptions, so neither side is addressable."

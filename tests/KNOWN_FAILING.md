@@ -37,7 +37,6 @@ truth file live under `tests/templates/`.
 | --- | --- | --- |
 | F2 | parse, write | Label-above slots are changed to right-adjacent slots. |
 | F3 | parse, write | Empty separator columns do not survive the text-defined used range. |
-| F5 | parse, write | Scattered groups are pooled into one column-role block and valid slots disappear. |
 | F6 | parse, write | Empty merged value ranges produce no slot. |
 | F9 | write | Number formats and dropdown validation are outside the saved grid. |
 | F10 | parse, write | Formula strings participate in label geometry. |
