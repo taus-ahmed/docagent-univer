@@ -53,6 +53,17 @@ def extracted(rows=None, state="READY"):
     totals = 6 + reserved_rows
     return {
         "document_state": state,
+        # app/core/review.py:489-505 derives NEEDS_ATTENTION from open
+        # ``attention`` items; the stored state string alone is not the gate.
+        "attention": ([{
+            "id": "att-1",
+            "text": "A required section is missing from the extraction.",
+            "disposition": None,
+        }] if state == "NEEDS_ATTENTION" else []),
+        "diagnostics": {"coverage": {"reasons": (
+            ["A required section is missing from the extraction."]
+            if state == "NEEDS_ATTENTION" else []
+        )}},
         "template_type": "slot",
         "extracted_fields": {
             "B2": "$30.00",

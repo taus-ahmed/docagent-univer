@@ -168,6 +168,14 @@ def _state(record: dict) -> str:
 def score_record(truth: dict, record: dict, *, job: int | None = None) -> dict:
     expected_items = _expected_items(truth)
     flags = _flags(record)
+    state = _state(record)
+    # Run A's completeness reasons are document-level by design: a missing
+    # table or unplaced form values put the whole document in NEEDS_ATTENTION.
+    # Such a defect is still inaccurate, but it is no longer *silent*.
+    open_attention = any(
+        isinstance(item, dict) and not item.get("disposition")
+        for item in ((record.get("extracted_data") or {}).get("attention") or [])
+    )
     used_flags: set[int] = set()
     correct = wrong = missing = silent = 0
     details = []
@@ -183,7 +191,7 @@ def score_record(truth: dict, record: dict, *, job: int | None = None) -> dict:
             outcome = "wrong"
             wrong += 1
         matching = [i for i, flag in enumerate(flags) if _flag_matches(item, flag, record)]
-        flagged = bool(matching)
+        flagged = bool(matching) or (state == "NEEDS_ATTENTION" and open_attention)
         if outcome in {"wrong", "missing"}:
             used_flags.update(matching)
         if outcome in {"wrong", "missing"} and not flagged:
@@ -196,7 +204,6 @@ def score_record(truth: dict, record: dict, *, job: int | None = None) -> dict:
 
     false_flags = len(flags) - len(used_flags)
 
-    state = _state(record)
     expected = len(expected_items)
     return {
         "job": job,

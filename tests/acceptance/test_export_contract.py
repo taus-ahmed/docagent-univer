@@ -9,7 +9,8 @@ from tests.acceptance.export_fixture import document, extracted, workbook
 
 RUN_A6 = pytest.mark.xfail(
     strict=True,
-    reason="Run A6: compact bands, clean default export, draft marking, and deterministic document spacing are not implemented",
+    reason=("Real app gap (A6): compact reserved bands, exactly three inter-document "
+            "blank rows, and clean default columns were not implemented"),
 )
 
 
@@ -87,7 +88,6 @@ def test_fills_comments_and_legend_survive_round_trip():
     assert wb["Legend"]["A1"].value
 
 
-@RUN_A6
 def test_attention_document_is_marked_draft():
     ed = extracted(state="NEEDS_ATTENTION")
     wb = workbook(docs=[document(ed, needs_review=True)], provenance=False, marks=False)

@@ -1,161 +1,141 @@
 from __future__ import annotations
 
 import copy
+import io
 
 import pytest
+from openpyxl import load_workbook
 
 from tests.contract import names
-from tests.contract.adapter import (
-    assert_non_ready_with_reason,
-    coverage_of,
-    evaluate_answer,
-    resolve_callable,
-    state_of,
-)
+from tests.contract.adapter import coverage_of, state_of
+from tests.contract.run_a_driver import words
 
 
-RUN_A3 = pytest.mark.xfail(
-    strict=True,
-    reason="Run A3: source inventory and unplaced AcroForm evidence are not implemented",
-)
-RUN_A4 = pytest.mark.xfail(
-    strict=True,
-    reason="Run A4: completeness gate and evidence-aware empty flags are not implemented",
-)
-RUN_A5 = pytest.mark.xfail(
-    strict=True,
-    reason="Run A5: dispositions, review gating, and end-to-end edit persistence are not implemented",
-)
+def _stored(client, auth, job_id):
+    response = client.get(f"/api/jobs/{job_id}/results", headers=auth["acme"])
+    assert response.status_code == 200, response.text
+    return response.json()[0]["extracted_data"]
 
 
-@RUN_A4
-def test_bank_inventory_survives_an_empty_model_answer():
-    result = evaluate_answer(
-        model_result={"raw_text": "{}", "finish_reason": "STOP", "candidates": [{}]},
-        expected_slots=["Opening Balance", "Closing Balance"],
-        expected_tables=["Transactions"],
-        section="full_document",
-        source_inventory={
-            "candidate_rows": 12,
-            "unplaced_amounts": [10309.62, 12445.50],
-        },
-    )
-    coverage = coverage_of(result)
-    assert coverage[names.CANDIDATE_ROWS_FIELD] in range(11, 14)
-    assert coverage[names.EXTRACTED_ROWS_FIELD] == 0
-    assert coverage[names.UNPLACED_AMOUNTS_FIELD] == [10309.62, 12445.50]
-    assert_non_ready_with_reason(result)
+def test_bank_inventory_survives_the_recorded_missing_table(replayed_jobs):
+    data = replayed_jobs[15]["extracted_data"]
+    coverage = coverage_of(data)
+    rows = coverage[names.ROWS_FIELD]["table"]
+    assert rows[names.CANDIDATE_ROWS_FIELD] == 12
+    assert rows[names.EXTRACTED_ROWS_FIELD] == 0
+    unplaced = {entry["value"] for entry in coverage[names.UNPLACED_AMOUNTS_FIELD]}
+    assert {"$10,309.62", "$12,445.50"} <= unplaced
+    assert state_of(data) == names.DOCUMENT_STATE_NEEDS_ATTENTION
 
 
-@RUN_A3
-def test_fillable_widget_values_survive_an_empty_model_answer():
-    result = evaluate_answer(
-        model_result={"raw_text": "{}", "finish_reason": "STOP", "candidates": [{}]},
-        expected_slots=["Box 1", "Employee Name"],
-        expected_tables=[],
-        section="full_document",
-        source_inventory={"unplaced_widget_values": ["10,535", "SETH W. WIGGINS"]},
-    )
-    coverage = coverage_of(result)
-    assert coverage[names.UNPLACED_WIDGET_VALUES_FIELD] == ["10,535", "SETH W. WIGGINS"]
-    assert_non_ready_with_reason(result)
+def test_fillable_widget_values_survive_the_recorded_empty_answer(replayed_jobs):
+    data = replayed_jobs[21]["extracted_data"]
+    coverage = coverage_of(data)
+    values = {entry["value"] for entry in coverage[names.UNPLACED_WIDGET_VALUES_FIELD]}
+    assert "10535" in values
+    assert any("SETH W. WIGGINS" in value for value in values)
+    assert state_of(data) == names.DOCUMENT_STATE_NEEDS_ATTENTION
 
 
 @pytest.mark.parametrize(
-    "slot,source_inventory",
+    "slot,page_text,raw_field,expected_fragment",
     [
-        ("Payer Name", {"label_only_slots": ["Payer Name"]}),
-        ("Total Withdrawals", {"unplaced_amounts_by_slot": {"Total Withdrawals": [10309.62]}}),
+        ("Payer Name", ["Payer Name"], {"value": "", "source": "Payer Name"},
+         "quoted this label"),
+        ("Total Withdrawals", ["Total Withdrawals $10,309.62"],
+         {"value": "", "source": ""}, "10,309.62"),
     ],
 )
-@RUN_A4
-def test_evidence_behind_an_empty_slot_is_flagged(slot, source_inventory):
-    result = evaluate_answer(
-        model_result={
-            "raw_text": '{"fields":{"F1":{"value":"","source":"%s"}},"tables":{}}' % slot,
-            "finish_reason": "STOP",
-            "candidates": [{}],
-        },
-        expected_slots=[slot],
-        expected_tables=[],
-        absent_slots=[],
-        section="full_document",
-        source_inventory=source_inventory,
+def test_evidence_behind_an_empty_slot_is_flagged(
+    slot, page_text, raw_field, expected_fragment
+):
+    import source_inventory as inventory
+
+    lines = [words(1, page_text)]
+    slots = {"fields": [{"slot_id": "F1", "ref": "B1", "row_label": slot}],
+             "tables": []}
+    coverage = inventory.coverage(
+        inventory.build(lines, [1]), slots, {}, {}, {"F1": raw_field}, lines, [1]
     )
-    flags = result.get("flags") or []
-    assert any(flag.get("slot") == slot for flag in flags)
-    assert state_of(result) == names.DOCUMENT_STATE_NEEDS_ATTENTION
+    assert expected_fragment in coverage[names.FLAG_SLOTS_FIELD]["B1"]
+    assert coverage[names.REASONS_FIELD] or "quoted this label" in expected_fragment
 
 
 @pytest.mark.parametrize("slot", ["GL Account", "PO Number"])
-@RUN_A4
 def test_a_truly_absent_slot_is_not_false_flagged(slot):
-    result = evaluate_answer(
-        model_result={
-            "raw_text": '{"fields":{"F1":{"value":"","source":""}},"tables":{}}',
-            "finish_reason": "STOP",
-            "candidates": [{}],
-        },
-        expected_slots=[slot],
-        expected_tables=[],
-        absent_slots=[slot],
-        section="full_document",
-        source_inventory={},
+    import source_inventory as inventory
+
+    lines = [words(1, ["A document that does not print the requested label"])]
+    slots = {"fields": [{"slot_id": "F1", "ref": "B1", "row_label": slot}],
+             "tables": []}
+    coverage = inventory.coverage(
+        inventory.build(lines, [1]), slots, {}, {},
+        {"F1": {"value": "", "source": ""}}, lines, [1]
     )
-    assert not any(flag.get("slot") == slot for flag in result.get("flags") or [])
+    assert coverage[names.FLAG_SLOTS_FIELD] == {}
+    assert slot in coverage[names.ABSENT_FIELD]
 
 
-@RUN_A5
-def test_mark_reviewed_rejects_open_attention_reasons():
-    evaluator = resolve_callable(names.REVIEW_DISPOSITION_EVALUATOR)
-    result = evaluator(
-        document={
-            names.DOCUMENT_STATE_FIELD: names.DOCUMENT_STATE_NEEDS_ATTENTION,
-            names.DIAGNOSTICS_FIELD: {names.REASONS_FIELD: [{"code": "coverage_gap", "open": True}]},
-        },
-        action="mark_reviewed",
-        dispositions=[],
-    )
-    assert result["accepted"] is False
+def test_mark_reviewed_returns_409_while_attention_reasons_are_open(
+    client, auth, run_a_http_doc
+):
+    job, document = run_a_http_doc
+    route = names.REVIEW_ROUTE.format(job_id=job.id, doc_id=document.id)
+    response = client.post(route, headers=auth["acme"], json={"scope": "document"})
+    assert response.status_code == 409
+    assert {item["id"] for item in response.json()["detail"]["open"]} == {"att-1", "att-2"}
+    assert _stored(client, auth, job.id).get("review") is None
 
 
-@RUN_A5
-def test_each_open_reason_must_be_dispositioned_explicitly():
-    evaluator = resolve_callable(names.REVIEW_DISPOSITION_EVALUATOR)
-    result = evaluator(
-        document={
-            names.DOCUMENT_STATE_FIELD: names.DOCUMENT_STATE_NEEDS_ATTENTION,
-            names.DIAGNOSTICS_FIELD: {
-                names.REASONS_FIELD: [
-                    {"id": "r1", "code": "coverage_gap", "open": True},
-                    {"id": "r2", "code": "unplaced_value", "open": True},
-                ]
-            },
-        },
-        action="mark_reviewed",
-        dispositions=[{"reason_id": "r1", "disposition": "accepted_absent"}],
-    )
-    assert result["accepted"] is False
-    assert result["open_reason_count"] == 1
+def test_each_open_reason_must_be_dispositioned_explicitly(
+    client, auth, run_a_http_doc
+):
+    job, document = run_a_http_doc
+    route = names.REVIEW_ROUTE.format(job_id=job.id, doc_id=document.id)
+    response = client.post(route, headers=auth["acme"], json={
+        "scope": "document",
+        "dispositions": [{"id": "att-1", "choice": names.DISPOSITION_ENTERED_MANUALLY}],
+    })
+    assert response.status_code == 409
+    # A refused request is atomic: even its one supplied disposition is not stored.
+    assert all(item["disposition"] is None for item in _stored(client, auth, job.id)["attention"])
 
 
-@RUN_A5
-def test_reviewing_never_deletes_coverage_reasons_or_banner_counts():
-    evaluator = resolve_callable(names.REVIEW_DISPOSITION_EVALUATOR)
-    result = evaluator(
-        document={
-            names.DOCUMENT_STATE_FIELD: names.DOCUMENT_STATE_NEEDS_ATTENTION,
-            names.DIAGNOSTICS_FIELD: {
-                names.REASONS_FIELD: [{"id": "r1", "code": "coverage_gap", "open": True}]
-            },
-        },
-        action="mark_reviewed",
-        dispositions=[{"reason_id": "r1", "disposition": "source_unreadable"}],
-    )
-    reasons = result[names.DIAGNOSTICS_FIELD][names.REASONS_FIELD]
-    assert reasons and reasons[0][names.REASON_CODE_FIELD] == names.REASON_COVERAGE_GAP
-    assert result["legend_count"] == 1
-    assert result["banner_count"] == 1
+def test_dispositions_are_stored_without_deleting_the_original_reasons(
+    client, auth, run_a_http_doc
+):
+    job, document = run_a_http_doc
+    route = names.REVIEW_ROUTE.format(job_id=job.id, doc_id=document.id)
+    response = client.post(route, headers=auth["acme"], json={
+        "dispositions": [
+            {"id": "att-1", "choice": names.DISPOSITION_ENTERED_MANUALLY},
+            {"id": "att-2", "choice": names.DISPOSITION_CONFIRMED_ABSENT},
+        ],
+    })
+    assert response.status_code == 200, response.text
+    attention = _stored(client, auth, job.id)["attention"]
+    assert [item["id"] for item in attention] == ["att-1", "att-2"]
+    assert [item["disposition"]["choice"] for item in attention] == [
+        names.DISPOSITION_ENTERED_MANUALLY,
+        names.DISPOSITION_CONFIRMED_ABSENT,
+    ]
+    listing = client.get(f"/api/jobs/{job.id}/review", headers=auth["acme"]).json()
+    assert listing["summary"]["attention_open"] == 0
+    assert len(listing["documents"][0]["attention"]) == 2
+
+
+def test_unsettled_export_name_and_first_legend_line_say_draft(
+    client, auth, run_a_http_doc
+):
+    job, _document = run_a_http_doc
+    response = client.get(names.DOWNLOAD_ROUTE.format(job_id=job.id), headers=auth["acme"])
+    assert response.status_code == 200, response.text
+    assert f"job_{job.id}_results_DRAFT.xlsx" in response.headers["content-disposition"]
+    workbook = load_workbook(io.BytesIO(response.content))
+    first_line = str(workbook["Legend"]["A1"].value)
+    print(f"draft export={response.headers['content-disposition']} legend={first_line}")
+    assert first_line.startswith("DRAFT")
+    assert "2 completeness reasons open" in first_line
 
 
 def test_current_edit_reconciliation_keeps_machine_history_for_fields_and_tables():
@@ -179,29 +159,55 @@ def test_current_edit_reconciliation_keeps_machine_history_for_fields_and_tables
     assert "Amount" in edited["Items_rows"][0]["_edited"]
 
 
-@RUN_A5
-def test_edits_survive_accept_reload_and_download():
-    # The fixture is intentionally supplied by the Run A integration branch;
-    # keeping the route names in names.py makes this test a one-file adapter update.
-    http_client = resolve_callable(names.HTTP_ACCEPTANCE_DRIVER)()
-    created = http_client.create_recorded_job(19)
-    assert http_client.edit(created, "B1", "PO-HUMAN").ok
-    assert http_client.edit_table(created, "table", 0, "Quantity", 13).ok
-    assert http_client.accept(created).ok
-    reloaded = http_client.reload(created)
-    assert reloaded.field("B1") == "PO-HUMAN"
-    assert reloaded.table_cell("table", 0, "Quantity") == 13
-    assert reloaded.original("B1") == "PO-2026-1147"
-    downloaded = http_client.download(created)
-    assert downloaded.cell("B1") == "PO-HUMAN"
-    assert downloaded.table_cell("table", 0, "Quantity") == 13
+def test_edits_survive_reload_review_and_export(client, auth, run_a_http_doc):
+    job, document = run_a_http_doc
+    field_route = names.FIELD_EDIT_ROUTE.format(job_id=job.id, doc_id=document.id, ref="B1")
+    cell_route = names.CELL_EDIT_ROUTE.format(
+        job_id=job.id, doc_id=document.id, table="table", row=0
+    )
+    assert client.patch(field_route, headers=auth["acme"], json={"value": "HUMAN BANK"}).status_code == 200
+    assert client.patch(
+        cell_route, headers=auth["acme"], json={"column": "Amount", "value": "1,300.00"}
+    ).status_code == 200
+
+    review_route = names.REVIEW_ROUTE.format(job_id=job.id, doc_id=document.id)
+    accepted = client.post(review_route, headers=auth["acme"], json={
+        "scope": "document",
+        "dispositions": [
+            {"id": "att-1", "choice": names.DISPOSITION_ENTERED_MANUALLY},
+            {"id": "att-2", "choice": names.DISPOSITION_CONFIRMED_ABSENT},
+        ],
+    })
+    assert accepted.status_code == 200, accepted.text
+
+    reloaded = _stored(client, auth, job.id)
+    assert reloaded["extracted_fields"]["B1"] == "HUMAN BANK"
+    assert reloaded["field_provenance"]["B1"]["original_value"] == "Lakeshore Bank"
+    assert reloaded["table_rows"][0]["Amount"] == "1,300.00"
+    assert reloaded["table_rows"][0]["_original"]["Amount"] == "1,254.00"
+    assert [(event["kind"], event["old"], event["new"]) for event in reloaded["edit_log"]] == [
+        ("field", "Lakeshore Bank", "HUMAN BANK"),
+        ("cell", "1,254.00", "1,300.00"),
+    ]
+
+    downloaded = client.get(names.DOWNLOAD_ROUTE.format(job_id=job.id), headers=auth["acme"])
+    assert downloaded.status_code == 200, downloaded.text
+    workbook = load_workbook(io.BytesIO(downloaded.content))
+    text = " ".join(
+        str(cell.value)
+        for sheet in workbook
+        for row in sheet.iter_rows()
+        for cell in row
+        if cell.value is not None
+    ).replace(",", "")
+    assert "HUMAN BANK" in text
+    assert "1300" in text
+    assert workbook["Results"]["B1"].value == "HUMAN BANK"
+    assert float(workbook["Results"]["B6"].value) == 1300.0
 
 
-@RUN_A5
-def test_failed_save_is_visible_to_the_reviewer():
-    http_client = resolve_callable(names.HTTP_ACCEPTANCE_DRIVER)()
-    created = http_client.create_recorded_job(19)
-    http_client.fail_next_save()
-    response = http_client.edit(created, "B1", "PO-HUMAN")
-    assert not response.ok
-    assert response.visible_error
+def test_failed_save_is_visible_to_the_reviewer(repo_dir):
+    panel = (repo_dir / "frontend" / "components" / "extract" / "ReviewPanel.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'toast.error(`Not saved: ${detailText(e, "Save failed")}`)' in panel

@@ -1,11 +1,12 @@
-"""The only acceptance-test file that knows provisional Run A names.
+"""Run A contract names, copied from the implementation rather than guessed.
 
-Claude Code may choose different field, route, or callable names on
-``fix/completeness-gate``. Update this module when that report arrives; the
-acceptance tests should not be edited to chase naming differences.
+Every constant below cites the implementation line that defines or consumes
+the name. The acceptance suite keeps these names in one place so a future
+contract change has one explicit audit point.
 """
 
-# Document state contract.
+# Stored document state: backend/engine/slot_extractor.py:2241-2246 and
+# backend/app/core/review.py:493-505.
 DOCUMENT_STATE_FIELD = "document_state"
 DOCUMENT_STATE_READY = "READY"
 DOCUMENT_STATE_NEEDS_REVIEW = "NEEDS_REVIEW"
@@ -18,51 +19,95 @@ DOCUMENT_STATES = {
     DOCUMENT_STATE_FAILED,
 }
 
-# Diagnostics and coverage contract.
+# Completeness reasons are stored as plain-sentence attention items, not typed
+# ``diagnostics.reasons`` entries: backend/app/core/review.py:466-490 and
+# backend/engine/slot_extractor.py:2241-2242.
+ATTENTION_FIELD = "attention"
+ATTENTION_ID_FIELD = "id"
+ATTENTION_TEXT_FIELD = "text"
+DISPOSITION_FIELD = "disposition"
+DISPOSITION_CHOICE_FIELD = "choice"
+
+# Diagnostics shape: backend/engine/slot_extractor.py:2267-2277.
 DIAGNOSTICS_FIELD = "diagnostics"
-REASONS_FIELD = "reasons"
-REASON_CODE_FIELD = "code"
-REASON_OPEN_FIELD = "open"
+ATTEMPTS_FIELD = "attempts"
+USAGE_FIELD = "usage"
+CONTRACT_FIELD = "contract"
+SOURCE_INVENTORY_FIELD = "inventory"
 COVERAGE_FIELD = "coverage"
-SOURCE_INVENTORY_FIELD = "source_inventory"
-CANDIDATE_ROWS_FIELD = "candidate_rows"
-EXTRACTED_ROWS_FIELD = "extracted_rows"
+PAGE_LEDGER_FIELD = "pages"
+
+# Coverage shape: backend/engine/source_inventory.py:322-333,472-479 and
+# backend/engine/slot_extractor.py:2273-2276.
+REASONS_FIELD = "reasons"
+FLAG_SLOTS_FIELD = "flag_slots"
+ABSENT_FIELD = "absent"
+EMPTY_BANDS_FIELD = "empty_bands"
+WIDGET_VALUES_FIELD = "widget_values"
+UNPLACED_WIDGET_VALUES_FIELD = "widget_unplaced"
 UNPLACED_AMOUNTS_FIELD = "unplaced_amounts"
-UNPLACED_WIDGET_VALUES_FIELD = "unplaced_widget_values"
-PAGE_LEDGER_FIELD = "page_ledger"
-PAGE_STATE_FIELD = "state"
+UNPLACED_AMOUNT_COUNT_FIELD = "unplaced_amount_count"
+ROWS_FIELD = "rows"
+CANDIDATE_ROWS_FIELD = "candidates"
+EXTRACTED_ROWS_FIELD = "extracted"
 
-# App entry points. Each callable takes keyword arguments; the thin adapter in
-# tests/contract/adapter.py makes the expected test-side shape explicit.
-ANSWER_CONTRACT_EVALUATOR = (
-    "app.services.completeness_gate.evaluate_answer_contract"
-)
-RETRY_EXECUTOR = "app.services.completeness_gate.execute_with_retries"
-REVIEW_DISPOSITION_EVALUATOR = (
-    "app.services.completeness_gate.apply_review_dispositions"
-)
-EXPORT_BUILDER = "app.api.routes.export._build_excel"
+# Page-ledger values: backend/engine/slot_extractor.py:2258-2266.
+PAGE_STATE_PROCESSED = "processed"
+PAGE_STATE_PROCESSED_EMPTY = "processed_empty"
+PAGE_STATE_FAILED = "failed"
+
+# Actual implementation entry points.
+# backend/engine/llm_contract.py:357,414
+ANSWER_CONTRACT_EVALUATOR = "llm_contract.check_answer"
+ANSWER_MERGER = "llm_contract.merge_answers"
+# backend/engine/source_inventory.py:151,322
+SOURCE_INVENTORY_BUILDER = "source_inventory.build"
+COVERAGE_EVALUATOR = "source_inventory.coverage"
+# backend/engine/slot_extractor.py:1219
+SLOT_EXTRACTOR = "slot_extractor.run_slot_extraction"
+# backend/engine/extractor.py:69; transport retry is in
+# backend/engine/connectors/gemini_client.py:206-302.
+LOGICAL_CALL_EXECUTOR = "extractor._llm_json"
+# backend/app/core/review.py:493,508
+DOCUMENT_STATE_EVALUATOR = "app.core.review.document_state"
+REVIEW_DISPOSITION_EVALUATOR = "app.core.review.apply_dispositions"
+# backend/engine/core/preprocessor.py:295 and the module path installed by
+# tests/harness/bootstrap.py.
 PREPROCESS_FILE = "core.preprocessor.preprocess_file"
-HTTP_ACCEPTANCE_DRIVER = "tests.contract.run_a_driver.create_client"
 
-# Review and edit routes.
-REVIEW_ROUTE = "/api/review/jobs/{job_id}/docs/{doc_id}/review"
-DISPOSITIONS_ROUTE = "/api/review/jobs/{job_id}/docs/{doc_id}/dispositions"
-EDIT_ROUTE = "/api/jobs/{job_id}/docs/{doc_id}/edit"
+# Review/disposition payload and route: backend/app/api/routes/review.py:159-168,
+# 230. Dispositions are part of the review request; there is no separate route.
+REVIEW_ROUTE = "/api/jobs/{job_id}/docs/{doc_id}/review"
+DISPOSITIONS_ROUTE = REVIEW_ROUTE
+DISPOSITION_CONFIRMED_ABSENT = "confirmed_absent"
+DISPOSITION_ENTERED_MANUALLY = "entered_manually"
+
+# Single-value edit routes: backend/app/api/routes/extract.py:968,986.
+FIELD_EDIT_ROUTE = "/api/jobs/{job_id}/docs/{doc_id}/fields/{ref}"
+CELL_EDIT_ROUTE = "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}/{row}"
+# Append-only edit events: backend/app/services/edits.py:178-213,251-252.
+EDIT_LOG_FIELD = "edit_log"
+EDIT_EVENT_KIND_FIELD = "kind"
+EDIT_EVENT_OLD_FIELD = "old"
+EDIT_EVENT_NEW_FIELD = "new"
+# Export route and naming: backend/app/api/routes/extract.py:704-708.
 DOWNLOAD_ROUTE = "/api/jobs/{job_id}/export"
+DRAFT_SUFFIX = "_DRAFT"
+# Legend first-line draft contract: backend/app/services/excel_cells.py:586-624.
+LEGEND_SHEET = "Legend"
+LEGEND_DRAFT_PREFIX = "DRAFT"
 
-# Typed reasons used by the acceptance contract. Additional codes are allowed;
-# these are the minimum stable categories the UI and scorer need.
-REASON_MISSING_SECTION = "missing_section"
-REASON_EMPTY_ANSWER = "empty_answer"
-REASON_INVALID_JSON = "invalid_json"
-REASON_NO_CANDIDATES = "no_candidates"
-REASON_BLOCKED = "blocked"
-REASON_MAX_TOKENS = "max_tokens"
-REASON_COVERAGE_GAP = "coverage_gap"
-REASON_UNPLACED_VALUE = "unplaced_value"
-REASON_OCR_FAILED = "ocr_failed"
-REASON_EMPTY_OCR = "empty_ocr"
+# Typed answer/transport failures: backend/engine/llm_contract.py:81-102.
+FAILURE_TRANSIENT = "transient"
+FAILURE_INVALID_REQUEST = "invalid_request"
+FAILURE_NO_CANDIDATE = "no_candidate"
+FAILURE_BLOCKED = "blocked"
+FAILURE_MAX_TOKENS = "max_tokens"
+FAILURE_EMPTY = "empty"
+FAILURE_INVALID_JSON = "invalid_json"
+FAILURE_MISSING_SLOT = "missing_slot"
+FAILURE_MISSING_TABLE = "missing_table"
+FAILURE_EMPTY_TABLE = "empty_table"
 
 NON_READY_STATES = {
     DOCUMENT_STATE_NEEDS_ATTENTION,

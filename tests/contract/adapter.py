@@ -1,4 +1,4 @@
-"""Thin dynamic adapter from provisional Run A names to stable test helpers."""
+"""Thin readers for the real Run A stored-result shape."""
 from __future__ import annotations
 
 import importlib
@@ -20,18 +20,6 @@ def resolve_callable(path: str) -> Callable[..., Any]:
     return target
 
 
-def evaluate_answer(**kwargs) -> dict:
-    result = resolve_callable(names.ANSWER_CONTRACT_EVALUATOR)(**kwargs)
-    assert isinstance(result, dict), "answer contract must return a mapping"
-    return result
-
-
-def execute_with_retries(**kwargs) -> dict:
-    result = resolve_callable(names.RETRY_EXECUTOR)(**kwargs)
-    assert isinstance(result, dict), "retry executor must return a mapping"
-    return result
-
-
 def state_of(result: dict) -> str:
     state = result.get(names.DOCUMENT_STATE_FIELD)
     assert state in names.DOCUMENT_STATES, (
@@ -41,21 +29,37 @@ def state_of(result: dict) -> str:
 
 
 def reasons_of(result: dict) -> list[dict]:
-    diagnostics = result.get(names.DIAGNOSTICS_FIELD) or {}
-    reasons = diagnostics.get(names.REASONS_FIELD) or []
+    reasons = result.get(names.ATTENTION_FIELD) or []
     assert isinstance(reasons, list)
     for reason in reasons:
         assert isinstance(reason, dict)
-        assert reason.get(names.REASON_CODE_FIELD), "every reason needs a typed code"
+        assert reason.get(names.ATTENTION_ID_FIELD), "every attention reason needs an id"
+        assert reason.get(names.ATTENTION_TEXT_FIELD), "every attention reason needs text"
     return reasons
 
 
+def diagnostics_of(result: dict) -> dict:
+    diagnostics = result.get(names.DIAGNOSTICS_FIELD)
+    assert isinstance(diagnostics, dict), f"missing {names.DIAGNOSTICS_FIELD}"
+    return diagnostics
+
+
 def coverage_of(result: dict) -> dict:
-    coverage = result.get(names.COVERAGE_FIELD)
-    assert isinstance(coverage, dict), f"missing {names.COVERAGE_FIELD}"
+    coverage = diagnostics_of(result).get(names.COVERAGE_FIELD)
+    assert isinstance(coverage, dict), (
+        f"missing {names.DIAGNOSTICS_FIELD}.{names.COVERAGE_FIELD}"
+    )
     return coverage
+
+
+def page_ledger_of(result: dict) -> dict[str, str]:
+    pages = diagnostics_of(result).get(names.PAGE_LEDGER_FIELD)
+    assert isinstance(pages, dict), (
+        f"missing {names.DIAGNOSTICS_FIELD}.{names.PAGE_LEDGER_FIELD}"
+    )
+    return pages
 
 
 def assert_non_ready_with_reason(result: dict) -> None:
     assert state_of(result) in names.NON_READY_STATES
-    assert reasons_of(result), "a non-ready result needs a typed reason"
+    assert reasons_of(result), "a non-ready result needs an attention reason"

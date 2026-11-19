@@ -1,13 +1,31 @@
 # Strict acceptance xfails
 
-Every item below is marked `xfail(strict=True)`. A Run A implementation that makes one pass will produce an XPASS failure until the marker is removed. Do not weaken the assertion.
+Every item below is `xfail(strict=True)`. These are real application gaps, not
+adapter/name mismatches. A future implementation that makes one pass will fail
+as XPASS until its marker and this row are removed.
 
-| Run A section | Tests | Parametrized cases | Waiting for |
-| --- | --- | ---: | --- |
-| A2 | `test_answer_contract.py`, `test_retry_contract.py` | 18 | Typed unusable-answer outcomes, bounded injectable retries, and section-only MAX_TOKENS recovery |
-| A3 | `test_completeness_review_edits.py`, `test_input_lanes.py` | 8 | AcroForm text-widget evidence, OCR/page ledger states, image attachment, and partial-page survival |
-| A4 | `test_completeness_review_edits.py`, `test_input_lanes.py`, `test_scoreboard.py` | 7 | Source inventory, evidence-aware empty flags, per-page completeness, and the zero-silent-defect recorded gate |
-| A5 | `test_completeness_review_edits.py` | 5 | Explicit reason dispositions, review gating, persistent edits, and visible save failures |
-| A6 | `test_export_contract.py` | 4 | Compact bands, three-row document separation, clean default columns, and draft marking |
+| Gap | Strict test | Implementation evidence | Observed failure |
+| --- | --- | --- | --- |
+| A6 compact reserved table bands | `test_unused_reserved_rows_are_removed_and_totals_touch_the_band` | `backend/app/services/excel_slot.py:167-170` shifts only when rows overflow the reserved band; it has no contraction path. | Subtotal stays on row 11 after two extracted rows; it should touch the band on row 9. |
+| A6 exactly three blank rows between documents | `test_multiple_documents_have_header_strip_and_exactly_three_blank_rows` | `backend/app/services/excel_slot.py:233,537-538` hard-codes `GAP_BETWEEN_DOCS = 2`. | The export has two blank rows, not three. |
+| A6 clean default export columns | `test_default_download_hides_source_and_review_columns_but_opt_in_restores_them` | `backend/app/api/routes/extract.py:626-647` defaults `provenance=True`; `backend/app/services/excel_slot.py:162-179` defaults review marks/status on. | Default output exposes `Source` and `Review status` columns. |
+| A8.3 row sum versus printed total | `test_A8_3_row_sum_versus_printed_total_is_not_built` | `backend/engine/source_inventory.py:322-479` checks row counts, empty slots, widget values, and unplaced amounts but contains no row-sum/printed-total comparison. | Two extracted rows sum to 100 while the page prints 110; no `row_sum_mismatch` reason is produced. |
 
-The count is the number pytest collects after parameter expansion. Existing OCR outcome xfails tied to Tesseract below 5.4 remain separately documented in `tests/harness/tesseract_gate.py`.
+## Reclassified naming problems
+
+- The guessed `app.services.completeness_gate` entry points did not exist.
+  Tests now use `llm_contract`, `source_inventory`,
+  `slot_extractor.run_slot_extraction`, and the real review/edit HTTP routes.
+- Completeness reasons are `attention[]` items with plain `text` and a nested
+  `disposition`, while deterministic coverage detail is under
+  `diagnostics.coverage`; the old tests guessed `diagnostics.reasons`.
+- The page ledger is `diagnostics.pages` with `processed`, `processed_empty`,
+  and `failed`, not a synthetic `coverage.page_ledger` object.
+- W-2 mod11's filled widget is `10535`, and that exact text reaches the model
+  input. The old `10,535` needle was wrong.
+
+Baseline before alignment: **74 collected, 28 passed, 42 xfailed, 4 failed**
+(the four failures were the local Poppler setup). Aligned suite target:
+**80 collected, 76 passed, 4 xfailed**. The acceptance test tooling uses the
+installed local PDFium/Tesseract seams, so the result does not depend on a
+Poppler executable being present on the developer machine.
