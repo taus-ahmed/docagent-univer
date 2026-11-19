@@ -177,11 +177,12 @@ class TestAStoredRowChange:
         assert ROW_EDIT in values
 
     @pytest.mark.parametrize("path", ["combined", "perfile"])
-    def test_export_py_does_not_export_table_rows_at_all(self, client, auth, row_edit, path):
-        """Not "saved correctly": these paths never write a table row, edited or
-        not."""
+    def test_export_py_exports_the_edited_row(self, client, auth, row_edit, path):
+        """These paths wrote no table row at all until Run C (C5,
+        DECISION-LOG 17b); they now write every row, and the edited one holds
+        the edit. (The original is not checked for absence, as above.)"""
         values = [c.value for c in _cells(client, auth, row_edit["job"], path)]
-        assert ROW_EDIT not in values and row_edit["original"] not in values
+        assert ROW_EDIT in values
 
 
 class TestAStoredTransposedRecordChange:
@@ -191,9 +192,10 @@ class TestAStoredTransposedRecordChange:
         assert RECORD_EDIT in values
 
     @pytest.mark.parametrize("path", ["combined", "perfile"])
-    def test_export_py_does_not_export_records_at_all(self, client, auth, record_edit, path):
+    def test_export_py_exports_the_edited_record(self, client, auth, record_edit, path):
+        """Run C (C5): a transposed record is a row like any other here."""
         values = [c.value for c in _cells(client, auth, record_edit["job"], path)]
-        assert RECORD_EDIT not in values
+        assert RECORD_EDIT in values
 
 
 # ══════════════════════════════════════════════════════════════════════════

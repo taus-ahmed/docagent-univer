@@ -29,9 +29,12 @@ def note_size(text: str) -> tuple[int, int]:
 
 
 class SheetMarks:
-    def __init__(self, ws, enabled: bool = True):
+    def __init__(self, ws, enabled: bool = True, status_column: bool = True):
         self.ws = ws
         self.enabled = enabled
+        #: Run C, C2: the Review status column is an AUDIT column. The fills
+        #: and comments always travel; the column only when asked for.
+        self.status_column = status_column
         #: (row, col) -> (resolved, status word). Per CELL, so a writer that
         #: writes one cell twice (the legacy layout writer does) is judged by
         #: the value it left there, not by both.
@@ -79,7 +82,7 @@ class SheetMarks:
     def finish(self, header_row: int = 1) -> int:
         """Write the Review status column; returns the unresolved count."""
         from openpyxl.cell import MergedCell
-        if not self.enabled or not self.rows:
+        if not self.enabled or not self.status_column or not self.rows:
             return self.unresolved
         col = (self.ws.max_column or 0) + 1
         n = self.unresolved

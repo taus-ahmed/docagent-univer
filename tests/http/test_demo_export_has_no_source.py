@@ -166,7 +166,10 @@ class TestTheTemplateExport:
         template gets the per-row `<file> · p.N` cells with no header over
         them. Pre-existing, and not what this change is about.
         """
-        r = client.get(f"/api/jobs/{plain_job.id}/export", headers=auth["acme"])
+        # Run C, C2: the Source column is an opt-in audit column now; the
+        # comments carry the filename by default (asserted below).
+        r = client.get(f"/api/jobs/{plain_job.id}/export?include_audit=true",
+                       headers=auth["acme"])
         assert r.status_code == 200, r.text
         ws = _book(r.content).active
         text = _all_text(ws)
@@ -230,8 +233,8 @@ class TestTheZipExport:
 
     def test_a_NON_demo_zip_still_names_its_files_after_the_document(
             self, client, auth, plain_job):
-        r = client.get(f"/api/jobs/{plain_job.id}/export/zip",
-                       headers=auth["acme"])
+        r = client.get(f"/api/jobs/{plain_job.id}/export/zip?include_audit=true",
+                       headers=auth["acme"])          # Run C, C2: Source is opt-in
         with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
             assert zf.namelist() == ["tmphjtbr12o_extracted.xlsx"]
             text = _all_text(_book(zf.read(zf.namelist()[0])).active)

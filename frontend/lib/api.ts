@@ -555,6 +555,9 @@ export interface PageMeta {
     kind: "field" | "cell"; ref: string | null; table: string | null;
     row: number | null; column: string | null;
     box_pt: number[] | null; match: "value" | "line" | null;
+    /** Run C, C6: the value is printed in several places; the box is the one
+     *  nearest its label, and `note` says so. */
+    ambiguous?: boolean; note?: string | null;
     no_box_reason: string | null;
   }[];
 }
@@ -620,12 +623,21 @@ export const exportApi = {
     const res = await api.post("/api/export/perfile", params, { responseType: "blob" });
     return res.data;
   },
-  templateExport: async (jobId: number): Promise<Blob> => {
-    const res = await api.get(`/api/jobs/${jobId}/export`, { responseType: "blob" });
+  /** The template-shaped workbook. `includeAudit` adds the Source and
+   *  Review status columns (off by default: the file holds only the
+   *  template's own fields; fills, comments and the Legend always travel). */
+  templateExport: async (jobId: number, includeAudit = false): Promise<Blob> => {
+    const res = await api.get(`/api/jobs/${jobId}/export`, {
+      responseType: "blob",
+      params: includeAudit ? { include_audit: true } : undefined,
+    });
     return res.data;
   },
-  zipExport: async (jobId: number): Promise<Blob> => {
-    const res = await api.get(`/api/jobs/${jobId}/export/zip`, { responseType: "blob" });
+  zipExport: async (jobId: number, includeAudit = false): Promise<Blob> => {
+    const res = await api.get(`/api/jobs/${jobId}/export/zip`, {
+      responseType: "blob",
+      params: includeAudit ? { include_audit: true } : undefined,
+    });
     return res.data;
   },
   downloadBlob: (blob: Blob, filename: string): void => {

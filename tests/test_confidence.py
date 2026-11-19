@@ -211,7 +211,10 @@ class TestExportMarksWhatNeedsReview:
         wb = openpyxl.Workbook()
         ws = wb.active
         with contextlib.redirect_stdout(_io.StringIO()):
-            n = _write_slot_excel(ws, [doc], GRID, GRID["cells"], openpyxl)
+            # Run C, C2: provenance and the Review status column are opt-in
+            # at the writer (the download route asks for them explicitly).
+            n = _write_slot_excel(ws, [doc], GRID, GRID["cells"], openpyxl,
+                                  provenance=True)
         return ws, n
 
     def test_a_low_value_is_marked_and_a_verified_one_is_not(self):
@@ -269,8 +272,13 @@ class TestExportMarksWhatNeedsReview:
         with contextlib.redirect_stdout(_io.StringIO()):
             _write_slot_excel(wb.active, [doc], GRID, GRID["cells"], openpyxl,
                               marks=False)
-        assert all(c.fill.fgColor.rgb in (None, "00000000")
+        # No REVIEW fill anywhere. Since Run C (C1.2) a block's first row
+        # carries the header-strip fill, which is layout, not a review mark.
+        from app.core import review as R
+        review_fills = set(R.EXPORT_FILLS.values())
+        assert all(c.fill.fgColor.rgb not in review_fills
                    for row in wb.active.iter_rows() for c in row)
+        assert not any(c.comment for row in wb.active.iter_rows() for c in row)
 
     def _mixed(self):
         line = "Ms. Linda Zhao | (310) 555-0233"

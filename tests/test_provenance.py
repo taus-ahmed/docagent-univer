@@ -217,7 +217,8 @@ class TestTheSheetShowsWhereEachValueCameFrom:
         _lab, grid, results = gold_runs["STMT-2024-01"]
         ed = results[0].extracted_data
         rows = next(v for k, v in ed.items() if k.endswith("_rows") and v)
-        ws = _export(results, grid)
+        # Run C, C2: the Source column is an opt-in audit column.
+        ws = _export(results, grid, audit=True)
         src = [c.value for row in ws.iter_rows() for c in row
                if isinstance(c.value, str) and c.value.startswith("STMT-2024-01.pdf · p.")]
         assert len(src) >= len(rows), (len(src), len(rows))
@@ -232,7 +233,8 @@ class TestTheSheetShowsWhereEachValueCameFrom:
             def __init__(self, ed, n):
                 self.extracted_data, self.filename = ed, f"merged.pdf [{n} of 3]"
         sc = S.load("multi_document")[0]
-        ws = _export([_R(ed, n) for n, ed in enumerate(merged, 1)], sc["grid"])
+        ws = _export([_R(ed, n) for n, ed in enumerate(merged, 1)], sc["grid"],
+                     audit=True)          # Run C, C2: Source is opt-in
         labels = {c.value for row in ws.iter_rows() for c in row
                   if isinstance(c.value, str) and c.value.startswith("merged.pdf [")}
         assert labels >= {"merged.pdf [1 of 3] · p.1", "merged.pdf [2 of 3] · p.2",
@@ -271,7 +273,9 @@ class TestNothingElseOnTheSheetChanges:
         _lab, grid, results = gold_runs["STMT-2024-01"]
 
         class _Old:
-            filename = "old.pdf"
+            # the same file as `off`: since Run C (C1.2) each block's header
+            # strip names its file, so a different name would differ there.
+            filename = results[0].filename
             def __init__(self, ed):
                 self.extracted_data = {k: (v if not (k.endswith("_rows") and isinstance(v, list))
                                            else [{c: x for c, x in r.items()

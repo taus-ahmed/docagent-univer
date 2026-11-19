@@ -24,8 +24,39 @@ import re
 # --imports-end--
 
 
+#: Blank rows between two documents' blocks on one sheet (Run C, C1.3). The
+#: same for every template and every row count, so a reader — or a formula —
+#: can find the next block without guessing.
+GAP_BETWEEN_DOCS = 3
+
+#: The header strip opening each document's block (Run C, C1.2): its fill,
+#: used only on a strip cell the template gave no fill of its own.
+STRIP_FILL = "FFE7E9EE"
+
+#: Labels that name a document's own number, for the header strip. Matched
+#: against the slot's row label; the first one holding a value wins.
+_DOC_NUMBER_LABEL = re.compile(
+    r"\b(invoice|statement|cheque|check|receipt|order|po|document|doc|bill|"
+    r"payslip|pay\s*slip|voucher|reference|ref)\b.*\b(no|number|num|#|id)\b"
+    r"|\b(invoice|po|cheque|check|statement)\s*#", re.I)
+
+
+def document_number_of(ed) -> tuple[str, str]:
+    """(label, value) of the document's own number when a slot holds one."""
+    if not isinstance(ed, dict):
+        return "", ""
+    fields = ed.get("extracted_fields") or {}
+    for f in (ed.get("slot_map") or {}).get("fields") or []:
+        label = str(f.get("row_label") or "")
+        value = str(fields.get(f.get("ref"), "") or "").strip()
+        if value and _DOC_NUMBER_LABEL.search(label):
+            return label, value
+    return "", ""
+
+
 def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
-                 provenance=True, marks=True):
+                 provenance=True, marks=True, audit=False,
+                 show_filename=True):
     """Route to the correct writer based on template regions primary_mode.
     Always uses the template structure for routing — never relies on AI output
     flags which can be stale or wrong from a previous extraction run."""
@@ -61,13 +92,14 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
         print("[EXPORT] routing: template_type=slot -> slot writer "
               "(values written to the addresses they were requested for)", flush=True)
         _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
-                          provenance=provenance, marks=marks)
+                          provenance=provenance, marks=marks, audit=audit,
+                          show_filename=show_filename)
         _fit_columns(ws, col_widths)
         return
     # Every other writer marks through one SheetMarks (app/core/export_marks):
     # the same fills, comments and Review status column as the slot writer.
     from app.core.export_marks import SheetMarks
-    sm = SheetMarks(ws, enabled=marks)
+    sm = SheetMarks(ws, enabled=marks, status_column=audit)
     if template_type == "structural":
         print("[EXPORT] routing: template_type=structural -> layout-mode writer", flush=True)
         _write_layout_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
@@ -104,7 +136,8 @@ def _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl_mod,
     _fit_columns(ws, col_widths)
 
 
-def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod, provenance=True):
+def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod, provenance=True,
+                           marks=True, audit=False, show_filename=True):
     """Phase 3 — export a job that ran with no template, using the template the
     engine inferred for each document.
 
@@ -149,7 +182,8 @@ def _write_inferred_sheets(wb, ws, doc_results, openpyxl_mod, provenance=True):
         print(f"[EXPORT]   shape {sig}: {len(g['docs'])} document(s) "
               f"-> sheet {i + 1}", flush=True)
         _write_slot_excel(sheet, g["docs"], g["grid"], g["grid"].get("cells", {}),
-                          openpyxl_mod, provenance=provenance)
+                          openpyxl_mod, provenance=provenance, marks=marks,
+                          audit=audit, show_filename=show_filename)
     return True
 
 
@@ -159,15 +193,91 @@ def _document_hint_of(ed):
     return document_hint_of(ed)
 
 
+def _dress_block(ws, top, height, max_c, ed, filename, index, show_name,
+                 slot_map, thick, spare_col):
+    """The header strip on a block's first row and the closing border under
+    its last (C1.2). `top` is the 0-based output row of the block's first row.
+
+    The strip names the source file and, when a slot holds it, the document's
+    own number. It is written into the rightmost EMPTY cell of the first row
+    that is not a slot and lies right of everything the template typed there,
+    so it never covers a label or a value; with no such cell it goes one
+    column past everything the export writes. A demo export (`show_name`
+    false) names the block by its position instead of the stored temp name.
+    """
+    from copy import copy
+    from openpyxl.cell import MergedCell
+    from openpyxl.styles import PatternFill
+
+    def strip(cell):
+        font, border = copy(cell.font), copy(cell.border)
+        font.bold, border.top = True, thick
+        cell.font, cell.border = font, border
+        if cell.fill is None or cell.fill.fill_type is None:
+            cell.fill = PatternFill(fill_type="solid", fgColor=STRIP_FILL)
+
+    r0, r1 = top + 1, top + height                 # 1-based, inclusive
+    for c in range(1, max_c + 2):
+        cell = ws.cell(row=r0, column=c)
+        if not isinstance(cell, MergedCell):
+            strip(cell)
+    for c in range(1, max_c + 2):
+        cell = ws.cell(row=r1, column=c)
+        if not isinstance(cell, MergedCell):
+            border = copy(cell.border)
+            border.bottom = thick
+            cell.border = border
+
+    label, number = document_number_of(ed)
+    name = filename if (show_name and filename) else f"Document {index}"
+    text = f"{name} · {label} {number}" if number else name
+    slot_cols = set()
+    for f in slot_map.get("fields") or []:
+        rc = _ref_to_rowcol(f.get("ref", ""))
+        if rc and rc[0] == 0:
+            slot_cols.add(rc[1] + 1)
+    typed = [c for c in range(1, max_c + 2)
+             if ws.cell(row=r0, column=c).value not in (None, "")]
+    for c in range(max_c + 1, 0, -1):
+        cell = ws.cell(row=r0, column=c)
+        if typed and c <= max(typed):
+            break
+        if isinstance(cell, MergedCell) or c in slot_cols or cell.value not in (None, ""):
+            continue
+        cell.value = text
+        return
+    cell = ws.cell(row=r0, column=spare_col + 1)
+    if not isinstance(cell, MergedCell) and cell.value in (None, ""):
+        cell.value = text
+        strip(cell)
+
+
 def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
-                      provenance=True, marks=True):
+                      provenance=False, marks=True, audit=None,
+                      show_filename=True):
     """
     Writer for slot-directed extraction.
 
     There is no placement logic here, and that is the point: every value was
     requested for a specific address and is written to that address. The only
-    computed thing is the row shift when a document has more table rows than
-    the template reserved blank rows for.
+    computed thing is the row shift: a band is written with the document's
+    ACTUAL row count (Run C, C1), so rows below it move down when there are
+    more rows than the template reserved and UP when there are fewer — unused
+    reserved rows are not written and the totals block sits directly under the
+    last real row. Blank rows the template draws OUTSIDE a band are kept.
+
+    BLOCKS (C1). Each document is one block: its first row is the header
+    strip (bold, a fill where the template gave none, a thick top border)
+    carrying the source file name and the document's own number when a slot
+    holds one; a thick bottom border closes it; GAP_BETWEEN_DOCS blank rows
+    separate blocks. The strip is the template's own first row rather than a
+    row inserted above it, so a value is at the same address in a one-document
+    export as in the template.
+
+    AUDIT COLUMNS (C2). The Source and Review status columns are written only
+    when `audit` is true. `audit=None` follows `provenance`, so a caller that
+    asks for provenance explicitly gets today's export unchanged; the download
+    route passes `audit` explicitly (its `include_audit` parameter).
 
     REVIEW MARKS (`marks`, on by default). An export must never present a
     value a person still owes a look — unverified, low, empty and flagged, or
@@ -230,14 +340,20 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             for col in t.get("columns") or []:
                 max_c = max(max_c, int(col.get("col", 0)))
 
-    GAP_BETWEEN_DOCS = 2
+    if audit is None:
+        audit = bool(provenance)
+    show_source = bool(provenance and audit)
+    show_status = bool(marks and audit)
     doc_offset = 0
     # I2 — the Source column sits one past the template's full extent, so it
     # can never land on a cell the template or a band owns.
     source_col = max_c + 1
     # The Review status column comes after it (or takes its place when the
-    # export carries no provenance).
-    status_col = source_col + 1 if provenance else source_col
+    # export carries no Source column).
+    status_col = source_col + 1 if show_source else source_col
+    from openpyxl.styles import Side
+    _thick = Side(style="thick", color="FF1E2130")
+    doc_index = 0
     from app.core import review as _review
     row_status = {}           # output row -> [status word, ...]
     unresolved_total = 0
@@ -331,16 +447,19 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 source_rows.setdefault(out_r, set()).update(
                     {page} if page and not edited else set())
 
-        # how far each template row moves down, given table overflow. A
-        # transposed table never pushes rows down — it grows to the right — so
-        # it contributes no shift.
+        # how far each template row moves, given the band's ACTUAL row count
+        # (C1): down when the document has more rows than were reserved, UP
+        # when it has fewer — the unused reserved rows are not written. A
+        # document with two lines has two; nothing is invented to fill the
+        # space. A transposed table never moves rows — it grows to the right —
+        # so it contributes no shift.
         shifts = []
         for t in tables:
             if t.get("orientation") == "columns":
                 continue
             rows = ed.get(f"{t['name']}_rows") or []
             band = t["end_row"] - t["start_row"] + 1
-            shifts.append((t["end_row"], max(0, len(rows) - band)))
+            shifts.append((t["end_row"], len(rows) - band))
 
         def out_row(tr):
             return tr + sum(ov for end, ov in shifts if tr > end)
@@ -411,13 +530,14 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 continue
             dress(out_row(tr), tc, (tr, tc))
 
-        # A band grows to the document's row count, so the rows the user drew
+        # A band takes the document's row count, so the rows the user drew
         # are not the rows that get written. Each drawn row keeps its own look;
         # rows BEYOND what was drawn take the look of the band's FIRST body
         # row, because that is the row the user drew as "a row of this table".
         # Repeating the LAST one instead would stamp a closing bottom border
         # onto every overflow row and draw the table as a stack of one-row
-        # boxes.
+        # boxes. Reserved rows the document does not fill are not written, so
+        # they are not dressed either (C1).
         for t in tables:
             rows_n = len(ed.get(f"{t['name']}_rows") or [])
             if t.get("orientation") == "columns":
@@ -428,8 +548,10 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                         dress(out_row(r), first + i, (r, src_c))
                 continue
             height = t["end_row"] - t["start_row"] + 1
-            for i in range(max(height, rows_n)):
+            for i in range(rows_n):
                 src_r = t["start_row"] + (i if i < height else 0)
+                if i == rows_n - 1 and rows_n < height:
+                    src_r = t["end_row"]      # the drawn closing row, border and all
                 for c in range(0, max_c + 1):
                     dress(out_row(t["start_row"]) + i, c, (src_r, c))
 
@@ -487,7 +609,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                             reviewed=doc_reviewed or bool(rec.get("_reviewed"))))
                 continue
             header_row = t.get("header_row", t["start_row"])
-            if provenance and rows and header_row < t["start_row"] and any(
+            if show_source and rows and header_row < t["start_row"] and any(
                     "_source" in r for r in rows):
                 hc = ws.cell(row=doc_offset + out_row(header_row) + 1,
                              column=source_col + 1)
@@ -516,7 +638,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                         mark(cell, r, col["col"], st)
 
         # 3b. one Source cell per row that received a value with provenance
-        for out_r, pages in source_rows.items():
+        for out_r, pages in (source_rows.items() if show_source else ()):
             sc = ws.cell(row=out_r + 1, column=source_col + 1)
             if isinstance(sc, MergedCell) or sc.value is not None:
                 continue
@@ -534,12 +656,16 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         _apply_template_merges(ws, sheet_data.get("merges"), _addr, band_rows,
                                openpyxl_mod)
 
-        block_height = max_r + 1 + sum(ov for _, ov in shifts)
+        block_height = max(1, max_r + 1 + sum(ov for _, ov in shifts))
+        doc_index += 1
+        _dress_block(ws, doc_offset, block_height, max_c, ed, filename,
+                     doc_index, show_filename, slot_map, _thick,
+                     spare_col=max_c + 1 + int(show_source) + int(show_status))
         doc_offset += block_height + GAP_BETWEEN_DOCS
 
     # 5. the Review status column: a header counting what needs review, and
     #    one word per row that received a value
-    if marks:
+    if show_status:
         head = (f"Review status — {unresolved_total} value"
                 f"{'' if unresolved_total == 1 else 's'} need"
                 f"{'s' if unresolved_total == 1 else ''} review"

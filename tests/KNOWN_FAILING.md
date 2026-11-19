@@ -6,9 +6,13 @@ as XPASS until its marker and this row are removed.
 
 | Gap | Strict test | Implementation evidence | Observed failure |
 | --- | --- | --- | --- |
-| A6 compact reserved table bands | `test_unused_reserved_rows_are_removed_and_totals_touch_the_band` | `backend/app/services/excel_slot.py:167-170` shifts only when rows overflow the reserved band; it has no contraction path. | Subtotal stays on row 11 after two extracted rows; it should touch the band on row 9. |
-| A6 exactly three blank rows between documents | `test_multiple_documents_have_header_strip_and_exactly_three_blank_rows` | `backend/app/services/excel_slot.py:233,537-538` hard-codes `GAP_BETWEEN_DOCS = 2`. | The export has two blank rows, not three. |
-| A6 clean default export columns | `test_default_download_hides_source_and_review_columns_but_opt_in_restores_them` | `backend/app/api/routes/extract.py:626-647` defaults `provenance=True`; `backend/app/services/excel_slot.py:162-179` defaults review marks/status on. | Default output exposes `Source` and `Review status` columns. |
+| (none open in this file) | | | |
+
+Run C removed the three A6 rows (compact reserved bands, exactly three blank
+rows between documents, clean default columns): `excel_slot._write_slot_excel`
+writes each band with its actual row count, `GAP_BETWEEN_DOCS = 3`, and the
+Source / Review status columns are opt-in (`include_audit`). The markers came
+off in the same commit as the fix.
 
 Run B removed the A8.3 row (row sum versus printed total): `source_inventory.row_sum_checks`
 now produces a `row_sum_mismatch` reason and the strict marker came off in the same commit.

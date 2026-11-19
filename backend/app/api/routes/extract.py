@@ -628,9 +628,17 @@ def export_job_excel(
 
     job_id: int,
     provenance: bool = True,
+    include_audit: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """The template-shaped workbook.
+
+    Run C, C2: the default download holds only the template's own fields —
+    no Source column and no Review status column. The review fills, the cell
+    comments and the Legend sheet still travel. `include_audit=true` brings
+    both columns back exactly as before.
+    """
     try:
         import openpyxl
     except ImportError:
@@ -687,14 +695,17 @@ def export_job_excel(
 
     if sheet_data:
         _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl,
-                     provenance=provenance)
+                     provenance=provenance, audit=include_audit,
+                     show_filename=not is_demo_user(current_user))
     elif _write_inferred_sheets(wb, ws, doc_results, openpyxl,
-                                provenance=provenance):
+                                provenance=provenance, audit=include_audit,
+                                show_filename=not is_demo_user(current_user)):
         pass          # Phase 3 — written from the template the engine inferred
     else:
         # Nothing to build a sheet from (e.g. an image with no text layer).
         _write_flat_table(ws, doc_results, openpyxl,
-                          show_filename=not is_demo_user(current_user))
+                          show_filename=not is_demo_user(current_user),
+                          audit=include_audit)
     _add_review_legend(wb, doc_results, demo=is_demo_user(current_user))
 
     buf = io.BytesIO()
@@ -713,10 +724,12 @@ def export_job_excel(
 def export_job_zip(
     job_id: int,
     provenance: bool = True,
+    include_audit: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Export each document as a separate Excel file, bundled into a ZIP."""
+    """Export each document as a separate Excel file, bundled into a ZIP.
+    `include_audit` as for the single workbook (Run C, C2)."""
     try:
         import openpyxl
     except ImportError:
@@ -775,10 +788,11 @@ def export_job_zip(
 
             if sheet_data:
                 _write_excel(ws, [doc], sheet_data, template_regions, openpyxl,
-                             provenance=provenance)
+                             provenance=provenance, audit=include_audit,
+                             show_filename=not demo)
             else:
                 _write_flat_table(ws, [doc], openpyxl,
-                                  show_filename=not demo)
+                                  show_filename=not demo, audit=include_audit)
             _add_review_legend(wb, [doc], demo=demo)
 
             # Use the original filename without extension as the Excel filename

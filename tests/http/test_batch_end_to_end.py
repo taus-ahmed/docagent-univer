@@ -187,11 +187,11 @@ def _results_for(client, auth, job_id, stems):
     return docs
 
 
-def _download(client, auth, job_id):
+def _download(client, auth, job_id, query=""):
     """The exported workbook, fetched through the download route and read back
     from the bytes the browser would receive — not from an in-memory result."""
     import openpyxl
-    r = client.get(f"/api/jobs/{job_id}/export", headers=auth["acme"])
+    r = client.get(f"/api/jobs/{job_id}/export{query}", headers=auth["acme"])
     assert r.status_code == 200, r.text[:400]
     assert "spreadsheetml" in r.headers.get("content-type", "")
     return openpyxl.load_workbook(io.BytesIO(r.content))
@@ -700,7 +700,9 @@ class TestTheDownloadSaysWhereEachValueCameFrom:
     """I2 through the real route: the stored job, rebuilt on download."""
 
     def test_each_documents_rows_name_their_own_file(self, templated_job, client, auth):
-        ws = _download(client, auth, templated_job["id"]).worksheets[0]
+        # Run C, C2: the Source column is opt-in (include_audit).
+        ws = _download(client, auth, templated_job["id"],
+                       "?include_audit=true").worksheets[0]
         named = {str(c.value).split(" · ")[0] for row in ws.iter_rows() for c in row
                  if isinstance(c.value, str) and " · p." in c.value}
         assert named == {f"{s}.pdf" for s in STATEMENTS}, named

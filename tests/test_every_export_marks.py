@@ -134,7 +134,9 @@ def _excel(ed, grid, regions=None):
     wb = openpyxl.Workbook()
     docs = [_doc(ed)]
     with contextlib.redirect_stdout(io.StringIO()):
-        X._write_excel(wb.active, docs, grid, regions, openpyxl)
+        # Run C, C2: the Review status column is an opt-in audit column;
+        # this file checks it, so it asks for it.
+        X._write_excel(wb.active, docs, grid, regions, openpyxl, audit=True)
         X._add_review_legend(wb, docs)
     return wb
 
@@ -333,9 +335,11 @@ WRITERS = {
     # layout writer wrote this fixture's section twice (Part 3.2,
     # tests/test_layout_writer_once.py).
     "layout": ({"lay-low", "lay-none"}, {"lay-high"}, 2),
-    "flat": (MARKED, CLEAN, 5),
-    "combined": (MARKED, CLEAN, 5),
-    "per_file": (MARKED, CLEAN, 5),
+    # 9 = the 5 field values + the 4 unresolved table cells: since Run C (C5)
+    # these three exports write the table rows too, marked and counted.
+    "flat": (MARKED | ROW_MARKED, CLEAN | ROW_CLEAN, 9),
+    "combined": (MARKED | ROW_MARKED, CLEAN | ROW_CLEAN, 9),
+    "per_file": (MARKED | ROW_MARKED, CLEAN | ROW_CLEAN, 9),
 }
 
 

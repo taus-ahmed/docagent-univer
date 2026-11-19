@@ -1,3 +1,6 @@
 reports/history/
 reports/*.log
 __pycache__/
+
+# Run C sample workbooks (tests/test_run_c_export.py)
+out/

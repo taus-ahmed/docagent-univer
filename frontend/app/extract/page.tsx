@@ -600,6 +600,8 @@ export default function ExtractPage() {
   const isFailed = jobStatus?.status === "failed";
   const isCancelled = jobStatus?.status === "cancelled";
   const [cancelling, setCancelling] = useState(false);
+  // Run C, C2: the download holds only the template's fields unless asked.
+  const [includeAudit, setIncludeAudit] = useState(false);
   const handleCancel = async () => {
     if (!activeJobId || !confirm("Cancel this extraction? Files that already finished keep their results; the rest are listed as cancelled.")) return;
     setCancelling(true);
@@ -986,7 +988,7 @@ export default function ExtractPage() {
                   <button className="btn btn-primary btn-sm" onClick={async () => {
                     if (!(await confirmExport(activeJobId))) return;
                     try {
-                      const blob = await exportApi.templateExport(activeJobId);
+                      const blob = await exportApi.templateExport(activeJobId, includeAudit);
                       exportApi.downloadBlob(blob, `job_${activeJobId}_results.xlsx`);
                       toast.success("Downloaded");
                     } catch { toast.error("Export failed"); }
@@ -1002,7 +1004,7 @@ export default function ExtractPage() {
                     <button className="btn btn-secondary btn-sm" onClick={async () => {
                       if (!(await confirmExport(activeJobId))) return;
                       try {
-                        const blob = await exportApi.zipExport(activeJobId);
+                        const blob = await exportApi.zipExport(activeJobId, includeAudit);
                         exportApi.downloadBlob(blob, `job_${activeJobId}_documents.zip`);
                         toast.success("Downloaded");
                       } catch { toast.error("Export failed"); }
@@ -1016,6 +1018,12 @@ export default function ExtractPage() {
                       Download ZIP
                     </button>
                   )}
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 4,
+                                  fontSize: 11, color: "var(--text-muted, #6b7280)" }}>
+                    <input type="checkbox" checked={includeAudit}
+                           onChange={e => setIncludeAudit(e.target.checked)} />
+                    Include source and review columns
+                  </label>
                 </div>
               )}
             </div>

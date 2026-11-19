@@ -261,17 +261,12 @@ class TestTheFlatExportsCarryTheScalarFields:
                                            job_id=job_with_rows.id))
 
 
-@pytest.mark.known_bug
-@pytest.mark.xfail(strict=True,
-                   reason="DECISION-LOG 17b: _build_excel reads only "
-                          "extracted_data['extracted_data'], which holds "
-                          "scalar fields, so neither export writes a single "
-                          "table row. Unfixed — the shape of a combined sheet "
-                          "is one row per document and line items are many.")
 class TestTheFlatExportsDropEveryTableRow:
-    """EXPECTED TO FAIL — an open defect, pinned so it cannot go quiet.
+    """FIXED in Run C (C5): the combined export puts every document's table
+    rows on a "Line items" sheet, the per-file export writes them under each
+    document's fields. The strict-xfail marker came off in the same commit.
 
-    `POST /api/export/combined` and `/api/export/perfile` have never written a
+    History: `POST /api/export/combined` and `/api/export/perfile` had never written a
     line item. It is ABSENT rather than WRONG: the values on the sheet are
     right, the rows are simply not on it, and nothing says so. The
     template-shaped export (`GET /api/jobs/{id}/export`) writes them correctly

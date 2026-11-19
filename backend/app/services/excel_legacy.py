@@ -1119,7 +1119,7 @@ def _write_mixed_excel(ws, doc_results, sheet_data, cells_tpl, max_r, max_c,
 
 
 def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True,
-                      marks=True):
+                      marks=True, audit=True):
     """Fallback flat table when no template.
 
     `show_filename=False` drops the Filename column. It is what a demo export
@@ -1137,7 +1137,7 @@ def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True,
     hf = PatternFill(fill_type="solid", fgColor="FF4F46E5")
     hfont = Font(bold=True, color="FFFFFFFF", size=11)
     from app.core.export_marks import SheetMarks
-    sm = SheetMarks(ws, enabled=marks)
+    sm = SheetMarks(ws, enabled=marks, status_column=audit)
     first = 1
     if show_filename:
         c = ws.cell(row=1, column=1, value="Filename"); c.font=hfont; c.fill=hf
@@ -1171,4 +1171,9 @@ def _write_flat_table(ws, doc_results, openpyxl_mod, show_filename=True,
         ws.column_dimensions["B"].width = 12
     for ci in range(first, len(all_keys)+first):
         ws.column_dimensions[get_column_letter(ci)].width = 20
+    # Run C, C5: the table rows, which one row per document has no room for,
+    # follow the document rows under a heading of their own rather than
+    # being nowhere — the same layout as the combined export.
+    from app.services.excel_cells import write_line_items_below
+    write_line_items_below(ws, doc_results, show_filename=show_filename, sm=sm)
     sm.finish()

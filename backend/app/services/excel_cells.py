@@ -150,10 +150,17 @@ def _calculate_layout(sections):
 #: Words that make a cell an IDENTIFIER — something you quote, not something
 #: you add up. Matched as whole words so "Paid" does not contain "id".
 _ID_LABEL = re.compile(
-    r"\b(id|ids|no|nos|num|number|#|code|ref|reference|nmls|ein|ssn|tin|itin"
+    r"\b(id|ids|no|nos|num|number|code|ref|reference|nmls|ein|ssn|tin|itin"
     r"|routing|aba|account|acct|licen[cs]e|policy|serial|iban|swift|sort"
-    r"|zip|postcode|postal|phone|tel|fax|mobile|mic|file|folio|batch)\b",
-    re.I)
+    r"|zip|postcode|postal|phone|tel|fax|mobile|mic|file|folio|batch"
+    # Run C, C3: a cheque / check / PO / invoice slot named by that word alone
+    r"|cheque|check|chq|po|invoice)\b"
+    # `#` is not a word character, so `\b#\b` never matched "Check #"
+    r"|#", re.I)
+
+#: "Last 4", "Last four", "Account Last 4 Digits": exactly four digits, held
+#: as text — 0042 must not become 42, and 1234 is a suffix, not a quantity.
+_LAST4_LABEL = re.compile(r"\blast\s*(4|four)\b", re.I)
 
 
 #: Words that make it a QUANTITY, and which WIN. "Account Balance" and
@@ -217,12 +224,15 @@ def coerce_cell_value(value, label="", decimal_hint=None):
     # THE CELL'S OWN LABEL FIRST. A digit run in a cell headed "NMLS ID",
     # "Account No" or "Routing" is an identifier however short it is, and no
     # rule about digit shape can know that.
-    if re.fullmatch(r"\d+", txt) and labels_an_identifier(label):
+    if re.fullmatch(r"\d+", txt) and (labels_an_identifier(label)
+                                      or _LAST4_LABEL.search(str(label or ""))):
         return txt
     # Then the shape of the digits themselves, for a cell whose label says
     # nothing: a leading zero, or longer than any amount written without
-    # separators.
-    if re.fullmatch(r"\d+", txt) and (txt[0] == "0" or len(txt) >= 9):
+    # separators. A lone "0" is the number zero, not a leading zero (C3:
+    # zero is a value).
+    if re.fullmatch(r"\d+", txt) and ((txt[0] == "0" and len(txt) > 1)
+                                      or len(txt) >= 9):
         return txt
 
     # ONE PARSER (engine/amounts.py), in any locale. It used to strip every
@@ -752,3 +762,92 @@ def _find_template_dimensions(cells):
             continue
         max_r = max(max_r, r); max_c = max(max_c, c)
     return max_r, max_c
+
+
+# ── Run C, C5: table rows in the flat exports ────────────────────────────────
+
+def table_rows_of(ed):
+    """[(table name, [column keys], [row dicts])] for every band a stored
+    result carries, in the template's column order where the slot map has it.
+
+    A band named `table` writes its rows to `table_rows` (CLAUDE.md, result
+    contract), so that key is read like every other `<name>_rows`.
+    """
+    if not isinstance(ed, dict):
+        return []
+    order = {}
+    for t in (ed.get("slot_map") or {}).get("tables") or []:
+        cols = t.get("columns") or t.get("fields") or []
+        order[f"{t.get('name')}_rows"] = [c.get("key") or c.get("header")
+                                          for c in cols if isinstance(c, dict)]
+    out = []
+    for key, rows in ed.items():
+        if not (isinstance(key, str) and key.endswith("_rows")
+                and isinstance(rows, list)):
+            continue
+        rows = [r for r in rows if isinstance(r, dict)]
+        if not rows:
+            continue
+        cols = [c for c in order.get(key, []) if c]
+        for r in rows:
+            for c in r:
+                if not str(c).startswith("_") and c not in cols:
+                    cols.append(c)
+        name = "table" if key == "table_rows" else key[:-len("_rows")]
+        out.append((name, cols, rows))
+    return out
+
+
+def write_line_items(ws, start_row, ed, *, filename=None, marks=None,
+                     with_header=True):
+    """Write one document's table rows from `start_row` (1-based): a heading
+    row per table, then one row per document row. Returns the next free row.
+    Numbers go through `put_extracted`, so a money cell is a number with its
+    printed notation, exactly as in the template export."""
+    from openpyxl.styles import Font
+    r = start_row
+    lead = [filename] if filename is not None else []
+    for name, cols, rows in table_rows_of(ed):
+        if with_header:
+            head = (["File"] if filename is not None else []) + ["Table"] + cols
+            for i, h in enumerate(head, 1):
+                ws.cell(row=r, column=i, value=h).font = Font(bold=True)
+            r += 1
+        for row in rows:
+            for i, v in enumerate(lead + [name], 1):
+                ws.cell(row=r, column=i, value=v)
+            base = len(lead) + 2
+            for k, col in enumerate(cols):
+                cell = ws.cell(row=r, column=base + k)
+                put_extracted(cell, row.get(col, ""), col, ed)
+                if marks is not None and col in row:
+                    marks.row_cell(cell, ed, row, col)
+            r += 1
+    return r
+
+
+def write_line_items_below(ws, doc_results, show_filename=True, sm=None):
+    """Every document's table rows, under a "Line items" heading two rows
+    below what the sheet already holds; nothing when no document has any.
+    One heading row per (document, table). Returns the number of rows written.
+
+    `sm` is the sheet's own SheetMarks: the line items carry the same fills
+    and comments as every other exported value, and — written before its
+    `finish` — are counted in the sheet's Review status header.
+    """
+    from openpyxl.styles import Font
+    docs = [(d, d.get_extracted_data()) for d in doc_results]
+    docs = [(d, ed) for d, ed in docs if table_rows_of(ed)]
+    if not docs:
+        return 0
+    r = ws.max_row + 3
+    ws.cell(row=r, column=1, value="Line items").font = Font(bold=True, size=12)
+    r += 1
+    n = 0
+    for i, (d, ed) in enumerate(docs, 1):
+        name = (str(getattr(d, "filename", "") or "") if show_filename
+                else f"Document {i}")
+        nxt = write_line_items(ws, r, ed, filename=name, marks=sm)
+        n += nxt - r
+        r = nxt + 1
+    return n

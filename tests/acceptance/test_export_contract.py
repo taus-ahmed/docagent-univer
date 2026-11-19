@@ -7,13 +7,6 @@ import pytest
 from tests.acceptance.export_fixture import document, extracted, workbook
 
 
-RUN_A6 = pytest.mark.xfail(
-    strict=True,
-    reason=("Real app gap (A6): compact reserved bands, exactly three inter-document "
-            "blank rows, and clean default columns were not implemented"),
-)
-
-
 def _find(ws, value):
     return [cell for row in ws.iter_rows() for cell in row if cell.value == value]
 
@@ -35,7 +28,6 @@ def test_identifiers_zips_and_last_four_remain_exact_text():
     assert len(ws["B4"].value) == 4 and ws["B4"].value.isdigit()
 
 
-@RUN_A6
 def test_unused_reserved_rows_are_removed_and_totals_touch_the_band():
     wb = workbook()
     ws = wb["Results"]
@@ -52,7 +44,6 @@ def test_template_authored_blank_row_between_sections_is_kept():
     assert all(ws.cell(marker.row - 1, col).value is None for col in range(1, 3))
 
 
-@RUN_A6
 def test_multiple_documents_have_header_strip_and_exactly_three_blank_rows():
     docs = [document(filename="a.pdf"), document(filename="b.pdf")]
     wb = workbook(docs=docs)
@@ -67,7 +58,6 @@ def test_multiple_documents_have_header_strip_and_exactly_three_blank_rows():
     assert ws.cell(titles[1], 1).value == "ACCEPTANCE EXPORT"
 
 
-@RUN_A6
 def test_default_download_hides_source_and_review_columns_but_opt_in_restores_them():
     default = workbook(use_defaults=True)["Results"]
     default_headers = [str(cell.value or "") for cell in default[1]]

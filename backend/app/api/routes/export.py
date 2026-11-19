@@ -270,6 +270,11 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                     sm.field(vcell, ext, ref=(fd.get("ref") if isinstance(fd, dict) else None),
                              label=col_name)
 
+            # Run C, C5 (DECISION-LOG 17b): the document's table rows, under
+            # its fields. They used to be absent — the sheet looked finished.
+            from app.services.excel_cells import table_rows_of, write_line_items
+            if table_rows_of(ext):
+                write_line_items(ws, ws.max_row + 2, ext, marks=sm)
             sm.finish()
             ws.column_dimensions["A"].width = 25
             ws.column_dimensions["B"].width = 40
@@ -343,6 +348,13 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                     sm.field(ws.cell(row=row_idx, column=first_value_col + k), full,
                              ref=(fd.get("ref") if isinstance(fd, dict) else None),
                              label=col_name)
+
+        # Run C, C5 (DECISION-LOG 17b): one row per document has no room for
+        # line items, so they follow the document rows, under a heading of
+        # their own, instead of being nowhere. Before `finish`, so the Review
+        # status header counts them too.
+        from app.services.excel_cells import write_line_items_below
+        write_line_items_below(ws, docs, show_filename=show_filename, sm=sm)
         sm.finish()
 
         # Auto-width

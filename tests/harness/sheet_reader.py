@@ -32,6 +32,20 @@ def _label_column(shape):
     return min(cols) if cols else 0
 
 
+def _rows_after_band(shape, band, depth=3):
+    """What the template prints on the `depth` rows directly below a band: a
+    field's normalised label, a band's first heading, or None for a row the
+    shape cannot name (blank, or static text it does not carry)."""
+    named = {}
+    for f in shape.get("field_slots") or []:
+        named.setdefault(f["row"], _norm(f.get("row_label")))
+    for b in shape.get("repeat_bands") or []:
+        cols = b.get("columns") or []
+        if cols and b.get("header_row") is not None:
+            named.setdefault(b["header_row"], _norm(cols[0].get("header")))
+    return [named.get(band.get("end_row", 0) + k) for k in range(1, depth + 1)]
+
+
 def read_sheet(ws, shape):
     """Worksheet + template shape -> {"fields": {...}, "tables": {...}}.
 
@@ -128,12 +142,35 @@ def read_sheet(ws, shape):
         # not, and it reported the writer as broken.
         shift = hdr_row - band.get("header_row", hdr_row)
         reserved_end = band.get("end_row", hdr_row) + shift
+        # Run C (C1): the writer now writes a band with its ACTUAL row count,
+        # so with fewer rows than reserved the template's rows below the band
+        # move UP into the reserved area. Inside it, a row therefore ends the
+        # band when the sheet from there on reads like the template's own rows
+        # below the band — the same labels in the same order — rather than
+        # when one label merely matches (which is the inference case above).
+        after = _rows_after_band(shape, band)
+
+        def _tail_matches(at):
+            # at least one row below the band must be nameable; unnamed ones
+            # (a section title the shape does not carry) match anything
+            if not any(after):
+                return False
+            for k, want in enumerate(after):
+                got = rows.get(at + k) or {}
+                if want is None:
+                    continue                            # a row the shape cannot name
+                lab = _norm(got.get(lcol0, got.get(headers[0][0])))
+                if lab != want:
+                    return False
+            return True
+
         while r <= max(rows):
             cells = rows.get(r)
             if not cells:
                 break                                   # blank line ends the band
             first = _norm(cells.get(headers[0][0], cells.get(lcol0)))
-            if first in stops and r > reserved_end:
+            if (first in stops and r > reserved_end) or (r > hdr_row + 1
+                                                          and _tail_matches(r)):
                 break                                   # a total, or the next band
             vals = {}
             for col, h in headers:
