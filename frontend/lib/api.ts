@@ -320,6 +320,10 @@ export interface ShapePreview {
                  declared?: boolean }>;
   required_columns: number;
   summary: string;
+  /** Run D, D13 — plain-language warnings about regions the engine may
+   *  misread (a formula read as a label, two tables sharing rows, …).
+   *  Information only: a save is never blocked by them. */
+  template_warnings?: string[];
   /** R6 — what the engine understood, and what it had to leave behind.
    *  Computed on the SERVER; the editor displays it rather than re-deriving
    *  the rule in TypeScript, which is what retiring `extractTarget` was

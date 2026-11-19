@@ -151,7 +151,20 @@ def preview_shape(payload: dict, current_user: User = Depends(get_current_user))
         "coverage": shape.get("coverage") or {},
         "usable": is_usable(shape),
         "error": None if is_usable(shape) else choose_path(shape).get("error"),
+        # Run D, D13: regions the engine may misread, in plain words. Shown in
+        # the editor when saving; a save is never blocked by them.
+        "template_warnings": _warnings_for(grid, shape),
     }
+
+
+def _warnings_for(grid, shape) -> list:
+    """`template_shape.template_warnings`, never raising."""
+    try:
+        from template_shape import template_warnings
+        return template_warnings(grid, shape)
+    except Exception as e:
+        print(f"[TEMPLATE] warnings unavailable ({type(e).__name__})", flush=True)
+        return []
 
 
 @router.post("", response_model=TemplateResponse, status_code=201)
@@ -249,7 +262,10 @@ def template_shape_of(tpl: ColumnTemplate):
         if not (isinstance(raw, dict) and "cells" in raw):
             return None
         from app.api.routes.extract import _compute_shape_for_grid
-        return _compute_shape_for_grid(raw)
+        shape = _compute_shape_for_grid(raw)
+        if isinstance(shape, dict):
+            shape = {**shape, "template_warnings": _warnings_for(raw, shape)}
+        return shape
     except Exception as e:
         print(f"[TEMPLATE] shape unavailable ({type(e).__name__})", flush=True)
         return None

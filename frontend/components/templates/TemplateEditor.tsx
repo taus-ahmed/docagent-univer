@@ -331,6 +331,13 @@ export default function TemplateEditor({ templateId }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["templates"] });
       toast.success("Template saved successfully");
+      // Run D, D13: the template check travels with the save, as a list.
+      const tw = shape?.template_warnings ?? [];
+      if (tw.length) {
+        toast(`Template check:\n• ${tw.slice(0, 5).join("\n• ")}`
+              + (tw.length > 5 ? `\n… and ${tw.length - 5} more` : ""),
+              { icon: "ℹ️", duration: 10000 });
+      }
       // WARN, do not block, on a partial read. A notes column the engine will
       // never fill is a legitimate thing to draw, and blocking it would be a
       // new version of the bug this gate exists to fix — the save path
@@ -531,6 +538,20 @@ export default function TemplateEditor({ templateId }: Props) {
             <span style={{ fontWeight:600, color:"#374151" }}>Structure:</span>
             <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11 }}>{existing.shape.summary}</span>
             <span style={{ color:"#9ca3af" }}>— edit cells to change this</span>
+          </div>
+        )}
+
+        {/* TEMPLATE CHECK (Run D, D13) — regions the engine may misread, in
+            the engine's own words. Information only: saving is never blocked. */}
+        {!!shape?.template_warnings?.length && (
+          <div role="status" aria-label="Template check"
+               style={{ flexShrink:0, background:"#fffbeb", borderBottom:"1px solid #fde68a", padding:"6px 20px", fontSize:11.5, color:"#92400e" }}>
+            <div style={{ fontWeight:600, marginBottom:2 }}>
+              Template check — {shape.template_warnings.length} thing{shape.template_warnings.length === 1 ? "" : "s"} the engine may read differently than you intend:
+            </div>
+            <ul style={{ margin:0, paddingLeft:18 }}>
+              {shape.template_warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
           </div>
         )}
 

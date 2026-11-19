@@ -1165,6 +1165,87 @@ def _empty_shape(migration=None):
             "required_columns": 0, "inferred": True, "migration": migration or {}}
 
 
+def template_warnings(grid, shape=None) -> list[str]:
+    """Run D, D13 — plain-language warnings about regions the engine may
+    MISREAD. Information for the person drawing the template; a save is never
+    blocked by them. Each names the cell or table it is about.
+
+      formula      a cell starting with `=` is read as a label, not calculated
+      shared rows  two tables on the same rows grow as one block
+      two slots    a label with an empty cell to its right AND an empty cell
+                   below it, on a row that is not blank: the right one is used
+      no label     an empty merged box that no label points at is never filled
+      no rows      a table header with no empty rows beneath it
+      merge/table  a merge over a table's rows is not recreated in the export
+    """
+    shape = shape or compute_shape(grid, log=lambda _m: None)
+    try:
+        m, _mig = _matrix(grid)
+    except Exception:
+        return []
+    out = []
+    static = {rc: t for rc, t in m.items() if t}
+    for (r, c), t in sorted(static.items()):
+        if str(t).startswith("="):
+            out.append(f"Cell {_ref(r, c)} holds {str(t)[:40]!r}, which looks like a "
+                       f"formula. It is read as a label and is not calculated.")
+    bands = [b for b in shape.get("repeat_bands") or [] if b.get("orientation") != "columns"]
+    for i, a in enumerate(bands):
+        for b in bands[i + 1:]:
+            lo = max(a.get("header_row", a["start_row"]), b.get("header_row", b["start_row"]))
+            hi = min(a["end_row"], b["end_row"])
+            if lo <= hi:
+                out.append(f"Tables {a['name']!r} and {b['name']!r} share rows "
+                           f"{lo + 1}-{hi + 1}. When one grows, everything below "
+                           f"both moves down by the larger of the two.")
+    slots = {(f["row"], f["col"]) for f in shape.get("field_slots") or []}
+    band_cells = {(r, c["col"]) for b in bands
+                  for r in range(b.get("header_row", b["start_row"]), b["end_row"] + 1)
+                  for c in b.get("columns") or []}
+    last_drawn = max((c for (_r, c) in static), default=-1)
+    for f in shape.get("field_slots") or []:
+        # Only where the right-hand slot is IMPLIED (past everything drawn):
+        # a right cell inside the drawing is an ordinary pair, and saying
+        # "or below" there would warn on every two-column form.
+        if f.get("below") or f["col"] <= last_drawn:
+            continue
+        left = [c for c in range(f["col"]) if (f["row"], c) in static]
+        if not left:
+            continue
+        lc = max(left)
+        below = (f["row"] + 1, lc)
+        if (below in m and below not in static and below not in slots
+                and below not in band_cells):
+            out.append(f"Label {f['row_label']!r} at {_ref(f['row'], lc)} has an empty "
+                       f"cell to its right ({f['ref']}) and one below it "
+                       f"({_ref(*below)}). The cell to the right is used.")
+    for key, span in (grid.get("merges") or {}).items():
+        try:
+            r, c = map(int, str(key).split(","))
+            nr = int((span or {}).get("rows") or 1)
+            nc = int((span or {}).get("cols") or 1)
+        except (ValueError, AttributeError, TypeError):
+            continue
+        rng = f"{_ref(r, c)}:{_ref(r + nr - 1, c + nc - 1)}"
+        if (r, c) in m and (r, c) not in static and (r, c) not in slots \
+                and (r, c) not in band_cells:
+            out.append(f"The merged box {rng} is empty and no label points at it, "
+                       f"so it will not be filled.")
+        for b in bands:
+            if r <= b["end_row"] and r + nr - 1 >= b["start_row"] and \
+                    b["start_row"] <= b["end_row"]:
+                out.append(f"The merge {rng} covers rows of table {b['name']!r}. "
+                           f"Those rows move with the table, so the merge is not "
+                           f"recreated in the export.")
+                break
+    for b in bands:
+        if b["end_row"] < b["start_row"]:
+            out.append(f"Table {b['name']!r} (header on row {b.get('header_row', 0) + 1}) "
+                       f"has no empty rows beneath its header. Its rows are added "
+                       f"below the header and push everything under it down.")
+    return out
+
+
 def is_usable(shape):
     """A shape with nowhere to put anything cannot drive extraction."""
     return bool(shape) and bool(shape.get("field_slots") or shape.get("repeat_bands"))
