@@ -223,11 +223,6 @@ def test_watermark_removal_audits_every_acceptance_and_available_local_pdf():
     assert hits == 5
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run B item B4: every 10-80 degree glyph is classified as a "
-            "watermark even when it is a normal-size legitimate PAID stamp"),
-)
 def test_small_diagonal_paid_stamp_is_not_a_watermark():
     from text_layer import watermark_chars
 

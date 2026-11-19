@@ -58,6 +58,9 @@ class ProcessedDocument:
     #: in x. Separated and rebuilt by `read_page`; listed here so the warning
     #: survives past the log line. NOT a scanned-page signal (I10).
     shredded_pages: list[int] = field(default_factory=list)
+    #: Run D, D3: {1-based page: [text of each rotated decoration run removed
+    #: before reading]} — exactly what the watermark filter took out.
+    watermark_removed: dict = field(default_factory=dict)
     #: 1-based page numbers on which OVERPRINT DETECTION WAS NOT PERFORMED,
     #: because the reader that produced them does not declare
     #: CHARACTER_GEOMETRY (engine/text_layer.py). NOT a claim that those pages
@@ -836,6 +839,9 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                     stats = {}
                     text, lines, repairs = read_page(
                         page, widgets.get(page_num) or [], stats=stats)
+                    if stats.get("watermark_removed"):
+                        doc.watermark_removed[page_num + 1] = list(
+                            stats["watermark_removed"])
                     if widgets.get(page_num):
                         # Labels come from the page's PRINTED words, read
                         # separately so `lines` and `text` stay as they were.

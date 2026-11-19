@@ -500,6 +500,16 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
         `core/preprocessor.py`: a thin OCR text layer scores 1.00 and says
         nothing here.
         """
+        # Run D, D3: exactly which rotated decoration was removed from which
+        # FILE page before reading — information, not a review reason.
+        removed = {str(p): list(w) for p, w in
+                   (getattr(doc, "watermark_removed", {}) or {}).items()
+                   if p in set(page_numbers)}
+        if removed:
+            for r in results or []:
+                ed = getattr(r, "extracted_data", None)
+                if isinstance(ed, dict):
+                    ed.setdefault("validation", {})["watermark_removed"] = dict(removed)
         if not shredded:
             return results
         pages = ", ".join(str(n) for n in shredded)

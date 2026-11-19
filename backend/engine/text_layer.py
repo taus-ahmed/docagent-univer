@@ -1256,14 +1256,37 @@ class PageSource:
         return capability in (self.capabilities or frozenset())
 
 
-def watermark_chars(page) -> list:
-    """The characters of a watermark: drawn DIAGONALLY (rotated 10-80 degrees),
-    or rotated at all and at least twice the page's median font size.
+def _light(color) -> bool:
+    """A fill colour so pale it is decoration: every channel of a grey or RGB
+    colour >= 0.85, or every CMYK ink <= 0.15. Unknown or absent: not light."""
+    try:
+        vals = [float(x) for x in (color if isinstance(color, (list, tuple)) else [color])]
+    except (TypeError, ValueError):
+        return False
+    if not vals:
+        return False
+    if len(vals) == 4:
+        return all(v <= 0.15 for v in vals)
+    return all(v >= 0.85 for v in vals)
 
-    Ordinary text is upright; a form's sideways captions are rotated a quarter
-    turn at body size and are kept. Measured over the 164 PDFs in tests/ and
-    local_docs/: 14 pages hit, 12 of them the FlowParse `SAMPLE` stamp, none
-    in the gold corpus or tests/test_pdfs.
+
+def watermark_runs(page) -> list:
+    """[(text, [chars])] — the rotated runs of a page that are DECORATION.
+
+    Run D, D3. A DIAGONAL run of characters (10-80 degrees; a quarter turn is
+    never a candidate) is a watermark only when it is clearly decoration:
+      oversized   at least twice the page's median font size (`SAMPLE` at 48pt
+                  over 8pt body text), or
+      repeated    the same text drawn rotated twice or more on the page (tiled),
+                  or
+      faint       a very pale fill colour.
+    A body-size `PAID` stamp at 35 degrees is none of those and stays: it is
+    information. And a run containing a DIGIT is never removed, whatever it
+    looks like — a rotated amount or date is a value, not decoration.
+
+    Measured before this rule (Run B): 14 of 164 local PDF pages hit, 12 of
+    them the FlowParse `SAMPLE` stamp; the audit test pins that on the
+    acceptance documents only `SAMPLE` goes.
     """
     import math
     import statistics
@@ -1271,16 +1294,45 @@ def watermark_chars(page) -> list:
     if not chars:
         return []
     med = statistics.median(float(c.get("size") or 0) for c in chars)
-    out = []
+    runs, cur, cur_key = [], [], None
     for c in chars:
         m = c.get("matrix") or (1, 0, 0, 1)
         a, b, cc = float(m[0]), float(m[1]), float(m[2])
         ang = abs(math.degrees(math.atan2(b, a))) % 90
-        diagonal = 10 < ang < 80
-        rotated = abs(b) > 1e-3 or abs(cc) > 1e-3
-        if diagonal or (rotated and float(c.get("size") or 0) >= 2 * med):
-            out.append(c)
+        # DIAGONAL only. Text turned a quarter turn is a form's sideways
+        # caption or margin note (the IRS 1099-R prints `DRAFT — DO NOT
+        # FILE` up both margins at 13pt over 5.7pt body text), and is kept.
+        rotated = 10 < ang < 80
+        key = (round(a, 2), round(b, 2)) if rotated else None
+        if key is not None and key == cur_key:
+            cur.append(c)
+            continue
+        if cur:
+            runs.append(cur)
+        cur, cur_key = ([c], key) if key is not None else ([], None)
+    if cur:
+        runs.append(cur)
+    texts = ["".join(str(c.get("text", "")) for c in r) for r in runs]
+    counts = {}
+    for t in texts:
+        k = t.strip().casefold()
+        counts[k] = counts.get(k, 0) + 1
+    out = []
+    for t, r in zip(texts, runs):
+        if re.search(r"\d", t):
+            continue                      # a rotated value is kept, always
+        size = max(float(c.get("size") or 0) for c in r)
+        oversized = med > 0 and size >= 2 * med
+        repeated = bool(t.strip()) and counts.get(t.strip().casefold(), 0) >= 2
+        faint = all(_light(c.get("non_stroking_color")) for c in r)
+        if oversized or repeated or faint:
+            out.append((t, r))
     return out
+
+
+def watermark_chars(page) -> list:
+    """The characters of every decoration run (`watermark_runs`)."""
+    return [c for _t, run in watermark_runs(page) for c in run]
 
 
 class PdfplumberSource(PageSource):
@@ -1305,11 +1357,15 @@ class PdfplumberSource(PageSource):
         # with no such characters is the same page object, so its text is
         # byte-identical to what it was.
         self.watermark = []
+        #: Run D, D3: the text of each removed run, said on the page's facts
+        self.watermark_words = []
         try:
-            marks = watermark_chars(page)
+            runs = watermark_runs(page)
+            marks = [c for _t, run in runs for c in run]
             if marks:
                 ids = {id(c) for c in marks}
                 self.watermark = marks
+                self.watermark_words = [t for t, _r in runs]
                 page = page.filter(lambda o: id(o) not in ids)
         except Exception:
             pass
@@ -1401,6 +1457,7 @@ def read_page(page, widgets=(), stats=None):
     source = as_page_source(page)
     if stats is not None and getattr(source, "watermark", None):
         stats["watermark_chars"] = len(source.watermark)
+        stats["watermark_removed"] = list(getattr(source, "watermark_words", []) or [])
     raw = source.raw_text()
     try:
         words = normalise_words(source.words(size_aware=True), source.space)
