@@ -15,7 +15,10 @@
     ]
   },
   "F11": {
-    "slot_descriptions": [],
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Name\"",
+      "F2: the value on the row labelled \"Date\""
+    ],
     "ambiguities": [
       "Placeholders are static labels under the one rule, so neither intended slot appears in the prompt."
     ]

@@ -46,3 +46,44 @@ class TestD6ScatteredGroups:
             ("B1", "Entity"), ("D1", "Period"), ("I1", "Status"),
             ("B4", "Owner"), ("D4", "Region"), ("F4", "Currency"),
             ("H4", "Rate"), ("J4", "Threshold"), ("H5", "Reviewer")])
+
+
+class TestD11Placeholders:
+    import pytest as _pt
+
+    @_pt.mark.parametrize("text", ["enter here", "Enter value here", "____", "[ ]",
+                                   "[enter name]", "{{ }}", "{{amount}}", "xxx",
+                                   "XXXX", "TBD", "....", "---"])
+    def test_a_placeholder_is_an_empty_slot(self, text):
+        from template_shape import is_placeholder
+        assert is_placeholder(text)
+        assert _fields(_grid({(0, 0): "Name", (0, 1): text})) == [("B1", "Name")]
+
+    @_pt.mark.parametrize("text", ["Notes [optional]", "XX-100", "Enter Date",
+                                   "Total", "N/A", "x"])
+    def test_ordinary_text_is_not_a_placeholder(self, text):
+        from template_shape import is_placeholder
+        assert not is_placeholder(text)
+
+    def test_the_writer_replaces_a_placeholder_and_never_copies_it(self):
+        import io
+        import contextlib
+        import json
+        import openpyxl
+        from types import SimpleNamespace
+        from slot_extractor import enumerate_slots
+        from app.api.routes.extract import _write_slot_excel
+        g = _grid({(0, 0): "Name", (0, 1): "[enter name]",
+                   (1, 0): "Date", (1, 1): "TBD"})
+        slots = enumerate_slots(g)
+        refs = {f["row_label"]: f["ref"] for f in slots["fields"]}
+        ed = {"template_type": "slot", "extracted_fields": {refs["Name"]: "Ada"},
+              "slot_map": {"fields": slots["fields"], "tables": []},
+              "validation": {"confidence_map": {}, "flagged_fields": []}}
+        s = json.dumps(ed)
+        doc = SimpleNamespace(filename="x.pdf", get_extracted_data=lambda: json.loads(s))
+        wb = openpyxl.Workbook()
+        with contextlib.redirect_stdout(io.StringIO()):
+            _write_slot_excel(wb.active, [doc], g, g["cells"], openpyxl)
+        ws = wb.active
+        assert ws["B1"].value == "Ada" and ws["B2"].value is None

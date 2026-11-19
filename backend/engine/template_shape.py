@@ -33,6 +33,8 @@ at load and persisted then, so the inference happens once, not per extraction.
     }
 """
 
+import re
+
 
 SHAPE_VERSION = 1
 
@@ -132,6 +134,26 @@ def _used_range(raw, grid, cover):
     return r1, c1, r2, c2
 
 
+#: Run D, D11 — text an auditor types INTO A SLOT to say "the value goes here".
+#: The ONE list, used by the shape (such a cell is an empty slot) and by the
+#: writer (it is replaced, never copied into the export). Kept small on
+#: purpose: every entry is a cell that will be read as empty.
+PLACEHOLDER = re.compile(
+    r"^(?:"
+    r"_{3,}|\.{3,}|-{3,}"                          # ____  ....  ----
+    r"|\[[^\[\]]*\]"                               # [ ]  [enter name]
+    r"|\{\{[^{}]*\}\}"                             # {{ }}  {{amount}}
+    r"|x{3,}"                                      # xxx
+    r"|(?:enter|type|insert|fill in)\b.*\bhere"    # enter here, type value here
+    r"|tbd"                                        # TBD
+    r")$", re.I)
+
+
+def is_placeholder(text) -> bool:
+    """Is this cell text a placeholder for a value rather than a label?"""
+    return bool(PLACEHOLDER.match(str(text or "").strip()))
+
+
 def _matrix(grid):
     """{(row, col): text} for every cell in the used range; '' for empty.
 
@@ -167,6 +189,12 @@ def _matrix(grid):
                 for c in range(c1, c2 + 1):
                     if (r, c) not in cover:
                         out.setdefault((r, c), "")
+
+    # A placeholder still widens the used range (it marks a slot the user
+    # drew), and is then an EMPTY cell — a slot, not a label (D11).
+    for rc, txt in list(out.items()):
+        if txt and is_placeholder(txt):
+            out[rc] = ""
 
     return out, {"extract_target_cells": marked,
                  "extract_target_cells_with_text": marked_with_text,

@@ -21,6 +21,7 @@ from app.services.excel_cells import provenance_edited_note
 from app.services.excel_cells import provenance_note
 from app.services.excel_cells import provenance_note_size
 import re
+from template_shape import is_placeholder
 # --imports-end--
 
 
@@ -510,7 +511,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             if tr > max_r or tc > max_c or (tr, tc) in band_cells:
                 continue
             text = str(cell_def.get("value") or "").strip()
-            if text:
+            # Run D, D11: a placeholder (`[enter name]`, `____`, `TBD`) marks a
+            # slot; it is replaced by the value, never copied into the export.
+            if text and not is_placeholder(text):
                 put(doc_offset + out_row(tr), tc, text)
 
         # 1b. THE LOOK — including inside a band.

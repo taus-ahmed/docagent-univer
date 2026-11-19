@@ -38,7 +38,6 @@ PARSE_XFAIL = {
            "right cell is usable, so it is kept (Run D, D9 never guesses)"),
     "F3": "F3: separator columns do not extend the text-defined used range",
     "F10": "F10: formula cells participate in label geometry",
-    "F11": "F11: placeholder text makes a slot static",
     "T2": "T2: a header-only band invents ten reserved rows",
     "T6": ("T6: both side-by-side bands are detected (Run D, D7), but the truth "
            "names them left/right, which nothing in the grid prints, and gives "
@@ -61,7 +60,6 @@ WRITE_XFAIL = {
     "F3": "F3: values are written in adjacent cells instead of separated slots",
     "F9": "F9: number formats and dropdown validation are not in the grid contract",
     "F10": "F10: formula geometry creates wrong slots and misses intended values",
-    "F11": "F11: placeholders remain static and cannot be cleared by an empty answer",
     "F12": "F12: hidden rows and columns are not preserved",
     "T9": "T9: the Item column is outside the detected band",
     "T10": "T10: totals are not attached to bands and nonstandard positions are lost",
