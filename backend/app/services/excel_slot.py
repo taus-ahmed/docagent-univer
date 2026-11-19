@@ -578,7 +578,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 cols = [c["col"] for c in t.get("columns") or []]
                 span = range(min(cols), max(cols) + 1) if cols else range(0, max_c + 1)
                 for c in span:              # the band's own columns (D8)
-                    dress(out_row(t["start_row"]) + i, c, (src_r, c))
+                    dress(out_row(t["start_row"] - 1) + 1 + i, c, (src_r, c))
 
         # 2. field slots, each at the exact address it was asked for
         slot_label = {f.get("ref"): f.get("row_label", "")
@@ -641,7 +641,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 if not isinstance(hc, MergedCell) and hc.value is None:
                     hc.value = "Source"
             for i, row in enumerate(rows):
-                r = doc_offset + out_row(t["start_row"]) + i
+                # placed from the row ABOVE the band: a band reserving no rows (D12)
+                # has start_row past end_row, and must not move by its own growth
+                r = doc_offset + out_row(t["start_row"] - 1) + 1 + i
                 for col in t["columns"]:
                     key = col.get("key") or col["header"]
                     cell = put(r, col["col"], row.get(key, ""), col.get("header", ""))

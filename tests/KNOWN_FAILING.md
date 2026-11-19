@@ -40,13 +40,11 @@ truth file live under `tests/templates/`.
 | F9 | write | Number formats and dropdown validation are outside the saved grid. |
 | F10 | parse, write | Formula strings participate in label geometry. |
 | F12 | write | Hidden row and column state is not preserved. |
-| T2 | parse | A header-only band is reported as ten reserved rows. |
 | T6 | parse | Both bands are detected and written (Run D); the truth's band names `left`/`right` are printed nowhere, and its closing `End left`/`End right` labels expect no slot while T1's `Total` in the same position expects one. |
 | T9 | parse, write | A merged two-level header drops the row-label column. |
 | T10 | parse, write | Totals have no band ownership and nonstandard positions are misread. |
 | T11 | write | A subtotal inside a detected band is overwritten by extracted rows. |
 | T12 | parse, write | Transposed tables require an editor declaration. |
-| T13 | parse | A header-only flat list is reported as ten reserved rows. |
 | T14 | parse, write | Excel Table metadata is ignored and not recreated. |
 | T15 | parse | Fields beside the band are read and written (Run D); the truth gives the closing `End \| _` row no slot while T1's `Total \| _` in the same position has one. |
 | T18 | parse, write | Only the first workbook sheet enters the grid and output. |

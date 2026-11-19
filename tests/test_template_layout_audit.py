@@ -38,7 +38,6 @@ PARSE_XFAIL = {
            "right cell is usable, so it is kept (Run D, D9 never guesses)"),
     "F3": "F3: separator columns do not extend the text-defined used range",
     "F10": "F10: formula cells participate in label geometry",
-    "T2": "T2: a header-only band invents ten reserved rows",
     "T6": ("T6: both side-by-side bands are detected (Run D, D7), but the truth "
            "names them left/right, which nothing in the grid prints, and gives "
            "the closing End left/End right labels no slot although T1's Total "
@@ -46,7 +45,6 @@ PARSE_XFAIL = {
     "T9": "T9: a merged two-level header drops the row-label column",
     "T10": "T10: totals have no ownership and a blank before a total becomes band capacity",
     "T12": "T12: transposed bands require an editor declaration",
-    "T13": "T13: a header-only flat list invents ten reserved rows",
     "T14": "T14: Excel Table metadata is ignored and ten rows are invented",
     "T15": ("T15: Owner/Reviewed beside the band are fields (Run D, D8), but the "
             "truth gives the closing `End | _` row no slot although T1's "

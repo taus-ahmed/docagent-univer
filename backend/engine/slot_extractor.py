@@ -318,7 +318,10 @@ def build_prompt(slots, page_texts, doc_type="", extra=""):
         if t["section"]:
             p.append(f'  section: "{t["section"]}"')
         p.append(f"  columns (use EXACTLY these keys): {cols}")
-        p.append(f'  the sheet has {t["end_row"] - t["start_row"] + 1} blank rows for it; '
+        # `prompt_rows`: a header-only band reserves no rows (Run D) but is
+        # described as it always was, so recorded answers stay valid.
+        room = t.get("prompt_rows") or (t["end_row"] - t["start_row"] + 1)
+        p.append(f'  the sheet has {room} blank rows for it; '
                  f"return as many rows as the document actually has, not that number.")
         p.append("")
 

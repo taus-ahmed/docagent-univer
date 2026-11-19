@@ -751,6 +751,7 @@ def compute_shape(grid, log=None):
         span_end = (min(nxt) - 1) if nxt else max(rows)
         span = [r for r in rows if hr < r <= span_end]
         need = max(1, (len(cols) + 1) // 2)
+        edge_rows = 0
 
         def _sc(r, _cols=cols):
             return _static_count(r, _cols)
@@ -777,10 +778,18 @@ def compute_shape(grid, log=None):
             # cells stay ambiguous ("Date | Amount" could be a pair) and are
             # skipped out loud rather than guessed at.
             if len(cols) >= 3:
-                end = hr + _EDGE_BAND_ROWS
+                # Run D, D12 (T2/T13): ZERO reserved rows, said honestly. It
+                # used to invent ten (`hr + _EDGE_BAND_ROWS`), which nothing
+                # in the grid drew; the writer adds one row per document row
+                # either way. The prompt keeps saying ten (`prompt_rows`), so
+                # the question the model is asked - and every recorded answer
+                # to it - is unchanged.
+                end = hr
+                edge_rows = _EDGE_BAND_ROWS
                 _say(f"row {hr} is a band header at the bottom of the grid "
                      f"({len(cols)} columns, no rows beneath) — treated as a "
-                     f"band; the writer expands it to the document's rows")
+                     f"band with no reserved rows; the writer adds the "
+                     f"document's rows")
             else:
                 tail = ("but has no empty rows beneath it — not treated as a "
                         "repeating band")
@@ -831,6 +840,7 @@ def compute_shape(grid, log=None):
             "end_row": end,
             "columns": columns,
             "section": section,
+            **({"prompt_rows": edge_rows} if edge_rows else {}),
         })
 
     band_rows = set()
