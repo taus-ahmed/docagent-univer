@@ -48,6 +48,7 @@ from extractor import _llm_json, _log
 from log_safety import doc_ref
 from micr import field_role, find_micr_line, parse_micr
 from validators import FAIL, UNREADABLE, CheckContext, run_checks
+from total_row_validators import split_duplicate_totals
 from text_layer import (canonical_value, check_placement, column_bands,
                         find_line, flatten_pages, line_page, matches_loosely,
                         overprinted_value, page_for_prompt_page, record_span,
@@ -229,6 +230,41 @@ _SYSTEM = (
     "read it from. You never move a value from one slot to another, and you "
     "never invent a value that is not in the document."
 )
+
+
+#: Run C, C7 — said to the model for a cheque read by OCR. Order differs by
+#: cheque style, so the fields are named by their symbols and digit counts.
+CHEQUE_BOTTOM_LINE = (
+    "CHEQUE BOTTOM LINE (MICR): the line printed along the bottom edge holds "
+    "three numbers. The ROUTING number is exactly 9 digits, between two "
+    "transit symbols (⑆, often read as 'A' or ':'). The ACCOUNT number is the "
+    "longer on-us field (usually 6-17 digits) ending with the on-us symbol "
+    "(⑈, often read as 'C' or '\"'). The CHEQUE number is the short 3-6 digit "
+    "group; it is also printed at the top right of the cheque. Business "
+    "cheques print cheque number, routing, account in that order; personal "
+    "cheques print routing, account, cheque number. Put each number only in "
+    "its own slot - a 9-digit routing number never goes in the account or "
+    "cheque-number slot.\n")
+
+
+def cheque_bottom_line_hint(doc_type, slots, page_origins, file_type="") -> str:
+    """The bottom-line instruction, for a cheque whose page was read by OCR
+    and whose template asks for a routing, account or cheque number. Empty
+    otherwise, so every other prompt — and every recorded answer to it — is
+    byte-identical to what it was."""
+    from validators import family_of
+    if family_of(doc_type) != "cheque":
+        return ""
+    scanned = any(str(o) == "ocr" for o in (page_origins or {}).values()) \
+        or str(file_type or "").lower() in ("image", "scanned_pdf")
+    if not scanned:
+        return ""
+    from micr import field_role
+    from cheque_validators import is_cheque_number_label
+    if not any(field_role(f["row_label"]) or is_cheque_number_label(f["row_label"])
+               for f in slots.get("fields") or []):
+        return ""
+    return CHEQUE_BOTTOM_LINE
 
 
 def build_prompt(slots, page_texts, doc_type="", extra=""):
@@ -1373,6 +1409,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # document: there is no user wording to reconcile.
     wording = [] if inferred else AL.hints(slots, grid, _lines_all)
     extra += AL.prompt_block(wording)
+    extra += cheque_bottom_line_hint(default_doc_type, slots, page_origins, file_type)
     prompt = build_prompt(slots, pages, default_doc_type, extra)
 
     # ── SOURCE INVENTORY + RESPONSE CONTRACT (Run A, A2/A3) ──
@@ -1532,6 +1569,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     unwitnessed = 0
     reanchored = 0          # B4: quotes replaced by the line printing the value
     opening_rows = 0        # opening-balance lines left out of a transaction table
+    duplicate_total_rows = 0  # a total line repeating its own slot (Run C, C4.1)
     all_lines = flatten_pages(page_lines)
     regions_warned = []
     # WHICH CHECK FAILED, per value. A value made low by a failed check used
@@ -2145,9 +2183,23 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                              f'({shown[:80]!r}); its amount is already in the '
                              f"sheet's own opening balance field")
             opening_rows += len(opening)
+            # Run C, C4.1: the table's own total line returned as a row AND
+            # filled into the template's total slot under the table. Dropped
+            # only when the amounts agree, so the slot still holds it; said
+            # in a note and counted. Disagreeing amounts are the validator's
+            # (total_row_validators.total_row_mismatch): both kept, both low.
+            rows_out, dup_totals = split_duplicate_totals(
+                t, rows_out, slots["tables"], slots["fields"], extracted_fields)
+            for row in dup_totals:
+                shown = " | ".join(f"{k}={v}" for k, v in row.items()
+                                   if not str(k).startswith("_") and str(v).strip())
+                notes.append(f'{t["name"]}: left out a row repeating a total the '
+                             f"sheet already holds in its own slot below the "
+                             f"table ({shown[:80]!r})")
+            duplicate_total_rows += len(dup_totals)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
-            if len(rows_out) + len(totals) < len(raw):
+            if len(rows_out) + len(totals) + len(dup_totals) < len(raw):
                 incomplete.add(t["name"])
 
     # A TEMPLATE COLUMN THE DOCUMENT NEVER NAMES, BY ANY WORDING, THAT
@@ -2511,6 +2563,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # B2.2: labels the page does not print word for word (information).
             "label_wording": AL.diagnostics(slots, all_lines),
             "opening_row_count": opening_rows,
+            "duplicate_total_row_count": duplicate_total_rows,
             # What the family's validators record at document level
             # (routing_checksum, micr_band_unreadable, ...).
             **check_validation,

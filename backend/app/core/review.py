@@ -58,6 +58,32 @@ REASONS: dict[str, tuple[str, str]] = {
         "Routing number failed its check digit",
         "These nine digits fail the ABA routing-number checksum, so they "
         "cannot be a routing number as read."),
+    "routing_checksum_failed": (
+        "Not a valid routing number",
+        "A routing number is exactly nine digits that pass the ABA checksum. "
+        "This value is not, so it is probably another number from the "
+        "cheque's bottom line in the wrong slot."),
+    "possible_swap": (
+        "Routing and account may be swapped",
+        "The routing value fails the routing-number check and the account "
+        "value passes it. The suggested correction is in the reason; nothing "
+        "was moved."),
+    "cheque_number_missing": (
+        "Cheque number empty",
+        "The cheque's bottom line carries a 3-6 digit group shaped like a "
+        "cheque number, and this slot is empty."),
+    "cheque_number_mismatch": (
+        "Cheque number differs from the top right",
+        "The cheque number in this slot is not the number printed at the "
+        "cheque's top right."),
+    "total_row_mismatch": (
+        "Total line disagrees with the total slot",
+        "The table holds a total line with the same label as a total below "
+        "the table, and the two amounts differ. Both are kept."),
+    "assets_not_equal_liabilities_plus_equity": (
+        "Assets do not equal liabilities + equity",
+        "Total assets and total liabilities & equity differ by more than "
+        "rounding. The difference is in the reason."),
     "amount_mismatch": (
         "Amount in figures and in words disagree",
         "The cheque's amount in figures and its amount in words both read "

@@ -687,6 +687,22 @@ def compute_shape(grid, log=None):
         #            Total Debits / Closing Balance` out of its transactions
         #            band, which FULL alone would have swallowed.
         #
+        #   AFTER    (Run C, C4.2) every row between the header and it is
+        #            blank — the reserved table rows — and the table does not
+        #            CONTINUE beneath it: no two consecutive blank rows follow
+        #            it before the span ends. `AP_Inv_Full` draws 20 blank
+        #            rows, then Subtotal / Discount / Shipping / Tax Total /
+        #            Invoice Total, a blank row, then the Remit To block. That
+        #            one blank row defeats TRAILING, so the band ran to row 39,
+        #            swallowed the whole totals block as row labels, gave it no
+        #            slots, and the export wrote neither the labels nor the
+        #            three totals. A payslip's `Total Earnings`, one separator
+        #            row, then the Deductions table is the same shape. R3's
+        #            `Subtotal` typed mid-table has the table continuing blank
+        #            beneath it and stays inside the band; typed row labels
+        #            directly under the header have no blank row above them and
+        #            stay inside too.
+        #
         # Anything else — an isolated label with the table continuing blank
         # beneath it — is inside the band.
         nxt = [r for r in sorted(header_candidates) if r > hr]
@@ -700,7 +716,12 @@ def compute_shape(grid, log=None):
                 continue
             full = _static_count(r) >= need
             trailing = not any(rr > r and not _static_count(rr) for rr in span)
-            if full or trailing:
+            below = [rr for rr in span if rr > r]
+            continues = any(not _static_count(a) and not _static_count(a + 1)
+                            and (a + 1) in span for a in below)
+            after = (r - 1 > hr and not continues
+                     and not any(_static_count(rr) for rr in range(hr + 1, r)))
+            if full or trailing or after:
                 end = r - 1
                 break
         if end <= hr:

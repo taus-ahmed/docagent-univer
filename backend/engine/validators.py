@@ -207,4 +207,6 @@ def _load():
         import bank_validators  # noqa: F401
         import payslip_validators  # noqa: F401
         import receipt_validators  # noqa: F401
+        import balance_sheet_validators  # noqa: F401  (Run C, C8)
+        import total_row_validators  # noqa: F401  (Run C, C4)
         import rules  # noqa: F401  (a template's declared rules, Part 3.1)

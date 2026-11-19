@@ -698,6 +698,12 @@ everything carries `False` and `[]`.
 | `placement_failed` | the value sits under a different column than its slot's, or its run crosses a column gutter (two side-by-side blocks merged) | exactly `low` |
 | `content_check_failed` | grounded, but not ONE datum (an email/phone/`\|` where none was asked), or a scalar wrapped in prose | exactly `low` |
 | `checksum_failed` | a routing number that fails the ABA check digit — those nine digits cannot be a routing number as read | exactly `low` |
+| `routing_checksum_failed` | cheque family (Run C, C7): a slot named like a routing number holds something that is not exactly 9 digits passing the ABA checksum; added beside the any-family `checksum_failed` | exactly `low` |
+| `possible_swap` | cheque family (C7): the routing value fails the routing check while the account value is 9 digits that pass it; set on BOTH, the flag names the suggested correction, and nothing is moved | both exactly `low` |
+| `cheque_number_missing` | cheque family (C7): the cheque-number slot is empty while the MICR line carries a 3-6 digit group; the empty slot is flagged | none — it requires review |
+| `cheque_number_mismatch` | cheque family (C7): the cheque-number slot differs from the number printed at the top right | exactly `low` |
+| `total_row_mismatch` | any family (C4): a table row whose label equals a total label in the block directly under that table carries a different amount from that total's slot; set on both, both kept | both exactly `low` |
+| `assets_not_equal_liabilities_plus_equity` | balance sheet (C8): TOTAL ASSETS and TOTAL LIABILITIES & EQUITY differ by more than rounding; set on both, the flag states the difference | both exactly `low` |
 | `amount_mismatch` | the cheque's amount in figures and in words both parse and disagree; set on BOTH values, since nothing says which is wrong | both exactly `low` |
 | `amount_unreadable` | the figures/words cross-check could not be completed (one side does not parse with certainty); set on both values | none — a notice, but it requires review |
 | `micr_band_unreadable` | the record carries a cheque's MICR band, shaped like one, but none of its digits could be read; set on every value that depends on the band's identity (routing, account). An identity slot left empty is flagged in `flagged_fields` instead, and `validation.micr_band_unreadable` is True. Distinct from `checksum_failed` (digits read, and wrong) and `possible_multiple_documents` (the count of cheques is unknown) | none — it requires review |
