@@ -187,6 +187,13 @@ export function stepOpen(values: ReviewValue[], from: number, dir: 1 | -1): numb
 }
 
 /** Box (points, frame top-left) → CSS percentages of the shown image. */
+/** Run C, C6: the panel line beside a value the page shows no box for. It
+ *  always opens with the same words, and keeps the server's reason. */
+export function locationNotFound(reason: string | null | undefined): string {
+  const why = String(reason ?? "").replace(/^location not found for this value:?\s*/i, "").trim();
+  return `Location not found for this value${why ? ` (${why})` : ""}.`;
+}
+
 export function boxToPercent(box: number[], widthPt: number, heightPt: number) {
   const [x0, top, x1, bottom] = box;
   return {

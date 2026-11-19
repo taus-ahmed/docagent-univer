@@ -405,35 +405,136 @@ def _inside(words, region) -> bool:
     return x0 - 2 <= cx <= x1 + 2 and top - 2 <= cy <= bottom + 2
 
 
-def find_box(lines, quote, value, region=None) -> tuple[Optional[list], str]:
+#: what `find_box` reports when it located nothing (Run C, C6)
+NOT_FOUND = "location not found for this value"
+
+
+def _key(s) -> str:
+    """A value or word with its notation dropped: case, spaces, currency
+    symbols and thousands separators. `- 46.32`, `-46.32` and `−46.32` meet."""
+    t = str(s or "").casefold().replace("−", "-")
+    return re.sub(r"[\s$£€₹¥,]", "", t)
+
+
+def _value_spans(words, value, max_words=4):
+    """Runs of 1..max_words consecutive words on one line that spell `value`
+    once notation is dropped — a number the text layer split into two words
+    (`-` + `46.32`, `19,6` + `94`) is found as well as a whole one."""
+    want = _key(value)
+    if not want:
+        return []
+    out = []
+    keys = [_key(w["text"]) for w in words]
+    for i in range(len(words)):
+        acc = ""
+        for j in range(i, min(len(words), i + max_words)):
+            acc += keys[j]
+            if acc == want:
+                out.append(words[i:j + 1])
+                break
+            if not want.startswith(acc):
+                break
+    return out
+
+
+def _centre(box):
+    return ((box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0)
+
+
+def _nearest(boxes, anchors):
+    """The box nearest any anchor box (by centre distance); None without
+    anchors."""
+    if not anchors:
+        return None
+    def dist(b):
+        cx, cy = _centre(b)
+        return min((cx - ax) ** 2 + (cy - ay) ** 2
+                   for ax, ay in (_centre(a) for a in anchors))
+    return min(boxes, key=dist)
+
+
+def _anchor_boxes(lines, near, region=None):
+    """Where each anchor text (a field's label, a row's other values) is
+    printed on the page."""
+    out = []
+    for text in near or []:
+        if not _key(text) or len(_key(text)) < 2:
+            continue
+        for ln in lines or []:
+            words = [w for w in ln if str(w.get("text", "")).strip()]
+            if not words or not _inside(words, region):
+                continue
+            joined = _norm(" ".join(str(w["text"]) for w in words))
+            if _norm(text) and _norm(text) in joined:
+                spans = _value_spans(words, text, max_words=8)
+                out.append(_words_box(spans[0]) if spans else _words_box(words))
+    return out
+
+
+def find_box(lines, quote, value, region=None, near=None) -> tuple[Optional[list], str]:
     """(box, how) for a value on one page, or (None, why not).
 
-    The quote's first line must match exactly ONE printed line (inside the
-    record's region when it has one); the box is then the value's own words on
-    that line when they are there in order, else the whole line."""
+    The quote's first line matching exactly ONE printed line (inside the
+    record's region when it has one) is the strong case: the box is then the
+    value's own words on that line when they are there in order, else the
+    whole line (`how` = "value" | "line").
+
+    Run C, C6: a real multi-page statement often gives no such line — the
+    quote matches two printed lines (a repeated row), or none (the page
+    interleaves an overlaid layer with the statement's words, so the model's
+    clean quote is not a substring of any printed line, or the value was
+    split across words). It used to stop there, and the review screen turned
+    to the page and drew nothing. Now, failing a unique quote line, the VALUE
+    itself is looked for — among the quote's lines when there are several,
+    else on the whole page — with its notation dropped and split words
+    rejoined. One place: `how` = "value" (or "line" when only its line is
+    known). Several: the one nearest `near` (the slot's label, or the row's
+    other values) with `how` = "ambiguous: …" naming the count. None: no box,
+    `how` says the location was not found and why.
+    """
     q = [_norm(x) for x in str(quote or "").split("\n") if _norm(x)]
-    if not q:
-        return None, "no quote was stored for this value"
     hits = []
     for ln in lines or []:
         words = [w for w in ln if str(w.get("text", "")).strip()]
         if not words or not _inside(words, region):
             continue
         text = _norm(" ".join(str(w["text"]) for w in words))
-        if text and (q[0] in text or (len(text) > 3 and text in q[0])):
+        if q and text and (q[0] in text or (len(text) > 3 and text in q[0])):
             hits.append(words)
-    if not hits:
-        return None, "the quote was not found on this page"
-    if len(hits) > 1:
-        return None, f"the quote matches {len(hits)} lines on this page"
-    words = hits[0]
-    toks = _norm(value).split()
-    if toks:
-        texts = [_norm(w["text"]) for w in words]
-        for i in range(len(texts) - len(toks) + 1):
-            if texts[i:i + len(toks)] == toks:
-                return _words_box(words[i:i + len(toks)]), "value"
-    return _words_box(words), "line"
+    if len(hits) == 1:
+        words = hits[0]
+        toks = _norm(value).split()
+        if toks:
+            texts = [_norm(w["text"]) for w in words]
+            for i in range(len(texts) - len(toks) + 1):
+                if texts[i:i + len(toks)] == toks:
+                    return _words_box(words[i:i + len(toks)]), "value"
+            spans = _value_spans(words, value)
+            if spans:
+                return _words_box(spans[0]), "value"
+        return _words_box(words), "line"
+
+    # no unique quote line: look for the value itself
+    why = ("no quote was stored for this value" if not q
+           else f"the quote matches {len(hits)} lines on this page" if hits
+           else "the quote was not found on this page")
+    k = _key(value)
+    if not k or (len(k) < 3 and not re.search(r"\d", k)):
+        return None, f"{NOT_FOUND}: {why}"
+    pool = hits or [[w for w in ln if str(w.get("text", "")).strip()]
+                    for ln in (lines or [])]
+    cands = [_words_box(s) for words in pool if words and _inside(words, region)
+             for s in _value_spans(words, value)]
+    kind = "value"
+    if not cands and hits:
+        cands, kind = [_words_box(words) for words in hits], "line"
+    if not cands:
+        return None, f"{NOT_FOUND}: {why}"
+    if len(cands) == 1:
+        return cands[0], kind
+    pick = _nearest(cands, _anchor_boxes(lines, near, region)) or cands[0]
+    return pick, (f"ambiguous: printed in {len(cands)} places on this page; "
+                  f"showing the one nearest its label")
 
 
 def _page_or_404(reading, n):
@@ -453,15 +554,7 @@ def page_meta(job_id: int, doc_id: int, page: int, db: Session = Depends(get_db)
     lines = reading["lines"][page - 1] if page - 1 < len(reading["lines"]) else []
     sr = (ed.get("validation") or {}).get("source_region") or {}
     region = sr.get("box_pt") if sr.get("page") == page else None
-    boxes = []
-    for v in R.document_values(ed):
-        if v.get("page") != page:
-            continue
-        box, how = find_box(lines, v.get("source"), v.get("value"), region)
-        boxes.append({"kind": v["kind"], "ref": v.get("ref"), "table": v.get("table"),
-                      "row": v.get("row"), "column": v.get("column"),
-                      "box_pt": box, "match": how if box else None,
-                      "no_box_reason": None if box else how})
+    boxes = boxes_for(ed, page, lines, region)
     frame = ("straightened page image, points from its top-left"
              if origin == "ocr" else "rendered page, points from its top-left")
     w, h = reading["sizes"].get(page, (None, None))
@@ -469,6 +562,37 @@ def page_meta(job_id: int, doc_id: int, page: int, db: Session = Depends(get_db)
             "width_pt": round(w, 1) if w else None,
             "height_pt": round(h, 1) if h else None,
             "record_box_pt": region, "boxes": boxes}
+
+
+def boxes_for(ed, page, lines, region=None) -> list:
+    """Every value stored for `page`, with its box on that page or the reason
+    it has none (the page route's `boxes`)."""
+    boxes = []
+    rows_of = dict(R.table_keys(ed))
+    for v in R.document_values(ed):
+        if v.get("page") != page:
+            continue
+        # what a repeated value is placed NEAR (C6): a field's label; a
+        # table cell's other values on the same row
+        if v["kind"] == "field":
+            near = [v.get("label")]
+        else:
+            rows = ed.get(rows_of.get(v.get("table"), "")) or []
+            i = v.get("row")
+            row = rows[i] if isinstance(i, int) and 0 <= i < len(rows) else {}
+            row = row if isinstance(row, dict) else {}
+            near = [x for k, x in (row or {}).items()
+                    if not str(k).startswith("_") and k != v.get("column") and x]
+        box, how = find_box(lines, v.get("source"), v.get("value"), region, near=near)
+        ambiguous = bool(box) and how.startswith("ambiguous")
+        boxes.append({"kind": v["kind"], "ref": v.get("ref"), "table": v.get("table"),
+                      "row": v.get("row"), "column": v.get("column"),
+                      "box_pt": box,
+                      "match": ("value" if ambiguous else how) if box else None,
+                      "ambiguous": ambiguous,
+                      "note": how if ambiguous else None,
+                      "no_box_reason": None if box else how})
+    return boxes
 
 
 def _page_png(reading, page) -> bytes:

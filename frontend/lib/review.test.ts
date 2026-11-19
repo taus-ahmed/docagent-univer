@@ -109,3 +109,10 @@ test("detailText reads a string detail, an object's message, or falls back", () 
                "2 reasons open");
   assert.equal(detailText({}, "Save failed"), "Save failed");
 });
+
+test("a value with no box says its location was not found, and why (Run C, C6)", async () => {
+  const { locationNotFound } = await import("./review.ts");
+  assert.equal(locationNotFound("location not found for this value: the quote was not found on this page"),
+               "Location not found for this value (the quote was not found on this page).");
+  assert.equal(locationNotFound(null), "Location not found for this value.");
+});

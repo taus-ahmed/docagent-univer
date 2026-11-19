@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { extractApi, reviewApi, type DocumentResult, type PageMeta } from "@/lib/api";
 import {
-  badgeFor, boxToPercent, detailText, reasonText, recordLabel, stepOpen,
+  badgeFor, boxToPercent, detailText, locationNotFound, reasonText, recordLabel, stepOpen,
   type AttentionItem, type ReasonMap, type ReviewDoc, type ReviewValue,
 } from "@/lib/review";
 
@@ -357,8 +357,9 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
                       <span style={{ fontSize: 10.5, color: "var(--text3)" }}>
                         {!v.page ? "No page recorded for this value, so no box."
                           : !meta ? ""
-                          : b?.box_pt ? (b.match === "line" ? "Box: the line it was read from" : "Box: the value")
-                          : `No box: ${b?.no_box_reason ?? "the value is not on this page"}.`}
+                          : b?.box_pt ? (b.ambiguous ? `Box: ${b.note ?? "one of several places it is printed"}.`
+                                         : b.match === "line" ? "Box: the line it was read from" : "Box: the value")
+                          : locationNotFound(b?.no_box_reason)}
                       </span>
                     </div>
                   )}
