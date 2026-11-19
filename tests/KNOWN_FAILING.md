@@ -50,7 +50,7 @@ truth file live under `tests/templates/`.
 | T12 | parse, write | Transposed tables require an editor declaration. |
 | T13 | parse | A header-only flat list is reported as ten reserved rows. |
 | T14 | parse, write | Excel Table metadata is ignored and not recreated. |
-| T15 | parse, write | Scalar fields on table rows are excluded with the whole row. |
+| T15 | parse | Fields beside the band are read and written (Run D); the truth gives the closing `End \| _` row no slot while T1's `Total \| _` in the same position has one. |
 | T18 | parse, write | Only the first workbook sheet enters the grid and output. |
 | T20 | write | Short bands do not contract unused reserved rows. |
 | T21 | write | Short repeated document blocks retain reserved-row gaps. |

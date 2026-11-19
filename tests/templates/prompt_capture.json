@@ -124,8 +124,9 @@
     "slot_descriptions": [
       "F1: the value on the row labelled \"Total direct\"",
       "F2: the value on the row labelled \"Total after blank\"",
-      "F3: the value on the row labelled \"End\"",
+      "F3: the value on the row labelled \"Total right\"",
       "F4: the value on the row labelled \"End\"",
+      "F5: the value on the row labelled \"End\"",
       "TABLE \"table_1\" — one object per row present in the document.",
       "columns (use EXACTLY these keys): Direct | Qty | Amount",
       "TABLE \"table_2\" — one object per row present in the document.",
@@ -183,7 +184,9 @@
   },
   "T15": {
     "slot_descriptions": [
-      "F1: the value on the row labelled \"End\"",
+      "F1: the value on the row labelled \"Owner\"",
+      "F2: the value on the row labelled \"Reviewed\"",
+      "F3: the value on the row labelled \"End\"",
       "TABLE \"table\" — one object per row present in the document.",
       "columns (use EXACTLY these keys): Item | Qty | Amount"
     ],

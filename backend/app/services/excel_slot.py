@@ -488,6 +488,16 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                     for c in range(t["start_col"], max_c + 1))
             else:
                 band_rows.update(range(t["start_row"], t["end_row"] + 1))
+                # Run D, D8: a row band owns its OWN COLUMNS on its rows; a
+                # field drawn beside it on those rows is written like any other
+                cols = [c["col"] for c in t.get("columns") or []]
+                if cols:
+                    band_cells.update(
+                        (r, c) for r in range(t["start_row"], t["end_row"] + 1)
+                        for c in range(min(cols), max(cols) + 1))
+                else:
+                    band_cells.update((r, c) for r in range(t["start_row"], t["end_row"] + 1)
+                                      for c in range(0, max_c + 1))
 
         # 1. static template text, at its shifted position
         for key, cell_def in cells_tpl.items():
@@ -497,9 +507,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 tr, tc = map(int, str(key).split(","))
             except ValueError:
                 continue
-            if tr > max_r or tc > max_c or tr in band_rows:
-                continue
-            if (tr, tc) in band_cells:
+            if tr > max_r or tc > max_c or (tr, tc) in band_cells:
                 continue
             text = str(cell_def.get("value") or "").strip()
             if text:
@@ -538,7 +546,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         for (tr, tc) in styles:
             if tr > max_r or tc > max_c:
                 continue
-            if tr in band_rows or (tr, tc) in band_cells:
+            if (tr, tc) in band_cells:
                 continue
             dress(out_row(tr), tc, (tr, tc))
 
@@ -564,7 +572,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 src_r = t["start_row"] + (i if i < height else 0)
                 if i == rows_n - 1 and rows_n < height:
                     src_r = t["end_row"]      # the drawn closing row, border and all
-                for c in range(0, max_c + 1):
+                cols = [c["col"] for c in t.get("columns") or []]
+                span = range(min(cols), max(cols) + 1) if cols else range(0, max_c + 1)
+                for c in span:              # the band's own columns (D8)
                     dress(out_row(t["start_row"]) + i, c, (src_r, c))
 
         # 2. field slots, each at the exact address it was asked for

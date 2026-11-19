@@ -48,7 +48,9 @@ PARSE_XFAIL = {
     "T12": "T12: transposed bands require an editor declaration",
     "T13": "T13: a header-only flat list invents ten reserved rows",
     "T14": "T14: Excel Table metadata is ignored and ten rows are invented",
-    "T15": "T15: scalar fields on band rows are excluded",
+    "T15": ("T15: Owner/Reviewed beside the band are fields (Run D, D8), but the "
+            "truth gives the closing `End | _` row no slot although T1's "
+            "`Total | _` in the same position has one"),
     "T18": "T18: only the first worksheet enters the template grid",
 }
 
@@ -66,7 +68,6 @@ WRITE_XFAIL = {
     "T11": "T11: a subtotal inside a band is overwritten by extracted rows",
     "T12": "T12: an undeclared transposed table is written as scalar fields",
     "T14": "T14: the Excel Table object is not recreated",
-    "T15": "T15: fields beside the band are skipped with the band row",
     "T18": "T18: secondary worksheets are not written",
     "T20": "T20: unused reserved rows are not contracted for 0/1-row cases",
     "T21": "T21: per-document blocks retain unused reserved rows and gaps",

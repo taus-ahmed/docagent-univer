@@ -863,7 +863,22 @@ def compute_shape(grid, log=None):
     field_slots, label_cols, value_cols = [], set(), set()
     heading_rows = set()
 
-    skip_rows = band_rows | set(header_rows) | section_rows
+    # Run D, D8: a row band CLAIMS ONLY ITS OWN COLUMNS, header to last row.
+    # It used to take whole rows, so `Owner | _` drawn to the right of a table
+    # on the table's own rows was neither a field nor part of the table, and
+    # the writer skipped it. Its rows now stay open to fields outside its
+    # columns; inside them nothing else may be a label or a slot.
+    band_cells = set()
+    for b in bands:
+        if b.get("orientation") == "columns" or not b.get("columns"):
+            continue
+        c0 = min(c["col"] for c in b["columns"])
+        c1 = max(c["col"] for c in b["columns"])
+        band_cells |= {(r, c) for r in range(b["header_row"], b["end_row"] + 1)
+                       for c in range(c0, c1 + 1)}
+    claimed = set(claimed) | band_cells
+    band_owned_rows = {r for r, _c in band_cells}
+    skip_rows = ((band_rows | set(header_rows)) - band_owned_rows) | section_rows
     all_cols = range(max_col + 1)
 
     def _text_cols(r):
@@ -935,8 +950,14 @@ def compute_shape(grid, log=None):
         # that test a fully populated row would qualify, and "Total | 999" —
         # two labels under THE ONE RULE — would sprout a slot in column C.
         in_box = [c for c in block_values if c <= max_col]
+        # Run D, D8: a PURE LABEL LIST on the right edge (one text per row, all
+        # in the last column — `Owner` / `Reviewed` drawn beside a table)
+        # implies its value column too, for the reason a one-column template
+        # is widened by one: nothing else explains labels with no room for
+        # values. "Total | 999" has two texts on its row and does not qualify.
+        label_list = all(_text_cols(r) == [max_col] for r in body)
         block_values = ([c for c in block_values if c <= max_col + 1]
-                        if in_box else in_box)
+                        if in_box or label_list else in_box)
 
         for r in body:
             for vc in block_values:
