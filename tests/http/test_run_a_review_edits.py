@@ -168,6 +168,34 @@ class TestDraftExport:
         all_text = " ".join(str(c.value) for row in lg.iter_rows() for c in row if c.value)
         assert "Needs attention" in all_text and heads
 
+    def test_c2_default_and_audit_route_keep_review_artifacts(self, client, auth, doc):
+        """Exercise C2 through the HTTP route, not just the workbook writer."""
+        j, _d = doc
+        default = client.get(f"/api/jobs/{j.id}/export", headers=auth["acme"])
+        audit = client.get(f"/api/jobs/{j.id}/export?include_audit=true",
+                           headers=auth["acme"])
+        assert default.status_code == audit.status_code == 200
+        assert "_DRAFT.xlsx" in default.headers["content-disposition"]
+        assert "_DRAFT.xlsx" in audit.headers["content-disposition"]
+
+        clean_book = load_workbook(io.BytesIO(default.content))
+        audit_book = load_workbook(io.BytesIO(audit.content))
+        for book in (clean_book, audit_book):
+            assert "Legend" in book.sheetnames
+            assert str(book["Legend"]["A1"].value).startswith("DRAFT")
+            cells = [c for row in book["Results"].iter_rows() for c in row]
+            assert any(c.comment is not None for c in cells)
+            assert any(c.fill.fill_type == "solid" for c in cells)
+
+        clean_text = [str(c.value) for row in clean_book["Results"].iter_rows()
+                      for c in row if c.value is not None]
+        audit_text = [str(c.value) for row in audit_book["Results"].iter_rows()
+                      for c in row if c.value is not None]
+        assert not any(v == "Source" or v.startswith("Review status")
+                       or " · p." in v for v in clean_text)
+        assert any(v.startswith("Review status") for v in audit_text)
+        assert any(" · p." in v for v in audit_text)
+
     def test_once_settled_the_name_has_no_draft(self, client, auth, doc):
         j, d = doc
         client.post(f"/api/jobs/{j.id}/docs/{d.id}/review", headers=auth["acme"],
