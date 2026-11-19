@@ -42,7 +42,6 @@ PARSE_XFAIL = {
            "names them left/right, which nothing in the grid prints, and gives "
            "the closing End left/End right labels no slot although T1's Total "
            "in the same position has one"),
-    "T9": "T9: a merged two-level header drops the row-label column",
     "T10": "T10: totals have no ownership and a blank before a total becomes band capacity",
     "T12": "T12: transposed bands require an editor declaration",
     "T14": "T14: Excel Table metadata is ignored and ten rows are invented",
@@ -65,7 +64,6 @@ WRITE_XFAIL = {
     "T12": "T12: an undeclared transposed table is written as scalar fields",
     "T14": "T14: the Excel Table object is not recreated",
     "T18": "T18: secondary worksheets are not written",
-    "T20": "T20: unused reserved rows are not contracted for 0/1-row cases",
     "T21": "T21: per-document blocks retain unused reserved rows and gaps",
 }
 

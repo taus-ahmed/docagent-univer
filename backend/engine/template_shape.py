@@ -235,7 +235,7 @@ def _wide_headings(grid):
     return out
 
 
-def _section_for(m, static, row, wide=()):
+def _section_for(m, static, row, wide=(), header_parts=()):
     """The section title above `row`, or "".
 
     Two ways to be a title, because there are two kinds of certainty:
@@ -273,9 +273,11 @@ def _section_for(m, static, row, wide=()):
     A merged heading reads as one static here because the cells it covers are
     not in `m` at all (see `_merge_cover`).
     """
-    # (1) the nearest non-blank row above, if it is a merged heading
+    # (1) the nearest non-blank row above, if it is a merged heading. A cell
+    # merged DOWN into the header row is part of the header, not a title
+    # (Run D, D12: `Item` over A1:A2 beside the `Amount` heading over B1:C1).
     for r in range(row - 1, -1, -1):
-        cols = [c for (rr, c) in static if rr == r]
+        cols = [c for (rr, c) in static if rr == r and (rr, c) not in header_parts]
         if not cols:
             continue
         if len(cols) == 1 and (r, cols[0]) in wide:
@@ -672,11 +674,31 @@ def compute_shape(grid, log=None):
     # side by side on the same rows (`Left A..D | _ | Right A..D`) used to be
     # rejected as "not adjacent" — the gap invalidated the whole row and
     # neither table was detected.
+    # Run D, D12 (T9): a header cell COVERED by a one-column merge coming down
+    # from the row above (`Item` over A1:A2 beside `Amount` over B1:C1 with
+    # `Debit | Credit` beneath) is that merge's heading on the lower row too —
+    # flattening a two-level header without dropping its row-label column.
+    inherited, inherited_from = {}, {}
+    for key, span in (grid.get("merges") or {}).items():
+        try:
+            ar, ac = map(int, str(key).split(","))
+            nrows = int((span or {}).get("rows") or 1)
+            ncols = int((span or {}).get("cols") or 1)
+        except (ValueError, AttributeError, TypeError):
+            continue
+        if ncols == 1 and nrows > 1 and (ar, ac) in static:
+            for rr in range(ar + 1, ar + nrows):
+                inherited[(rr, ac)] = m[(ar, ac)]
+                inherited_from[(rr, ac)] = (ar, ac)
+    header_text = dict(m)
+    header_text.update(inherited)
+
     header_runs = []                                    # [(row, cols)]
     for r in rows:
         if r in claimed_rows:
             continue                                    # inside a declared table
-        cols = sorted(c for c in range(max_col + 1) if (r, c) in static)
+        cols = sorted(c for c in range(max_col + 1)
+                      if (r, c) in static or (r, c) in inherited)
         run = []
         for c in cols + [None]:
             if c is not None and (not run or c == run[-1] + 1):
@@ -794,12 +816,14 @@ def compute_shape(grid, log=None):
                 tail = ("but has no empty rows beneath it — not treated as a "
                         "repeating band")
                 _skip(f"row {hr} looks like a band header "
-                      f"({', '.join(m[(hr, c)] for c in cols)}) {tail}",
+                      f"({', '.join(header_text[(hr, c)] for c in cols)}) {tail}",
                       logged=f"row {hr} looks like a band header "
                              f"({len(cols)} headings) {tail}")
                 continue
-        section = _section_for(m, static, hr, wide)
-        headers_raw = [m[(hr, c)] for c in cols]
+        section = _section_for(m, static, hr, wide,
+                               {inherited_from[(hr, c)] for c in cols
+                                if (hr, c) in inherited_from})
+        headers_raw = [header_text[(hr, c)] for c in cols]
 
         # A TWO-column band is a label/value pair by construction — there is
         # nothing else two columns can be — so its first column is the label

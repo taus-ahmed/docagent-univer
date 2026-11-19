@@ -336,8 +336,9 @@
   "T9": {
     "slot_descriptions": [
       "F1: the value on the row labelled \"Prepared by\"",
-      "TABLE \"Debit\" — one object per row present in the document.",
-      "columns (use EXACTLY these keys): Debit | Credit"
+      "TABLE \"Amount\" — one object per row present in the document.",
+      "section: \"Amount\"",
+      "columns (use EXACTLY these keys): Item | Debit | Credit"
     ],
     "ambiguities": [
       "The merged Item header is omitted; the prompt exposes only a two-column Debit/Credit band."

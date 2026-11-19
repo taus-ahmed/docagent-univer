@@ -194,6 +194,19 @@ def _document_hint_of(ed):
     return document_hint_of(ed)
 
 
+def _template_slot_map(sheet_data) -> dict:
+    """The slot map the template itself implies (no values): what a document
+    with no stored slot map is laid out with."""
+    try:
+        from slot_extractor import _table_map, enumerate_slots
+        slots = enumerate_slots(sheet_data or {})
+    except Exception:
+        return {}
+    return {"fields": [{k: f.get(k) for k in ("slot_id", "ref", "row_label", "section")}
+                       for f in slots.get("fields") or []],
+            "tables": [_table_map(t) for t in slots.get("tables") or []]}
+
+
 def _dress_block(ws, top, height, max_c, ed, filename, index, show_name,
                  slot_map, thick, spare_col):
     """The header strip on a block's first row and the closing border under
@@ -387,6 +400,12 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         if not isinstance(ed, dict):
             continue
         slot_map = ed.get("slot_map") or {}
+        if not slot_map:
+            # Run D, D12: a document that FAILED stores no slot map. Its block
+            # is still the template's, laid out with the template's own tables
+            # holding no rows — not the reserved rows of a template nobody
+            # filled.
+            slot_map = _template_slot_map(sheet_data)
         tables = slot_map.get("tables") or []
         fields = ed.get("extracted_fields") or {}
 
