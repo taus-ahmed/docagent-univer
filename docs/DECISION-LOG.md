@@ -1708,6 +1708,65 @@ design; only amounts beside an EMPTY slot's printed label, and candidate rows
 of a band on a page that prints its headings, raise one. The rest are listed
 in `diagnostics.coverage.unplaced_amounts` as information.
 
+## 25. Run B: the values have to come out, not only be marked missing
+
+Run A made missing data visible. Run B makes it come out, under one standard:
+a value printed in the document is extracted even when the template words it
+differently; a slot the document does not fill stays plainly empty and
+unflagged; a flag on correct data is a defect of its own.
+
+**Live first (B0, 6 of 12 capped calls, ~$0.04 at Flash prices on
+flash-lite).** Three identical bank calls returned `tables` every time (13
+rows, STOP, no thinking tokens): the Run A omission did not recur in three
+tries, which is a sample, not a rate. The defects were elsewhere: the W-2's
+widget values were read but paired by position (`Box c Employer Name` =
+`R AND R FARM 10535 21 BEECH…`) and seven correct money values were flagged;
+every statement carried a "template columns" flag; card categories were
+flagged as misplaced because `locate` found `Payment` inside `PAYMENT
+RECEIVED`; the bank's BEGINNING BALANCE line became a 13th transaction. The
+SAMPLE watermark was in the card's text (`ETravel`), though this model run
+cleaned it. Those findings set the order: forms, the false flags, grounding,
+then the rest.
+
+**What changed.** (B1) `engine/form_fields.py`: each filled widget becomes an
+entry with the caption printed above it; the prompt lists `label: value`
+(only for documents that have widgets); a slot the model left empty,
+renotated, or — on a box-id match — contradicted, takes the widget's value as
+MACHINE-READ (provenance `machine_read: form_field`), never as missing. On a
+form read this way, a quoted empty box is not evidence of a miss. (B2)
+`engine/aliases.py`: a small phrase table plus qualifier stripping; the
+prompt names another wording only where the label is not printed and the
+alias is (as a whole phrase), and never for an inferred template — so none of
+the ten gold prompts changed and the replay cache still answers. Per-cell
+`aliases` in the grid are optional. `validation.label_wording` reports
+labels with no literal match (information only). (B3) `engine/format_rules.py`:
+a "Last 4" must be the suffix of a printed account number — `58842` becomes
+`8842`, machine-corrected; money and date slots are type-checked and
+flagged, never coerced. (B4) watermark characters (diagonal, or rotated and
+2x the median size) are filtered before any reading; a quote the page does
+not hold is re-anchored on the line that prints the value(s). (B5) stacked
+entries in a numbered box are never dropped: next empty slot of the same
+box, else a flag ("Box 14 has a second entry 52.00 X that has no slot").
+(B6) `source_inventory.row_sum_checks`: band rows against a printed total;
+flags the total cell; any candidate total equal to the sum settles it. (B7)
+OCR-split amounts (`$9,428` `99`) are rejoined for the inventory only.
+(B8) "template columns" fires only for a column that received values while
+neither its heading nor an alias is printed.
+
+**Found live and fixed in the same run.** The first last-4 rule took any
+label containing "ending"; the reworded bank template's "Ending Balance"
+came back as `8842`, READY, unflagged. "Ending" now counts only in "card /
+account ending" or "ending in", and a test pins both balances.
+
+**What it cost / what is not fixed.** B7's premise (Codex: the scanned bank
+pages expose 1 and 0 amounts) did not reproduce here — those two pages of
+`long_digital_25pg` are receipts, and on `long_scan_25pg` the bank pages were
+already selected; the repair corrects four amounts' values and selects no new
+page. Watermarks on SCANS are not detected. A multi-line address that no
+single line holds still reports ungrounded. The strict scorer compares golden
+labels to template labels verbatim, so `Balance` vs `Running Balance` reads
+as "missing" on live card/bank runs that are in fact correct.
+
 ## What these decisions have in common
 
 Five of the first seven replaced something that failed *silently* — placement

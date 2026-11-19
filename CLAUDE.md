@@ -158,6 +158,9 @@ The reasoning for each is in `docs/DECISION-LOG.md`.
 | `backend/engine/shape_inference.py` | no-template: document → inferred template → grid → same path |
 | `backend/engine/text_layer.py` | positional evidence: words with x/y; wrapped-value repair; column bands; placement; record spans; AcroForm state |
 | `backend/engine/doc_boundaries.py` | one file → many documents, deterministically |
+| `backend/engine/form_fields.py` | Run B: fillable-form widgets as labelled entries; slots filled from them are machine-read (DECISION-LOG §25) |
+| `backend/engine/aliases.py` | Run B: template labels matched by meaning — small alias table, prompt wording hints, label-wording diagnostics |
+| `backend/engine/format_rules.py` | Run B: last-4 must be a printed account suffix; money/date type checks (flag, never coerce) |
 | `backend/engine/core/preprocessor.py` | PDF/image → page texts, word lines and per-page origin (native / OCR); selective OCR |
 | `backend/engine/ocr_source.py` | the OCR reader seam (Tesseract today) behind the same word-list contract |
 | `backend/engine/validators.py` | per-family check registry; `cheque_`, `invoice_`, `bank_`, `payslip_validators.py` register into it |
