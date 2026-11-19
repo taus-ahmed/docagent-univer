@@ -41,15 +41,14 @@ truth file live under `tests/templates/`.
 | F10 | parse, write | Formula strings participate in label geometry. |
 | F12 | write | Hidden row and column state is not preserved. |
 | T6 | parse | Both bands are detected and written (Run D); the truth's band names `left`/`right` are printed nowhere, and its closing `End left`/`End right` labels expect no slot while T1's `Total` in the same position expects one. |
-| T9 | parse, write | A merged two-level header drops the row-label column. |
-| T10 | parse, write | Totals have no band ownership and nonstandard positions are misread. |
-| T11 | write | A subtotal inside a detected band is overwritten by extracted rows. |
+| T9 | write | Parse passes (Run D). The truth expects the text `Item` in A2 and also keeps the A1:A2 merge that covers it. |
+| T10 | parse, write | Needs non-geometric readings: a blank row before a total is a spacer (not capacity), `Total above` over a header is a total (the gold payslip's `Earnings` in that position is a title), and closing `End` rows get no slot. |
+| T11 | write | The subtotal keeps its place and records go around it (Run D). The test expects records in rows 2-6 contiguously and the subtotal formula in E4 at the same time. |
 | T12 | parse, write | Transposed tables require an editor declaration. |
 | T14 | parse, write | Excel Table metadata is ignored and not recreated. |
 | T15 | parse | Fields beside the band are read and written (Run D); the truth gives the closing `End \| _` row no slot while T1's `Total \| _` in the same position has one. |
 | T18 | parse, write | Only the first workbook sheet enters the grid and output. |
-| T20 | write | Short bands do not contract unused reserved rows. |
-| T21 | write | Short repeated document blocks retain reserved-row gaps. |
+| T21 | write | Blocks are compact (Run C/D); the test expects 2 blank rows between documents, Run C's acceptance test exactly 3. |
 
 ## Reclassified naming problems
 

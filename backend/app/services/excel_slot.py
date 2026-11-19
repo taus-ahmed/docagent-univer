@@ -194,6 +194,43 @@ def _document_hint_of(ed):
     return document_hint_of(ed)
 
 
+def _interior_rows(t, cells_tpl) -> dict:
+    """{template row: [(col, text)]} for static text typed inside a row
+    band's own cells (a subtotal line drawn within the table)."""
+    cols = [c["col"] for c in t.get("columns") or []]
+    if not cols:
+        return {}
+    out = {}
+    for key, cell_def in (cells_tpl or {}).items():
+        if not isinstance(cell_def, dict) or cell_def.get("mergeParent"):
+            continue
+        try:
+            r, c = map(int, str(key).split(","))
+        except ValueError:
+            continue
+        text = str(cell_def.get("value") or "").strip()
+        if (t["start_row"] <= r <= t["end_row"] and min(cols) <= c <= max(cols)
+                and text and not is_placeholder(text)):
+            out.setdefault(r, []).append((c, text))
+    return out
+
+
+def _band_layout(t, n, interior) -> list:
+    """The rows a band is written as: ("rec", k) for record k, ("static", r)
+    for the interior template row r. Template rows are walked in order; an
+    interior row keeps its place, each record takes the next free row,
+    unused free rows are dropped, and records beyond them follow."""
+    out, k = [], 0
+    for r in range(t["start_row"], t["end_row"] + 1):
+        if r in interior:
+            out.append(("static", r))
+        elif k < n:
+            out.append(("rec", k))
+            k += 1
+    out += [("rec", i) for i in range(k, n)]
+    return out
+
+
 def _template_slot_map(sheet_data) -> dict:
     """The slot map the template itself implies (no values): what a document
     with no stored slot map is laid out with."""
@@ -478,19 +515,28 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         # group. The rows below the group move by the group's LARGEST change,
         # so when the left table grows and the right does not, both stay on
         # their own rows and nothing below lands inside the longer one.
+        # Run D, D12 (T11): a static row typed INSIDE a table (`Subtotal |
+        # =SUM(...)`) keeps its place; records are written around it. Each
+        # table's written rows are `layouts[name]`, in order.
+        layouts = {}
+        for t in tables:
+            if t.get("orientation") == "columns":
+                continue
+            n = len(ed.get(f"{t['name']}_rows") or [])
+            layouts[t["name"]] = _band_layout(t, n, _interior_rows(t, cells_tpl))
         groups = []                     # [[first row, end row, delta]]
         for t in tables:
             if t.get("orientation") == "columns":
                 continue
-            rows = ed.get(f"{t['name']}_rows") or []
             band = t["end_row"] - t["start_row"] + 1
+            grown = len(layouts[t["name"]])
             top = t.get("header_row", t["start_row"])
             g = next((g for g in groups if top <= g[1] and t["end_row"] >= g[0]), None)
             if g is None:
-                groups.append([top, t["end_row"], len(rows) - band])
+                groups.append([top, t["end_row"], grown - band])
             else:
                 g[0], g[1] = min(g[0], top), max(g[1], t["end_row"])
-                g[2] = max(g[2], len(rows) - band)
+                g[2] = max(g[2], grown - band)
         shifts = [(end, delta) for _top, end, delta in groups]
 
         def out_row(tr):
@@ -590,14 +636,29 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                         dress(out_row(r), first + i, (r, src_c))
                 continue
             height = t["end_row"] - t["start_row"] + 1
+            cols = [c["col"] for c in t.get("columns") or []]
+            span = range(min(cols), max(cols) + 1) if cols else range(0, max_c + 1)
+            base = out_row(t["start_row"] - 1) + 1
+            interior = _interior_rows(t, cells_tpl)
+            if interior:
+                # D12 (T11): the layout keeps each interior row where it was
+                # drawn — its text and its look — and records fill the rest
+                free = [r for r in range(t["start_row"], t["end_row"] + 1)
+                        if r not in interior] or [t["start_row"]]
+                for j, (kind, v) in enumerate(layouts[t["name"]]):
+                    src_r = v if kind == "static" else free[v if v < len(free) else 0]
+                    for c in span:
+                        dress(base + j, c, (src_r, c))
+                    if kind == "static":
+                        for c, text in interior[v]:
+                            put(doc_offset + base + j, c, text)
+                continue
             for i in range(rows_n):
                 src_r = t["start_row"] + (i if i < height else 0)
                 if i == rows_n - 1 and rows_n < height:
                     src_r = t["end_row"]      # the drawn closing row, border and all
-                cols = [c["col"] for c in t.get("columns") or []]
-                span = range(min(cols), max(cols) + 1) if cols else range(0, max_c + 1)
                 for c in span:              # the band's own columns (D8)
-                    dress(out_row(t["start_row"] - 1) + 1 + i, c, (src_r, c))
+                    dress(base + i, c, (src_r, c))
 
         # 2. field slots, each at the exact address it was asked for
         slot_label = {f.get("ref"): f.get("row_label", "")
@@ -659,10 +720,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                              column=source_col + 1)
                 if not isinstance(hc, MergedCell) and hc.value is None:
                     hc.value = "Source"
+            at = {v: j for j, (kind, v) in enumerate(layouts.get(t["name"]) or [])
+                  if kind == "rec"}
             for i, row in enumerate(rows):
                 # placed from the row ABOVE the band: a band reserving no rows (D12)
-                # has start_row past end_row, and must not move by its own growth
-                r = doc_offset + out_row(t["start_row"] - 1) + 1 + i
+                # has start_row past end_row, and must not move by its own growth;
+                # an interior static row keeps its place (`layouts`)
+                r = doc_offset + out_row(t["start_row"] - 1) + 1 + at.get(i, i)
                 for col in t["columns"]:
                     key = col.get("key") or col["header"]
                     cell = put(r, col["col"], row.get(key, ""), col.get("header", ""))

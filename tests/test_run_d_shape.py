@@ -87,3 +87,46 @@ class TestD11Placeholders:
             _write_slot_excel(wb.active, [doc], g, g["cells"], openpyxl)
         ws = wb.active
         assert ws["B1"].value == "Ada" and ws["B2"].value is None
+
+
+class TestD12InteriorRows:
+    """T11's behaviour (its own write test also asks for one cell to hold a
+    record and the subtotal formula at once, so it stays xfail): a subtotal
+    row drawn inside a table keeps its place and records go around it."""
+
+    def _write(self, n):
+        import io
+        import contextlib
+        import json
+        import openpyxl
+        from types import SimpleNamespace
+        from slot_extractor import _table_map, enumerate_slots
+        from app.api.routes.extract import _write_slot_excel
+        g = _grid({(0, 0): "Item", (0, 1): "Date", (0, 2): "Qty", (0, 3): "Rate",
+                   (0, 4): "Amount", (3, 0): "Subtotal", (3, 4): "=SUM(E2:E3)",
+                   (6, 0): "Total"})
+        slots = enumerate_slots(g)
+        t = slots["tables"][0]
+        assert (t["start_row"], t["end_row"]) == (1, 5), t
+        ed = {"template_type": "slot", "extracted_fields": {},
+              "slot_map": {"fields": slots["fields"],
+                           "tables": [_table_map(t) for t in slots["tables"]]},
+              "validation": {"confidence_map": {}, "flagged_fields": []},
+              f"{t['name']}_rows": [{"Item": f"I{k}", "Amount": f"{k}.00"} for k in range(n)]}
+        s = json.dumps(ed)
+        doc = SimpleNamespace(filename="x.pdf", get_extracted_data=lambda: json.loads(s))
+        wb = openpyxl.Workbook()
+        with contextlib.redirect_stdout(io.StringIO()):
+            _write_slot_excel(wb.active, [doc], g, g["cells"], openpyxl)
+        ws = wb.active
+        return [ws.cell(r, 1).value for r in range(1, ws.max_row + 1)], ws
+
+    def test_records_fill_around_the_subtotal_row(self):
+        col_a, ws = self._write(4)
+        assert col_a[:7] == ["Item", "I0", "I1", "Subtotal", "I2", "I3", "Total"]
+        assert ws["E4"].value == "=SUM(E2:E3)"
+
+    def test_unused_free_rows_are_dropped_and_extra_records_follow(self):
+        assert self._write(1)[0][:4] == ["Item", "I0", "Subtotal", "Total"]
+        assert self._write(6)[0][:9] == ["Item", "I0", "I1", "Subtotal", "I2", "I3",
+                                         "I4", "I5", "Total"]

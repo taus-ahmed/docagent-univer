@@ -42,7 +42,10 @@ PARSE_XFAIL = {
            "names them left/right, which nothing in the grid prints, and gives "
            "the closing End left/End right labels no slot although T1's Total "
            "in the same position has one"),
-    "T10": "T10: totals have no ownership and a blank before a total becomes band capacity",
+    "T10": ("T10: the truth needs three readings geometry cannot make: a blank row "
+            "before a total is a spacer, not a reserved row; `Total above` directly "
+            "over a header is a total, not the band's title; and the closing `End` "
+            "rows get no slot"),
     "T12": "T12: transposed bands require an editor declaration",
     "T14": "T14: Excel Table metadata is ignored and ten rows are invented",
     "T15": ("T15: Owner/Reviewed beside the band are fields (Run D, D8), but the "
@@ -58,13 +61,17 @@ WRITE_XFAIL = {
     "F9": "F9: number formats and dropdown validation are not in the grid contract",
     "F10": "F10: formula geometry creates wrong slots and misses intended values",
     "F12": "F12: hidden rows and columns are not preserved",
-    "T9": "T9: the Item column is outside the detected band",
-    "T10": "T10: totals are not attached to bands and nonstandard positions are lost",
-    "T11": "T11: a subtotal inside a band is overwritten by extracted rows",
+    "T9": ("T9: the band now includes Item (Run D, D12), but the truth expects the "
+           "text Item in A2 while also keeping the A1:A2 merge that covers A2"),
+    "T10": "T10: see the parse reason",
+    "T11": ("T11: the subtotal row keeps its place and records go around it (Run D, "
+            "D12; tests/test_run_d_shape.py), but this test expects records 1-5 in "
+            "rows 2-6 contiguously AND the subtotal formula in E4: one cell, two values"),
     "T12": "T12: an undeclared transposed table is written as scalar fields",
     "T14": "T14: the Excel Table object is not recreated",
     "T18": "T18: secondary worksheets are not written",
-    "T21": "T21: per-document blocks retain unused reserved rows and gaps",
+    "T21": ("T21: blocks are compact (Run C/D), but this test expects 2 blank rows "
+            "between documents; Run C's acceptance test requires exactly 3"),
 }
 
 
