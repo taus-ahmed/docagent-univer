@@ -98,6 +98,11 @@ FAMILY_ALIASES = {
 }
 
 
+#: Document types that are US federal tax forms (a decimal POINT, always).
+US_FEDERAL_FORMS = {"w2", "w-2", "form_w2", "form_1099", "1099", "form_1098", "1098",
+                    "tax_form_w2", "tax_form_1099"}
+
+
 def register(family, validator):
     REGISTRY.setdefault(family, []).append(validator)
     return validator
@@ -115,8 +120,13 @@ def run_checks(doc_type, ctx):
     from amounts import DOCUMENT_HINT, FIRM_LOCALE, document_hint
     # Locale hint, in order: the template's, the firm's, then the document's
     # own unambiguous numbers (engine/amounts.py).
-    token = DOCUMENT_HINT.set(document_hint(ctx.texts(),
-                                            ctx.locale or FIRM_LOCALE.get()))
+    hint = document_hint(ctx.texts(), ctx.locale or FIRM_LOCALE.get())
+    if hint is None and family_of(doc_type) in US_FEDERAL_FORMS:
+        # Run B: an IRS W-2 / 1099 / 1098 is a US form by definition, so a
+        # lone "15,250" on it is fifteen thousand. Used only when the
+        # document's own numbers and every locale said nothing.
+        hint = "."
+    token = DOCUMENT_HINT.set(hint)
     try:
         return _run(fam=family_of(doc_type), ctx=ctx)
     finally:

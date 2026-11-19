@@ -148,6 +148,49 @@ def _context(line, i, n=6) -> str:
     return " ".join(str(w["text"]) for w in ws[lo:i + 1])[:80]
 
 
+_OCR_WHOLE = re.compile(r"^\(?-?[$€£]?\d{1,3}(?:,\d{3})+$|^\(?-?[$€£]\d{2,}$")
+_OCR_DOT_THOUSANDS = re.compile(r"^\(?-?[$€£]?\d{1,3}\.\d{3}$")
+_OCR_CENTS = re.compile(r"^\d{2}\)?$")
+
+
+def ocr_amount_repair(line) -> tuple[list, int]:
+    """(line, repairs): amounts an OCR reading split in two, rejoined.
+
+    Run B, B7. On the scanned Carson Bank pages Tesseract drops the decimal
+    point and reads the cents as a word of their own - `$9,428` `99`,
+    `$2,688` `81` - or reads the thousands comma as a point - `$6.428` `29`.
+    Neither half is an amount (`amount_of` wants two decimals or a symbol and
+    a well-formed figure), so the page's money went uncounted and the scan
+    was never asked for its rows. A repair needs BOTH: a whole-number amount
+    with a currency symbol or thousands groups, and a two-digit word directly
+    after it on the same line (gap under the word height). Used for the
+    inventory only; the text the model reads is untouched."""
+    ws = list(line or [])
+    out, fixed, i = [], 0, 0
+    while i < len(ws):
+        w = ws[i]
+        nxt = ws[i + 1] if i + 1 < len(ws) else None
+        t = str(w.get("text", "")).strip()
+        if nxt is not None and _OCR_CENTS.match(str(nxt.get("text", "")).strip()):
+            h = max(1.0, float(w.get("bottom", 0) or 0) - float(w.get("top", 0) or 0))
+            gap = float(nxt["x0"]) - float(w["x1"])
+            joined = None
+            if gap <= max(6.0, h) and "." not in t.lstrip("$€£(-")[-3:]:
+                cents = str(nxt["text"]).strip().rstrip(")")
+                if _OCR_WHOLE.match(t):
+                    joined = f"{t}.{cents}"
+                elif _OCR_DOT_THOUSANDS.match(t):
+                    joined = f"{t.replace('.', ',')}.{cents}"
+            if joined and amount_of(joined) is not None:
+                out.append(dict(w, text=joined, x1=nxt["x1"], ocr_joined=True))
+                fixed += 1
+                i += 2
+                continue
+        out.append(w)
+        i += 1
+    return out, fixed
+
+
 def build(page_lines, page_numbers=None, widget_values=None, origins=None,
           ocr_failed=(), ocr_zero=()) -> dict:
     """{"pages": {file page: {...}}, "totals": {...}} for one document.
@@ -161,7 +204,12 @@ def build(page_lines, page_numbers=None, widget_values=None, origins=None,
         lines = (page_lines or [])[k] if k < len(page_lines or []) else []
         amounts, dated, item = [], 0, 0
         words = 0
+        scanned = (origins or {}).get(n) in ("ocr", "pre_ocr")
+        joined = 0
         for li, line in enumerate(lines or []):
+            if scanned:
+                line, fixed = ocr_amount_repair(line)
+                joined += fixed
             ws = _words(line)
             words += len(ws)
             kind = row_kind(line)
@@ -187,6 +235,7 @@ def build(page_lines, page_numbers=None, widget_values=None, origins=None,
             "dated_rows": dated,
             "item_rows": item,
             "amounts": amounts,
+            "ocr_joined_amounts": joined,
             "unreadable": state,
         }
     return {"pages": pages, "totals": {
@@ -320,7 +369,7 @@ def _norm_text(s) -> str:
 
 
 def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
-             page_lines=None, page_numbers=None) -> dict:
+             page_lines=None, page_numbers=None, form_lane=False) -> dict:
     """Compare the extraction with the inventory.
 
     Returns {"reasons": [plain sentences], "flag_slots": {ref: why},
@@ -330,7 +379,12 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
 
     `raw_fields` is the model's answer per slot id ({F1: {value, source}}),
     used for one signal: an empty value WITH a source quote means the model
-    found the label and no value (job 25)."""
+    found the label and no value (job 25).
+
+    `form_lane` (Run B, B1): the document's filled form fields were read as
+    labelled entries and matched to slots. On such a form the WIDGETS are the
+    evidence of what was filled in, so a label quoted with no value - an
+    empty box on the form - is not by itself a sign of a miss."""
     pages = (inventory or {}).get("pages") or {}
     numbers = list(page_numbers or sorted(pages))
     lines_of = {n: ((page_lines or [])[k] if k < len(page_lines or []) else [])
@@ -435,7 +489,7 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             why = f"amount {val} printed near this label (page {n}) is not in any cell"
             flagged_amounts.append({"page": n, "value": val, "context": ctx,
                                     "slot": label})
-        elif quoted:
+        elif quoted and not form_lane:
             why = "the model quoted this label from the page but returned no value"
         elif printed and widgets_missing:
             why = "the label is printed and the form's filled values were not placed"
@@ -454,7 +508,11 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
         reasons.append(f"Amount {value} appears on page {page} next to {names} "
                        f"but is not in any cell.")
 
-    if fields and len(empty) * 2 > len(fields) and printed_empty * 2 > len(empty) \
+    # On a form read through its fields (B1) with every filled value placed,
+    # printed labels over empty boxes are the blank part of the form.
+    blank_form = form_lane and not widget_unplaced
+    if not blank_form and fields and len(empty) * 2 > len(fields) \
+            and printed_empty * 2 > len(empty) \
             and (inventory or {}).get("totals", {}).get("words", 0) > 0:
         reasons.append(f"{len(empty)} of {len(fields)} field slots are empty while "
                        f"the labels of {printed_empty} of them are printed on the "
@@ -469,7 +527,17 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
                                  "context": a["context"],
                                  "on_candidate_row": bool(a.get("row_kind"))})
 
+    # ── row sum against the printed total (Run B, B6) ──
+    row_sums = row_sum_checks(slots, tables_out, page_lines, numbers)
+    for m in row_sums:
+        shown = ", ".join(m["printed"][:3])
+        reasons.append(
+            f"row_sum_mismatch: the {m['rows']} extracted row(s) of table "
+            f"{m['table']!r} sum to {m['row_sum']} in column {m['column']!r}, "
+            f"but the page prints a total of {shown}.")
+
     return {"reasons": reasons, "flag_slots": flag_slots, "absent": absent,
+            "row_sums": row_sums,
             "empty_bands": sorted(empty_band),
             "widget_values": len(widget_all),
             "widget_unplaced": [{"page": n, "value": str(v)[:60]}
@@ -477,6 +545,139 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             "unplaced_amounts": unplaced[:40],
             "unplaced_amount_count": len(unplaced),
             "rows": rows_report}
+
+
+def stacked_entries(lines, label, value) -> list:
+    """Run B, B5: every entry printed in ONE slot's box, in order.
+
+    A W-2's Box 14 (or 12a-d) can hold several `amount code` entries stacked
+    in its column; the template has one cell for it. The first entry is the
+    amount on the label's line (or the next) equal to the slot's value; the
+    rest are amounts on the next three lines whose x-span overlaps it, read
+    until a non-amount word sits in that column (a new box). Each entry's
+    code is the short token right after its amount, with the box number
+    prefix stripped (`14H` -> `H`). [] when the value is not an amount or is
+    not found under its label."""
+    want = [amount_of(t) for t in str(value or "").split()]
+    want = [a for a in want if a is not None]
+    if not want:
+        return []
+    box = re.match(r"\s*(?:box\s+)?(\d{1,2})\b", str(label or ""), re.I)
+    prefix = box.group(1) if box else ""
+    if not prefix:
+        return []          # only a numbered form box holds stacked entries
+
+    def code_after(ws, k):
+        if k + 1 < len(ws):
+            t = str(ws[k + 1].get("text", ""))
+            if prefix and t.startswith(prefix) and 1 <= len(t) - len(prefix) <= 3:
+                return t[len(prefix):]
+        return ""
+
+    if prefix:
+        # a numbered box is found by its printed number (`14`, `14Other`)
+        spots = [(li, wi) for li, ln in enumerate(lines or [])
+                 for wi, w in enumerate(_words(ln))
+                 if str(w.get("text", "")) == prefix
+                 or re.fullmatch(re.escape(prefix) + r"[A-Za-z]{3,}", str(w.get("text", "")))]
+    else:
+        spots = label_lines(lines, label)
+    for li, wi in spots:
+        anchor, entries = None, []
+        for lj in (li, li + 1):
+            if lj >= len(lines):
+                break
+            ws = _words(lines[lj])
+            start = wi + 1 if lj == li else 0
+            for k in range(start, len(ws)):
+                if amount_of(ws[k]["text"]) == want[0]:
+                    anchor = ws[k]
+                    entries.append({"amount": _clean(ws[k]["text"]),
+                                    "code": code_after(ws, k), "line": lj})
+                    break
+            if anchor is not None:
+                break
+        if anchor is None:
+            continue
+        x0, x1 = float(anchor["x0"]) - 4, float(anchor["x1"]) + 4
+        left = float(_words(lines[li])[wi]["x0"]) - 4      # the box's label
+        for lj in range(entries[0]["line"] + 1, min(len(lines), entries[0]["line"] + 4)):
+            ws = _words(lines[lj])
+            col = [(k, w) for k, w in enumerate(ws)
+                   if float(w["x0"]) < x1 and float(w["x1"]) > x0]
+            if not col:
+                continue
+            k, w = col[0]
+            if amount_of(w["text"]) is None:
+                break
+            if any(left <= float(v["x0"]) and float(v["x1"]) <= x0 for v in ws[:k]):
+                break      # a word of its own to the left: a new labelled line
+            entries.append({"amount": _clean(w["text"]), "code": code_after(ws, k),
+                            "line": lj})
+        return entries
+    return []
+
+
+_TOTAL_WORD = re.compile(r"\b(?:sub-?total|totals?|sum)\b", re.I)
+_RUNNING = re.compile(r"\bbalance\b", re.I)
+
+
+def row_sum_checks(slots, tables_out, page_lines, page_numbers=None) -> list:
+    """Run B, B6 (the A8.3 gap): the extracted rows of a band against the
+    total the page prints for it.
+
+    For each summable column (two or more rows carrying an amount; a running
+    BALANCE is never summed), the candidate printed totals are the amounts on
+    lines that say "total" / "subtotal" / "sum" and name the column or the
+    table - or, when the table has only one summable column, every such line.
+    ANY candidate equal to the rows' sum settles it, so a sheet that prints
+    subtotal, tax and total is consistent by its subtotal. Only a column whose
+    candidates exist and none of which equals the sum is reported.
+
+    Returns [{table, column, rows, row_sum, printed}], printed being the
+    candidates, as plain decimal strings. Reports only; nothing is changed.
+    """
+    lines = [ln for page in (page_lines or []) for ln in (page or [])]
+    texts = [(_line_text(ln), ln) for ln in lines]
+    out = []
+    for t in slots.get("tables") or []:
+        rows = (tables_out or {}).get(t["name"]) or []
+        cols = [(c.get("key") or c.get("header"), c.get("header") or "")
+                for c in (t.get("columns") or [])]
+        summable = []
+        for key, header in cols:
+            if _RUNNING.search(header):
+                continue
+            vals = [amount_of(str(r.get(key, "") or "")) for r in rows]
+            vals = [v for v in vals if v is not None]
+            if len(vals) >= 2:
+                summable.append((key, header, vals))
+        if not summable:
+            continue
+        row_text = {_norm_text(" ".join(str(v) for k, v in r.items()
+                                        if not str(k).startswith("_")))
+                    for r in rows}
+        total_lines = [(txt, ln) for txt, ln in texts
+                       if _TOTAL_WORD.search(txt) and _norm_text(txt) not in row_text]
+        name_stems = _head_stems(t.get("name", ""))
+        for key, header, vals in summable:
+            stems = _head_stems(header) + name_stems
+            named = [(txt, ln) for txt, ln in total_lines
+                     if any(_word_matches(s, w) for s in stems
+                            for w in re.findall(r"[a-z]+", txt.casefold()))]
+            use = named or (total_lines if len(summable) == 1 else [])
+            printed = []
+            for _txt, ln in use:
+                printed += [a for a in (amount_of(w.get("text", "")) for w in _words(ln))
+                            if a is not None]
+            if not printed:
+                continue
+            s = sum(vals, Decimal(0))
+            if any(p == s for p in printed):
+                continue
+            out.append({"table": t["name"], "column": header, "rows": len(vals),
+                        "row_sum": str(s), "printed": [str(p) for p in printed]})
+    return out
 
 
 def expected_rows(inventory, slots, page_lines=None, page_numbers=None) -> dict:

@@ -44,6 +44,9 @@ class ProcessedDocument:
     # {file page: [value, ...]} of every FILLED form field (AcroForm /Tx, /Ch)
     # — written into page_texts too; kept here for the source inventory.
     widget_values: dict = field(default_factory=dict)
+    #: Run B, B1: {file page: [form_fields entry]} - each filled widget with
+    #: the label printed above it. Empty for a document with no widgets.
+    form_fields: dict = field(default_factory=dict)
     # Positional evidence: one list of words per page, each carrying x0/x1/top,
     # grouped into visual lines. This is what lets validation ask which COLUMN
     # a value sits in — a flat string cannot be asked that. See
@@ -180,6 +183,22 @@ def _all_widgets(path) -> dict:
     values = acroform_field_values(path) or {}
     return {p: list(boxes.get(p) or []) + list(values.get(p) or [])
             for p in set(boxes) | set(values)}
+
+
+def form_field_entries(path) -> dict:
+    """{file page: [form_fields entry]} read straight from the file (Run B,
+    B1) - for a caller that holds widget values but no labelled entries."""
+    from form_fields import entries_for_page
+    widgets = _all_widgets(path)
+    if not widgets:
+        return {}
+    out = {}
+    with pdfplumber.open(path) as pdf:
+        for page_num, ws in widgets.items():
+            if 0 <= page_num < len(pdf.pages) and ws:
+                out[page_num + 1] = entries_for_page(
+                    pdf.pages[page_num].extract_words(), ws, page_num + 1)
+    return out
 
 
 def text_layer_pages(file_path: str | Path) -> tuple[list[int], int]:
@@ -817,6 +836,16 @@ def _process_pdf(file_path: Path) -> ProcessedDocument:
                     stats = {}
                     text, lines, repairs = read_page(
                         page, widgets.get(page_num) or [], stats=stats)
+                    if widgets.get(page_num):
+                        # Labels come from the page's PRINTED words, read
+                        # separately so `lines` and `text` stay as they were.
+                        from form_fields import entries_for_page
+                        try:
+                            doc.form_fields[page_num + 1] = entries_for_page(
+                                page.extract_words(), widgets[page_num], page_num + 1)
+                        except Exception as e:      # a label is a hint, never fatal
+                            print(f"[TEXTLAYER] form field labels unreadable on "
+                                  f"page {page_num + 1}: {type(e).__name__}", flush=True)
                     needed_ocr = page_needs_ocr(text)
                     # The pypdf reader is opened only for a page that could be
                     # a pre-OCR'd scan (a usable text layer AND an image), so a

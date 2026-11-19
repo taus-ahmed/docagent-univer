@@ -482,6 +482,8 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                # Run A, A3 — the source inventory's facts the page words
                # alone do not carry: filled form fields, unreadable scans.
                widget_values=dict(getattr(doc, "widget_values", {}) or {}),
+               # Run B, B1 — each filled widget with its printed label.
+               form_fields=dict(getattr(doc, "form_fields", {}) or {}),
                unreadable={"ocr_failed": list(getattr(doc, "ocr_failed_pages", []) or []),
                            "ocr_zero": list(getattr(doc, "ocr_zero_word_pages", []) or [])})
 

@@ -28,13 +28,30 @@ def test_bank_inventory_survives_the_recorded_missing_table(replayed_jobs):
     assert state_of(data) == names.DOCUMENT_STATE_NEEDS_ATTENTION
 
 
-def test_fillable_widget_values_survive_the_recorded_empty_answer(replayed_jobs):
-    data = replayed_jobs[21]["extracted_data"]
+def test_fillable_widget_values_survive_the_recorded_empty_answer(monkeypatch):
+    """The Run A safety net, with the Run B form-field lane switched off (no
+    widget matches any slot): the widget values are still reported."""
+    import form_fields
+    from tests.contract.run_a_driver import replay_job
+
+    monkeypatch.setattr(form_fields, "match", lambda *a, **k: (None, False))
+    data = replay_job(21)["extracted_data"]
     coverage = coverage_of(data)
     values = {entry["value"] for entry in coverage[names.UNPLACED_WIDGET_VALUES_FIELD]}
     assert "10535" in values
     assert any("SETH W. WIGGINS" in value for value in values)
     assert state_of(data) == names.DOCUMENT_STATE_NEEDS_ATTENTION
+
+
+def test_fillable_widget_values_reach_their_cells_through_the_form_lane(replayed_jobs):
+    """Run B, B1: with the lane on, the same empty answer has every filled
+    widget value placed, so none is left unplaced."""
+    data = replayed_jobs[21]["extracted_data"]
+    coverage = coverage_of(data)
+    assert coverage[names.UNPLACED_WIDGET_VALUES_FIELD] == []
+    assert data["extracted_fields"]
+    assert "10535" in data["extracted_fields"].values()
+    assert "SETH W. WIGGINS" in data["extracted_fields"].values()
 
 
 @pytest.mark.parametrize(

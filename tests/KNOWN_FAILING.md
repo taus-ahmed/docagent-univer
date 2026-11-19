@@ -9,7 +9,9 @@ as XPASS until its marker and this row are removed.
 | A6 compact reserved table bands | `test_unused_reserved_rows_are_removed_and_totals_touch_the_band` | `backend/app/services/excel_slot.py:167-170` shifts only when rows overflow the reserved band; it has no contraction path. | Subtotal stays on row 11 after two extracted rows; it should touch the band on row 9. |
 | A6 exactly three blank rows between documents | `test_multiple_documents_have_header_strip_and_exactly_three_blank_rows` | `backend/app/services/excel_slot.py:233,537-538` hard-codes `GAP_BETWEEN_DOCS = 2`. | The export has two blank rows, not three. |
 | A6 clean default export columns | `test_default_download_hides_source_and_review_columns_but_opt_in_restores_them` | `backend/app/api/routes/extract.py:626-647` defaults `provenance=True`; `backend/app/services/excel_slot.py:162-179` defaults review marks/status on. | Default output exposes `Source` and `Review status` columns. |
-| A8.3 row sum versus printed total | `test_A8_3_row_sum_versus_printed_total_is_not_built` | `backend/engine/source_inventory.py:322-479` checks row counts, empty slots, widget values, and unplaced amounts but contains no row-sum/printed-total comparison. | Two extracted rows sum to 100 while the page prints 110; no `row_sum_mismatch` reason is produced. |
+
+Run B removed the A8.3 row (row sum versus printed total): `source_inventory.row_sum_checks`
+now produces a `row_sum_mismatch` reason and the strict marker came off in the same commit.
 
 ## Reclassified naming problems
 

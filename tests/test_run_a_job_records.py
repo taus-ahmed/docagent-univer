@@ -176,7 +176,13 @@ class TestFillableForms:
     @pytest.mark.parametrize("job,rel,sheet", [
         (21, "w2/irs_w2_mod11.pdf", "W2_Full"),
         (25, "1099/irs_1099nec_ellis.pdf", "F1099_NEC_MISC")])
-    def test_empty_answers_need_attention_and_empty_flagged_fires(self, job, rel, sheet):
+    def test_empty_answers_need_attention_and_empty_flagged_fires(self, job, rel, sheet,
+                                                                  monkeypatch):
+        """The Run A safety net, with the Run B form-field lane switched off
+        (no widget matches a slot). With the lane on, the same answers are
+        filled from the widgets: tests/test_run_b_forms.py."""
+        import form_fields
+        monkeypatch.setattr(form_fields, "match", lambda *a, **k: (None, False))
         from app.core import review as R
         r, calls, _doc = _run(rel, sheet, "other",
                               lambda n, kw: _raw(job) if n == 1 else {"fields": {}})

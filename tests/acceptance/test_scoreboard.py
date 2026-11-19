@@ -80,4 +80,6 @@ def test_replayed_results_pass_the_silent_defect_gate(golden_dir, replayed_jobs)
     assert not gate_failures(after), "\n".join(gate_failures(after))
     job19 = next(run for run in runs if run["job"] == 19)
     assert job19["state"] == "READY"
-    assert job19["false_flags"] == 1
+    # Run B, B8: the "template columns" false flag on this healthy PO is gone.
+    assert job19["false_flags"] == 0
+    assert job19["approve_only"] is True

@@ -8,12 +8,37 @@ from tests.contract import names
 from tests.contract.adapter import assert_non_ready_with_reason, state_of
 
 
-@pytest.mark.parametrize("job", [15, 21, 25])
+@pytest.mark.parametrize("job", [15])
 def test_frozen_incomplete_answers_replay_as_visible_non_ready_results(replayed_jobs, job):
     replay = replayed_jobs[job]
     assert replay["calls"][0]
     assert replay["raw"] == replay["record"]["extracted_data"]["raw_llm_responses"][0]
     assert_non_ready_with_reason(replay["extracted_data"])
+
+
+@pytest.mark.parametrize("job,truth", [(21, "irs_w2_mod11.json"),
+                                       (25, "irs_1099nec_ellis.json")])
+def test_frozen_empty_form_answers_are_completed_from_the_form_fields(
+        replayed_jobs, golden_dir, job, truth):
+    """Run B, B1. Jobs 21 and 25 were non-ready under Run A because the model
+    left the form's filled values out. The PDF's own form fields now fill
+    those slots (machine-read), so every golden value is correct, nothing is
+    flagged and the document is READY. Job 15 (no table in the answer) is
+    still non-ready above."""
+    from tests.tools.score_runs import score_record
+
+    replay = replayed_jobs[job]
+    assert replay["raw"] == replay["record"]["extracted_data"]["raw_llm_responses"][0]
+    data = replay["extracted_data"]
+    scored = score_record(json.loads((golden_dir / truth).read_text(encoding="utf-8")),
+                          {"extracted_data": data,
+                           "document_state": data["document_state"]})
+    assert scored["wrong"] == 0 and scored["missing"] == 0, scored["details"]
+    assert scored["false_flags"] == 0
+    assert state_of(data) == names.DOCUMENT_STATE_READY
+    machine = [p for p in data["field_provenance"].values()
+               if p.get("machine_read") == "form_field"]
+    assert len(machine) >= 7
 
 
 @pytest.mark.parametrize(
@@ -62,7 +87,9 @@ def test_missing_tables_get_one_targeted_second_call_then_need_attention(replaye
     assert state_of(data) != names.DOCUMENT_STATE_READY
 
 
-def test_job19_healthy_po_stays_ready_and_reports_known_false_flag(replayed_jobs):
+def test_job19_healthy_po_stays_ready_and_reports_no_false_flag(replayed_jobs):
+    """Run B, B8: the "template columns" flag Run A raised here (heading
+    "Item Description" against a printed "Description") was a false flag."""
     replay = replayed_jobs[19]
     recorded = replay["record"]["extracted_data"]
     data = replay["extracted_data"]
@@ -80,8 +107,8 @@ def test_job19_healthy_po_stays_ready_and_reports_known_false_flag(replayed_jobs
     flags = data["validation"]["flagged_fields"]
     template_columns = [flag for flag in flags if flag.get("ref") == "template columns"]
     print(f"job19 state={state_of(data)} template-columns false flags={len(template_columns)}")
-    assert len(template_columns) == 1
-    assert "headings do not appear" in template_columns[0]["reason"]
+    assert template_columns == []
+    assert flags == []
 
 
 def test_recorded_job19_is_an_unchanged_healthy_control(acceptance_job_records):

@@ -196,12 +196,8 @@ def test_heavy_file_has_explicit_page_states_and_skips_non_band_pages(monkeypatc
     assert state_of(data) != names.DOCUMENT_STATE_FAILED
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("A8.3 real app gap: no check compares extracted row sums with a "
-            "printed table total"),
-)
 def test_A8_3_row_sum_versus_printed_total_is_not_built():
+    # Run B, B6: built. The strict xfail was removed when this started passing.
     import source_inventory as inventory
 
     page_lines = [words(1, [

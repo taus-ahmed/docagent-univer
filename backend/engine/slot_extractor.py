@@ -231,7 +231,11 @@ _SYSTEM = (
 )
 
 
-def build_prompt(slots, page_texts, doc_type=""):
+def build_prompt(slots, page_texts, doc_type="", extra=""):
+    """`extra` is appended after the document text: the form-field lane (B1)
+    and the meaning-match guidance (B2). It is empty for a document that
+    needs neither, so the prompt - and every cached answer to it - is
+    byte-identical to what it was."""
     fields, tables = slots["fields"], slots["tables"]
     p = []
     p.append(f"Fill in a {doc_type or 'document'} spreadsheet from the document below.\n")
@@ -240,6 +244,8 @@ def build_prompt(slots, page_texts, doc_type=""):
     for i, txt in enumerate(page_texts, 1):
         p.append(f"--- page {i} ---\n{txt or ''}")
     p.append("=== END DOCUMENT ===\n")
+    if extra:
+        p.append(extra)
 
     if fields:
         # The label is the slot's ADDRESS, not its answer. Saying only
@@ -837,6 +843,62 @@ def verify_span(value, source, page, page_texts, record=""):
 # to be made, it is named in the warning, and the warning fires every time more
 # than one region matched, whether or not the choice was right.
 
+# ── VALUE-BASED GROUNDING (Run B, B4) ────────────────────────────────────────
+#
+# `verify_span` checks the QUOTE the model gave and then the value inside it.
+# A quote is the model's own rendering of a line, and it is wrong in ways the
+# value is not: on the FlowParse card the model quoted lines with the SAMPLE
+# watermark's letters in them ("SKYLARK AIR TICKETS ETravel $412.00"), and once
+# the watermark is removed from the text those quotes match nothing - while
+# every value in them is printed, plainly, on one line. What has to be on the
+# page is the VALUE. So when the quote fails, the line is found from the
+# value(s) themselves, and that line becomes the source.
+
+def _line_str(ln) -> str:
+    return " ".join(str(w.get("text", "")) for w in ln)
+
+
+def value_on_line(value, text) -> bool:
+    """Is `value` printed on this line, allowing only for notation?"""
+    v = str(value or "").strip()
+    if not v:
+        return False
+    key = _number_key(v)
+    if key is not None:
+        return any(_number_key(tok) == key for tok in printed_numbers(text))
+    from dates import parse_date
+    d = parse_date(v)
+    if d.ok and re.search(r"\d", v):
+        for tok in re.findall(r"[0-9A-Za-z]+[/.\-][0-9A-Za-z]+[/.\-][0-9]{2,4}", text):
+            dt = parse_date(tok)
+            if dt.ok and dt.value == d.value:
+                return True
+    fv = _flat(v)
+    return bool(fv) and fv in _flat(text)
+
+
+def value_lines(value, all_lines) -> list:
+    """Indices of every line on which `value` is printed."""
+    return [i for i, ln in enumerate(all_lines or [])
+            if ln and value_on_line(value, _line_str(ln))]
+
+
+def reanchor_row(cells, headers, all_lines, claimed=()):
+    """The first unclaimed line printing EVERY non-empty value of this row,
+    or None. All of them, so a row cannot be anchored by one shared amount."""
+    vals = [str(cells.get(h, "") or "").strip() for h in headers]
+    vals = [v for v in vals if v]
+    if not vals or not all_lines:
+        return None
+    for i, ln in enumerate(all_lines):
+        if i in claimed or not ln:
+            continue
+        text = _line_str(ln)
+        if all(value_on_line(v, text) for v in vals):
+            return i
+    return None
+
+
 def page_of(source, page, all_lines, page_lines, line_no=None):
     """The FILE page a value was read from, or None when nothing can say (I2).
 
@@ -988,6 +1050,44 @@ def split_total_rows(rows, keys):
         kept.append(row)
         since.append(row)
     return kept, totals
+
+
+_OPENING_LINE = re.compile(
+    r"^\s*(?:beginning|opening|previous|starting)\s+balance\b|^\s*balance\s+(?:forward|brought)\b",
+    re.I)
+
+
+def split_opening_rows(rows, keys, field_values):
+    """(rows, opening rows) - Run B. A statement prints its opening balance as
+    the first line of its transaction table ("09/01 BEGINNING BALANCE
+    18,240.12"); it is not a transaction. Such a row is taken out ONLY when
+    every amount it carries is already in one of the sheet's own fields (the
+    template's Opening Balance), so nothing the reader needs leaves the sheet;
+    any other row stays."""
+    from amounts import parse_amount
+    if not rows or not keys:
+        return rows, []
+    held = set()
+    for v in field_values:
+        a = parse_amount(str(v or ""))
+        if a.ok and not a.percent:
+            held.add(abs(a.value))
+    kept, opening = [], []
+    for row in rows:
+        texts = [str(row.get(k) or "") for k in keys]
+        if not any(_OPENING_LINE.match(t) for t in texts):
+            kept.append(row)
+            continue
+        nums = []
+        for t in texts:
+            a = parse_amount(t.strip()) if t.strip() else None
+            if a is not None and a.ok and not a.percent and re.search(r"\.\d{2}\b", t):
+                nums.append(abs(a.value))
+        if nums and all(n in held for n in nums):
+            opening.append(row)
+        else:
+            kept.append(row)
+    return kept, opening
 
 
 #: A label that CLOSES a table: its own total, a net figure, a closing
@@ -1220,7 +1320,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         page_images, doc_text, doc_text_pages, file_type,
                         default_doc_type, start, page_lines=None,
                         page_origins=None, page_numbers=None,
-                        widget_values=None, unreadable=None):
+                        widget_values=None, unreadable=None, form_fields=None):
     """Slot-directed extraction for one file. Returns list[DocumentExtractionResult].
 
     `page_origins` ({file page: "native" | "ocr" | "pre_ocr"}) moves the
@@ -1250,7 +1350,30 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                      f"'{GROUNDED}' at best, never '{HIGH}'")
 
     pages = doc_text_pages or ([doc_text] if doc_text else [])
-    prompt = build_prompt(slots, pages, default_doc_type)
+    import form_fields as FF
+    import format_rules as FR
+    if form_fields is None and widget_values and str(file_path).lower().endswith(".pdf"):
+        try:
+            from core.preprocessor import form_field_entries
+            form_fields = form_field_entries(file_path)
+        except Exception as e:                 # a hint, never fatal
+            _log("SLOT", f"form field labels unreadable: {type(e).__name__}")
+            form_fields = {}
+    _wanted = set(page_numbers or range(1, len(pages) + 1))
+    form_entries = [e for pg, es in sorted((form_fields or {}).items())
+                    if int(pg) in _wanted for e in es]
+    extra = FF.prompt_block(form_entries) if form_entries else ""
+    # B2: match by meaning. Said only where it carries information - a slot
+    # whose label is not printed but another wording of it is, or aliases the
+    # template declares - so a template worded like its document is asked
+    # exactly what it was asked before.
+    import aliases as AL
+    _lines_all = flatten_pages(page_lines) if page_lines else []
+    # An INFERRED template's labels were named by the model from this very
+    # document: there is no user wording to reconcile.
+    wording = [] if inferred else AL.hints(slots, grid, _lines_all)
+    extra += AL.prompt_block(wording)
+    prompt = build_prompt(slots, pages, default_doc_type, extra)
 
     # ── SOURCE INVENTORY + RESPONSE CONTRACT (Run A, A2/A3) ──
     # What the page holds, counted without the model, and an answer schema
@@ -1311,6 +1434,35 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         failed_r.extraction_response = resp
         return [failed_r]
 
+    # ── FORM-FIELD LANE (Run B, B1) ──
+    # A filled widget is one value in one box under its own printed label:
+    # better evidence than anything the model can pair up from the flattened
+    # text. A slot the model left empty, answered with the same value in
+    # another notation, or (on a strong match) contradicted, takes the
+    # widget's value. It is MACHINE-READ from the file - recorded as such in
+    # its provenance and notes - and never reported as missing.
+    machine_read = {}
+    if form_entries and slots["fields"]:
+        answers0 = parsed.get("fields")
+        if not isinstance(answers0, dict):
+            answers0 = parsed["fields"] = {}
+        for f in slots["fields"]:
+            entry, strong = FF.match(f["row_label"], form_entries)
+            if entry is None:
+                continue
+            had = _answer_value(answers0.get(f["slot_id"]))
+            agrees = bool(had) and FF.same_value(had, entry["value"])
+            if had and not agrees and not strong:
+                continue                      # a weak match never overrules
+            machine_read[f["slot_id"]] = {
+                "entry": entry, "model": "" if agrees else had}
+            answers0[f["slot_id"]] = {"value": entry["value"],
+                                      "source": entry["value"],
+                                      "page": entry["page"]}
+        if machine_read:
+            _log("SLOT", f"{doc_ref(file_path)}: {len(machine_read)} slot(s) "
+                         f"filled from the PDF's form fields")
+
     # Validate BEFORE anything becomes a cell. Missing slot ids whose label
     # the page does not print are not worth a second call — the document
     # simply has no such field.
@@ -1332,7 +1484,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                        if _answer_value((parsed.get("fields") or {}).get(f["slot_id"]))},
                       {t["name"]: [r.get("cells", r) for r in _table_rows_of(parsed, t, slots)]
                        for t in slots["tables"]},
-                      parsed.get("fields"), page_lines or [], nums)
+                      parsed.get("fields"), page_lines or [], nums,
+                      form_lane=bool(form_entries))
     ref_to_id = {f["ref"]: f["slot_id"] for f in slots["fields"]}
     retry_ids += [ref_to_id[r] for r in pre["flag_slots"] if r in ref_to_id]
     retry_ids = list(dict.fromkeys(retry_ids))
@@ -1345,7 +1498,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                  [f'table "{t["name"]}"' for t in sub["tables"]]
         _log("SLOT", f"{doc_ref(file_path)}: targeted second request for "
                      f"{len(sub['fields'])} slot(s) and {len(sub['tables'])} table(s)")
-        p2 = build_prompt(sub, pages, default_doc_type) + (
+        p2 = build_prompt(sub, pages, default_doc_type, extra) + (
             "\n\nSECOND REQUEST. Your previous answer left out these, or left "
             "them empty while the page prints a value for them: "
             + "; ".join(labels) + ". The page image is attached. Answer ONLY "
@@ -1377,6 +1530,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     merged_columns = 0
     overprinted = 0
     unwitnessed = 0
+    reanchored = 0          # B4: quotes replaced by the line printing the value
+    opening_rows = 0        # opening-balance lines left out of a transaction table
     all_lines = flatten_pages(page_lines)
     regions_warned = []
     # WHICH CHECK FAILED, per value. A value made low by a failed check used
@@ -1414,17 +1569,19 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         for t in slots["tables"]:
             declared += [c.get("header", "") for c in (t.get("columns") or [])]
             declared += [f.get("header", "") for f in (t.get("fields") or [])]
-        missing = unprinted_headers(all_lines, declared)
-        if missing:
-            shown = ", ".join(repr(m) for m in missing[:6])
-            notes.append(
-                f"{len(missing)} template column heading(s) are not printed "
-                f"anywhere in this document ({shown}) — values under them were "
-                f"placed by position, not by what the heading means")
-            flagged.append(_flag(
-                "template columns", shown,
-                "these column headings do not appear in the document, so "
-                "nothing but position decided which source column filled them"))
+        # Run B, B8: a heading the document words differently is not missing
+        # ("Running Balance" against a printed "Balance", "Item Description"
+        # against "Description"), and a column nothing was placed under has
+        # nothing to warn about. Both used to flag: job 19 (a correct PO) and
+        # every bank, W-2 and card statement carried this flag, so none of
+        # them could ever be approve-only. The check now keeps the headings
+        # printed neither literally nor by an alias, and reports - below, once
+        # the tables are read - only those that actually received a value.
+        import aliases as AL
+        unprinted_cols = [h for h in unprinted_headers(all_lines, declared)
+                          if not AL.printed_by_meaning(all_lines, h)]
+    else:
+        unprinted_cols = []
 
     # ── field slots ──
     answers = parsed.get("fields") or {}
@@ -1440,6 +1597,19 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 value, source, page = ans, "", 0
             if str(value).strip() == "":
                 continue
+            mr = machine_read.get(slot["slot_id"])
+            if mr and str(value) == mr["entry"]["value"]:
+                e = mr["entry"]
+                field_prov[slot["ref"]] = {
+                    "source": f'form field "{(e["label"] or e.get("extra") or "").strip()}"',
+                    "page": e["page"], "grounded": True,
+                    "machine_read": "form_field"}
+                extracted_fields[slot["ref"]] = value
+                conf_map[slot["ref"]] = confident
+                notes.append(f'{slot["row_label"]}: machine-read from the PDF '
+                             f'form field' + (f' (the model read {mr["model"]!r})'
+                                              if mr["model"] else ""))
+                continue
             if is_label_echo(value, slot["row_label"]):
                 notes.append(f'{slot["row_label"]}: the model returned the '
                              f"slot's own label instead of a value — dropped")
@@ -1448,6 +1618,33 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 "source": source,
                 "page": page_of(source, page, all_lines, page_lines),
                 "grounded": None}
+
+            # LAST 4 (Run B, B3): exactly four digits, and the suffix of an
+            # account / card number the page prints - checked against the
+            # page, not the model's quote.
+            if all_lines and FR.is_last4_slot(slot["row_label"]):
+                status, fixed4, line4 = FR.check_last4(value, all_lines)
+                if status in ("ok", "corrected"):
+                    field_prov[slot["ref"]].update(
+                        source=line4, grounded=True,
+                        page=page_of(line4, 0, all_lines, page_lines))
+                    if status == "corrected":
+                        field_prov[slot["ref"]]["machine_corrected"] = str(value)
+                        notes.append(f'{slot["row_label"]}: machine-corrected '
+                                     f'{str(value)!r} to {fixed4!r}, the last four '
+                                     f'digits of the number the page prints')
+                    extracted_fields[slot["ref"]] = fixed4
+                    conf_map[slot["ref"]] = confident
+                    continue
+                if status == "ambiguous":
+                    flagged.append(_flag(
+                        slot["row_label"], value,
+                        "not the last four digits of any account number the "
+                        "page prints, and the page prints more than one"))
+                    extracted_fields[slot["ref"]] = value
+                    conf_map[slot["ref"]] = LOW
+                    failed(slot["ref"], CONTENT_CHECK_FAILED)
+                    continue
 
             # ONE JOIN RULE (D9). A field's value is the document's own words,
             # in reading order, joined by a single space. The join used to be
@@ -1532,6 +1729,25 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     continue
 
             ok, why = verify_span(value, source, page, pages)
+            if not ok and all_lines and why == "source span not found in document":
+                # B4: grounding is about the VALUE. A quote the page does not
+                # hold is replaced by the line that prints the value -
+                # preferring one that also carries a word of the slot's label.
+                # A quote the page DOES hold with the value not in it stays
+                # ungrounded: that is a value taken from somewhere else.
+                cands = value_lines(value, all_lines)
+                if cands:
+                    lab = [w for w in re.split(r"[^0-9a-z]+", slot["row_label"].casefold())
+                           if len(w) >= 3]
+                    pick = next((i for i in cands if any(
+                        w in _line_str(all_lines[i]).casefold() for w in lab)), cands[0])
+                    source = _line_str(all_lines[pick])
+                    ok, why = verify_span(value, source, 0, pages)
+                    if ok:
+                        reanchored += 1
+                        field_prov[slot["ref"]].update(
+                            source=source, reanchored=True,
+                            page=page_of(source, 0, all_lines, page_lines, pick))
             field_prov[slot["ref"]]["grounded"] = ok
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
                                          inferred=inferred)
@@ -1543,6 +1759,14 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 flagged.append(_flag(slot["row_label"], value, reason or why))
                 failed(slot["ref"], GROUNDING_FAILED if not ok
                        else CONTENT_CHECK_FAILED)
+            # TYPE CHECK (Run B, B3): flag, never drop or coerce.
+            t_ok, t_norm, t_why = FR.check_type(value, slot["row_label"])
+            if t_norm is not None:
+                field_prov[slot["ref"]]["normalised"] = t_norm
+            if not t_ok and lvl in CONFIDENT_LEVELS:
+                # Like an UNREADABLE check: said out loud, level not moved -
+                # the string may be exactly what the page prints ("n/a").
+                flagged.append(_flag(slot["row_label"], value, t_why))
             head = slot.get("col_header", "")
             if field_bands and head and lvl in CONFIDENT_LEVELS:
                 line = find_line(all_lines, source)
@@ -1594,6 +1818,49 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         if parts:
             _log("MICR", f"{doc_ref(file_path)}: band decomposed into "
                          f"{len(parts)} field(s)")
+
+    # ── MORE ENTRIES THAN SLOTS (Run B, B5) ──
+    # A box holding several stacked entries (W-2 Box 14: 1,600.00 H and
+    # 52.00 X) against a template with one cell for it lost every entry but
+    # the one the model chose, silently. An extra entry goes into the next
+    # EMPTY slot of the same box when the template has one; otherwise it is
+    # kept in the diagnostics and the field is flagged in a plain sentence.
+    overflow = []
+    if page_lines:
+        import form_fields as _FF
+        for f in slots["fields"]:
+            val = extracted_fields.get(f["ref"])
+            if not str(val or "").strip():
+                continue
+            entries = []
+            for pl in page_lines:
+                entries = SI.stacked_entries(pl, f["row_label"], val)
+                if entries:
+                    break
+            if len(entries) < 2:
+                continue
+            box = _FF.box_id(f["row_label"])
+            siblings = [g for g in slots["fields"] if g is not f and box
+                        and _FF.box_id(g["row_label"]) == box
+                        and g["ref"] not in extracted_fields]
+            name = f"Box {box}" if box else f["row_label"]
+            for n_e, e in enumerate(entries[1:]):
+                nth = ("second", "third", "fourth", "fifth")[min(n_e, 3)]
+                shown = f'{e["amount"]} {e["code"]}'.strip()
+                if siblings:
+                    g = siblings.pop(0)
+                    extracted_fields[g["ref"]] = shown
+                    conf_map[g["ref"]] = confident
+                    field_prov[g["ref"]] = {"source": shown, "page": None,
+                                            "grounded": True, "overflow_of": f["row_label"]}
+                    notes.append(f'{name}: further entry {shown!r} placed in '
+                                 f'{g["row_label"]!r}')
+                    continue
+                overflow.append({"slot": f["row_label"], "amount": e["amount"],
+                                 "code": e["code"]})
+                flagged.append(_flag(
+                    f["row_label"], shown,
+                    f"{name} has a {nth} entry {shown} that has no slot"))
 
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:
@@ -1671,6 +1938,16 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 key = _flat(source)
                 occurrences = (source_occurrences(all_lines, source)
                                if (all_lines and key) else [])
+                if all_lines and not occurrences:
+                    # B4: the quote is on no line; find the line from the
+                    # row's own values and read the row from THAT line.
+                    taken = {o for *_x, occ in located for o in occ[:1]}
+                    li = reanchor_row(cells, headers, all_lines, taken)
+                    if li is not None:
+                        reanchored += 1
+                        source = _line_str(all_lines[li])
+                        key = _flat(source)
+                        occurrences = source_occurrences(all_lines, source)
                 located.append((cells, source, page, key, occurrences))
 
             # ONE REGION PER BAND (round 2, I1). See `select_region`.
@@ -1859,10 +2136,45 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 notes.append(f'{t["name"]}: left out its total line ({shown[:80]!r}); '
                              f"the arithmetic shows it sums the rows above it")
             total_rows += len(totals)
+            rows_out, opening = split_opening_rows(
+                rows_out, table_headers(t), extracted_fields.values())
+            for row in opening:
+                shown = " | ".join(f"{k}={v}" for k, v in row.items()
+                                   if not str(k).startswith("_") and str(v).strip())
+                notes.append(f'{t["name"]}: left out its opening-balance line '
+                             f'({shown[:80]!r}); its amount is already in the '
+                             f"sheet's own opening balance field")
+            opening_rows += len(opening)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
             if len(rows_out) + len(totals) < len(raw):
                 incomplete.add(t["name"])
+
+    # A TEMPLATE COLUMN THE DOCUMENT NEVER NAMES, BY ANY WORDING, THAT
+    # NONETHELESS RECEIVED VALUES (I9, narrowed in Run B, B8). Only position
+    # can have chosen what went there, and that is worth saying out loud.
+    if unprinted_cols:
+        filled = set()
+        for t in slots["tables"]:
+            for c in (t.get("columns") or []) + (t.get("fields") or []):
+                key = c.get("key") or c.get("header")
+                if any(str(r.get(key, "") or "").strip()
+                       for r in tables_out.get(t["name"], [])):
+                    filled.add(c.get("header"))
+        for f in slots["fields"]:
+            if f.get("col_header") and str(extracted_fields.get(f["ref"], "")).strip():
+                filled.add(f["col_header"])
+        hit = [h for h in unprinted_cols if h in filled]
+        if hit:
+            shown = ", ".join(repr(m) for m in hit[:6])
+            notes.append(
+                f"{len(hit)} template column heading(s) are not printed "
+                f"anywhere in this document ({shown}) — values under them were "
+                f"placed by position, not by what the heading means")
+            flagged.append(_flag(
+                "template columns", shown,
+                "these column headings do not appear in the document, so "
+                "nothing but position decided which source column filled them"))
 
     # ── CROSS-FIELD CHECKS, by document family (validators.py) ──
     # The family's registered validators, applied by one rule set: FAIL makes
@@ -2086,8 +2398,20 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # whose label the page does not print stays plain empty and is listed as
     # absent — GL Account and PO number must not make noise.
     cov = SI.coverage(inventory, slots, extracted_fields, tables_out,
-                      parsed.get("fields"), page_lines or [], nums)
+                      parsed.get("fields"), page_lines or [], nums,
+                      form_lane=bool(form_entries))
     label_of = {f["ref"]: f["row_label"] for f in slots["fields"]}
+    # B6: the TOTAL cell carries both numbers. The slot holding the printed
+    # total is flagged when the template has one; otherwise the table is.
+    for m in cov.get("row_sums") or []:
+        printed = {_number_key(p) for p in m["printed"]}
+        ref = next((label_of[r] for r, v in extracted_fields.items()
+                    if r in label_of and _number_key(v) in printed), None)
+        flagged.append(_flag(
+            ref or f'{m["table"]}[total]', ", ".join(m["printed"][:3]),
+            f'the {m["rows"]} extracted rows sum to {m["row_sum"]} in column '
+            f'{m["column"]!r}, but the page prints a total of '
+            f'{", ".join(m["printed"][:3])} - a row may be missing or wrong'))
     for ref, why in cov["flag_slots"].items():
         flagged.append(_flag(label_of.get(ref, ref), "", f"{EMPTY_FLAGGED}: {why}"))
     attention = list(cov["reasons"])
@@ -2182,6 +2506,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "confidence_map": conf_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
+            "reanchored_count": reanchored,
+            "overflow_entries": overflow,
+            # B2.2: labels the page does not print word for word (information).
+            "label_wording": AL.diagnostics(slots, all_lines),
+            "opening_row_count": opening_rows,
             # What the family's validators record at document level
             # (routing_checksum, micr_band_unreadable, ...).
             **check_validation,

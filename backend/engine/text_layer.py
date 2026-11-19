@@ -877,12 +877,17 @@ def acroform_field_values(path):
                 if str(obj.get("/F", 0)).isdigit() and int(obj.get("/F", 0)) & 2:
                     continue                      # hidden widget
                 rect = [float(v) for v in obj.get("/Rect")]
+                # Run B, B1: the field's own name and tooltip, kept as
+                # matching text for `form_fields` (never written to the page).
+                name = obj.get("/T") if obj.get("/T") is not None else                     (parent.get("/T") if parent is not None else None)
+                tip = obj.get("/TU") if obj.get("/TU") is not None else                     (parent.get("/TU") if parent is not None else None)
             except Exception:
                 continue
             x0, x1 = min(rect[0], rect[2]), max(rect[0], rect[2])
             y0, y1 = min(rect[1], rect[3]), max(rect[1], rect[3])
             items.append({"x0": x0, "x1": x1, "top": height - y1,
-                          "bottom": height - y0, "value": value})
+                          "bottom": height - y0, "value": value,
+                          "name": str(name or ""), "tooltip": str(tip or "")})
         if items:
             out[i] = items
     return out
@@ -1251,6 +1256,33 @@ class PageSource:
         return capability in (self.capabilities or frozenset())
 
 
+def watermark_chars(page) -> list:
+    """The characters of a watermark: drawn DIAGONALLY (rotated 10-80 degrees),
+    or rotated at all and at least twice the page's median font size.
+
+    Ordinary text is upright; a form's sideways captions are rotated a quarter
+    turn at body size and are kept. Measured over the 164 PDFs in tests/ and
+    local_docs/: 14 pages hit, 12 of them the FlowParse `SAMPLE` stamp, none
+    in the gold corpus or tests/test_pdfs.
+    """
+    import math
+    import statistics
+    chars = list(getattr(page, "chars", None) or [])
+    if not chars:
+        return []
+    med = statistics.median(float(c.get("size") or 0) for c in chars)
+    out = []
+    for c in chars:
+        m = c.get("matrix") or (1, 0, 0, 1)
+        a, b, cc = float(m[0]), float(m[1]), float(m[2])
+        ang = abs(math.degrees(math.atan2(b, a))) % 90
+        diagonal = 10 < ang < 80
+        rotated = abs(b) > 1e-3 or abs(cc) > 1e-3
+        if diagonal or (rotated and float(c.get("size") or 0) >= 2 * med):
+            out.append(c)
+    return out
+
+
 class PdfplumberSource(PageSource):
     """The default reader: today's behaviour, unchanged, behind the seam.
 
@@ -1266,6 +1298,21 @@ class PdfplumberSource(PageSource):
     """
 
     def __init__(self, page):
+        # Run B, B4: a watermark drawn across the page is removed before any
+        # reading, so its letters cannot land inside the words it crosses
+        # (`SAMPLE` read as "ETravel", "M Subscriptions", "A Office") - not in
+        # the prompt, not in the word boxes grounding checks against. A page
+        # with no such characters is the same page object, so its text is
+        # byte-identical to what it was.
+        self.watermark = []
+        try:
+            marks = watermark_chars(page)
+            if marks:
+                ids = {id(c) for c in marks}
+                self.watermark = marks
+                page = page.filter(lambda o: id(o) not in ids)
+        except Exception:
+            pass
         self._page = page
         self._size_aware = None          # unknown until first asked
         self._caps = None
@@ -1352,6 +1399,8 @@ def read_page(page, widgets=(), stats=None):
     return value because a dozen callers unpack the triple.
     """
     source = as_page_source(page)
+    if stats is not None and getattr(source, "watermark", None):
+        stats["watermark_chars"] = len(source.watermark)
     raw = source.raw_text()
     try:
         words = normalise_words(source.words(size_aware=True), source.space)
@@ -1703,6 +1752,19 @@ def check_placement(row, columns, line, bands):
             continue                                   # flush right: correct
         if span[0] < band[1] and band[0] < span[1]:
             continue                                   # overlaps its column
+        # Run B: the same word may be printed twice on the line - a card's
+        # category `Payment` after the description `PAYMENT RECEIVED`. Before
+        # calling the value misplaced, look at its later occurrences; this can
+        # only withdraw a verdict, never add one.
+        alt, fits = locate(value, line, after_x=span[1] + 0.5), False
+        while alt is not None:
+            if abs(alt[1] - band[1]) <= COLUMN_TOL or (alt[0] < band[1] and band[0] < alt[1]):
+                fits = True
+                break
+            alt = locate(value, line, after_x=alt[1] + 0.5)
+        if fits:
+            cursor = alt[0]
+            continue
         near = _nearest(span, bands)
         why = (f"value sits under the {near!r} column, not {col.get('header')!r}"
                if near and near != col.get("header")
