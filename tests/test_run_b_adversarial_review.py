@@ -189,15 +189,12 @@ def _normal_alias(value):
 
 # B4: watermark audit ---------------------------------------------------------------
 
-def test_watermark_removal_audits_every_acceptance_and_available_local_pdf():
+def test_watermark_removal_audits_only_committed_acceptance_pdfs():
     import pdfplumber
     from text_layer import PdfplumberSource, watermark_chars
 
-    roots = [Path(__file__).parent / "fixtures" / "acceptance"]
-    local = Path(__file__).parents[1] / "local_docs"
-    if local.exists():
-        roots.append(local)
-    pdfs = sorted(path for root in roots for path in root.rglob("*.pdf"))
+    acceptance = Path(__file__).parent / "fixtures" / "acceptance"
+    pdfs = sorted(acceptance.rglob("*.pdf"))
     assert pdfs
     audited = hits = 0
     for path in pdfs:

@@ -44,9 +44,7 @@
       "F1: the value on the row labelled \"Invoice Date\"",
       "F2: the value on the row labelled \"Approval Code\""
     ],
-    "ambiguities": [
-      "The engine describes horizontal slots B1/D1 instead of the intended cells below A1/C1."
-    ]
+    "ambiguities": []
   },
   "F3": {
     "slot_descriptions": [
@@ -146,7 +144,7 @@
       "columns (use EXACTLY these keys): Above | Qty | Amount"
     ],
     "ambiguities": [
-      "Totals have no explicit ownership; the prompt treats any detected total as an independent field."
+      "Without declared tables, geometry cannot distinguish a spacer from reserved capacity or a total above a table from its title."
     ]
   },
   "T11": {
@@ -177,9 +175,7 @@
       "TABLE \"table\" — one object per row present in the document.",
       "columns (use EXACTLY these keys): Document | Date | Entity | Total"
     ],
-    "ambiguities": [
-      "The prompt claims ten reserved rows for a header-only flat list."
-    ]
+    "ambiguities": []
   },
   "T14": {
     "slot_descriptions": [
@@ -198,9 +194,7 @@
       "TABLE \"table\" — one object per row present in the document.",
       "columns (use EXACTLY these keys): Item | Qty | Amount"
     ],
-    "ambiguities": [
-      "Rows owned by a table are excluded wholesale from scalar-field inference, so side fields are absent."
-    ]
+    "ambiguities": []
   },
   "T16": {
     "slot_descriptions": [
@@ -249,9 +243,7 @@
       "TABLE \"table\" — one object per row present in the document.",
       "columns (use EXACTLY these keys): Item | Qty | Amount"
     ],
-    "ambiguities": [
-      "The prompt claims the header-only sheet has ten blank rows, although the workbook reserves none."
-    ]
+    "ambiguities": []
   },
   "T20": {
     "slot_descriptions": [
@@ -310,9 +302,7 @@
       "TABLE \"table_2\" — one object per row present in the document.",
       "columns (use EXACTLY these keys): Right A | Right B | Right C | Right D"
     ],
-    "ambiguities": [
-      "The gapped header row yields no table slot descriptions, so neither side is addressable."
-    ]
+    "ambiguities": []
   },
   "T7": {
     "slot_descriptions": [

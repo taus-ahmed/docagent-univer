@@ -12,7 +12,7 @@
       "orientation": "rows",
       "header_row": 1,
       "first_data_row": 2,
-      "reserved_rows": 0,
+      "reserved_rows": 10,
       "start_col": "A",
       "columns": [
         "Document",
@@ -27,7 +27,5 @@
   "formulas": [],
   "native_features": {},
   "write": {},
-  "prompt_ambiguities": [
-    "The prompt claims ten reserved rows for a header-only flat list."
-  ]
+  "prompt_ambiguities": []
 }

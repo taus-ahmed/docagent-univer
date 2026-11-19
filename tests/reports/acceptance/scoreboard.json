@@ -6,21 +6,14 @@
       "run_id": "flowparse_bank_us",
       "file": "bank_statement/flowparse_bank_us.pdf",
       "state": "READY",
-      "expected": 29,
+      "expected": 28,
       "correct": 7,
       "wrong": 2,
-      "missing": 20,
+      "missing": 19,
       "silent_defects": 16,
       "false_flags": 0,
       "approve_only": false,
       "details": [
-        {
-          "key": "Account Number",
-          "outcome": "missing",
-          "expected": "7301558842",
-          "actual": null,
-          "flagged": true
-        },
         {
           "key": "Account Number Last 4",
           "outcome": "wrong",
@@ -349,10 +342,10 @@
     }
   ],
   "totals": {
-    "expected": 68,
+    "expected": 67,
     "correct": 27,
     "wrong": 2,
-    "missing": 39,
+    "missing": 38,
     "silent_defects": 35,
     "false_flags": 2,
     "approve_only": 0

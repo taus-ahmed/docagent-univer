@@ -27,6 +27,11 @@
         "Debit",
         "Credit"
       ],
+      "header_cells": [
+        "A1",
+        "B2",
+        "C2"
+      ],
       "totals_cells": [],
       "write_rows": 3
     }

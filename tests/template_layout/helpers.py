@@ -328,7 +328,8 @@ def desired_row(row_1based, truth, doc_index=0, override=None):
             continue
         end = int(b["first_data_row"]) + int(b["reserved_rows"]) - 1
         if row_1based > end:
-            shifted += _row_count_for(truth, bi, doc_index, override) - int(b["reserved_rows"])
+            usable = int(b["reserved_rows"]) - len(b.get("interior_rows") or [])
+            shifted += _row_count_for(truth, bi, doc_index, override) - usable
     return shifted
 
 
