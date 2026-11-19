@@ -800,18 +800,17 @@ def compute_shape(grid, log=None):
             # cells stay ambiguous ("Date | Amount" could be a pair) and are
             # skipped out loud rather than guessed at.
             if len(cols) >= 3:
-                # Run D, D12 (T2/T13): ZERO reserved rows, said honestly. It
-                # used to invent ten (`hr + _EDGE_BAND_ROWS`), which nothing
-                # in the grid drew; the writer adds one row per document row
-                # either way. The prompt keeps saying ten (`prompt_rows`), so
-                # the question the model is asked - and every recorded answer
-                # to it - is unchanged.
-                end = hr
-                edge_rows = _EDGE_BAND_ROWS
+                # Run D, D12 tried ZERO reserved rows here (the T2/T13 audit
+                # truth) and REVERTED it: tests/test_prod_templates.py pins
+                # the production bank_statement_101 — the same shape, a header
+                # on the template's last row — at >= 5 reserved rows. Two
+                # tests in the repo contradict each other; the choice is the
+                # owner's. Ten rows stay. (Since Run C the writer drops unused
+                # reserved rows, so the export is the same either way.)
+                end = hr + _EDGE_BAND_ROWS
                 _say(f"row {hr} is a band header at the bottom of the grid "
                      f"({len(cols)} columns, no rows beneath) — treated as a "
-                     f"band with no reserved rows; the writer adds the "
-                     f"document's rows")
+                     f"band; the writer expands it to the document's rows")
             else:
                 tail = ("but has no empty rows beneath it — not treated as a "
                         "repeating band")
@@ -1238,8 +1237,9 @@ def template_warnings(grid, shape=None) -> list[str]:
                            f"Those rows move with the table, so the merge is not "
                            f"recreated in the export.")
                 break
+    drawn_rows = {r for (r, _c) in m}
     for b in bands:
-        if b["end_row"] < b["start_row"]:
+        if not any(r in drawn_rows for r in range(b["start_row"], b["end_row"] + 1)):
             out.append(f"Table {b['name']!r} (header on row {b.get('header_row', 0) + 1}) "
                        f"has no empty rows beneath its header. Its rows are added "
                        f"below the header and push everything under it down.")

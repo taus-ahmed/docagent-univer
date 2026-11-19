@@ -40,6 +40,8 @@ truth file live under `tests/templates/`.
 | F9 | write | Number formats and dropdown validation are outside the saved grid. |
 | F10 | parse, write | Formula strings participate in label geometry. |
 | F12 | write | Hidden row and column state is not preserved. |
+| T2 | parse | 0 reserved rows wanted under a header-only band; `tests/test_prod_templates.py` pins the same shape (production `bank_statement_101`) at >= 5. Contradictory tests: owner's decision. |
+| T13 | parse | As T2. |
 | T6 | parse | Both bands are detected and written (Run D); the truth's band names `left`/`right` are printed nowhere, and its closing `End left`/`End right` labels expect no slot while T1's `Total` in the same position expects one. |
 | T9 | write | Parse passes (Run D). The truth expects the text `Item` in A2 and also keeps the A1:A2 merge that covers it. |
 | T10 | parse, write | Needs non-geometric readings: a blank row before a total is a spacer (not capacity), `Total above` over a header is a total (the gold payslip's `Earnings` in that position is a title), and closing `End` rows get no slot. |

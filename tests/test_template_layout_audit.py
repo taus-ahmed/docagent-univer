@@ -38,6 +38,11 @@ PARSE_XFAIL = {
            "right cell is usable, so it is kept (Run D, D9 never guesses)"),
     "F3": "F3: separator columns do not extend the text-defined used range",
     "F10": "F10: formula cells participate in label geometry",
+    "T2": ("T2: the truth wants 0 reserved rows under a header-only band; "
+           "tests/test_prod_templates.py pins the same shape (production "
+           "bank_statement_101) at >= 5. Contradictory tests: owner's decision"),
+    "T13": ("T13: as T2 - 0 reserved rows wanted, while "
+            "tests/test_prod_templates.py requires >= 5 for the same shape"),
     "T6": ("T6: both side-by-side bands are detected (Run D, D7), but the truth "
            "names them left/right, which nothing in the grid prints, and gives "
            "the closing End left/End right labels no slot although T1's Total "
