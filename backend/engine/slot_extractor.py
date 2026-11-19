@@ -327,6 +327,166 @@ def build_prompt(slots, page_texts, doc_type=""):
     return "\n".join(p)
 
 
+def _answer_value(ans) -> str:
+    """The value of one slot answer, however the model shaped it."""
+    if isinstance(ans, dict):
+        return str(ans.get("value") or "").strip()
+    return str(ans or "").strip()
+
+
+def _table_rows_of(parsed, t, slots) -> list:
+    """The model's rows for band `t` (the renamed-table tolerance included)."""
+    import llm_contract as C
+    raw = C._table_answer((parsed or {}).get("tables"), t, len(slots["tables"]))
+    return [r for r in raw if isinstance(r, dict)] if isinstance(raw, list) else []
+
+
+def _echoed_header(cells, headers) -> bool:
+    """A row whose values are the band's own headings (a header line reprinted
+    at the top of a later page, answered as data)."""
+    heads = {str(h or "").strip().casefold() for h in headers if str(h or "").strip()}
+    vals = [str(v or "").strip().casefold() for v in (cells or {}).values()
+            if str(v or "").strip()]
+    return len(vals) >= 2 and sum(1 for v in vals if v in heads) * 2 >= len(vals)
+
+
+def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
+                   doc_type):
+    """(parsed, resp, {file page: why it failed}) for a long document.
+
+    Fields: ONE call over the whole document. Tables: one call per PAGE that
+    prints the band's headings, or continues it (the page after one that
+    does, holding candidate rows of the band's kind), at most
+    PAGE_CALL_CONCURRENCY at once. A page whose call fails is retried ALONE,
+    once; a page that still fails is reported, and every other page's rows
+    are kept — a failure on page 17 does not discard pages 1-16. A page that
+    prints no part of a band is never asked for its rows, so a statement
+    template run on a vendor list returns nothing for it rather than
+    something invented."""
+    import contextvars
+    from concurrent.futures import ThreadPoolExecutor
+
+    import llm_contract as C
+    import source_inventory as SI
+
+    want = {}                          # page index -> [band]
+    for t in slots["tables"]:
+        kind = SI.band_kind(t)
+        prev = False
+        for k, _n in enumerate(nums):
+            lines = page_lines[k] if k < len(page_lines) else []
+            rows_here = (inventory["pages"].get(nums[k]) or {}).get(
+                f"{kind}_rows", 0) > 0
+            # Asked only where the page prints the band's headings AND holds
+            # a row of its kind, or directly continues a page that did.
+            here = rows_here and SI.page_has_band(lines, t)
+            cont = prev and rows_here
+            # A MACHINE-READ page: OCR misreads dates and headings, so the
+            # inventory cannot be trusted to say a page holds no rows. Any
+            # such page carrying amounts is asked; the model is told a table
+            # the page does not print is [].
+            pg = inventory["pages"].get(nums[k]) or {}
+            if pg.get("origin") in ("ocr", "pre_ocr") and len(pg.get("amounts") or []) >= 5:
+                here = True
+            if here or cont:
+                want.setdefault(k, []).append(t)
+            prev = here or cont
+    # A band NO page was selected for is not skipped: the inventory may be
+    # blind to it (an OCR misread, a layout it does not know), and skipping
+    # would return no rows with nothing to say so. It is asked in one call
+    # over the whole document, as before page-at-a-time existed.
+    whole = [t for t in slots["tables"]
+             if not any(t in bands for bands in want.values())]
+    fields_parsed, fields_resp = {}, None
+    if slots["fields"] or whole:
+        sub = {"fields": slots["fields"], "tables": whole}
+        fields_parsed, fields_resp = ask(build_prompt(sub, pages, doc_type), sub,
+                                         "fields" + ("+tables" if whole else ""))
+    conc = max(1, int(C.setting("PAGE_CALL_CONCURRENCY", 3) or 1))
+
+    def one(k, label):
+        sub = {"fields": [], "tables": want[k]}
+        n = nums[k]
+        p = build_prompt(sub, [pages[k]], doc_type) + (
+            f"\n\nThis is page {n} of {len(nums)} of the document, sent on its "
+            f"own. Return only the rows printed on THIS page; a table this page "
+            f"does not print is [].")
+        img = [page_images[k]] if k < len(page_images) and page_images[k] else []
+        exp = {t["name"]: (inventory["pages"].get(n) or {}).get(
+            f"{SI.band_kind(t)}_rows", 0) for t in sub["tables"]}
+        parsed, resp = ask(p, sub, f"{label} {n}", images=img, text=pages[k],
+                           expect=exp)
+        bad = None
+        if not isinstance(parsed, dict):
+            bad = getattr(resp, "error_kind", None) or "no usable answer"
+        else:
+            miss = [f for f in C.check_answer(parsed, sub, resp)
+                    if f["kind"] == C.MISSING_TABLE]
+            if miss:
+                bad = "the answer left out the table"
+        return k, parsed, resp, bad
+
+    results, last_resp = {}, None
+    order = sorted(want)
+    with ThreadPoolExecutor(max_workers=conc) as pool:
+        futs = [pool.submit(contextvars.copy_context().run, one, k, "page")
+                for k in order]
+        for f in futs:
+            k, parsed, resp, bad = f.result()
+            results[k] = (parsed, bad)
+            last_resp = resp or last_resp
+    failed = {}
+    for k in order:
+        if results[k][1]:
+            _k, parsed, resp, bad = one(k, "retry:page")
+            results[k] = (parsed, bad)
+            last_resp = resp or last_resp
+            if bad:
+                failed[nums[k]] = bad
+    tables = {t["name"]: [] for t in slots["tables"]}
+    for t in whole:
+        tables[t["name"]] = list(_table_rows_of(fields_parsed or {}, t,
+                                                {"tables": whole}))
+    for k in order:
+        parsed, bad = results[k]
+        if bad or not isinstance(parsed, dict):
+            continue
+        for t in want[k]:
+            heads = table_headers(t)
+            for r in _table_rows_of(parsed, t, {"tables": want[k]}):
+                cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
+                if _echoed_header(cells, heads):
+                    continue
+                tables[t["name"]].append({**r, "page": k + 1})
+    fields_ok = not (slots["fields"] or whole) or isinstance(fields_parsed, dict)
+    pages_ok = any(not results[k][1] for k in order)
+    if not fields_ok and not pages_ok:
+        # Nothing at all came back: a FAILED document, not an empty success.
+        return None, fields_resp or last_resp, failed
+    if order and not pages_ok and not (slots["fields"] or whole):
+        return None, last_resp, failed
+    merged = {"fields": (fields_parsed or {}).get("fields") or {}, "tables": tables}
+    if not fields_ok:
+        failed[0] = "the call for the field slots failed"
+    return merged, fields_resp or last_resp, failed
+
+
+def output_cap(slots, expected_rows) -> int:
+    """maxOutputTokens for one call, sized from what the page holds.
+
+    A fixed cap is too small for a dense statement once thinking spends part
+    of it (on gemini-2.5 thinking tokens count against the cap), and a cap
+    the answer cannot reach costs nothing. Estimated: ~80 tokens per field
+    answer, and per expected row ~60 + 20 per column; added to the base."""
+    import llm_contract as C
+    base = int(C.setting("GEMINI_MAX_OUTPUT_TOKENS", 8192))
+    est = 300 + 80 * len(slots.get("fields") or [])
+    for t in slots.get("tables") or []:
+        rows = max(int((expected_rows or {}).get(t["name"], 0) or 0), 5)
+        est += rows * (60 + 20 * len(table_headers(t)))
+    return min(65536, base + est)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # GROUNDING
 # ══════════════════════════════════════════════════════════════════════════════
@@ -742,6 +902,11 @@ PLACEMENT_FAILED = "placement_failed"          # under another column, or across
 CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / prose in a scalar
 POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one cheque?
 THIN_TEXT_LAYER = "thin_text_layer"            # Gate 2c: image-covered page, OCR could not check it
+#: Run A, A4.2 — the prefix of a flag on an EMPTY slot the page shows a value
+#: for (an unplaced amount beside its label, a form's filled values not
+#: placed, a label the model quoted with no value). The flag is what turns the
+#: review status `empty` into `empty_flagged`.
+EMPTY_FLAGGED = "empty_flagged"
 # Family checks' codes (amount_mismatch, checksum_failed, ...) live with their
 # validators: cheque_validators.py, registered in validators.py.
 
@@ -825,6 +990,14 @@ def split_total_rows(rows, keys):
     return kept, totals
 
 
+#: A label that CLOSES a table: its own total, a net figure, a closing
+#: balance. Broader than `_TOTAL_LABEL` (which must match the whole label,
+#: for the arithmetic gate) because here it only decides whether a table
+#: has ended at a page break.
+_ENDS_TABLE = re.compile(
+    r"^\s*(?:grand\s+|sub[- ]?)?totals?\b|^\s*net\s+(?:pay|income|earnings|amount)\b"
+    r"|\b(?:ending|closing)\s+balance\b", re.I)
+
 _PAGE_N_OF = re.compile(r"page\s+(\d{1,3})\s*(?:of|/)\s*(\d{1,3})", re.I)
 
 
@@ -864,6 +1037,57 @@ def continued_pages(kept_page, all_lines, headers):
         p += 1
 
 
+def _heading_on(page, all_lines, headers) -> bool:
+    """Does `page` print one line holding every one of the band's headings?"""
+    heads = [str(h or "").strip().casefold() for h in headers or []
+             if str(h or "").strip()]
+    if len(heads) < 2:
+        return False
+    for ln in all_lines or []:
+        if line_page(ln) != page:
+            continue
+        t = " ".join(str(w.get("text", "")) for w in ln if isinstance(w, dict)).casefold()
+        if all(h in t for h in heads):
+            return True
+    return False
+
+
+def _line_text(ln) -> str:
+    """A visual line's words, casefolded, single-spaced: a comparison key."""
+    return " ".join(" ".join(str(w.get("text", "")) for w in ln
+                             if isinstance(w, dict)).casefold().split())
+
+
+def _reprints_block(page, nxt, located, pages_by_row, all_lines) -> bool:
+    """Does page `nxt` print again the heading block the band has on `page`
+    — the (up to two) lines without an amount directly above the band's
+    first row there? The DOCUMENT's own headings, whatever the template calls
+    its columns: Berkshire prints "Fourth Quarter  Full Year" over
+    "2024 2023 2024 2023" above both of its tables."""
+    import source_inventory as SI
+    first = None
+    for (_c, _s, _p, _k, occ), pages in zip(located, pages_by_row):
+        if page in pages:
+            idx = [i for i in occ if line_page(all_lines[i]) == page]
+            if idx:
+                first = min(idx) if first is None else min(first, min(idx))
+    if first is None:
+        return False
+    block = []
+    for i in (first - 1, first - 2):
+        if i < 0 or line_page(all_lines[i]) != page:
+            break
+        ln = all_lines[i]
+        if any(SI.amount_of(w.get("text", "")) is not None for w in ln
+               if isinstance(w, dict)):
+            break
+        block.append(_line_text(ln))
+    if not block:
+        return False
+    on_next = {_line_text(ln) for ln in all_lines if line_page(ln) == nxt}
+    return any(b in on_next for b in block)
+
+
 def select_region(located, all_lines, page_lines, headers=None):
     """(located rows kept, region report or None).
 
@@ -898,6 +1122,46 @@ def select_region(located, all_lines, page_lines, headers=None):
     kept_page = next((next(iter(p)) for p in pages_by_row if len(p) == 1),
                      distinct[0])
     region = {kept_page} | continued_pages(kept_page, all_lines, headers)
+    # A BAND CONTINUES ACROSS A PAGE BREAK UNTIL ITS TOTAL LINE (Run A, A8.3).
+    # The strict rule above kept one page unless the document numbered its
+    # pages, and gave up real rows that simply ran onto the next page — a
+    # payslip's `Life Insurance` deduction and three equity lines of a
+    # balance sheet were dropped. A table whose rows on its last page do not
+    # end in its own total line has not ended: the NEXT page's rows are its
+    # continuation. A table that did end there (Berkshire's first earnings
+    # table, closed by its own total before the second one starts) keeps the
+    # strict rule, and anything left out is still flagged.
+    if headers:
+        label = headers[0]
+        last = max(region)
+        while (last + 1) in distinct:
+            on_last = [cells for (cells, *_r), pages in zip(located, pages_by_row)
+                       if last in pages]
+            if not on_last or _ENDS_TABLE.match(
+                    str((on_last[-1] or {}).get(label) or "")):
+                break
+            # A page that prints the band's heading line again opens a NEW
+            # table of the same shape (Berkshire page 2: the operating
+            # earnings table under the same five headings). A numbered
+            # continuation that reprints it is `continued_pages`' case.
+            if _heading_on(last + 1, all_lines, headers) or _reprints_block(
+                    last, last + 1, located, pages_by_row, all_lines):
+                break
+            # ...and its rows must LOOK like the band's rows: an amount in a
+            # column where the rows before the break carry amounts. ENGIE's
+            # page-4 glossary ("Meter Constant", no amount) is not the charges
+            # table carrying on.
+            import source_inventory as SI
+            numeric = {k for c in on_last for k, v in (c or {}).items()
+                       if k != label and SI.amount_of(str(v or "")) is not None}
+            nxt_rows = [c for (c, *_r), pages in zip(located, pages_by_row)
+                        if pages == {last + 1}]
+            if not numeric or not nxt_rows or not all(
+                    any(SI.amount_of(str((c or {}).get(k) or "")) is not None
+                        for k in numeric) for c in nxt_rows):
+                break
+            region.add(last + 1)
+            last += 1
     kept, left_out = [], []
     for row, pages in zip(located, pages_by_row):
         if pages and not (pages & region):
@@ -955,7 +1219,8 @@ def template_locale(template_data):
 def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         page_images, doc_text, doc_text_pages, file_type,
                         default_doc_type, start, page_lines=None,
-                        page_origins=None, page_numbers=None):
+                        page_origins=None, page_numbers=None,
+                        widget_values=None, unreadable=None):
     """Slot-directed extraction for one file. Returns list[DocumentExtractionResult].
 
     `page_origins` ({file page: "native" | "ocr" | "pre_ocr"}) moves the
@@ -986,16 +1251,112 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
 
     pages = doc_text_pages or ([doc_text] if doc_text else [])
     prompt = build_prompt(slots, pages, default_doc_type)
-    parsed, resp = _llm_json(orchestrator, prompt, _SYSTEM,
-                             images=page_images, text=doc_text)
+
+    # ── SOURCE INVENTORY + RESPONSE CONTRACT (Run A, A2/A3) ──
+    # What the page holds, counted without the model, and an answer schema
+    # in which every slot id and every table key is REQUIRED. Job 15 came
+    # back as valid JSON with F1..F8 and no `tables` key, and the absence was
+    # read as "no rows".
+    import llm_contract as C
+    import source_inventory as SI
+    nums = list(page_numbers or range(1, len(pages) + 1))
+    unread = unreadable or {}
+    inventory = SI.build(page_lines or [], nums, widget_values or {},
+                         page_origins or {}, unread.get("ocr_failed") or (),
+                         unread.get("ocr_zero") or ())
+    expected = SI.expected_rows(inventory, slots, page_lines or [], nums)
+    sink = C.ATTEMPTS.get()
+    attempts = sink if sink is not None else []
+
+    def ask(p, sub, label, images=None, text=None, expect=None):
+        tok = C.ATTEMPTS.set(attempts) if sink is None else None
+        try:
+            with C.section(label):
+                return _llm_json(orchestrator, p, _SYSTEM,
+                                 images=page_images if images is None else images,
+                                 text=doc_text if text is None else text,
+                                 response_schema=C.response_schema(sub, table_headers),
+                                 max_output_tokens=output_cap(
+                                     sub, expected if expect is None else expect))
+        finally:
+            if tok is not None:
+                C.ATTEMPTS.reset(tok)
+
+    # ── HEAVY DOCUMENTS: one PAGE at a time for tables (Run A, A8) ──
+    min_pages = int(C.setting("PAGE_CALL_MIN_PAGES", 6) or 0)
+    chunked = bool(min_pages and len(pages) >= min_pages and slots["tables"]
+                   and page_lines)
+    page_failed = {}
+    if chunked:
+        parsed, resp, page_failed = page_at_a_time(
+            ask, slots, pages, page_lines, page_images or [], nums, inventory,
+            default_doc_type)
+    else:
+        parsed, resp = ask(prompt, slots, "fields+tables")
     if not isinstance(parsed, dict):
         _log("SLOT", "no parseable response — failing the document")
         from app.api.routes.extract import _fail
         err = str(getattr(resp, "error", "") or "") if resp is not None else ""
+        kind = getattr(resp, "error_kind", None) if resp is not None else None
         why = "Slot extraction returned no usable JSON"
         if resp is not None and not getattr(resp, "success", False):
             why += f" — the model call failed: {err or 'no error given'}"
-        return [_fail(file_path.name, why)]
+        failed_r = _fail(file_path.name, why)
+        failed_r.extracted_data = {
+            "document_state": "FAILED", "failure_kind": kind or C.INVALID_JSON,
+            "diagnostics": {"attempts": attempts,
+                            "usage": C.summarise(attempts),
+                            "inventory": inventory["totals"],
+                            "pages": {str(n): "failed" for n in nums}}}
+        failed_r.extraction_response = resp
+        return [failed_r]
+
+    # Validate BEFORE anything becomes a cell. Missing slot ids whose label
+    # the page does not print are not worth a second call — the document
+    # simply has no such field.
+    contract_first = C.check_answer(parsed, slots, resp, expected)
+    C.note_contract(attempts, *C.counts(parsed, slots))
+    printed = {f["slot_id"] for f in slots["fields"]
+               if any(SI.label_lines(ln, f["row_label"]) for ln in (page_lines or []))}
+    retry_ids, retry_tables = [], []
+    for fl in contract_first:
+        if fl["kind"] == C.MISSING_SLOT:
+            retry_ids += [s for s in fl["slots"] if s in printed or not page_lines]
+        elif fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE) and not chunked:
+            retry_tables += fl["tables"]
+    # Empty answers the page contradicts (unplaced amount beside the label,
+    # a form's filled values not placed, a label quoted with no value).
+    pre = SI.coverage(inventory, slots,
+                      {f["ref"]: _answer_value((parsed.get("fields") or {}).get(f["slot_id"]))
+                       for f in slots["fields"]
+                       if _answer_value((parsed.get("fields") or {}).get(f["slot_id"]))},
+                      {t["name"]: [r.get("cells", r) for r in _table_rows_of(parsed, t, slots)]
+                       for t in slots["tables"]},
+                      parsed.get("fields"), page_lines or [], nums)
+    ref_to_id = {f["ref"]: f["slot_id"] for f in slots["fields"]}
+    retry_ids += [ref_to_id[r] for r in pre["flag_slots"] if r in ref_to_id]
+    retry_ids = list(dict.fromkeys(retry_ids))
+    retry_tables = list(dict.fromkeys(retry_tables))
+    contract_after = contract_first
+    if retry_ids or retry_tables:
+        sub = {"fields": [f for f in slots["fields"] if f["slot_id"] in retry_ids],
+               "tables": [t for t in slots["tables"] if t["name"] in retry_tables]}
+        labels = [f["row_label"] for f in sub["fields"]] + \
+                 [f'table "{t["name"]}"' for t in sub["tables"]]
+        _log("SLOT", f"{doc_ref(file_path)}: targeted second request for "
+                     f"{len(sub['fields'])} slot(s) and {len(sub['tables'])} table(s)")
+        p2 = build_prompt(sub, pages, default_doc_type) + (
+            "\n\nSECOND REQUEST. Your previous answer left out these, or left "
+            "them empty while the page prints a value for them: "
+            + "; ".join(labels) + ". The page image is attached. Answer ONLY "
+            "these slots and tables. Read every row of each table. If a value "
+            "really is not on the page, give \"\" with status \"absent\".")
+        parsed2, resp2 = ask(p2, sub, "retry:" + ",".join(
+            (["fields"] if sub["fields"] else []) + [t["name"] for t in sub["tables"]]))
+        if isinstance(parsed2, dict):
+            parsed = C.merge_answers(parsed, parsed2, retry_ids, retry_tables)
+            C.note_contract(attempts, *C.counts(parsed2, sub))
+        contract_after = C.check_answer(parsed, slots, resp, expected)
 
     # Declared identifier kinds (`id_type` on a value cell or a table
     # heading) — attached AFTER the prompt is built, so a declaration never
@@ -1313,9 +1674,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 located.append((cells, source, page, key, occurrences))
 
             # ONE REGION PER BAND (round 2, I1). See `select_region`.
-            located, region = select_region(
+            # Page-at-a-time rows were each asked of ONE page that prints
+            # (or continues) the band, so they are bound to a region by
+            # construction; only the single-call answer needs choosing.
+            located, region = (located, None) if chunked else select_region(
                 located, all_lines, page_lines,
-                headers=[c.get("header") for c in t.get("columns") or []])
+                headers=([c.get("header") for c in t.get("columns") or []]
+                         or table_headers(t)))
             if region:
                 shown_pages = ", ".join(str(p) for p in region["pages"])
                 left = region["left_out"]
@@ -1715,6 +2080,40 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 origin, list(next((w for rr, w in row_fail if rr is r), ()))
                 + [why for rr, why in row_notice if rr is r])
             value_origins.append(origin)
+    # ── COMPLETENESS (Run A, A3/A4) ──
+    # The extraction against what the page holds. A slot the page shows a
+    # value for and the extraction left empty is EMPTY AND FLAGGED; a slot
+    # whose label the page does not print stays plain empty and is listed as
+    # absent — GL Account and PO number must not make noise.
+    cov = SI.coverage(inventory, slots, extracted_fields, tables_out,
+                      parsed.get("fields"), page_lines or [], nums)
+    label_of = {f["ref"]: f["row_label"] for f in slots["fields"]}
+    for ref, why in cov["flag_slots"].items():
+        flagged.append(_flag(label_of.get(ref, ref), "", f"{EMPTY_FLAGGED}: {why}"))
+    attention = list(cov["reasons"])
+    for n, why in sorted(page_failed.items()):
+        attention.append(
+            f"The field slots could not be extracted ({why}); only table rows "
+            f"were read." if n == 0 else
+            f"Page {n} could not be extracted ({why}); the table rows printed "
+            f"on it are missing. The other pages were kept.")
+    for fl in contract_after:
+        if fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE):
+            names = ", ".join(repr(x) for x in fl["tables"])
+            attention.append(f"The model's answer did not include the rows of "
+                             f"table {names}, and a second request did not "
+                             f"return them either.")
+    for name, rr in cov["rows"].items():
+        for n in rr["no_matching_table"]:
+            if len(nums) > 1:
+                notes.append(f"no matching table on page {n} (table {name!r})")
+    values_need_review = (
+        bool(ungrounded) or review_gate or bool(dropped) or bool(merged_columns)
+        or bool(regions_warned) or bool(empty_rows) or bool(off_schema_keys)
+        or check_review or bool(cov["flag_slots"]))
+    for t in attention:
+        notes.append(f"NEEDS ATTENTION: {t}")
+
     needs_review = (bool(ungrounded) or bool(unanswered) or review_gate
                     or bool(dropped) or bool(merged_columns)
                     or bool(regions_warned)
@@ -1832,6 +2231,58 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     }
     for name, rows in tables_out.items():
         ed[f"{name}_rows"] = rows
+
+    # ── STATE AND DIAGNOSTICS (Run A, A0/A4/A8) ──
+    # READY: nothing outstanding. NEEDS_REVIEW: values to confirm.
+    # NEEDS_ATTENTION: the page holds something the extraction does not — a
+    # missing table or section, unplaced amounts, unread pages. FAILED is set
+    # where the call itself failed, above. `needs_review` keeps its old
+    # meaning for every older reader; `document_state` is the new truth.
+    ed["attention"] = [{"id": f"att-{i + 1}", "text": t, "disposition": None}
+                       for i, t in enumerate(attention)]
+    ed["document_state"] = ("NEEDS_ATTENTION" if attention else
+                            "NEEDS_REVIEW" if (values_need_review or any(
+                                o != "native" for o in value_origins)) else
+                            "READY")
+    if attention:
+        ed["needs_review"] = True
+    usage = C.summarise(attempts)
+    from_page = {}
+    for ref, p in ed["field_provenance"].items():
+        if p.get("page") is not None:
+            from_page[p["page"]] = from_page.get(p["page"], 0) + 1
+    for rows in tables_out.values():
+        for row in rows:
+            if row.get("_page") is not None:
+                from_page[row["_page"]] = from_page.get(row["_page"], 0) + 1
+    ledger = {}
+    for n in nums:
+        pg = inventory["pages"].get(n) or {}
+        if pg.get("unreadable") or n in page_failed:
+            ledger[str(n)] = "failed"
+        elif from_page.get(n) or pg.get("amounts") or pg.get("widget_values")                 or pg.get("dated_rows") or pg.get("item_rows"):
+            ledger[str(n)] = "processed"
+        else:
+            ledger[str(n)] = "processed_empty"
+    ed["diagnostics"] = {
+        "attempts": attempts,
+        "usage": usage,
+        "contract": {"first": contract_first, "after": contract_after,
+                     "retried_slots": retry_ids, "retried_tables": retry_tables},
+        "inventory": inventory["totals"],
+        "coverage": {k: cov[k] for k in ("reasons", "flag_slots", "absent",
+                                          "empty_bands", "widget_values",
+                                          "widget_unplaced", "unplaced_amounts",
+                                          "unplaced_amount_count", "rows")},
+        "pages": ledger,
+    }
+    if resp is not None and usage["total_tokens"] is not None:
+        # tokens_used is what the worker stores: every attempt of this
+        # document, thinking tokens included.
+        try:
+            resp.tokens_used = usage["total_tokens"]
+        except AttributeError:
+            pass
     r.extracted_data = ed
     r.extraction_response = resp
     _log("RESULT", f"slot-directed: {len(kv)} fields, "

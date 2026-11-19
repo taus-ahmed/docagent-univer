@@ -900,6 +900,13 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                 else Path(str(fp)).name or str(fp)
             )
             print(f"[THREAD] processing file {i+1}/{len(file_keys)}: {doc_ref(fp)}", flush=True)
+            # Run A, A0: every model attempt's log line names the job and
+            # this file (by its redacted reference, never its name).
+            try:
+                import llm_contract as _C
+                _C.CALL_CONTEXT.set({"job_id": job_id, "document": doc_ref(fp)})
+            except Exception:
+                pass
 
             # Issue 2: update job progress so the UI can poll live status
             try:

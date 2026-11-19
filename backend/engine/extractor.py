@@ -67,52 +67,86 @@ def _unreadable(file_path, doc):
 
 
 def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
-              temperature=0.1):
+              temperature=0.1, **options):
     """
-    One Gemini call (vision-first, all images), returning (parsed_dict_or_None,
-    response_or_None). 3 attempts with 2s backoff; text fallback when vision fails.
-    `model` pins the Gemini tier (e.g. "gemini-2.5-flash" for accuracy-critical calls).
-    `temperature` is 0 for shape inference — see `infer_template`.
+    One logical model call (vision-first, all images), returning
+    (parsed_dict_or_None, response_or_None).
+
+    RETRIES ARE TYPED (Run A, A2) and never loop:
+      - transport failures (timeout, 429 rate limit, 5xx) are retried INSIDE
+        the provider, with backoff, jitter and Retry-After, in one budget;
+      - MAX_TOKENS: ONE more call with twice the output cap and the thinking
+        budget turned down, because on gemini-2.5 thinking spends the cap;
+      - invalid JSON / empty answer / no candidate: ONE more identical call;
+      - a quota exhausted, an invalid request, an auth failure or a policy
+        block: never retried;
+      - a vision call the provider refused for a non-terminal reason falls
+        back to the text alone, as before.
+
+    `options` go to the provider untouched (`response_schema`,
+    `max_output_tokens`, `thinking_budget`). The returned response carries
+    every attempt (`attempts`) and `tokens_used` summed over all of them.
+    `model` pins the Gemini tier; `temperature` is 0 for shape inference.
     """
-    resp = None
-    base_delay = 1
-    for attempt in range(3):
-        err_txt = ""
+    import llm_contract as C
+    from connectors.base import LLMResponse
+
+    if not images and not text:
+        return None, None
+    attempts, tokens = [], 0
+
+    def call(**kw):
+        nonlocal tokens
         try:
-            if images:
-                resp = orchestrator.llm.extract(image_b64=images, prompt=prompt,
-                                                system_instruction=system, model=model,
-                                                temperature=temperature)
-                if (not getattr(resp, "success", False)) and text:
-                    resp = orchestrator.llm.extract(text=text, prompt=prompt,
-                                                    system_instruction=system, model=model,
-                                                    temperature=temperature)
-            elif text:
-                resp = orchestrator.llm.extract(text=text, prompt=prompt,
-                                                system_instruction=system, model=model,
-                                                temperature=temperature)
-            else:
-                return None, None
-            if resp and getattr(resp, "success", False) and getattr(resp, "parsed_json", None):
-                return resp.parsed_json, resp
-            err_txt = str(getattr(resp, "error", "") or "")
+            r = orchestrator.llm.extract(prompt=prompt, system_instruction=system,
+                                         model=model, temperature=temperature,
+                                         **kw)
         except Exception as e:
-            err_txt = str(e)
-            _log("LLM", f"error attempt {attempt+1}: {exc_brief(e)}")
-            # keep the cause: the caller names it in the failure it reports
-            from connectors.base import LLMResponse
-            resp = LLMResponse(raw_text="", success=False,
-                               error=f"{type(e).__name__}: {e}")
-        if attempt < 2:
-            # E5 — exponential backoff on rate limiting: 1s, 2s, 4s... capped at
-            # 30s. Non-429 failures keep the original fixed 2s retry delay.
-            low = err_txt.lower()
-            if "429" in err_txt or "rate limit" in low or "resource_exhausted" in low or "quota" in low:
-                delay = min(base_delay * (2 ** attempt), 30)
-                _log("RATE", f"429 received — backing off {delay}s before retry")
-                time.sleep(delay)
-            else:
-                time.sleep(2)
+            _log("LLM", f"call raised: {exc_brief(e)}")
+            r = LLMResponse(raw_text="", success=False,
+                            error=f"{type(e).__name__}: {e}", error_kind="exception")
+        attempts.extend(getattr(r, "attempts", None) or [])
+        tokens += int(getattr(r, "tokens_used", 0) or 0)
+        return r
+
+    def ok(r):
+        return bool(r and getattr(r, "success", False) and getattr(r, "parsed_json", None))
+
+    kw = dict(options)
+    if images:
+        resp = call(image_b64=images, **kw)
+        if not ok(resp) and text and getattr(resp, "error_kind", None) not in (
+                C.NEVER_RETRY | {C.TRANSIENT, C.MAX_TOKENS}):
+            resp = call(text=text, **kw)
+            kw["_text_only"] = True
+    else:
+        resp = call(text=text, **kw)
+        kw["_text_only"] = True
+    text_only = kw.pop("_text_only", False)
+    payload = {"text": text} if text_only else {"image_b64": images}
+
+    if not ok(resp):
+        kind = getattr(resp, "error_kind", None)
+        if kind == C.MAX_TOKENS:
+            cap = int(options.get("max_output_tokens")
+                      or C.setting("GEMINI_MAX_OUTPUT_TOKENS", 8192))
+            pro = "pro" in str(model or C.setting("GEMINI_MODEL", "")).lower()
+            with C.section(f"{C.CALL_SECTION.get() or 'call'}|retry:max_tokens"):
+                resp = call(**payload, **{**options,
+                                          "max_output_tokens": min(cap * 2, 65536),
+                                          "thinking_budget": 128 if pro else 0})
+        elif kind in (C.INVALID_JSON, C.EMPTY, C.NO_CANDIDATE):
+            with C.section(f"{C.CALL_SECTION.get() or 'call'}|retry:{kind}"):
+                resp = call(**payload, **options)
+
+    if resp is not None:
+        try:
+            resp.attempts = attempts
+            resp.tokens_used = tokens
+        except AttributeError:
+            pass
+    if ok(resp):
+        return resp.parsed_json, resp
     return None, resp
 
 
@@ -444,7 +478,12 @@ def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                doc_text_pages=doc_text_pages, file_type=ftype,
                default_doc_type=default_doc_type, start=start,
                page_lines=doc_page_lines, page_origins=page_origins or None,
-               page_numbers=page_numbers)
+               page_numbers=page_numbers,
+               # Run A, A3 — the source inventory's facts the page words
+               # alone do not carry: filled form fields, unreadable scans.
+               widget_values=dict(getattr(doc, "widget_values", {}) or {}),
+               unreadable={"ocr_failed": list(getattr(doc, "ocr_failed_pages", []) or []),
+                           "ocr_zero": list(getattr(doc, "ocr_zero_word_pages", []) or [])})
 
     def _note_shredded(results):
         """Say it on the RESULT, not only in the log (I10).
@@ -793,6 +832,16 @@ def _count_flags(results):
         v = (getattr(r, "extracted_data", None) or {}).get("validation")             if isinstance(getattr(r, "extracted_data", None), dict) else None
         if isinstance(v, dict) and "flagged_fields" in v:
             v["flagged_count"] = len(v["flagged_fields"])
+        # Run A, A4: the stored state is decided LAST, after every pass that
+        # can add a review reason (stamps, OCR notes, possible-multiple), by
+        # the same function the API and the export use.
+        ed = getattr(r, "extracted_data", None)
+        if isinstance(ed, dict) and ed.get("document_state") not in (None, "FAILED"):
+            try:
+                from app.core.review import document_state
+                ed["document_state"] = document_state(ed)
+            except Exception:
+                pass
     return results
 
 
@@ -866,6 +915,19 @@ def _extract_one(orchestrator, file_path, template_data, ctx, doc_text,
     """
     from cancellation import checkpoint
     checkpoint()      # a cancelled job stops before the next document's model call
+    import llm_contract as C
+    # Every model attempt for THIS document — inference, a reused schema's
+    # trial and the extraction itself — lands in one list, stored on the
+    # result as `diagnostics.attempts` (Run A, A0).
+    with C.collect_attempts(fresh=True):
+        return _extract_one_inner(orchestrator, file_path, template_data, ctx,
+                                  doc_text, doc_text_pages, page_images,
+                                  default_doc_type, batch_schemas)
+
+
+def _extract_one_inner(orchestrator, file_path, template_data, ctx, doc_text,
+                       doc_text_pages, page_images, default_doc_type,
+                       batch_schemas):
     # ── NO TEMPLATE (Phase 3) — infer one, then take the SAME path ──
     # An empty grid (no labels, no headers) gives extraction nothing to anchor
     # to and is treated exactly like no template at all.

@@ -52,3 +52,5 @@ Thumbs.db
 # Owner-supplied acceptance material. Curated copies live under
 # tests/fixtures/acceptance; never commit the local staging dump itself.
 /local_docs/
+# Owner test material (PDFs, job records, answer sheet): never committed
+local_docs/

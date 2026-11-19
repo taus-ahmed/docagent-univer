@@ -1081,13 +1081,13 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 `/api/export/perfile`, both openpyxl directly — never the engine's
 `excel_writer.py`.
 
-### Measured limits (`tests/reports/latest*.json`, replay at `591d3b6`)
+### Measured limits (`tests/reports/latest*.json`, replay on `fix/completeness-gate`, Run A)
 
 | | templated | no-template |
 |---|---|---|
-| **accuracy** (container-aware headline) | **97.2%** | **96.7%** |
-| **content** (container-blind) | 96.7% | 95.9% |
-| **structure fidelity** | **100%** (17/17; 15 exact row count) | **100%** (17/17; 15 exact) |
+| **accuracy** (container-aware headline) | **98.7%** | **98.2%** |
+| **content** (container-blind) | 97.9% | 97.1% |
+| **structure fidelity** | **100%** (17/17; 17 exact row count) | **100%** (17/17; 17 exact) |
 | accuracy RAW (all adapter widenings off) | 47.0% | 70.1% |
 | invented (value nowhere in the PDF) | 0 | 0 |
 | misfiled | **0** | **0** |
@@ -1095,7 +1095,7 @@ the endpoints. `export.py` additionally serves `POST /api/export/combined` and
 | **defect rate** | **0.0%** | **0.0%** |
 | fields varying across 3 live repeats (Phase 9) | 0 | 1 |
 
-**Down from 98.7% / 98.2%, and the whole loss is the strict region rule
+**Run A (DECISION-LOG §24) recovered the strict region rule's whole cost:** a band now continues across a page break when its rows do not end in a total and the next page neither reprints the heading block nor stops carrying amounts, so the six cells below came back (97.2% → 98.7%, 96.7% → 98.2%). Run A also adds the completeness gate: 0 attention reasons on all 20 harness runs. The history: **Down from 98.7% / 98.2%, and the whole loss is the strict region rule
 (round-2 I1).** A band binds one region and a region never crosses a page, so
 the two gold documents whose tables genuinely continue onto page 2 give those
 rows up: `BS-2024-Q1` equity loses 2 rows (100% → 91.3%) and
