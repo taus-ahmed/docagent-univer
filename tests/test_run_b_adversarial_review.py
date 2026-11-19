@@ -44,21 +44,11 @@ def test_last_four_keeps_repeated_zero_eight_and_one_digits(line, value):
     assert FR.check_last4(value, D.words(1, [line]))[:2] == ("ok", value)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run B item B3: a page with two different account/card numbers "
-            "accepts whichever suffix the model supplied instead of flagging ambiguity"),
-)
 def test_last_four_flags_even_when_model_picks_one_of_two_accounts():
     lines = D.words(1, ["Account 11110088", "Card 22220011"])
     assert FR.check_last4("0088", lines)[0] == "ambiguous"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run B item B3: the generic 'Number' cue treats a Routing Number "
-            "as an account/card number and prevents a unique correction"),
-)
 def test_routing_number_is_not_a_last_four_candidate():
     lines = D.words(1, ["Routing Number 071000505", "Account Number 7301558842"])
     assert FR.account_numbers(lines) == [

@@ -33,15 +33,50 @@ def is_last4_slot(label) -> bool:
     return bool(_LAST4.search(str(label or "")))
 
 
-def account_numbers(all_lines) -> list[tuple[str, str]]:
-    """[(digits, line text)] for each account/card number printed right after
-    a cue word (`Account 7301558842`, `Card ending 7421`, `Account: XXXX-0000`).
-    The token must carry at least four digits; masks are allowed."""
+#: what a cue's own word, or the word before a generic cue, says the number is
+_KIND_WORD = {"account": "account", "acct": "account", "checking": "account",
+              "savings": "account", "card": "card", "credit": "card",
+              "debit": "card", "routing": "routing", "aba": "routing",
+              "rtn": "routing", "transit": "routing"}
+
+
+def _kind_of(words, i) -> str:
+    """'account' | 'card' | 'routing' | '' for the cue at words[i]."""
+    w = re.sub(r"[.:#]+$", "", words[i].strip().casefold())
+    if w in _KIND_WORD:
+        return _KIND_WORD[w]
+    if i > 0:            # `Account Number`, `Card ending`, `Routing Number`
+        prev = re.sub(r"[^a-z]", "", words[i - 1].casefold())
+        return _KIND_WORD.get(prev, "")
+    return ""
+
+
+def _aba_valid(d: str) -> bool:
+    if len(d) != 9 or not d.isdigit():
+        return False
+    n = [int(c) for c in d]
+    return (3 * (n[0] + n[3] + n[6]) + 7 * (n[1] + n[4] + n[7])
+            + (n[2] + n[5] + n[8])) % 10 == 0
+
+
+def _candidates(all_lines) -> list[tuple[str, str, str]]:
+    """[(digits, line text, kind)] for each account/card number printed right
+    after a cue word (`Account 7301558842`, `Card ending 7421`, `Account:
+    XXXX-0000`). The token must carry at least four digits; masks are allowed.
+
+    Run D, D2: a ROUTING number is never a candidate — one named so
+    (`Routing Number 071000505`, `ABA`, `RTN`, `Transit`), or nine digits that
+    pass the ABA checksum behind a cue that names no kind (`Number 0710…`).
+    The generic word `Number` otherwise made `Routing Number` an account
+    number and blocked the one unique correction."""
     out, seen = [], set()
     for ln in all_lines or []:
         words = [str(w.get("text", "")) for w in ln]
         for i, w in enumerate(words):
             if not _CUE.match(w.strip()):
+                continue
+            kind = _kind_of(words, i)
+            if kind == "routing":
                 continue
             j = i + 1
             while j < len(words) and j <= i + 3 and _SKIP.match(words[j].strip()):
@@ -50,28 +85,57 @@ def account_numbers(all_lines) -> list[tuple[str, str]]:
                 continue
             tok = words[j].strip().strip(".,;")
             digits = re.sub(r"\D", "", tok)
-            if len(digits) >= 4 and _MASKED.match(tok) and digits not in seen:
-                seen.add(digits)
-                out.append((digits, " ".join(words)))
+            if not (len(digits) >= 4 and _MASKED.match(tok)) or digits in seen:
+                continue
+            if not kind and _aba_valid(digits):
+                continue                      # an unnamed 9-digit routing number
+            seen.add(digits)
+            out.append((digits, " ".join(words), kind))
     return out
 
 
-def check_last4(value, all_lines):
+def account_numbers(all_lines) -> list[tuple[str, str]]:
+    """[(digits, line text)] — see `_candidates`."""
+    return [(d, line) for d, line, _k in _candidates(all_lines)]
+
+
+def slot_kind(label) -> str:
+    """'account' | 'card' | '' — which kind of number a last-4 slot asks for."""
+    words = set(re.sub(r"[^a-z ]+", " ", str(label or "").casefold()).split())
+    kinds = {_KIND_WORD[w] for w in words if _KIND_WORD.get(w) in ("account", "card")}
+    return kinds.pop() if len(kinds) == 1 else ""
+
+
+def check_last4(value, all_lines, label=""):
     """(status, value, source line).
 
     status: "ok" (the value is the suffix of a printed account number),
     "corrected" (it was not; the page offers exactly one suffix, returned),
-    "ambiguous" (several different suffixes and none matches), "none" (the
-    page prints no account number - nothing to check against)."""
-    nums = account_numbers(all_lines)
+    "ambiguous" (the page offers several and nothing decides which), "none"
+    (the page prints no account number - nothing to check against).
+
+    Run D, D1 — the slot's LABEL chooses the candidates: an account-like label
+    (`Account`, `Checking`) considers only account numbers, a card-like one
+    (`Card`, `Credit`) only card numbers. When that leaves two or more
+    different FULL numbers (more than four digits) the value is AMBIGUOUS
+    even when it matches one of them: the model may simply have picked one,
+    and nothing on the page says it picked the right one. A printed four-digit
+    `ending 7421` display is the page's own suffix and does not compete."""
+    nums = _candidates(all_lines)
     if not nums:
         return "none", value, ""
+    want = slot_kind(label)
+    pool = [n for n in nums if n[2] == want] if want else nums
+    pool = pool or nums
+    full = {d for d, _l, _k in pool if len(d) > 4}
     v = re.sub(r"\D", "", str(value or ""))
-    for digits, line in nums:
+    for digits, line, _k in pool:
         if len(v) == 4 and digits.endswith(v):
+            if len(full) > 1:
+                return "ambiguous", value, ""
             return "ok", v, line
     suffixes = {}
-    for digits, line in nums:
+    for digits, line, _k in pool:
         suffixes.setdefault(digits[-4:], line)
     if len(suffixes) == 1:
         (s, line), = suffixes.items()

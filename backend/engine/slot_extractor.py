@@ -1661,7 +1661,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # account / card number the page prints - checked against the
             # page, not the model's quote.
             if all_lines and FR.is_last4_slot(slot["row_label"]):
-                status, fixed4, line4 = FR.check_last4(value, all_lines)
+                status, fixed4, line4 = FR.check_last4(value, all_lines,
+                                                       slot["row_label"])
                 if status in ("ok", "corrected"):
                     field_prov[slot["ref"]].update(
                         source=line4, grounded=True,
@@ -1677,8 +1678,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 if status == "ambiguous":
                     flagged.append(_flag(
                         slot["row_label"], value,
-                        "not the last four digits of any account number the "
-                        "page prints, and the page prints more than one"))
+                        "the page prints more than one account/card number "
+                        "and nothing says which one these last four belong to"))
                     extracted_fields[slot["ref"]] = value
                     conf_map[slot["ref"]] = LOW
                     failed(slot["ref"], CONTENT_CHECK_FAILED)
