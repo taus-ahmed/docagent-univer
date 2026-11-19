@@ -878,6 +878,15 @@ def compute_shape(grid, log=None):
                        for c in range(c0, c1 + 1)}
     claimed = set(claimed) | band_cells
     band_owned_rows = {r for r, _c in band_cells}
+    merge_cols, empty_merges = {}, set()
+    for key, span in (grid.get("merges") or {}).items():
+        try:
+            mr, mc = map(int, str(key).split(","))
+            merge_cols[(mr, mc)] = int((span or {}).get("cols") or 1)
+        except (ValueError, AttributeError, TypeError):
+            continue
+        if (mr, mc) in m and (mr, mc) not in static:
+            empty_merges.add((mr, mc))
     skip_rows = ((band_rows | set(header_rows)) - band_owned_rows) | section_rows
     all_cols = range(max_col + 1)
 
@@ -938,6 +947,15 @@ def compute_shape(grid, log=None):
             continue
         headed = set(_text_cols(head)) if head is not None else set()
         beside = {c + 1 for c in block_labels}
+        # Run D, D10: a label merged across k columns sits beside the cell
+        # just past its merge — and when THAT cell anchors an EMPTY merge
+        # (`Legal Name` over A1:B1, an empty box over C1:D1), the empty
+        # merge's top-left cell is the slot.
+        for r in body:
+            for c in _text_cols(r):
+                k = merge_cols.get((r, c), 1)
+                if k > 1 and (r, c + k) in empty_merges:
+                    beside.add(c + k)
         block_values = sorted((headed | beside) - set(block_labels))
 
         # A LABEL COLUMN AT THE RIGHT EDGE still needs its value column, and

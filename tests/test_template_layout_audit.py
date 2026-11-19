@@ -37,7 +37,6 @@ PARSE_XFAIL = {
            "the truth wants the cells below, F4's truth the cells right, and the "
            "right cell is usable, so it is kept (Run D, D9 never guesses)"),
     "F3": "F3: separator columns do not extend the text-defined used range",
-    "F6": "F6: a merged empty value range is not a slot",
     "F10": "F10: formula cells participate in label geometry",
     "F11": "F11: placeholder text makes a slot static",
     "T2": "T2: a header-only band invents ten reserved rows",
@@ -60,7 +59,6 @@ PARSE_XFAIL = {
 WRITE_XFAIL = {
     "F2": "F2: see the parse reason - values are written to the usable right-hand cells",
     "F3": "F3: values are written in adjacent cells instead of separated slots",
-    "F6": "F6: merged value anchors receive no extracted values",
     "F9": "F9: number formats and dropdown validation are not in the grid contract",
     "F10": "F10: formula geometry creates wrong slots and misses intended values",
     "F11": "F11: placeholders remain static and cannot be cleared by an empty answer",

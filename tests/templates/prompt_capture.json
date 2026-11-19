@@ -77,7 +77,10 @@
     "ambiguities": []
   },
   "F6": {
-    "slot_descriptions": [],
+    "slot_descriptions": [
+      "F1: the value on the row labelled \"Legal Name\"",
+      "F2: the value on the row labelled \"Reporting Date\""
+    ],
     "ambiguities": [
       "Merged empty value ranges produce no field-slot prompt; only merge anchors can carry values."
     ]
