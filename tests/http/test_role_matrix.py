@@ -153,7 +153,7 @@ def test_a_reviewer_cannot_edit_or_delete_a_template(client, headers, templates)
 
 def test_an_admin_can_create_a_reviewer(client, auth):
     r = client.post("/api/admin/users", headers=auth["acme"], json={
-        "username": "made_reviewer", "display_name": "R", "password": "secret1",
+        "username": "made_reviewer", "display_name": "R", "password": "reviewer-passphrase-1",
         "role": "reviewer", "client_id": "acme_001"})
     assert r.status_code == 201, r.text
     assert r.json()["role"] == "reviewer"

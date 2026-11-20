@@ -20,6 +20,7 @@ from app.core.auth import (
     revoke_tokens, token_for,
 )
 from app.core import audit
+from app.core.password_policy import enforce as enforce_password
 from app.core.permissions import permissions_of
 from app.core.demo import is_demo_user
 from app.core import demo_audit
@@ -222,8 +223,7 @@ def update_me(
     if payload.email is not None:
         current_user.email = payload.email
     if payload.password is not None:
-        if len(payload.password) < 6:
-            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        enforce_password(payload.password, current_user.username)   # H3
         current_user.password_hash = hash_password(payload.password)
         revoke_tokens(current_user)             # H2: every other session ends
 
@@ -260,6 +260,7 @@ def change_password(
     one-time and must differ from it."""
     if not verify_password(payload.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="The current password is not right")
+    enforce_password(payload.new_password, current_user.username)    # H3
     if payload.new_password == payload.current_password:
         raise HTTPException(status_code=400,
                             detail="Choose a password different from the current one")

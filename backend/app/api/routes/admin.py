@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.auth import hash_password, is_one_time, revoke_tokens
+from app.core.password_policy import enforce as enforce_password
 from app.core.permissions import PLATFORM_ADMIN, require, role_of
 from app.core.demo import is_demo_user
 from app.core.confidence import CONFIDENT_LEVELS
@@ -58,6 +59,7 @@ def create_user(
             detail="Tenant admins can create users only in their own tenant",
         )
 
+    enforce_password(payload.password, payload.username)       # H3
     existing = db.query(User).filter(User.username == payload.username).first()
     if existing:
         raise HTTPException(status_code=409, detail=f"Username '{payload.username}' already exists")
@@ -104,8 +106,7 @@ def update_user(
     if payload.email is not None:
         user.email = payload.email
     if payload.password is not None:
-        if len(payload.password) < 6:
-            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        enforce_password(payload.password, user.username)      # H3
         user.password_hash = hash_password(
             payload.password, one_time=bool(payload.must_change_password))
         revoke_tokens(user)                     # H2: a reset ends their sessions

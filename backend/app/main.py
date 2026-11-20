@@ -322,6 +322,12 @@ def _validate_bootstrap_password(username: str, password: str) -> None:
     if password.casefold() in _KNOWN_BOOTSTRAP_PASSWORDS:
         raise RuntimeError(
             "Administrator bootstrap password is a known default or placeholder.")
+    # Overnight H3: the one password policy as well (common passwords, plain
+    # sequences); its 12-character minimum is below this path's 15.
+    from app.core.password_policy import problems
+    found = problems(password, username)
+    if found:
+        raise RuntimeError("Administrator bootstrap password refused: " + " ".join(found))
 
 
 def _bootstrap_admin():

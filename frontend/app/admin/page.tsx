@@ -136,7 +136,7 @@ function UserFormModal({
           </div>
 
           <div>
-            <label className="form-label">{isCreate ? "Password" : "New password (leave blank to keep)"}</label>
+            <label className="form-label">{isCreate ? "Password (at least 12 characters, not the username)" : "New password (leave blank to keep; at least 12 characters)"}</label>
             <input className="input" type="password" autoComplete="new-password" placeholder={isCreate ? "Min 6 chars" : "Leave blank to keep"}
               value={form.password} onChange={set("password")} />
             <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, marginTop: 6 }}>

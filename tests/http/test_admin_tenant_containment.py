@@ -211,7 +211,7 @@ def test_unscoped_super_admin_keeps_cross_tenant_management(
 
     updated = client.put(
         f"/api/admin/users/{target.id}", headers=auth["super"],
-        json={"client_id": "acme_001", "password": "super-reset"},
+        json={"client_id": "acme_001", "password": "super-reset-passphrase"},  # H3: 12+
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["client_id"] == "acme_001"
