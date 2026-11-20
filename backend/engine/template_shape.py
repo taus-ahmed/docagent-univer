@@ -149,6 +149,11 @@ PLACEHOLDER = re.compile(
     r")$", re.I)
 
 
+#: a label naming a table's total (Run E, D8): `Total`, `Subtotal`, `Balance
+#: Due`, `Grand Total`
+_TOTALISH = re.compile(r"\b(?:sub-?total|totals?|balance|due)\b", re.I)
+
+
 def is_placeholder(text) -> bool:
     """Is this cell text a placeholder for a value rather than a label?"""
     return bool(PLACEHOLDER.match(str(text or "").strip()))
@@ -1081,7 +1086,14 @@ def compute_shape(grid, log=None):
         # implies its value column too, for the reason a one-column template
         # is widened by one: nothing else explains labels with no room for
         # values. "Total | 999" has two texts on its row and does not qualify.
-        label_list = all(_text_cols(r) == [max_col] for r in body)
+        # Run E, E7 (D8): on a TABLE'S OWN ROWS a list means two or more
+        # labels (T15's Owner / Reviewed), or one that names the table's
+        # total (T10's `Total right`, a totals cell drawn beside its table);
+        # any other lone text there (`Amounts in USD`) is a note beside the
+        # table, not a field. Off a table's rows nothing changes.
+        label_list = all(_text_cols(r) == [max_col] for r in body) and (
+            len(body) >= 2 or not any(r in band_owned_rows for r in body)
+            or bool(_TOTALISH.search(m[(body[0], max_col)])))
         block_values = ([c for c in block_values if c <= max_col + 1]
                         if in_box or label_list else in_box)
 

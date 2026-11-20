@@ -148,11 +148,6 @@ def test_d7_a_blank_spacer_inside_one_table_does_not_make_two_tables():
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D8: a static note beside a table is treated as a "
-            "field label and gets a bogus slot"),
-)
 def test_d8_a_note_beside_a_table_is_not_a_scalar_field():
     grid = _grid({
         (0, 0): "Date", (0, 1): "Description", (0, 2): "Amount",
