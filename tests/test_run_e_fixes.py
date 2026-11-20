@@ -42,6 +42,19 @@ def test_e0_extraction_drops_a_band_row_equal_to_its_total_slot():
     assert [r["Description"] for r in dropped] == ["Total"]
 
 
+def test_e4_a_merge_inside_a_band_is_kept_on_every_written_row():
+    from tests.test_run_c_adversarial import MERGED_BAND, document, round_trip, stored
+    from slot_extractor import enumerate_slots
+
+    table = enumerate_slots(MERGED_BAND)["tables"][0]["name"]
+    rows = [{"Item": f"W{i}", "Amount": "1.00"} for i in range(3)]
+    result, _ = stored(MERGED_BAND, fields={"Total": "3.00"}, rows={table: rows})
+    sheet = round_trip([document(result)], MERGED_BAND)["Results"]
+    merged = {str(item) for item in sheet.merged_cells.ranges}
+    assert {"B4:C4", "B5:C5", "B6:C6"} <= merged
+    assert [sheet.cell(r, 2).value for r in (4, 5, 6)] == [1.0, 1.0, 1.0]
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch

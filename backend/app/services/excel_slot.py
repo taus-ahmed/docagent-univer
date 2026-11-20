@@ -765,6 +765,37 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
 
         _apply_template_merges(ws, sheet_data.get("merges"), _addr, band_rows,
                                openpyxl_mod)
+        # Run E, E4 (C1): a ONE-ROW merge wholly inside a row band's body
+        # (`B4:C4` widening an entry cell) describes a row of the table, so it
+        # is re-created on every record row written — never over a cell
+        # holding a value, which a merge would erase.
+        for t in tables:
+            if t.get("orientation") == "columns":
+                continue
+            recs = ed.get(f"{t['name']}_rows") or []
+            at = {v: j for j, (kind, v) in enumerate(layouts.get(t["name"]) or [])
+                  if kind == "rec"}
+            for key, span in (sheet_data.get("merges") or {}).items():
+                try:
+                    tr, tc = map(int, str(key).split(","))
+                    nr = int((span or {}).get("rows") or 1)
+                    nc = int((span or {}).get("cols") or 1)
+                except (ValueError, AttributeError, TypeError):
+                    continue
+                if nr != 1 or nc < 2 or tc + nc - 1 > max_c:
+                    continue
+                if not (t["start_row"] <= tr <= t["end_row"]):
+                    continue
+                for i in range(len(recs)):
+                    r = doc_offset + out_row(t["start_row"] - 1) + 1 + at.get(i, i)
+                    if any(ws.cell(row=r + 1, column=c + 1).value not in (None, "")
+                           for c in range(tc + 1, tc + nc)):
+                        continue
+                    try:
+                        ws.merge_cells(start_row=r + 1, start_column=tc + 1,
+                                       end_row=r + 1, end_column=tc + nc)
+                    except Exception:
+                        continue
 
         block_height = max(1, max_r + 1 + sum(ov for _, ov in shifts))
         doc_index += 1

@@ -344,10 +344,6 @@ MERGED_BAND = grid_of(
 )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="C1: a template merge wholly inside a repeating band is dropped",
-)
 def test_c1_merge_inside_a_band_survives_the_export():
     from slot_extractor import enumerate_slots
 

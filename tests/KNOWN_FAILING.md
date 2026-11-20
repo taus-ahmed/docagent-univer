@@ -6,7 +6,6 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 
 | Gap | Strict test | Implementation evidence | Observed failure |
 | --- | --- | --- | --- |
-| C1 merge inside a repeating band | `test_c1_merge_inside_a_band_survives_the_export` | `excel_cells._apply_template_merges` skips every merge intersecting a band instead of only unsafe cross-boundary merges. | With one extracted row and template merge `B4:C4`, the exported workbook has no `B4:C4` merge. |
 | C7 non-US transit number | `test_c7_non_us_transit_number_is_not_failed_as_an_aba_routing_number` | `cheque_validators.bottom_line` applies the US ABA checksum to every routing/transit field. | Legitimate transit number `12345` is flagged `routing_checksum_failed`. |
 | C7 checksum-only routing validation | `test_c7_nine_digits_that_are_not_a_routing_number_are_rejected` | `cheque_validators.aba_is_valid` has no nonzero/plausibility guard. | `000000000` passes as a valid routing number. |
 | C7 swap hidden by a checksum coincidence | `test_c7_checksum_valid_account_number_does_not_hide_a_swap` | `cheque_validators.bottom_line` uses checksum validity as the swap detector and ignores unambiguous MICR sentinels when both values pass. | MICR `A021000021A C011401533C 1234D` with stored routing `011401533` and account `021000021` yields no `possible_swap`. |
