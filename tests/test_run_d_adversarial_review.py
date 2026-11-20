@@ -124,11 +124,6 @@ def test_d6_blank_rows_really_isolate_scattered_field_groups():
     ])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D6: requiring a contiguous heading turns a matrix "
-            "heading with one intentionally empty cell into scalar fields"),
-)
 def test_d6_a_matrix_heading_may_have_one_intentionally_empty_cell():
     # A real two-value comparison: A names the rows, B is the unlabeled current
     # amount, and C is the explicitly headed prior-year amount.

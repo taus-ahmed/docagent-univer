@@ -1017,6 +1017,17 @@ def compute_shape(grid, log=None):
         # alternates text and blanks; on its own above a shorter row it used
         # to read as a matrix heading and lose every one of its own slots.
         contiguous = first == list(range(first[0], first[-1] + 1)) if first else False
+        # Run E, E7 (D6): a heading may leave a column UNNAMED (`Line item |
+        # _ | 2026`, B being the current amount) when every row beneath names
+        # itself in the heading's first column only — that is a matrix, not a
+        # row of label/value pairs, whose lower rows carry pairs of their own.
+        # Its other headings must carry a digit (a year, a period, a column
+        # number): `Name | _ | Date | _` over `Address | _` is a form, and
+        # reading it as a matrix would take Name's and Date's slots away.
+        if first and not contiguous and rest:
+            contiguous = (all(_text_cols(r) == [first[0]] for r in rest)
+                          and all(re.search(r"\d", m[(non_blank[0], c)])
+                                  for c in first[1:]))
         if rest and contiguous and len(first) > max(len(_text_cols(r)) for r in rest):
             head = non_blank[0]
             heading_rows.add(head)

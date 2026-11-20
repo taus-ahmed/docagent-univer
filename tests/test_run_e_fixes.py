@@ -68,6 +68,11 @@ def test_e7_a_blank_corner_matrix_keeps_both_value_columns():
                              ("C2", "Revenue"), ("C3", "Expenses")]
 
 
+def test_e7_a_form_row_of_pairs_over_one_label_is_not_a_matrix():
+    grid = _grid({(0, 0): "Name", (0, 2): "Date", (1, 0): "Address"})
+    assert _fields(grid) == [("B1", "Name"), ("B2", "Address"), ("D1", "Date")]
+
+
 def test_e7_a_two_level_header_still_inherits_its_vertical_merge():
     from template_shape import compute_shape
     grid = _grid({(0, 0): "Item", (0, 1): "Amount", (1, 1): "Debit", (1, 2): "Credit"},
