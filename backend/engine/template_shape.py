@@ -703,14 +703,29 @@ def compute_shape(grid, log=None):
             continue                                    # inside a declared table
         cols = sorted(c for c in range(max_col + 1)
                       if (r, c) in static or (r, c) in inherited)
-        run = []
+        runs, run = [], []
         for c in cols + [None]:
             if c is not None and (not run or c == run[-1] + 1):
                 run.append(c)
                 continue
+            if run:
+                runs.append(run)
+            run = [c] if c is not None else []
+        # Run E, E7 (D7): runs one blank column apart are ONE table with a
+        # visual spacer when either side is only two headings wide (`Date |
+        # Description | _ | Debit | Balance`). Two wider tables drawn side by
+        # side (T6's four and four) stay two.
+        joined = []
+        for run in runs:
+            prev = joined[-1] if joined else None
+            if (prev and run[0] == prev[-1] + 2 and len(prev) >= 2
+                    and len(run) >= 2 and min(len(prev), len(run)) == 2):
+                joined[-1] = prev + run
+            else:
+                joined.append(run)
+        for run in joined:
             if len(run) >= 2 and not any((r + 1, x) in static for x in run):
                 header_runs.append((r, run))            # not a stack of labels
-            run = [c] if c is not None else []
     header_candidates = {}
     for r, cols in header_runs:
         header_candidates.setdefault(r, cols)

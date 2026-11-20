@@ -137,11 +137,6 @@ def test_d6_a_matrix_heading_may_have_one_intentionally_empty_cell():
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D7: one table with an intentional blank spacer "
-            "column is silently split into two side-by-side tables"),
-)
 def test_d7_a_blank_spacer_inside_one_table_does_not_make_two_tables():
     grid = _grid({
         (0, 0): "Date", (0, 1): "Description",

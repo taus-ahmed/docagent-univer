@@ -6,7 +6,6 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 
 | Gap | Strict test | Implementation evidence | Observed failure |
 | --- | --- | --- | --- |
-| Run D D7: one table split at a spacer column | `test_d7_a_blank_spacer_inside_one_table_does_not_make_two_tables` | Header detection splits every contiguous text run into a separate band. | `Date | Description | _ | Debit | Balance` becomes two tables instead of one table with an intentional visual spacer. |
 | Run D D8: side note becomes a field | `test_d8_a_note_beside_a_table_is_not_a_scalar_field` | A pure label list at the right edge implies a value column even when the text is a static note. | `Amounts in USD` beside a three-column table creates bogus slot F2. |
 | Run D D10: decorative merge becomes a slot | `test_d10_a_merged_section_heading_does_not_own_a_decorative_empty_merge` | Any empty merge immediately after a merged text cell is assigned to that text. | Merged heading `Invoice Summary` over A1:B1 plus decorative empty C1:D1 creates field C1. |
 | Run D D11: legitimate `TBD` label erased | `test_d11_an_exact_tbd_label_can_be_real_template_text` | Exact `TBD` is unconditionally converted to an empty placeholder. | A row label `TBD` disappears and its B1 field slot is lost. (`Total due TBD` is correctly left alone.) |
