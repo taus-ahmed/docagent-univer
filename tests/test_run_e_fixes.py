@@ -4,6 +4,8 @@ Offline only: editor grids, stored results and synthetic page lines.
 """
 from __future__ import annotations
 
+import json
+
 from tests.harness import bootstrap as bs
 
 bs.bootstrap()
@@ -259,6 +261,89 @@ def test_e11_a_different_number_still_fails():
     page = "Service charge −45.00"
     assert verify_span("-46.00", "Service charge −45.00", 1, [page])[0] is False
     assert verify_span("45.00", "Service charge −45.00", 1, [page])[0] is False
+
+
+# ---------------------------------------------------------------------------
+# E12: a multi-line address grounds as an ordered sequence of the page's lines.
+
+def _run_doc(relative_pdf, sheet, doc_type, answer):
+    """Any acceptance PDF + template sheet + a scripted answer, through the real
+    `run_slot_extraction` (the same seams as run_a_driver.replay_job)."""
+    import contextlib
+    import io
+    from types import SimpleNamespace
+    import llm_contract as C
+    from connectors.base import LLMResponse
+    from core.preprocessor import preprocess_file
+    from slot_extractor import run_slot_extraction
+    from tests.contract.run_a_driver import DOCS, template_grid
+
+    path = DOCS / relative_pdf
+    with contextlib.redirect_stdout(io.StringIO()):
+        document = preprocess_file(path)
+
+    def extract(**_kw):
+        return LLMResponse(raw_text=json.dumps(answer), parsed_json=answer,
+                           success=True, model_used="offline-scripted-response")
+
+    n = len(document.page_texts)
+    with contextlib.redirect_stdout(io.StringIO()), C.collect_attempts(fresh=True):
+        result = run_slot_extraction(
+            SimpleNamespace(llm=SimpleNamespace(extract=extract)), path,
+            {"layout": template_grid(sheet)}, None, page_images=[],
+            doc_text=document.extracted_text, doc_text_pages=document.page_texts,
+            file_type="digital_pdf", default_doc_type=doc_type, start=0.0,
+            page_lines=document.page_lines,
+            page_origins={i + 1: o for i, o in enumerate(document.page_origins)},
+            page_numbers=list(range(1, n + 1)),
+            widget_values=document.widget_values,
+            unreadable={"ocr_failed": document.ocr_failed_pages,
+                        "ocr_zero": document.ocr_zero_word_pages})[0]
+    return result.extracted_data
+
+
+_VENDOR = "14 Weavers Yard Shoreditch London E2 7DP United Kingdom"
+_BILL_TO = "Unit 9, Quayside Business Park, Bristol BS1 6QS, United Kingdom"
+
+
+def _invoice_answer(vendor, bill_to):
+    f = lambda v, s=None: {"value": v, "source": s if s is not None else v, "page": 1}  # noqa: E731
+    return {"fields": {
+        "F1": f("Harwood Design Studio Ltd"),
+        "F2": f(vendor),
+        "F4": f("HD-2026-0142", "Harwood Design Studio Ltd INVOICE HD-2026-0142"),
+        "F10": f("Bright Harbour Ltd", "Harwood Design Studio Ltd Bright Harbour Ltd"),
+        "F11": f(bill_to),
+    }, "tables": {"table": []}}
+
+
+def _ref_flags(ed, label):
+    return [f for f in ed["validation"]["flagged_fields"] if f["ref"] == label]
+
+
+def test_e12_interleaved_multi_line_addresses_ground():
+    ed = _run_doc("invoice/flowparse_invoice_tax.pdf", "AP_Inv_Full", "invoice",
+                  _invoice_answer(_VENDOR, _BILL_TO))
+    conf = ed["validation"]["confidence_map"]
+    assert conf["B2"] in ("high", "grounded") and conf["B11"] in ("high", "grounded")
+    assert _ref_flags(ed, "Vendor Address") == [] and _ref_flags(ed, "Bill To Address") == []
+    assert ed["extracted_fields"]["B2"] == _VENDOR
+
+
+def test_e12_an_address_whose_parts_are_not_on_the_page_is_still_flagged():
+    ed = _run_doc("invoice/flowparse_invoice_tax.pdf", "AP_Inv_Full", "invoice",
+                  _invoice_answer("14 Weavers Yard Hackney London E2 7DP United Kingdom",
+                                  _BILL_TO))
+    assert ed["validation"]["confidence_map"]["B2"] == "low"
+    assert _ref_flags(ed, "Vendor Address")
+
+
+def test_e12_lines_in_order_needs_consecutive_lines_in_order():
+    from slot_extractor import in_line_order
+    page = "14 Weavers Yard Unit 9\nShoreditch Quayside\nLondon E2 7DP Bristol\nUnited Kingdom"
+    assert in_line_order("14 Weavers Yard, Shoreditch, London E2 7DP", [page], 1)
+    assert not in_line_order("Shoreditch 14 Weavers Yard London", [page], 1)    # wrong order
+    assert not in_line_order("14 Weavers Yard Hackney London", [page], 1)       # not printed
 
 
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():

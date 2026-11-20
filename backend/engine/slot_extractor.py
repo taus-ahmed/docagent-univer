@@ -877,6 +877,52 @@ def confidence_for(value, source, label, grounded, inferred=False):
     return (GROUNDED if inferred else HIGH), ""
 
 
+def _words_nc(s) -> list:
+    """Flattened words with commas dropped (E12)."""
+    return _flat(str(s or "").replace(",", " ")).split()
+
+
+def in_line_order(text, page_texts, page=None, max_lines=8) -> bool:
+    """Run E, E12: is `text` printed as an ORDERED SEQUENCE of the page's
+    lines — a run of its words on one line, the next run on the very next
+    line, and so on — ignoring line breaks and commas?
+
+    That is how an address prints: `14 Weavers Yard` / `Shoreditch` /
+    `London E2 7DP` / `United Kingdom`, and on an invoice with FROM and BILL
+    TO side by side every one of those lines also carries the other party's
+    words, so the address is never a contiguous substring of the text. Three
+    or more words, at most `max_lines` consecutive lines, every line used
+    contributing a run; a word the page does not print, or the parts out of
+    order, fails."""
+    want = _words_nc(text)
+    if len(want) < 3:
+        return False
+    try:
+        pi = int(page) - 1
+    except (TypeError, ValueError):
+        pi = -1
+    pages = ([page_texts[pi]] if 0 <= pi < len(page_texts or []) else []) + list(page_texts or [])
+    for txt in pages:
+        lines = [_words_nc(ln) for ln in str(txt or "").splitlines()]
+        lines = [ln for ln in lines if ln]
+        for i in range(len(lines)):
+            k, j = 0, i
+            while k < len(want) and j < len(lines) and j < i + max_lines:
+                ws, best = lines[j], 0
+                for m in range(len(want) - k, 0, -1):
+                    run = want[k:k + m]
+                    if any(ws[s:s + m] == run for s in range(len(ws) - m + 1)):
+                        best = m
+                        break
+                if not best:
+                    break
+                k += best
+                j += 1
+            if k == len(want) and j - i >= 2:
+                return True
+    return False
+
+
 def verify_span(value, source, page, page_texts, record=""):
     """(grounded, reason). An empty answer needs no grounding.
 
@@ -901,7 +947,8 @@ def verify_span(value, source, page, page_texts, record=""):
     except (TypeError, ValueError):
         pi = -1
     ordered = ([haystacks[pi]] if 0 <= pi < len(haystacks) else []) + haystacks
-    if not any(src in h for h in ordered if h):
+    if not any(src in h for h in ordered if h) and not in_line_order(
+            source, page_texts, page):
         return False, "source span not found in document"
 
     # the value must sit inside the span it claims to come from — or, failing
@@ -926,6 +973,10 @@ def verify_span(value, source, page, page_texts, record=""):
             continue
         val = _flat(value)
         if val and val in _flat(span):
+            return True, ""
+        # E12: commas are notation in a multi-line value (`Unit 9, Quayside`)
+        nc = " ".join(_words_nc(value))
+        if nc and len(nc.split()) >= 3 and nc in " ".join(_words_nc(span)):
             return True, ""
     return False, "value not found inside its own source span"
 
@@ -1802,7 +1853,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         conf_map[slot["ref"]] = LOW
                         failed(slot["ref"], PLACEMENT_FAILED)
                         continue
-                elif not matches_loosely(value, all_lines):
+                elif not matches_loosely(value, all_lines) and not in_line_order(
+                        value, pages, page):
+                    # (E12: a value printed as an ordered run of consecutive
+                    # lines — an address beside another party's — IS spelled
+                    # by the page, commas and line breaks aside.)
                     # NO RUN OF WORDS ON THE PAGE SPELLS THIS, even allowing
                     # for renotation. `canonical_value` has always known that
                     # and the answer was dropped on the floor: the branch read
