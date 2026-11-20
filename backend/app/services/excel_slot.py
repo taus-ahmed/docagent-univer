@@ -690,7 +690,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 value, conf_map.get(ref), review_required=bool(p.get("review_required")),
                 reasons=p.get("review_reasons") or [],
                 flagged=slot_label.get(ref, "") in flagged_refs or ref in flagged_refs,
-                reviewed=doc_reviewed or bool(p.get("reviewed"))))
+                reviewed=doc_reviewed or bool(p.get("reviewed")),
+                disposition=_review._mark_disposition(p.get("reviewed"))))
 
         # 3. table rows, in their band, by column header address
         for t in tables:
@@ -718,7 +719,10 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                                 else rec.get("_confidence")),
                             review_required=bool(rec.get("_review_required")),
                             reasons=rec.get("_review_reasons") or [],
-                            reviewed=doc_reviewed or bool(rec.get("_reviewed"))))
+                            reviewed=(doc_reviewed or bool(rec.get("_reviewed"))
+                                      or bool(_review.cell_mark(rec, f["header"]))),
+                            disposition=_review._mark_disposition(
+                                _review.cell_mark(rec, f["header"]))))
                 continue
             header_row = t.get("header_row", t["start_row"])
             if show_source and rows and header_row < t["start_row"] and any(
@@ -750,7 +754,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                                 else row.get("_confidence")),
                             review_required=bool(row.get("_review_required")),
                             reasons=row.get("_review_reasons") or [],
-                            reviewed=doc_reviewed or bool(row.get("_reviewed")))
+                            reviewed=(doc_reviewed or bool(row.get("_reviewed"))
+                                      or bool(_review.cell_mark(row, key))),
+                            disposition=_review._mark_disposition(_review.cell_mark(row, key)))
                     if cell is not None:
                         mark(cell, r, col["col"], st)
 
