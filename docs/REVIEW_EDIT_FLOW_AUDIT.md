@@ -163,3 +163,21 @@ unresolved review state.
 5. Retire or repair the legacy approve route and derive database flags, final
    approval, export marks, and DRAFT from the same stored open-obligation state;
    add HTTP/UI/export tests for the complete workflow.
+
+## (g) Target contract pinned by tests
+
+[`tests/test_review_flow_spec.py`](../tests/test_review_flow_spec.py) chooses and
+pins the following API contract. It deliberately keeps the legacy approve
+route, but requires it to share the same state as review rather than introducing
+a second approval truth.
+
+| Rule | Target behavior | Today |
+| --- | --- | --- |
+| 1 | Each value stores `accepted_as_is`, `corrected`, or `confirmed_empty`, with actor/time and an edit-log event. | Strict xfail: marks contain actor/time but no disposition or acceptance event. |
+| 2 | A `corrected` review entry changes the value, logs old/new, and accepts it in one transaction. | Strict xfail: edit and review are separate operations. |
+| 3 | A table review mark addresses one stable row id and one column. | Strict xfail: `_reviewed` applies to the entire row. |
+| 4 | `confirmed_empty` removes that slot's unresolved flag and exports a clean empty cell. | Strict xfail: no field-level empty disposition exists. |
+| 5 | `POST .../rows/{table}` creates a stable row, logs it, resolves its completeness item, and recomputes or re-flags totals. | Strict xfail: the endpoint does not exist. |
+| 6 | JSON review, relational columns, legacy approve, listing state, and DRAFT derive from the same open obligations. | Strict xfail: DRAFT ignores unresolved flagged values and legacy approve updates a different state. |
+| 7 | `GET .../history` returns actor, time, old/new, and field/cell identity. | Strict xfail: history is stored but has no read endpoint. |
+| 8 | Re-downloaded Excel contains final corrected/confirmed values and no stale review styling. | Strict xfail: the review call cannot apply the target dispositions atomically. |
