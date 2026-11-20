@@ -683,7 +683,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         # 2. field slots, each at the exact address it was asked for
         slot_label = {f.get("ref"): f.get("row_label", "")
                       for f in (slot_map.get("fields") or [])}
-        for ref, value in fields.items():
+        # B4 (overnight): EVERY slot, not only the ones holding a value. An
+        # empty slot the engine flagged is counted in the Legend as "empty and
+        # flagged" and must be the grey cell, with its comment, that the
+        # Legend describes (job 48 said 12 and showed none).
+        all_refs = list(fields) + [r for r in slot_label if r and r not in fields]
+        for ref in all_refs:
+            value = fields.get(ref, "")
             rc = _ref_to_rowcol(ref)
             if rc is None:
                 continue

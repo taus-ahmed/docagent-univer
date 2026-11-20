@@ -13,7 +13,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] B1 — dot leaders no longer hide a number; a glued-line quote yields to the value the page spells; a label-row quote grounds the value beneath its own heading (alias-matched). A quote found with the value not in it stays Low (protected)
 - [x] B2 — placement also accepts a value aligned with its own column's values (set_column_anchors: modal left/right edge of >= 3 values that overlap the heading); a description written into Date still fires; McGuire case pinned (not reproducible on current code)
 - [x] B3 — fillable form: empty widget = confirmed empty (no reason, no second request; tables confirmed when every filled figure is in a cell); text layer: a printed label counts only with its whole caption and a value-like token after it
-- [ ] B4 — Legend counts equal marked cells
+- [x] B4 — slot writer marks EVERY slot, so an empty-and-flagged slot is the grey cell with a comment the Legend counts; tests/legend_check.py (real exports before: 3 of 16 disagree — jobs 46, 48, 51)
 - [ ] GATE B
 - [ ] C — merge origin/review/run-f; fix 13 strict xfails; restore _on_page
 - [ ] GATE C
