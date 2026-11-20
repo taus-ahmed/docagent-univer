@@ -255,11 +255,6 @@ def test_02_blank_form_discards_underscores_and_inventions_without_slot_flags():
     ],
     ids=["ou_check_stub", "saltlake_paycheck"],
 )
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Rule: explanatory or sample prose is not real pay data; reject it "
-            "and expose document-level attention"),
-)
 def test_03_explainer_pages_do_not_become_pay_data(name, label, bad_value, needles):
     document = _document(name)
     source, page = _line(document, *needles)

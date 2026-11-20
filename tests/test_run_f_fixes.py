@@ -14,6 +14,22 @@ def _synthetic(grid, answer):
     return B.D.run_synthetic(lambda **_kw: B.D.model_response(answer), [_FORM], grid=grid)
 
 
+def test_f2_real_pay_lines_and_sentences_on_other_documents_are_data():
+    import real_data as RD
+    assert RD.refusal("$1,234.56", "Net Pay $1,234.56", "Net Pay",
+                      family="payslip", page_texts=[], specimen=False) == ""
+    # a bill states real amounts in sentences; the prose rule is pay-only
+    sentence = ("Your payment of $500.00 is due on the 15th and will be taken "
+                "from the account on file for this bill")
+    assert RD.refusal("$500.00", sentence, "Amount Due", family="invoice",
+                      page_texts=[], specimen=False) == ""
+    assert RD.refusal("$500.00", sentence, "Net Pay", family="payslip",
+                      page_texts=[], specimen=False)
+    # a quantity of 8 on an ordinary line is not a list number
+    assert RD.refusal("8", "Hours worked 8", "Hours", family="payslip",
+                      page_texts=[], specimen=False) == ""
+
+
 def test_f1_one_grounded_value_means_the_form_is_not_blank():
     """A labels-and-blanks page with ONE value really filled in: nothing is
     cleared, and the invented answer keeps its ordinary flag."""
