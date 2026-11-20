@@ -483,9 +483,20 @@ export default function ExtractPage() {
   // worked, so it loads them exactly as "completed" does. The difference is
   // what the page then SAYS about the batch, not whether it fetches.
   const finishedWithResults = jobStatus?.status === "completed" || jobStatus?.status === "partial";
+  // Overnight E1: the results are a QUERY (the key History uses), so a review
+  // action's invalidation re-reads them; a one-off fetch into local state
+  // kept the pre-edit copy and a saved correction reverted on screen.
+  const resultsQ = useQuery<DocumentResult[]>({
+    queryKey: ["job-results", activeJobId],
+    queryFn: () => extractApi.getResults(activeJobId!),
+    enabled: !!activeJobId && finishedWithResults,
+    staleTime: 0,
+  });
+  useEffect(() => {
+    if (resultsQ.data) { setResults(resultsQ.data); setIsExtracting(false); }
+  }, [resultsQ.data]);
   if (finishedWithResults && prevStatus.current !== jobStatus!.status) {
     prevStatus.current = jobStatus!.status;
-    extractApi.getResults(activeJobId!).then(data => { setResults(data); setIsExtracting(false); });
   }
   if (jobStatus?.status === "failed" && prevStatus.current !== "failed") {
     prevStatus.current = "failed";

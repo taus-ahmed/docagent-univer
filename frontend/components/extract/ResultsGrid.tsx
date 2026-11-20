@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { refreshAfterReview } from "@/lib/reviewRefresh";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AgGridReact } from "ag-grid-react";
 import type { ColDef, CellValueChangedEvent, ICellRendererParams } from "ag-grid-community";
@@ -149,8 +150,10 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
     return m;
   }, [review.data]);
 
+  // Overnight E1: every review action re-reads the stored results too, or a
+  // saved correction reverts on screen (the grid kept its pre-edit copy).
   const refresh = useCallback(() => {
-    qc.invalidateQueries({ queryKey: ["review", jobId] });
+    refreshAfterReview(qc, jobId);
   }, [qc, jobId]);
 
   const { rowData, colDefs } = useMemo(() => {
