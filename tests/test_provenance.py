@@ -44,11 +44,40 @@ def _on_page(value, text):
     text as a whitespace- and case-insensitive substring — or, since Run E
     (E12), as an ordered run of consecutive lines, the way a wrapped name or
     an address prints (`FIRST NATIONAL BANK OF NEW` / `YORK`)."""
-    from slot_extractor import _flat, _number_key, in_line_order, printed_numbers
+    from slot_extractor import _flat, _number_key, printed_numbers
     key = _number_key(value)
     if key is not None:
         return any(_number_key(t) == key for t in printed_numbers(text))
-    return _flat(value) in _flat(text) or in_line_order(value, [text], 1)
+    if _flat(value) in _flat(text):
+        return True
+    # Run F review: a multi-line value is a run of consecutive lines whose
+    # fragments all come from ONE side of the page — every fragment a prefix
+    # of its line (a left column), or every one a suffix (a right column), a
+    # whole line counting as either. A run taking the left part of one line
+    # and the right part of the next ("Keizersgracht 391" + "500 Market
+    # Street") is assembled across columns and is not on the page.
+    lines = [_flat(ln).split() for ln in str(text or "").splitlines()]
+    want = _flat(value).split()
+
+    def walk(i, k, sides):
+        if k == len(want):
+            return True
+        if i >= len(lines) or not lines[i]:
+            return False
+        ln = lines[i]
+        for n in range(len(ln), 0, -1):
+            frag = want[k:k + n]
+            if len(frag) < n:
+                continue
+            for side, piece in (("L", ln[:n]), ("R", ln[-n:])):
+                if piece != frag:
+                    continue
+                s2 = sides if n == len(ln) else sides | {side}
+                if len(s2) <= 1 and walk(i + 1, k + n, s2):
+                    return True
+        return False
+
+    return any(walk(i, 0, frozenset()) for i in range(len(lines)) if len(want) > 1)
 
 
 @pytest.fixture(scope="module")

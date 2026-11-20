@@ -63,7 +63,12 @@ def list_number(value, source) -> bool:
     if not re.fullmatch(r"\d{1,2}", v):
         return False
     toks = _words(source)
-    return len(toks) > 1 and toks[0] == v + "."
+    if not (len(toks) > 1 and toks[0] == v + "."):
+        return False
+    # Run F review: "8. Overtime 12.50" is a labelled line of figures, and its
+    # 8 can be real hours; an enumerator leads a line of PROSE, with no other
+    # figure on it ("8. Net pay is total amount of pay check.")
+    return not any(re.search(r"\d", t) for t in toks[1:])
 
 
 def callout_number(value, source, label) -> bool:
@@ -75,8 +80,15 @@ def callout_number(value, source, label) -> bool:
         return False
     toks = [t.rstrip(":.,") for t in _words(source)]
     lab = [w.rstrip(":.,") for w in _words(label) if w]
-    return bool(lab) and any(t == v and toks[i + 1:i + 1 + len(lab)] == lab
-                             for i, t in enumerate(toks))
+    for i, t in enumerate(toks):
+        if t == v and toks[i + 1:i + 1 + len(lab)] == lab and lab:
+            # Run F review: a callout numbers a label whose VALUE is printed
+            # after it ("1 Your Account Value: $125,310.49"). With no figure
+            # after the label, the small number before it IS the value
+            # ("5 Qty Stainless bolts").
+            rest = toks[i + 1 + len(lab):]
+            return any(re.search(r"\d", x) for x in rest)
+    return False
 
 
 _FUNCTION = {"the", "a", "an", "is", "are", "will", "be", "for", "of", "to", "in",
@@ -89,6 +101,24 @@ def prose_sentence(source) -> bool:
     function words), not a labelled line of figures."""
     words = re.findall(r"[A-Za-z']+", str(source or ""))
     return len(words) >= 10 and sum(1 for w in words if w.casefold() in _FUNCTION) >= 3
+
+
+def explanatory_page(source, page_texts) -> bool:
+    """Run F review: the page the quote was read from is EXPLANATORY prose —
+    at least 60 words, a fifth of them function words — rather than a pay
+    advice that happens to state one figure in a sentence ("Your net pay for
+    this period is $1,842.73 ..."). A quote found on no page is judged by
+    the document's prose as a whole."""
+    src = re.sub(r"\s+", " ", str(source or "")).strip().casefold()
+    pages = [str(t or "") for t in page_texts or []]
+    if not any(p.strip() for p in pages):
+        return True       # no page to judge: the original F2 rule stands
+    mine =[t for t in pages if src and src[:40] in re.sub(r"\s+", " ", t).casefold()]
+    for t in (mine or pages):
+        words = re.findall(r"[A-Za-z']+", t)
+        if len(words) >= 60 and sum(1 for w in words if w.casefold() in _FUNCTION) * 5 >= len(words):
+            return True
+    return False
 
 
 def refusal(value, source, label, *, family, page_texts, specimen) -> str:
@@ -106,7 +136,8 @@ def refusal(value, source, label, *, family, page_texts, specimen) -> str:
     # SENTENCE is an example in the explanatory text ("the amounts will always
     # balance to $0.00"). Scoped to pay documents: a bill or a letter states
     # real amounts in sentences ("your payment of $500.00 is due").
-    if family == "payslip" and prose_sentence(source) and re.search(r"\d", str(value or "")):
+    if family == "payslip" and prose_sentence(source) and re.search(r"\d", str(value or "")) \
+            and explanatory_page(source, page_texts):
         return "a figure quoted from explanatory text, not pay data"
     return ""
 
@@ -144,6 +175,29 @@ def statements_printing(label, page_lines) -> list:
         if titles >= 2 and len(under) >= 2:
             out.extend(under)
     return out
+
+
+def value_under_statement(label, value, statement, page_lines) -> bool:
+    """Run F review: is `value` printed on a line beginning with `label`
+    inside the statement whose title matches `statement` (the slot's column
+    heading)? Titles match by their words, either containing the other."""
+    want = " ".join(_words(label))
+    head = " ".join(_words(statement))
+    val = re.sub(r"[^\d.]", "", str(value or ""))
+    if not want or not head or not val:
+        return False
+    for lines in page_lines or []:
+        inside = False
+        for ln in lines or []:
+            t = _line_text(ln)
+            if _STATEMENT_TITLE.match(t):
+                title = " ".join(_words(t))
+                inside = head in title or title in head
+                continue
+            if inside and " ".join(_words(t)).startswith(want + " ") and \
+                    any(re.sub(r"[^\d.]", "", w) == val for w in _words(t)):
+                return True
+    return False
 
 
 # ── F3: specimen placeholders ───────────────────────────────────────────────

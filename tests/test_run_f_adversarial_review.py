@@ -162,10 +162,6 @@ def test_f1_invoice_leader_lines_do_not_make_real_invoice_values_blank():
 # F2: legitimate payslip values can be prose or lead a numbered-looking line.
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="F2 prose-sentence rule refuses a real payslip figure stated in a sentence",
-)
 @pytest.mark.parametrize(
     "label,value,line",
     [
@@ -191,10 +187,6 @@ def test_f2_real_payslip_figure_in_a_sentence_is_data(label, value, line):
     assert not _no_data_message(data)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="F2 leading-list-number rule refuses a real hours value written as '8. Overtime 12.50'",
-)
 def test_f2_leading_eight_on_an_overtime_line_can_be_real_hours():
     line = "8. Overtime 12.50"
     grid = B._scalar_grid("Hours")
@@ -261,10 +253,6 @@ def test_f3_one_sample_watermark_does_not_clear_real_page_data():
 # F4: a short value immediately before its own label is not always a callout.
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="F4 callout rule refuses a real 1- or 2-digit value printed before its own label",
-)
 @pytest.mark.parametrize(
     "label,value,line",
     [
@@ -288,10 +276,6 @@ def test_f4_value_before_its_label_is_real_data(label, value, line):
 # F5: repeated labels are safe when the template already disambiguates them.
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="F5 two-statements rule flags both real Totals despite distinct template statement columns",
-)
 def test_f5_repeated_total_is_disambiguated_by_its_template_statement_column():
     grid = B._grid({
         "0,0": "Metric",
@@ -386,10 +370,6 @@ def test_f5_balance_sheet_and_income_statement_with_different_labels_are_clear()
 # E9: equal columns can be intentional.
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="E9 copied-column rule clears a legitimate Description equal to Payee",
-)
 def test_e9_payee_and_description_may_legitimately_be_identical():
     headers = ["Date", "Payee", "Description", "Amount"]
     grid = _table_grid(headers, name="Transactions")
@@ -430,10 +410,6 @@ def test_e9_equal_or_empty_debit_and_credit_columns_are_not_cleared():
     assert data["validation"]["copied_column_count"] == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="E9 copied-column rule clears a legitimate second date column when both dates agree",
-)
 def test_e9_two_date_columns_may_legitimately_be_equal():
     headers = ["Order", "Order Date", "Delivery Date"]
     grid = _table_grid(headers, name="Orders")
@@ -459,10 +435,6 @@ def test_e9_two_date_columns_may_legitimately_be_equal():
 # E11/E12: notation and address normalisation.
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="E11 numeric-grounding normalisation rejects a real trailing-minus amount",
-)
 def test_e11_trailing_minus_grounds_and_exports_as_a_negative_amount():
     from tests.test_run_c_adversarial import document, round_trip
 
@@ -478,10 +450,6 @@ def test_e11_trailing_minus_grounds_and_exports_as_a_negative_amount():
     assert sheet["B1"].value == pytest.approx(-46.32)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="E12 ordered-line address rule flags a real address normalised into a different part order",
-)
 def test_e12_address_parts_in_a_different_normal_order_still_ground():
     lines = [
         "Northwind Trading BV",
@@ -501,10 +469,6 @@ def test_e12_address_parts_in_a_different_normal_order_still_ground():
     assert not B._flags(data)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="E12 provenance-helper rule accepts one value assembled across unrelated address columns",
-)
 def test_e12_provenance_helper_does_not_self_certify_a_cross_column_address():
     from tests.test_provenance import _on_page
 

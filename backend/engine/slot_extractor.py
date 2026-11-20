@@ -130,12 +130,14 @@ _NUM_PIECE = re.compile(
     r"(?:(?P<cur>[$£€])\s?)?"
     r"(?P<sign2>-)?"
     r"(?P<body>\d[\d,]*(?:\.\d+)?)"
+    r"(?P<tsign>-(?![\w-]))?"      # Run F review, E11: a trailing minus (46.32-)
     r"(?P<close>\))?"
     r"(?![\d])")
 
 
 def _piece(m):
-    return {"open": bool(m.group("open")), "sign": bool(m.group("sign") or m.group("sign2")),
+    return {"open": bool(m.group("open")),
+            "sign": bool(m.group("sign") or m.group("sign2") or m.group("tsign")),
             "cur": m.group("cur") or "", "body": m.group("body").rstrip(","),
             "close": bool(m.group("close")), "start": m.start(), "end": m.end()}
 
@@ -346,6 +348,11 @@ def copied_columns(rows, keys, printed=None) -> list:
             copy, src = b, a
             if printed(b) and not printed(a):
                 copy, src = a, b
+            if printed(copy):
+                # Run F review: the page prints a heading for this column too
+                # (`Payee` and `Description`; `Order Date` and `Delivery
+                # Date`), so equal values are two readings, not a copy.
+                continue
             # Two rows make a copy; ONE does when the page prints the source
             # column's heading and not the copy's (Batch 2, test_01: a
             # one-line PO whose Memo repeats its Description, no Memo printed).
@@ -1164,6 +1171,30 @@ def value_on_line(value, text) -> bool:
                 return True
     fv = _flat(v)
     return bool(fv) and fv in _flat(text)
+
+
+def address_parts_printed(value, all_lines) -> bool:
+    """Run F review, E12: every comma-separated part of `value` (two or more)
+    is a WHOLE printed line, the lines all on one page within a block of
+    len(parts) + 2 consecutive lines. Whole-line equality is the guard: a
+    value assembled across side-by-side columns matches no whole line."""
+    parts = [p.strip() for p in str(value or "").split(",") if p.strip()]
+    if len(parts) < 2:
+        return False
+    flat = [_flat(_line_str(ln)) for ln in all_lines]
+    hits = []
+    for p in parts:
+        idx = [i for i, t in enumerate(flat) if t == _flat(p)]
+        if not idx:
+            return False
+        hits.append(idx)
+    for start in hits[0]:
+        page = line_page(all_lines[start])
+        lo, hi = start - len(parts) - 2, start + len(parts) + 2
+        if all(any(lo <= i <= hi and line_page(all_lines[i]) == page for i in idx)
+               for idx in hits[1:]):
+            return True
+    return False
 
 
 def label_row_value(value, label, source, all_lines):
@@ -2073,7 +2104,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         failed(slot["ref"], PLACEMENT_FAILED)
                         continue
                 elif not matches_loosely(value, all_lines) and not in_line_order(
-                        value, pages, page):
+                        value, pages, page) and not address_parts_printed(value, all_lines):
                     # (E12: a value printed as an ordered run of consecutive
                     # lines — an address beside another party's — IS spelled
                     # by the page, commas and line breaks aside.)
@@ -2179,6 +2210,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                             reanchored=True,
                             page=page_of(_line_str(all_lines[below]), 0, all_lines,
                                          page_lines, below))
+            if not ok and all_lines and address_parts_printed(value, all_lines):
+                # Run F review, E12: a complete address the model put in a
+                # different order — every comma part a whole printed line of
+                # one block on one page.
+                ok, why = True, ""
             field_prov[slot["ref"]]["grounded"] = ok
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
                                          inferred=inferred)
@@ -2927,9 +2963,17 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # the slot says which statement it means, so the value is low and the
     # ambiguity is said — the stricter of "choose one" and "flag it", because
     # a choice made silently is the failure being fixed.
+    col_by_ref = {f["ref"]: f.get("col_header", "") for f in slots["fields"]}
     for ref in list(extracted_fields):
         lab = label_by_ref.get(ref, "")
         under = RD.statements_printing(lab, page_lines)
+        head = col_by_ref.get(ref, "")
+        if under and head and RD.value_under_statement(
+                lab, extracted_fields[ref], head, page_lines):
+            # Run F review: the template's own column names the statement
+            # (`Total` under `Income Statement` / `Statement of Retained
+            # Earnings`) and the value is printed there — not ambiguous.
+            under = []
         if under:
             flagged.append(_flag(
                 lab, extracted_fields[ref],
