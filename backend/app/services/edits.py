@@ -225,14 +225,27 @@ def _keep_server_state(stored, ed):
         if isinstance(p, dict) and p.get("reviewed") and ref in e_prov \
                 and isinstance(e_prov[ref], dict) and not e_prov[ref].get("reviewed"):
             e_prov[ref]["reviewed"] = p["reviewed"]
+    # Run G: a flag a reviewer set aside (confirmed empty) stays set aside
+    cleared = {str(ref) for ref, p in s_prov.items() if isinstance(p, dict)
+               and (p.get("reviewed") or {}).get("disposition") == "confirmed_empty"}
+    if cleared:
+        val = ed.setdefault("validation", {})
+        val["flagged_fields"] = [f for f in val.get("flagged_fields") or []
+                                 if not (isinstance(f, dict) and str(f.get("ref")) in cleared)]
     for key, s_rows in (stored or {}).items():
         rows = ed.get(key)
         if isinstance(key, str) and key.endswith("_rows") and isinstance(s_rows, list) \
                 and isinstance(rows, list) and len(rows) == len(s_rows):
             for a, b in zip(s_rows, rows):
-                if isinstance(a, dict) and isinstance(b, dict) \
-                        and a.get("_reviewed") and not b.get("_reviewed"):
+                if not (isinstance(a, dict) and isinstance(b, dict)):
+                    continue
+                if a.get("_reviewed") and not b.get("_reviewed"):
                     b["_reviewed"] = a["_reviewed"]
+                # Run G: per-cell marks and a row's stable id are server state
+                for col, m in (a.get("_reviewed_cells") or {}).items():
+                    b.setdefault("_reviewed_cells", {}).setdefault(col, m)
+                if a.get("_row_id") and not b.get("_row_id"):
+                    b["_row_id"] = a["_row_id"]
 
 
 def _save_edit(doc, ed, current_user, db, stored=None):

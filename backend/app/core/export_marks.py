@@ -68,6 +68,8 @@ class SheetMarks:
         if m is None:
             return
         cell.fill = PatternFill(fill_type="solid", fgColor=m[1])
+        if m[2] is None:
+            return                # a final value: coloured, no warning note
         text = m[2] + (f"\n\n{cell.comment.text}" if cell.comment else "")
         w, h = note_size(text)
         cell.comment = Comment(text, "DocAgent", width=w, height=h)

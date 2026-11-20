@@ -247,13 +247,35 @@ _LEVEL_STATUS = {HIGH: "verified", GROUNDED: "grounded", UNVERIFIED: "unverified
 _NEEDS_PERSON = {"unverified", "low", "empty_flagged", "unknown"}
 
 
+#: Run G, G4: what a reviewer said about ONE value. Stored on the value's
+#: review mark (`field_provenance[ref]["reviewed"]["disposition"]`, or a
+#: row's `_reviewed_cells[column]["disposition"]`) with who and when, and
+#: logged in `edit_log`.
+#:
+#:   accepted_as_is   the value is right as extracted
+#:   corrected        the reviewer typed the right value (edit + accept, one step)
+#:   confirmed_empty  the document really has no value here; the slot is
+#:                    cleared, its flag is set aside, and the export shows a
+#:                    plain empty cell
+VALUE_DISPOSITIONS = {
+    "accepted_as_is": "Accepted as is",
+    "corrected": "Corrected",
+    "confirmed_empty": "Confirmed empty",
+}
+
+
 def value_status(value: Any, level: Optional[str], *, review_required: bool = False,
                  reasons: Iterable[str] = (), flagged: bool = False,
-                 reviewed: bool = False) -> dict:
+                 reviewed: bool = False, disposition: Optional[str] = None) -> dict:
     """The review status of one value.
 
     `resolved` is False while a person still owes it a look."""
     reasons = [str(r) for r in (reasons or [])]
+    if disposition == "confirmed_empty":
+        # A person checked: nothing belongs here. An empty value that owes
+        # nothing, whatever the machine expected.
+        return {"status": "empty", "reasons": reasons, "review_required": False,
+                "reviewed": True, "resolved": True, "disposition": disposition}
     empty = value is None or str(value).strip() == ""
     if level == EDITED:
         status = "edited"
@@ -262,9 +284,22 @@ def value_status(value: Any, level: Optional[str], *, review_required: bool = Fa
     else:
         status = _LEVEL_STATUS.get(str(level or ""), "unknown")
     owes = status in _NEEDS_PERSON or bool(review_required)
-    resolved = status == "edited" or bool(reviewed) or not owes
+    resolved = status == "edited" or bool(reviewed) or bool(disposition) or not owes
     return {"status": status, "reasons": reasons, "review_required": bool(review_required),
-            "reviewed": bool(reviewed), "resolved": resolved}
+            "reviewed": bool(reviewed) or bool(disposition), "resolved": resolved,
+            "disposition": disposition}
+
+
+def _mark_disposition(mark) -> Optional[str]:
+    d = mark.get("disposition") if isinstance(mark, dict) else None
+    return d if d in VALUE_DISPOSITIONS else None
+
+
+def cell_mark(row: dict, col: str):
+    """The per-cell review mark of a table cell (Run G), or None."""
+    cells = row.get("_reviewed_cells") if isinstance(row, dict) else None
+    m = cells.get(col) if isinstance(cells, dict) else None
+    return m if isinstance(m, dict) else None
 
 
 def table_keys(ed: dict) -> list[tuple[str, str]]:
@@ -315,7 +350,8 @@ def document_values(ed: dict) -> list[dict]:
                               review_required=bool(p.get("review_required")),
                               reasons=p.get("review_reasons") or [],
                               flagged=label in flagged or ref in flagged,
-                              reviewed=doc_ok or bool(p.get("reviewed")))
+                              reviewed=doc_ok or bool(p.get("reviewed")),
+                              disposition=_mark_disposition(p.get("reviewed")))
             out.append({"kind": "field", "ref": ref, "label": label, "value": v,
                         "level": cmap.get(ref), "page": p.get("page"),
                         "source": p.get("source"), **st})
@@ -339,12 +375,15 @@ def document_values(ed: dict) -> list[dict]:
                     continue
                 level = _image_level(ed, EDITED if col in edited else (
                     LOW if col in ungrounded else row.get("_confidence")))
+                cm = cell_mark(row, col)
                 st = value_status(v, level, review_required=bool(row.get("_review_required")),
                                   reasons=row.get("_review_reasons") or [],
-                                  reviewed=doc_ok or bool(row.get("_reviewed")))
+                                  reviewed=doc_ok or bool(row.get("_reviewed")) or bool(cm),
+                                  disposition=_mark_disposition(cm))
                 if st["status"] in ("empty", "empty_flagged"):
                     continue          # a blank cell in a row is not a value
                 out.append({"kind": "cell", "table": name, "row": i, "column": col,
+                            "row_id": row.get("_row_id"),
                             "ref": None, "label": f"{name} row {i + 1}: {col}",
                             "value": v, "level": level, "page": row.get("_page"),
                             "source": row.get("_source"), **st})
@@ -428,7 +467,8 @@ def field_status(ed: Any, ref: Optional[str] = None, label: Optional[str] = None
                         review_required=bool(p.get("review_required")),
                         reasons=p.get("review_reasons") or [],
                         flagged=str(ref) in flagged or (label is not None and str(label) in flagged),
-                        reviewed=document_reviewed(ed) or bool(p.get("reviewed")))
+                        reviewed=document_reviewed(ed) or bool(p.get("reviewed")),
+                        disposition=_mark_disposition(p.get("reviewed")))
 
 
 def row_cell_status(ed: Any, row: Any, col: str) -> dict:
@@ -446,9 +486,11 @@ def row_cell_status(ed: Any, row: Any, col: str) -> dict:
     if col in set(row.get("_edited") or []):
         level = EDITED
     level = _image_level(ed, level)
+    cm = cell_mark(row, col)
     return value_status(v, level, review_required=bool(row.get("_review_required")),
                         reasons=row.get("_review_reasons") or [],
-                        reviewed=document_reviewed(ed) or bool(row.get("_reviewed")))
+                        reviewed=document_reviewed(ed) or bool(row.get("_reviewed")) or bool(cm),
+                        disposition=_mark_disposition(cm))
 
 
 def layout_values(ed: Any) -> list[dict]:
@@ -565,10 +607,19 @@ EXPORT_FILLS = {
 }
 
 
-def export_mark(st: dict) -> Optional[tuple[str, str, str]]:
+def export_mark(st: dict) -> Optional[tuple[str, str, Optional[str]]]:
     """(row status word, fill, comment text) for one exported value, or None
-    when the value is clean (verified or grounded, nothing owed)."""
+    when the value is clean (verified or grounded, nothing owed).
+
+    Run G: a value a reviewer CONFIRMED EMPTY is a clean empty cell, and a
+    value a reviewer CORRECTED is final — lavender (typed by a person, as the
+    Legend says) with no warning comment. The comment text is None then."""
     status = st["status"]
+    disposition = st.get("disposition")
+    if disposition == "confirmed_empty":
+        return None
+    if disposition == "corrected" and status == "edited":
+        return ("Edited", EXPORT_FILLS["edited"], None)
     reasons = [reason_text(r)[0] for r in st.get("reasons") or []]
     why = ("; ".join(reasons)) if reasons else STATUSES.get(status, (status, ""))[1]
     if status == "edited":

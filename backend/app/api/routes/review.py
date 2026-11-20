@@ -168,34 +168,151 @@ class ReviewMark(BaseModel):
     dispositions: list[dict] = []
 
 
+def _disposition_of(v: dict) -> Optional[str]:
+    d = v.get("disposition")
+    if d is None:
+        return None
+    if d not in R.VALUE_DISPOSITIONS:
+        raise HTTPException(status_code=422, detail=(
+            f"Unknown disposition {d!r}; use "
+            f"{' / '.join(R.VALUE_DISPOSITIONS)}"))
+    if d == "corrected" and "value" not in v:
+        raise HTTPException(status_code=422,
+                            detail="A correction needs the corrected value")
+    return d
+
+
+def _clear_field_flags(ed: dict, ref: str) -> list:
+    """Remove `ref`'s entries (by ref or by its label) from
+    validation.flagged_fields; return them, so the mark can keep them."""
+    label = next((f.get("row_label") for f in (ed.get("slot_map") or {}).get("fields") or []
+                  if str(f.get("ref")) == ref), None)
+    val = ed.setdefault("validation", {})
+    keep, gone = [], []
+    for f in val.get("flagged_fields") or []:
+        hit = isinstance(f, dict) and str(f.get("ref")) in {ref, str(label)}
+        (gone if hit else keep).append(f)
+    val["flagged_fields"] = keep
+    return gone
+
+
+def _find_row(ed: dict, v: dict):
+    """(table name, row index, row) for a value entry naming a table row by
+    `row` and/or `row_id`. A row id wins; a row index that disagrees with it
+    is a conflict (409), never a guess."""
+    tables = dict(R.table_keys(ed))
+    name = str(v["table"])
+    key = tables.get(name)
+    rows = ed.get(key) if key else None
+    if not isinstance(rows, list):
+        raise HTTPException(status_code=404, detail="No such table row")
+    idx = v.get("row")
+    if v.get("row_id") is not None:
+        found = [i for i, r in enumerate(rows)
+                 if isinstance(r, dict) and str(r.get("_row_id")) == str(v["row_id"])]
+        if not found:
+            raise HTTPException(status_code=404, detail="No row with that row id")
+        if isinstance(idx, int) and idx != found[0]:
+            raise HTTPException(status_code=409, detail=(
+                "The row id and the row number name different rows; reload "
+                "and try again"))
+        idx = found[0]
+    if not isinstance(idx, int) or not 0 <= idx < len(rows) \
+            or not isinstance(rows[idx], dict):
+        raise HTTPException(status_code=404, detail="No such table row")
+    return name, idx, rows[idx]
+
+
 def _apply_marks(ed: dict, payload: ReviewMark, stamp: dict) -> dict:
     """The marks in `payload` applied to `ed` in place (and returned).
-    Marking a value already marked re-stamps it; nothing accumulates."""
+    Marking a value already marked re-stamps it; nothing accumulates.
+
+    Run G, G4: a value entry may carry a `disposition`:
+      accepted_as_is — the value is right as it is
+      corrected      — `value` replaces it AND it is accepted, one operation
+      confirmed_empty — the slot is cleared, its flags set aside
+    stored on the value's own mark with who and when and logged in
+    `edit_log`. A table entry with a disposition must name its `column`: a
+    cell is accepted, never its whole row."""
+    from app.services.edits import _edit_cell, _edit_field
     if payload.scope == "document":
         ed["review"] = ({"document_reviewed": True, **stamp} if payload.reviewed
                         else {"document_reviewed": False})
         return ed
     prov = ed.setdefault("field_provenance", {})
-    tables = dict(R.table_keys(ed))
+    log = ed.setdefault("edit_log", [])
     for v in payload.values:
+        disp = _disposition_of(v)
+        if disp and not payload.reviewed:
+            raise HTTPException(status_code=422, detail=(
+                "A disposition cannot be withdrawn; correct the value instead"))
         if v.get("ref") is not None:
             ref = str(v["ref"])
-            if ref not in prov and ref not in (ed.get("extracted_fields") or {}):
+            if ref not in prov and ref not in (ed.get("extracted_fields") or {}) \
+                    and ref not in {str(f.get("ref")) for f in
+                                    (ed.get("slot_map") or {}).get("fields") or []}:
                 raise HTTPException(status_code=404, detail=f"No field at {ref!r}")
-            p = prov.setdefault(ref, {})
-            if payload.reviewed:
-                p["reviewed"] = stamp
+            if not payload.reviewed:
+                prov.setdefault(ref, {}).pop("reviewed", None)
+                continue
+            if not disp:
+                prov.setdefault(ref, {})["reviewed"] = stamp
+                continue
+            old = (ed.get("extracted_fields") or {}).get(ref, "")
+            event = {**stamp, "kind": "field", "ref": ref, "disposition": disp}
+            if disp == "corrected":
+                _edit_field(ed, ed, ref, str(v.get("value") or ""))
+                event.update(old=old, new=ed["extracted_fields"][ref],
+                             reason="corrected in review")
+            elif disp == "confirmed_empty":
+                if str(old or "") != "":
+                    _edit_field(ed, ed, ref, "")
+                else:
+                    ed.setdefault("extracted_fields", {})[ref] = ""
+                cleared = _clear_field_flags(ed, ref)
+                event.update(old=old, new="", reason="confirmed empty in review",
+                             cleared_flags=cleared)
             else:
-                p.pop("reviewed", None)
-        elif v.get("table") is not None and isinstance(v.get("row"), int):
-            key = tables.get(str(v["table"]))
-            rows = ed.get(key) if key else None
-            if not isinstance(rows, list) or not 0 <= v["row"] < len(rows)                     or not isinstance(rows[v["row"]], dict):
-                raise HTTPException(status_code=404, detail="No such table row")
-            if payload.reviewed:
-                rows[v["row"]]["_reviewed"] = stamp
+                event.update(value=old, reason="accepted as is in review")
+            mark = {"disposition": disp, **stamp}
+            prov.setdefault(ref, {})["reviewed"] = mark
+            log.append(event)
+        elif v.get("table") is not None and (isinstance(v.get("row"), int)
+                                             or v.get("row_id") is not None):
+            name, idx, row = _find_row(ed, v)
+            col = v.get("column")
+            if col is None:
+                if disp:
+                    raise HTTPException(status_code=422, detail=(
+                        "A disposition on a table names its column: a cell "
+                        "is accepted, not its row"))
+                if payload.reviewed:
+                    row["_reviewed"] = stamp
+                else:
+                    row.pop("_reviewed", None)
+                continue
+            col = str(col)
+            if not payload.reviewed:
+                (row.get("_reviewed_cells") or {}).pop(col, None)
+                continue
+            old = row.get(col, "")
+            event = {**stamp, "kind": "cell", "table": name, "row": idx,
+                     "row_id": row.get("_row_id"), "column": col,
+                     "disposition": disp or "accepted_as_is"}
+            if disp == "corrected":
+                _edit_cell(ed, name, idx, col, str(v.get("value") or ""))
+                event.update(old=old, new=row.get(col, ""), reason="corrected in review")
+            elif disp == "confirmed_empty":
+                _edit_cell(ed, name, idx, col, "")
+                event.update(old=old, new="", reason="confirmed empty in review")
             else:
-                rows[v["row"]].pop("_reviewed", None)
+                if col.startswith("_") or col not in row:
+                    raise HTTPException(status_code=404,
+                                        detail=f"No column {col!r} in this row")
+                event.update(value=old, reason="accepted as is in review")
+            cells = row.setdefault("_reviewed_cells", {})
+            cells[col] = {"disposition": event["disposition"], **stamp}
+            log.append(event)
         else:
             raise HTTPException(status_code=422,
                                 detail="Each value needs a ref, or a table and a row")

@@ -212,7 +212,6 @@ def _value_cell_below_header(workbook, header: str):
     raise AssertionError(f"No exported header {header!r}")
 
 
-@RULE_1
 def test_explicit_dispositions_are_stored_per_value_and_logged(
     client, db, review_case_factory
 ):
@@ -243,7 +242,6 @@ def test_explicit_dispositions_are_stored_per_value_and_logged(
         assert event["by"] == case.actor and event["at"]
 
 
-@RULE_2
 def test_correct_and_accept_is_one_atomic_operation(client, db, review_case_factory):
     case = review_case_factory(open_refs=("B2",), flag_empty=False, table_open=False)
     response = _review(client, case, {"values": [
@@ -261,7 +259,6 @@ def test_correct_and_accept_is_one_atomic_operation(client, db, review_case_fact
     assert event["by"] == case.actor and event["at"]
 
 
-@RULE_3
 def test_accepting_one_table_cell_marks_only_that_cell(client, db, review_case_factory):
     case = review_case_factory(open_refs=(), flag_empty=False, table_open=True)
     response = _review(client, case, {"values": [{
@@ -288,7 +285,6 @@ def test_accepting_one_table_cell_marks_only_that_cell(client, db, review_case_f
     assert cells["Description"]["resolved"] is False
 
 
-@RULE_4
 def test_confirmed_empty_clears_the_flag_and_exports_a_clean_empty_slot(
     client, db, review_case_factory
 ):
@@ -451,7 +447,6 @@ def test_document_history_endpoint_returns_who_when_old_new_and_target(
     assert cell_event["kind"] == "cell"
 
 
-@RULE_8
 def test_export_after_correction_and_empty_confirmation_has_no_stale_warning(
     client, review_case_factory
 ):

@@ -479,6 +479,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             from openpyxl.comments import Comment
             from openpyxl.styles import PatternFill
             cell.fill = PatternFill(fill_type="solid", fgColor=m[1])
+            if m[2] is None:
+                return            # a corrected value: final, no warning note
             if st["status"] == "edited" and cell.comment:
                 return            # the edited note already says so, and what it replaced
             text = m[2] + (f"\n\n{cell.comment.text}" if cell.comment else "")
