@@ -215,11 +215,6 @@ def test_d11_an_exact_tbd_label_can_be_real_template_text():
     assert _fields(grid) == [("B1", "TBD"), ("B2", "Approval")]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D12: a vertical merge over a scalar label is "
-            "inherited into the next row and invents a repeating table"),
-)
 def test_d12_a_vertical_merge_over_a_scalar_label_is_not_a_table_header():
     grid = _grid(
         {(0, 0): "Customer", (1, 1): "Invoice Date", (3, 0): "Total"},

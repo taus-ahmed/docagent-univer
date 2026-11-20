@@ -686,7 +686,11 @@ def compute_shape(grid, log=None):
             ncols = int((span or {}).get("cols") or 1)
         except (ValueError, AttributeError, TypeError):
             continue
-        if ncols == 1 and nrows > 1 and (ar, ac) in static:
+        # Run E, E7 (D12): only a merge whose TOP row is itself a heading row
+        # (a heading beside it) is a two-level header. `Customer` merged A1:A2
+        # beside nothing is a scalar label, and inheriting it invented a band.
+        if ncols == 1 and nrows > 1 and (ar, ac) in static and (
+                (ar, ac - 1) in static or (ar, ac + 1) in static):
             for rr in range(ar + 1, ar + nrows):
                 inherited[(rr, ac)] = m[(ar, ac)]
                 inherited_from[(rr, ac)] = (ar, ac)
@@ -981,6 +985,14 @@ def compute_shape(grid, log=None):
                 run = []
             continue
         if run and r != run[-1] + 1:
+            blocks.append(run)
+            run = []
+        # Run E, E7 (D12): a row whose texts all sit RIGHT of every text on
+        # the row above is not the same list — `Customer` in A beside an
+        # empty B, then `Invoice Date` in B, would make B a label column for
+        # both and lose both slots. (A blank-corner heading `_ | 2024 | 2023`
+        # over labels in A is the other way round and stays one block.)
+        if run and min(_text_cols(r)) > max(_text_cols(run[-1])):
             blocks.append(run)
             run = []
         run.append(r)

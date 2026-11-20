@@ -55,6 +55,28 @@ def test_e4_a_merge_inside_a_band_is_kept_on_every_written_row():
     assert [sheet.cell(r, 2).value for r in (4, 5, 6)] == [1.0, 1.0, 1.0]
 
 
+def _fields(grid):
+    from template_shape import compute_shape
+    return sorted((f["ref"], f["row_label"])
+                  for f in compute_shape(grid, log=lambda _m: None)["field_slots"])
+
+
+def test_e7_a_blank_corner_matrix_keeps_both_value_columns():
+    grid = _grid({(0, 1): "2024", (0, 2): "2023",
+                  (1, 0): "Revenue", (2, 0): "Expenses"})
+    assert _fields(grid) == [("B2", "Revenue"), ("B3", "Expenses"),
+                             ("C2", "Revenue"), ("C3", "Expenses")]
+
+
+def test_e7_a_two_level_header_still_inherits_its_vertical_merge():
+    from template_shape import compute_shape
+    grid = _grid({(0, 0): "Item", (0, 1): "Amount", (1, 1): "Debit", (1, 2): "Credit"},
+                 merges={"0,0": {"rows": 2, "cols": 1}, "0,1": {"rows": 1, "cols": 2}})
+    bands = compute_shape(grid, log=lambda _m: None)["repeat_bands"]
+    assert [[c["header"] for c in b["columns"]] for b in bands] == [
+        ["Item", "Debit", "Credit"]]
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch
