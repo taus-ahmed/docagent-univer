@@ -1,6 +1,6 @@
 {
- "run_id": "2026-11-19 07:28:23",
- "git_commit": "f478861",
+ "run_id": "2026-11-20 04:44:49",
+ "git_commit": "1f8e7a0",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -1449,7 +1449,7 @@
      "Total Non-Current Assets": {
       "outcome": "correct",
       "expected": 236500,
-      "actual": "$236,500",
+      "actual": 236500.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -1463,28 +1463,28 @@
      "Total Current Liabilities": {
       "outcome": "correct",
       "expected": 421200,
-      "actual": "$421,200",
+      "actual": 421200.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Total Long-Term Liabilities": {
       "outcome": "correct",
       "expected": 129400,
-      "actual": "$129,400",
+      "actual": 129400.0,
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL LIABILITIES": {
       "outcome": "correct",
       "expected": 550600,
-      "actual": "$550,600",
+      "actual": 550600.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Total Equity": {
       "outcome": "correct",
       "expected": 698104,
-      "actual": "$698,104",
+      "actual": 698104.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -1526,7 +1526,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 143803,
-        "actual": "$143,803",
+        "actual": 143803.0,
         "in_gold_schema": true
        },
        {
@@ -1546,7 +1546,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 348200,
-        "actual": "$348,200",
+        "actual": 348200.0,
         "in_gold_schema": true
        },
        {
@@ -1566,7 +1566,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 612000,
-        "actual": "$612,000",
+        "actual": 612000.0,
         "in_gold_schema": true
        },
        {
@@ -1586,7 +1586,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 16200,
-        "actual": "$16,200",
+        "actual": 16200.0,
         "in_gold_schema": true
        },
        {
@@ -1606,7 +1606,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8800,
-        "actual": "$8,800",
+        "actual": 8800.0,
         "in_gold_schema": true
        }
       ]
@@ -1640,7 +1640,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 240000,
-        "actual": "$240,000",
+        "actual": 240000.0,
         "in_gold_schema": true
        },
        {
@@ -1660,7 +1660,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 108500,
-        "actual": "$108,500",
+        "actual": 108500.0,
         "in_gold_schema": true
        },
        {
@@ -1680,7 +1680,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85000,
-        "actual": "$85,000",
+        "actual": 85000.0,
         "in_gold_schema": true
        },
        {
@@ -1700,7 +1700,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 20000,
-        "actual": "$20,000",
+        "actual": 20000.0,
         "in_gold_schema": true
        }
       ]
@@ -1734,7 +1734,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 254800,
-        "actual": "$254,800",
+        "actual": 254800.0,
         "in_gold_schema": true
        },
        {
@@ -1754,7 +1754,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 44200,
-        "actual": "$44,200",
+        "actual": 44200.0,
         "in_gold_schema": true
        },
        {
@@ -1774,7 +1774,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 80000,
-        "actual": "$80,000",
+        "actual": 80000.0,
         "in_gold_schema": true
        },
        {
@@ -1794,7 +1794,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18200,
-        "actual": "$18,200",
+        "actual": 18200.0,
         "in_gold_schema": true
        },
        {
@@ -1814,7 +1814,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 24000,
-        "actual": "$24,000",
+        "actual": 24000.0,
         "in_gold_schema": true
        }
       ]
@@ -1848,7 +1848,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 121000,
-        "actual": "$121,000",
+        "actual": 121000.0,
         "in_gold_schema": true
        },
        {
@@ -1868,7 +1868,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8400,
-        "actual": "$8,400",
+        "actual": 8400.0,
         "in_gold_schema": true
        }
       ]
@@ -1902,7 +1902,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 100000,
-        "actual": "$100,000",
+        "actual": 100000.0,
         "in_gold_schema": true
        },
        {
@@ -1922,7 +1922,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 550751,
-        "actual": "$550,751",
+        "actual": 550751.0,
         "in_gold_schema": true
        },
        {
@@ -1942,7 +1942,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 47353,
-        "actual": "$47,353",
+        "actual": 47353.0,
         "in_gold_schema": true
        }
       ]
@@ -2251,7 +2251,7 @@
      "Date": {
       "outcome": "correct",
       "expected": "2024-01-31",
-      "actual": "January 31, 2024",
+      "actual": "2024-01-31",
       "type": "date",
       "in_gold_schema": true
      },
@@ -5891,14 +5891,14 @@
      "Invoice Date": {
       "outcome": "correct",
       "expected": "2024-01-15",
-      "actual": "January 15, 2024",
+      "actual": "2024-01-15",
       "type": "date",
       "in_gold_schema": true
      },
      "Due Date": {
       "outcome": "correct",
       "expected": "2024-02-14",
-      "actual": "February 14, 2024",
+      "actual": "2024-02-14",
       "type": "date",
       "in_gold_schema": true
      },
@@ -7483,14 +7483,14 @@
      "Invoice Date": {
       "outcome": "correct",
       "expected": "2024-02-03",
-      "actual": "February 3, 2024",
+      "actual": "2024-02-03",
       "type": "date",
       "in_gold_schema": true
      },
      "Due Date": {
       "outcome": "correct",
       "expected": "2024-03-04",
-      "actual": "March 4, 2024",
+      "actual": "2024-03-04",
       "type": "date",
       "in_gold_schema": true
      },
@@ -9111,42 +9111,42 @@
      "Total Operating Expenses": {
       "outcome": "correct",
       "expected": 359250,
-      "actual": "$359,250",
+      "actual": 359250.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Operating Income (EBIT)": {
       "outcome": "correct",
       "expected": 336150,
-      "actual": "$336,150",
+      "actual": 336150.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Interest Income": {
       "outcome": "correct",
       "expected": 1240,
-      "actual": "$1,240",
+      "actual": 1240.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Net Income Before Tax": {
       "outcome": "correct",
       "expected": 337390,
-      "actual": "$337,390",
+      "actual": 337390.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Income Tax Provision": {
       "outcome": "correct",
       "expected": 70852,
-      "actual": "$70,852",
+      "actual": 70852.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Net Income After Tax": {
       "outcome": "correct",
       "expected": 266538,
-      "actual": "$266,538",
+      "actual": 266538.0,
       "type": "money",
       "in_gold_schema": true
      }
@@ -9201,7 +9201,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 28600,
-        "actual": "$28,600",
+        "actual": 28600.0,
         "in_gold_schema": true
        }
       ]
@@ -9235,7 +9235,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 648000,
-        "actual": "$648,000",
+        "actual": 648000.0,
         "in_gold_schema": true
        },
        {
@@ -9275,7 +9275,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 52000,
-        "actual": "$52,000",
+        "actual": 52000.0,
         "in_gold_schema": true
        },
        {
@@ -9295,7 +9295,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 724000,
-        "actual": "$724,000",
+        "actual": 724000.0,
         "in_gold_schema": true
        }
       ]
@@ -9329,7 +9329,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 190000,
-        "actual": "$190,000",
+        "actual": 190000.0,
         "in_gold_schema": true
        },
        {
@@ -9349,7 +9349,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85500,
-        "actual": "$85,500",
+        "actual": 85500.0,
         "in_gold_schema": true
        },
        {
@@ -9369,7 +9369,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 22400,
-        "actual": "$22,400",
+        "actual": 22400.0,
         "in_gold_schema": true
        },
        {
@@ -9389,7 +9389,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 12100,
-        "actual": "$12,100",
+        "actual": 12100.0,
         "in_gold_schema": true
        },
        {
@@ -9409,7 +9409,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 10300,
-        "actual": "$10,300",
+        "actual": 10300.0,
         "in_gold_schema": true
        },
        {
@@ -9429,7 +9429,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 7150,
-        "actual": "$7,150",
+        "actual": 7150.0,
         "in_gold_schema": true
        },
        {
@@ -9449,7 +9449,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 5800,
-        "actual": "$5,800",
+        "actual": 5800.0,
         "in_gold_schema": true
        },
        {
@@ -9469,7 +9469,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18000,
-        "actual": "$18,000",
+        "actual": 18000.0,
         "in_gold_schema": true
        },
        {
@@ -9489,7 +9489,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 3800,
-        "actual": "$3,800",
+        "actual": 3800.0,
         "in_gold_schema": true
        },
        {
@@ -9509,7 +9509,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 4200,
-        "actual": "$4,200",
+        "actual": 4200.0,
         "in_gold_schema": true
        }
       ]
@@ -10476,7 +10476,7 @@
      "Pay Date": {
       "outcome": "correct",
       "expected": "2024-04-30",
-      "actual": "April 30, 2024",
+      "actual": "2024-04-30",
       "type": "date",
       "in_gold_schema": true
      },
@@ -11668,7 +11668,7 @@
      "Pay Date": {
       "outcome": "correct",
       "expected": "2024-04-30",
-      "actual": "April 30, 2024",
+      "actual": "2024-04-30",
       "type": "date",
       "in_gold_schema": true
      },
@@ -12922,7 +12922,7 @@
      "Date": {
       "outcome": "correct",
       "expected": "2024-01-10",
-      "actual": "January 10, 2024",
+      "actual": "2024-01-10",
       "type": "date",
       "in_gold_schema": true
      },
@@ -17500,16 +17500,16 @@
  },
  "calibration": {
   "high": {
-   "n": 386,
-   "correct": 384,
+   "n": 387,
+   "correct": 385,
    "wrong": 0,
    "missed": 0,
    "near": 2,
    "hallucinated": 0
   },
   "low": {
-   "n": 8,
-   "correct": 5,
+   "n": 7,
+   "correct": 4,
    "wrong": 0,
    "missed": 0,
    "near": 3,
@@ -17518,5 +17518,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-11-19 07:02:15"
+ "diff_against": "2026-11-19 07:28:23"
 }

@@ -2,9 +2,9 @@
 
 A restarted session reads this first and skips every item marked [x] or BLOCKED.
 
-- [ ] CI1 — ci/backend "Backend tests" step fails on CI only
-- [ ] A1 — wrong-slot and duplicate values (job 42 Remit To Bank; job 51 Box 11 / Box 13)
-- [ ] A2 — repeated Box 14 entries never placed in another table's band
+- [x] CI1 — CI-only failures: git-ignored local_docs PDFs skip on CI with the file named; checkout fetch-depth 0 for `git show 56e80ca`; -ra --durations=20 (1f8e7a0)
+- [x] A1 — wrong-slot and duplicate values: engine/ownership.py (box owner by geometry, checkbox X by x-position, unwitnessed duplicate cleared); completeness box-caption rule
+- [x] A2 — a row printed in another box never enters a box-coded band; Box 14 second entry flagged in plain words
 - [ ] A3 — identifiers are text; control number spacing; money always 2 decimals
 - [ ] A4 — lost page recovery (mammoth page 2)
 - [ ] A5 — silent empty slot (form title printed on the page)
@@ -21,7 +21,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [ ] D2 — D13 warning-inventory test asserts content
 - [ ] D3 — stale T9 ambiguity text
 - [ ] GATE D
-- [ ] E1 — review edits revert
+- [ ] E1 — review edits revert (owner note: API persists; stale frontend state — ReviewPanel does not update result.extracted_data, ResultsGrid.refresh() invalidates only the review query; refetch/invalidate the results query after EVERY review action, status and added rows too; frontend test)
 - [ ] E2 — multi-page navigation in the review dialog
 - [ ] GATE E
 - [ ] M1 — no -latest candidates; GEMINI_MODEL_FALLBACKS; 404 fails visibly
@@ -31,4 +31,5 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [ ] H2 — token revocation
 - [ ] H3 — password policy
 - [ ] H4 — raw response retention + log redaction
+- [ ] RUN-G — merge origin/review/run-g before the final run; tests/test_batch1_real_defects.py (10 strict xfails) must pass, each marker removed when its fix lands
 - [ ] FINISH — final checks, KNOWN_FAILING, TEMPLATE_RULES, OVERNIGHT_REPORT, push

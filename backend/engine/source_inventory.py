@@ -319,15 +319,44 @@ def label_lines(lines, label):
     return out
 
 
+def _is_box_caption(ws, wi, label, own) -> bool:
+    """B3 (overnight): a FORM BOX slot's caption, not a word of it in another
+    caption. Every distinctive word of the label must be printed in one run
+    starting at `wi` (`Social Security Tips`, never the `Tips` of `Wages,
+    Tips & Other Compensation`), and no different box code may lead the line
+    (`14E NonQualified Moving` is box 14's caption, not box 11's)."""
+    stems = _stems(re.sub(r"^\s*box\s+\S+", "", str(label or ""), flags=re.I))
+    num = re.match(r"\d+", own)
+    for w in ws[:wi]:
+        m = re.fullmatch(r"(\d{1,2})[A-Za-z]?", str(w.get("text", "")))
+        if m and num and m.group(1) != num.group(0):
+            return False
+    if not stems:
+        return True
+    hit = set()
+    for w in ws[wi:wi + 2 * len(stems) + 2]:
+        t = str(w.get("text", ""))
+        if not re.search(r"[A-Za-z]{2,}", t):
+            continue
+        m = [st for st in stems if _word_matches(st, t)]
+        if not m and len(re.sub(r"[^a-z]", "", t.lower())) >= 4:
+            break
+        hit.update(m)
+    return hit >= set(stems)
+
+
 def slot_area_amounts(lines, label) -> list:
     """Amounts that sit where `label`'s value would: the first amount to the
     right of a label word on its own line, else the amount on the NEXT line
     whose centre is nearest the label word's (within 40 pt) — the
     column-heading layout, `Withdrawals` over `$10,309.62`."""
     out = []
+    box = re.match(r"\s*box\s+(\d{1,2}[a-z]?|[a-f])\b", str(label or ""), re.I)
     for li, wi in label_lines(lines, label):
         ws = _words(lines[li])
         anchor = ws[wi]
+        if box and not _is_box_caption(ws, wi, label, box.group(1)):
+            continue
         # Same line: the first amount within three words of the label, and
         # nothing but the label's own words, `$` or a colon before it. "Payer
         # made direct sales totaling $5,000" is a sentence, not a value.

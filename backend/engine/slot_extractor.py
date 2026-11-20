@@ -2021,6 +2021,22 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             _log("MICR", f"{doc_ref(file_path)}: band decomposed into "
                          f"{len(parts)} field(s)")
 
+    # ── WHICH SLOT A VALUE BELONGS TO (overnight A1, engine/ownership.py) ──
+    # A box value printed in another box, an X under another option of the
+    # same box, and one value in two non-alias slots of which only one is
+    # witnessed: the wrong copy is cleared (said in a note) and the slot is
+    # left plainly empty, because the page leaves it blank.
+    if all_lines:
+        import ownership as OW
+        _cleared = OW.settle_fields(slots["fields"], extracted_fields, conf_map,
+                                    field_prov, all_lines, notes)
+        if _cleared:
+            _gone = {f["row_label"] for f in slots["fields"] if f["ref"] in _cleared}
+            flagged[:] = [x for x in flagged
+                          if not (isinstance(x, dict) and x.get("ref") in _gone)]
+            for _r in _cleared:
+                field_fail.pop(_r, None)
+
     # ── MORE ENTRIES THAN SLOTS (Run B, B5) ──
     # A box holding several stacked entries (W-2 Box 14: 1,600.00 H and
     # 52.00 X) against a template with one cell for it lost every entry but
@@ -2080,6 +2096,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if not isinstance(raw, list):
                 continue
             headers = table_headers(t)
+            # A2: a row of a box-coded table (`Box 12 Codes`) whose amounts are
+            # printed in a DIFFERENT box is never placed in this band; the
+            # owning box's own slot reports any entry it has no room for.
+            if all_lines:
+                import ownership as OW
+                raw, _foreign = OW.foreign_box_rows(t["name"], raw, headers, all_lines)
+                for _row, _owner in _foreign:
+                    notes.append(f'{t["name"]}: a row printed in box {_owner} '
+                                 f"was not placed in this table")
             # PLACEMENT (D6). Grounding says the value is in the document; it
             # cannot say the value belongs in THIS column, because a flattened
             # line carries no columns. The document's own heading line does:

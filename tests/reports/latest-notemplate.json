@@ -1,6 +1,6 @@
 {
- "run_id": "2026-11-19 07:28:39",
- "git_commit": "f478861",
+ "run_id": "2026-11-20 04:45:27",
+ "git_commit": "1f8e7a0",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -1628,7 +1628,7 @@
      "Total Non-Current Assets": {
       "outcome": "correct",
       "expected": 236500,
-      "actual": "$236,500",
+      "actual": 236500.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -1642,28 +1642,28 @@
      "Total Current Liabilities": {
       "outcome": "correct",
       "expected": 421200,
-      "actual": "$421,200",
+      "actual": 421200.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Total Long-Term Liabilities": {
       "outcome": "correct",
       "expected": 129400,
-      "actual": "$129,400",
+      "actual": 129400.0,
       "type": "money",
       "in_gold_schema": true
      },
      "TOTAL LIABILITIES": {
       "outcome": "correct",
       "expected": 550600,
-      "actual": "$550,600",
+      "actual": 550600.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Total Equity": {
       "outcome": "correct",
       "expected": 698104,
-      "actual": "$698,104",
+      "actual": 698104.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -1704,7 +1704,7 @@
      "As of Date": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "March 31, 2024",
+      "actual": "2024-03-31",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -1759,7 +1759,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 143803,
-        "actual": "$143,803",
+        "actual": 143803.0,
         "in_gold_schema": true
        },
        {
@@ -1779,7 +1779,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 348200,
-        "actual": "$348,200",
+        "actual": 348200.0,
         "in_gold_schema": true
        },
        {
@@ -1799,7 +1799,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 612000,
-        "actual": "$612,000",
+        "actual": 612000.0,
         "in_gold_schema": true
        },
        {
@@ -1819,7 +1819,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 16200,
-        "actual": "$16,200",
+        "actual": 16200.0,
         "in_gold_schema": true
        },
        {
@@ -1839,7 +1839,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8800,
-        "actual": "$8,800",
+        "actual": 8800.0,
         "in_gold_schema": true
        }
       ]
@@ -1873,7 +1873,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 240000,
-        "actual": "$240,000",
+        "actual": 240000.0,
         "in_gold_schema": true
        },
        {
@@ -1893,7 +1893,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 108500,
-        "actual": "$108,500",
+        "actual": 108500.0,
         "in_gold_schema": true
        },
        {
@@ -1913,7 +1913,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85000,
-        "actual": "$85,000",
+        "actual": 85000.0,
         "in_gold_schema": true
        },
        {
@@ -1933,7 +1933,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 20000,
-        "actual": "$20,000",
+        "actual": 20000.0,
         "in_gold_schema": true
        }
       ]
@@ -1967,7 +1967,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 254800,
-        "actual": "$254,800",
+        "actual": 254800.0,
         "in_gold_schema": true
        },
        {
@@ -1987,7 +1987,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 44200,
-        "actual": "$44,200",
+        "actual": 44200.0,
         "in_gold_schema": true
        },
        {
@@ -2007,7 +2007,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 80000,
-        "actual": "$80,000",
+        "actual": 80000.0,
         "in_gold_schema": true
        },
        {
@@ -2027,7 +2027,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18200,
-        "actual": "$18,200",
+        "actual": 18200.0,
         "in_gold_schema": true
        },
        {
@@ -2047,7 +2047,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 24000,
-        "actual": "$24,000",
+        "actual": 24000.0,
         "in_gold_schema": true
        }
       ]
@@ -2081,7 +2081,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 121000,
-        "actual": "$121,000",
+        "actual": 121000.0,
         "in_gold_schema": true
        },
        {
@@ -2101,7 +2101,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 8400,
-        "actual": "$8,400",
+        "actual": 8400.0,
         "in_gold_schema": true
        }
       ]
@@ -2135,7 +2135,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 100000,
-        "actual": "$100,000",
+        "actual": 100000.0,
         "in_gold_schema": true
        },
        {
@@ -2155,7 +2155,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 550751,
-        "actual": "$550,751",
+        "actual": 550751.0,
         "in_gold_schema": true
        },
        {
@@ -2175,7 +2175,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 47353,
-        "actual": "$47,353",
+        "actual": 47353.0,
         "in_gold_schema": true
        }
       ]
@@ -2610,7 +2610,7 @@
      "Date": {
       "outcome": "correct",
       "expected": "2024-01-31",
-      "actual": "January 31, 2024",
+      "actual": "2024-01-31",
       "type": "date",
       "in_gold_schema": true
      },
@@ -5564,7 +5564,6 @@
      "Total Due": "$12,179.21",
      "PO Reference": "PO-2024-0018",
      "Sales Tax": "$966.71",
-     "Vendor Name": "NEXUS GLOBAL TRADING LLC",
      "Vendor Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Vendor Phone": "(212) 555-0148",
      "Vendor Tax ID": "47-3821654",
@@ -5706,15 +5705,6 @@
       "actual": "$12,179.21",
       "type": "money",
       "in_gold_schema": true
-     },
-     "Vendor Name": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "NEXUS GLOBAL TRADING LLC",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      },
      "Vendor Address": {
       "outcome": "hallucinated",
@@ -6017,17 +6007,17 @@
     "counts": {
      "correct": 32,
      "near": 1,
-     "hallucinated": 10
+     "hallucinated": 9
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 9
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.23255813953488372,
+    "hallucination_rate": 0.21428571428571427,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -6126,15 +6116,6 @@
       "actual": "$12,179.21",
       "type": "money",
       "in_gold_schema": true
-     },
-     "Vendor Name": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "NEXUS GLOBAL TRADING LLC",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      },
      "Vendor Address": {
       "outcome": "hallucinated",
@@ -6758,18 +6739,18 @@
      "correct": 10,
      "near": 1,
      "renamed": 2,
-     "hallucinated": 30,
+     "hallucinated": 29,
      "missed": 20
     },
     "renamed": 2,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 30
+     "out_of_schema": 29
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.30303030303030304,
-    "hallucination_rate": 0.6976744186046512,
+    "hallucination_rate": 0.6904761904761905,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -6786,14 +6767,14 @@
      "Invoice Date": {
       "outcome": "correct",
       "expected": "2024-01-15",
-      "actual": "January 15, 2024",
+      "actual": "2024-01-15",
       "type": "date",
       "in_gold_schema": true
      },
      "Due Date": {
       "outcome": "correct",
       "expected": "2024-02-14",
-      "actual": "February 14, 2024",
+      "actual": "2024-02-14",
       "type": "date",
       "in_gold_schema": true
      },
@@ -6866,15 +6847,6 @@
       "actual": 12179.21,
       "type": "money",
       "in_gold_schema": true
-     },
-     "Vendor Name": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "NEXUS GLOBAL TRADING LLC",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      },
      "Vendor Address": {
       "outcome": "hallucinated",
@@ -7177,28 +7149,28 @@
     "counts": {
      "correct": 32,
      "near": 1,
-     "hallucinated": 10
+     "hallucinated": 9
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 10
+     "out_of_schema": 9
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.9696969696969697,
-    "hallucination_rate": 0.23255813953488372,
+    "hallucination_rate": 0.21428571428571427,
     "invention_rate": 0.0
    },
    "score_content": {
     "counts": {
      "correct": 24,
      "near": 1,
-     "unmatched": 10
+     "unmatched": 9
     },
     "gold_valued": 25,
     "accuracy": 0.96,
-    "unmatched": 10,
+    "unmatched": 9,
     "mismatches": [
      {
       "key": "bill to contact",
@@ -7301,7 +7273,6 @@
      "Shipping & Handling": "$580.00",
      "Total Due": "$17,411.79",
      "Sales Tax": "$1,282.79",
-     "Vendor Name": "NEXUS GLOBAL TRADING LLC",
      "Vendor Address": "142 West 57th Street, Suite 1800, New York, NY 10019",
      "Vendor Phone": "(212) 555-0148",
      "Vendor Tax ID": "47-3821654",
@@ -7450,15 +7421,6 @@
       "actual": "$17,411.79",
       "type": "money",
       "in_gold_schema": true
-     },
-     "Vendor Name": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "NEXUS GLOBAL TRADING LLC",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      },
      "Vendor Address": {
       "outcome": "hallucinated",
@@ -7801,17 +7763,17 @@
     },
     "counts": {
      "correct": 38,
-     "hallucinated": 9
+     "hallucinated": 8
     },
     "renamed": 0,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 9
+     "out_of_schema": 8
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 1.0,
-    "hallucination_rate": 0.19148936170212766,
+    "hallucination_rate": 0.17391304347826086,
     "invention_rate": 0.0
    },
    "score_raw": {
@@ -7909,15 +7871,6 @@
       "actual": "$17,411.79",
       "type": "money",
       "in_gold_schema": true
-     },
-     "Vendor Name": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "NEXUS GLOBAL TRADING LLC",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
      },
      "Vendor Address": {
       "outcome": "hallucinated",
@@ -8657,18 +8610,18 @@
     "counts": {
      "correct": 12,
      "renamed": 1,
-     "hallucinated": 34,
+     "hallucinated": 33,
      "missed": 25
     },
     "renamed": 1,
     "halluc_kinds": {
      "invented": 0,
      "misfiled": 0,
-     "out_of_schema": 34
+     "out_of_schema": 33
     },
     "hallucinated_ungrounded": 0,
     "accuracy": 0.3157894736842105,
-    "hallucination_rate": 0.723404255319149,
+    "hallucination_rate": 0.717391304347826,
     "invention_rate": 0.0
    },
    "score_export": {
@@ -8685,14 +8638,14 @@
      "Invoice Date": {
       "outcome": "correct",
       "expected": "2024-02-03",
-      "actual": "February 3, 2024",
+      "actual": "2024-02-03",
       "type": "date",
       "in_gold_schema": true
      },
      "Due Date": {
       "outcome": "correct",
       "expected": "2024-03-04",
-      "actual": "March 4, 2024",
+      "actual": "2024-03-04",
       "type": "date",
       "in_gold_schema": true
      },
@@ -8766,15 +8719,6 @@
       "type": "money",
       "in_gold_schema": true
      },
-     "Vendor Name": {
-      "outcome": "hallucinated",
-      "expected": null,
-      "actual": "NEXUS GLOBAL TRADING LLC",
-      "type": "string",
-      "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
-     },
      "Vendor Address": {
       "outcome": "hallucinated",
       "expected": null,
@@ -8841,11 +8785,11 @@
      "Notes Late Payment Interest": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "1.5%",
+      "actual": 0.015,
       "type": "string",
       "in_gold_schema": false,
-      "grounded": true,
-      "halluc_kind": "out_of_schema"
+      "grounded": false,
+      "halluc_kind": "invented"
      }
     },
     "tables": {
@@ -9116,27 +9060,27 @@
     },
     "counts": {
      "correct": 38,
-     "hallucinated": 9
+     "hallucinated": 8
     },
     "renamed": 0,
     "halluc_kinds": {
-     "invented": 0,
+     "invented": 1,
      "misfiled": 0,
-     "out_of_schema": 9
+     "out_of_schema": 7
     },
-    "hallucinated_ungrounded": 0,
+    "hallucinated_ungrounded": 1,
     "accuracy": 1.0,
-    "hallucination_rate": 0.19148936170212766,
-    "invention_rate": 0.0
+    "hallucination_rate": 0.17391304347826086,
+    "invention_rate": 0.021739130434782608
    },
    "score_content": {
     "counts": {
      "correct": 28,
-     "unmatched": 9
+     "unmatched": 8
     },
     "gold_valued": 28,
     "accuracy": 1.0,
-    "unmatched": 9,
+    "unmatched": 8,
     "mismatches": []
    },
    "score_structure": {
@@ -10614,42 +10558,42 @@
      "Total Operating Expenses": {
       "outcome": "correct",
       "expected": 359250,
-      "actual": "$359,250",
+      "actual": 359250.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Operating Income (EBIT)": {
       "outcome": "correct",
       "expected": 336150,
-      "actual": "$336,150",
+      "actual": 336150.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Interest Income": {
       "outcome": "correct",
       "expected": 1240,
-      "actual": "$1,240",
+      "actual": 1240.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Net Income Before Tax": {
       "outcome": "correct",
       "expected": 337390,
-      "actual": "$337,390",
+      "actual": 337390.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Income Tax Provision": {
       "outcome": "correct",
       "expected": 70852,
-      "actual": "$70,852",
+      "actual": 70852.0,
       "type": "money",
       "in_gold_schema": true
      },
      "Net Income After Tax": {
       "outcome": "correct",
       "expected": 266538,
-      "actual": "$266,538",
+      "actual": 266538.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -10758,7 +10702,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 28600,
-        "actual": "$28,600",
+        "actual": 28600.0,
         "in_gold_schema": true
        }
       ]
@@ -10792,7 +10736,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 648000,
-        "actual": "$648,000",
+        "actual": 648000.0,
         "in_gold_schema": true
        },
        {
@@ -10832,7 +10776,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 52000,
-        "actual": "$52,000",
+        "actual": 52000.0,
         "in_gold_schema": true
        },
        {
@@ -10852,7 +10796,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 724000,
-        "actual": "$724,000",
+        "actual": 724000.0,
         "in_gold_schema": true
        }
       ]
@@ -10886,7 +10830,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 190000,
-        "actual": "$190,000",
+        "actual": 190000.0,
         "in_gold_schema": true
        },
        {
@@ -10906,7 +10850,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 85500,
-        "actual": "$85,500",
+        "actual": 85500.0,
         "in_gold_schema": true
        },
        {
@@ -10926,7 +10870,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 22400,
-        "actual": "$22,400",
+        "actual": 22400.0,
         "in_gold_schema": true
        },
        {
@@ -10946,7 +10890,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 12100,
-        "actual": "$12,100",
+        "actual": 12100.0,
         "in_gold_schema": true
        },
        {
@@ -10966,7 +10910,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 10300,
-        "actual": "$10,300",
+        "actual": 10300.0,
         "in_gold_schema": true
        },
        {
@@ -10986,7 +10930,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 7150,
-        "actual": "$7,150",
+        "actual": 7150.0,
         "in_gold_schema": true
        },
        {
@@ -11006,7 +10950,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 5800,
-        "actual": "$5,800",
+        "actual": 5800.0,
         "in_gold_schema": true
        },
        {
@@ -11026,7 +10970,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 18000,
-        "actual": "$18,000",
+        "actual": 18000.0,
         "in_gold_schema": true
        },
        {
@@ -11046,7 +10990,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 3800,
-        "actual": "$3,800",
+        "actual": 3800.0,
         "in_gold_schema": true
        },
        {
@@ -11066,7 +11010,7 @@
         "type": "money",
         "outcome": "correct",
         "expected": 4200,
-        "actual": "$4,200",
+        "actual": 4200.0,
         "in_gold_schema": true
        }
       ]
@@ -12121,7 +12065,7 @@
      "Pay Date": {
       "outcome": "correct",
       "expected": "2024-04-30",
-      "actual": "April 30, 2024",
+      "actual": "2024-04-30",
       "type": "date",
       "in_gold_schema": true
      },
@@ -13427,7 +13371,7 @@
      "Pay Date": {
       "outcome": "correct",
       "expected": "2024-04-30",
-      "actual": "April 30, 2024",
+      "actual": "2024-04-30",
       "type": "date",
       "in_gold_schema": true
      },
@@ -15037,7 +14981,7 @@
      "Date": {
       "outcome": "correct",
       "expected": "2024-01-10",
-      "actual": "January 10, 2024",
+      "actual": "2024-01-10",
       "type": "date",
       "in_gold_schema": true
      },
@@ -18172,7 +18116,7 @@
   "overall": {
    "counts": {
     "correct": 387,
-    "hallucinated": 61,
+    "hallucinated": 59,
     "renamed": 3,
     "near": 4,
     "empty_ok": 12
@@ -18182,13 +18126,13 @@
    "near_rate": 0.01015228426395939,
    "renamed": 3,
    "rename_rate": 0.007614213197969543,
-   "hallucinated": 61,
-   "hallucination_rate": 0.13406593406593406,
+   "hallucinated": 59,
+   "hallucination_rate": 0.13024282560706402,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 0,
-   "out_of_schema": 61,
+   "out_of_schema": 59,
    "defect_rate": 0.0
   },
   "by_document_type": {
@@ -18333,20 +18277,20 @@
     "counts": {
      "correct": 70,
      "near": 1,
-     "hallucinated": 19
+     "hallucinated": 17
     },
     "gold_valued": 71,
     "accuracy": 0.9859154929577465,
     "near_rate": 0.014084507042253521,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 19,
-    "hallucination_rate": 0.2111111111111111,
+    "hallucinated": 17,
+    "hallucination_rate": 0.19318181818181818,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 19,
+    "out_of_schema": 17,
     "defect_rate": 0.0
    }
   },
@@ -18408,7 +18352,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 61,
+     "hallucinated": 59,
      "correct": 184,
      "renamed": 3,
      "near": 4
@@ -18418,13 +18362,13 @@
     "near_rate": 0.020942408376963352,
     "renamed": 3,
     "rename_rate": 0.015706806282722512,
-    "hallucinated": 61,
-    "hallucination_rate": 0.24206349206349206,
+    "hallucinated": 59,
+    "hallucination_rate": 0.236,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 61,
+    "out_of_schema": 59,
     "defect_rate": 0.0
    }
   }
@@ -18433,7 +18377,7 @@
   "overall": {
    "counts": {
     "correct": 234,
-    "hallucinated": 204,
+    "hallucinated": 202,
     "missed": 142,
     "renamed": 15,
     "near": 3,
@@ -18444,13 +18388,13 @@
    "near_rate": 0.007614213197969543,
    "renamed": 15,
    "rename_rate": 0.03807106598984772,
-   "hallucinated": 204,
-   "hallucination_rate": 0.4473684210526316,
+   "hallucinated": 202,
+   "hallucination_rate": 0.44493392070484583,
    "hallucinated_ungrounded": 0,
    "invention_rate": 0.0,
    "invented": 0,
    "misfiled": 0,
-   "out_of_schema": 204,
+   "out_of_schema": 202,
    "defect_rate": 0.0
   },
   "by_document_type": {
@@ -18603,7 +18547,7 @@
      "correct": 22,
      "near": 1,
      "renamed": 3,
-     "hallucinated": 64,
+     "hallucinated": 62,
      "missed": 45
     },
     "gold_valued": 71,
@@ -18611,13 +18555,13 @@
     "near_rate": 0.014084507042253521,
     "renamed": 3,
     "rename_rate": 0.04225352112676056,
-    "hallucinated": 64,
-    "hallucination_rate": 0.7111111111111111,
+    "hallucinated": 62,
+    "hallucination_rate": 0.7045454545454546,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 64,
+    "out_of_schema": 62,
     "defect_rate": 0.0
    }
   },
@@ -18683,7 +18627,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 204,
+     "hallucinated": 202,
      "missed": 87,
      "correct": 95,
      "renamed": 6,
@@ -18694,13 +18638,13 @@
     "near_rate": 0.015706806282722512,
     "renamed": 6,
     "rename_rate": 0.031413612565445025,
-    "hallucinated": 204,
-    "hallucination_rate": 0.6623376623376623,
+    "hallucinated": 202,
+    "hallucination_rate": 0.6601307189542484,
     "hallucinated_ungrounded": 0,
     "invention_rate": 0.0,
     "invented": 0,
     "misfiled": 0,
-    "out_of_schema": 204,
+    "out_of_schema": 202,
     "defect_rate": 0.0
    }
   }
@@ -18709,7 +18653,7 @@
   "overall": {
    "counts": {
     "correct": 387,
-    "hallucinated": 61,
+    "hallucinated": 59,
     "renamed": 3,
     "near": 4,
     "empty_ok": 12
@@ -18719,14 +18663,14 @@
    "near_rate": 0.01015228426395939,
    "renamed": 3,
    "rename_rate": 0.007614213197969543,
-   "hallucinated": 61,
-   "hallucination_rate": 0.13406593406593406,
-   "hallucinated_ungrounded": 0,
-   "invention_rate": 0.0,
-   "invented": 0,
+   "hallucinated": 59,
+   "hallucination_rate": 0.13024282560706402,
+   "hallucinated_ungrounded": 1,
+   "invention_rate": 0.002207505518763797,
+   "invented": 1,
    "misfiled": 0,
-   "out_of_schema": 61,
-   "defect_rate": 0.0
+   "out_of_schema": 58,
+   "defect_rate": 0.002207505518763797
   },
   "by_document_type": {
    "balance_sheet": {
@@ -18870,21 +18814,21 @@
     "counts": {
      "correct": 70,
      "near": 1,
-     "hallucinated": 19
+     "hallucinated": 17
     },
     "gold_valued": 71,
     "accuracy": 0.9859154929577465,
     "near_rate": 0.014084507042253521,
     "renamed": 0,
     "rename_rate": 0.0,
-    "hallucinated": 19,
-    "hallucination_rate": 0.2111111111111111,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0,
-    "invented": 0,
+    "hallucinated": 17,
+    "hallucination_rate": 0.19318181818181818,
+    "hallucinated_ungrounded": 1,
+    "invention_rate": 0.011363636363636364,
+    "invented": 1,
     "misfiled": 0,
-    "out_of_schema": 19,
-    "defect_rate": 0.0
+    "out_of_schema": 16,
+    "defect_rate": 0.011363636363636364
    }
   },
   "by_field_type": {
@@ -18945,7 +18889,7 @@
    },
    "string": {
     "counts": {
-     "hallucinated": 61,
+     "hallucinated": 59,
      "correct": 184,
      "renamed": 3,
      "near": 4
@@ -18955,26 +18899,26 @@
     "near_rate": 0.020942408376963352,
     "renamed": 3,
     "rename_rate": 0.015706806282722512,
-    "hallucinated": 61,
-    "hallucination_rate": 0.24206349206349206,
-    "hallucinated_ungrounded": 0,
-    "invention_rate": 0.0,
-    "invented": 0,
+    "hallucinated": 59,
+    "hallucination_rate": 0.236,
+    "hallucinated_ungrounded": 1,
+    "invention_rate": 0.004,
+    "invented": 1,
     "misfiled": 0,
-    "out_of_schema": 61,
-    "defect_rate": 0.0
+    "out_of_schema": 58,
+    "defect_rate": 0.004
    }
   }
  },
  "summary_content": {
   "counts": {
    "correct": 234,
-   "unmatched": 64,
+   "unmatched": 62,
    "missed": 3,
    "near": 4
   },
   "gold_valued": 241,
-  "unmatched": 64,
+  "unmatched": 62,
   "accuracy": 0.970954356846473
  },
  "summary_structure": {
@@ -18987,22 +18931,22 @@
  "calibration": {
   "grounded": {
    "n": 435,
-   "correct": 381,
+   "correct": 382,
    "wrong": 0,
    "missed": 0,
    "near": 3,
-   "hallucinated": 51
+   "hallucinated": 50
   },
   "low": {
-   "n": 12,
-   "correct": 5,
+   "n": 10,
+   "correct": 4,
    "wrong": 0,
    "missed": 0,
    "near": 1,
-   "hallucinated": 6
+   "hallucinated": 5
   }
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-11-19 07:02:30"
+ "diff_against": "2026-11-20 04:45:08"
 }

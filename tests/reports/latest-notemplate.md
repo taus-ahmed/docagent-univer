@@ -1,6 +1,6 @@
-# Accuracy report — 2026-11-19 07:28:39
+# Accuracy report — 2026-11-20 04:45:27
 
-- git: `f478861`  mode: **replay**  repeat: 1
+- git: `1f8e7a0`  mode: **replay**  repeat: 1
 - config: {"PRIMARY_LLM": "gemini", "GEMINI_MODEL": "gemini-2.5-flash-lite"}
 
 ## Overall
@@ -11,15 +11,15 @@
 | **accuracy RAW (all adapter widenings off)** | **59.4%** |
 | **accuracy CONTENT (container-blind)** | **97.1%** |
 | **structure FIDELITY (gold tables returned as tables)** | **100.0%** (17/17; 17 with exact row count) |
-| **hallucination rate (hallucinated / extracted)** | **13.4%** |
+| **hallucination rate (hallucinated / extracted)** | **13.0%** |
 | **├ INVENTED — value found NOWHERE in the PDF** | **0** (0.0%) |
 | ├ misfiled — real content in a slot gold says is EMPTY | 0 |
-| └ out-of-schema — real content, name gold has no field for | 61 *(not a defect)* |
+| └ out-of-schema — real content, name gold has no field for | 59 *(not a defect)* |
 | **DEFECT RATE (invented + misfiled / extracted)** | **0.0%** |
-| hallucinated values | 61 |
+| hallucinated values | 59 |
 | near misses | 4 |
 | **renamed (right value, different field name)** | **3** (0.8%) |
-| outcome counts | {"correct": 387, "hallucinated": 61, "renamed": 3, "near": 4, "empty_ok": 12} |
+| outcome counts | {"correct": 387, "hallucinated": 59, "renamed": 3, "near": 4, "empty_ok": 12} |
 
 ## By document type
 
@@ -32,7 +32,7 @@
 | income_statement | 100.0% | 12.8% | 0 | 41 | 0 | 0 | 0 | 0 | 6 |
 | payslip | 94.3% | 5.4% | 0 | 66 | 2 | 2 | 0 | 0 | 4 |
 | purchase_order | 96.8% | 31.1% | 0 | 30 | 1 | 0 | 0 | 0 | 14 |
-| sales_invoice | 98.6% | 21.1% | 0 | 70 | 1 | 0 | 0 | 0 | 19 |
+| sales_invoice | 98.6% | 19.3% | 0 | 70 | 1 | 0 | 0 | 0 | 17 |
 
 ## By field type
 
@@ -41,7 +41,7 @@
 | date | 100.0% | 0.0% | 0 | 30 | 0 | 0 | 0 | 0 | 0 |
 | money | 100.0% | 0.0% | 0 | 161 | 0 | 0 | 0 | 0 | 0 |
 | number | 100.0% | 0.0% | 0 | 12 | 0 | 0 | 0 | 0 | 0 |
-| string | 96.3% | 24.2% | 0 | 184 | 4 | 3 | 0 | 0 | 61 |
+| string | 96.3% | 23.6% | 0 | 184 | 4 | 3 | 0 | 0 | 59 |
 
 ## Per document
 
@@ -50,8 +50,8 @@
 | BS-2024-Q1 | balance_sheet | 100.0% | 58.7% | 6 | 0 | doc-aa42f790f4: file_type=digital_pdf pages=2 text_len=1242 |  |
 | CHQ-001847 | cheque | 100.0% | 90.9% | 5 | 0 | doc-f7ea3d6e0e: file_type=digital_pdf pages=1 text_len=501 |  |
 | EXP-2024-0081 | expense_report | 98.1% | 13.0% | 7 | 0 | doc-71691073cd: file_type=digital_pdf pages=1 text_len=1107 |  |
-| INV-2024-0031 | sales_invoice | 97.0% | 30.3% | 10 | 0 | doc-9f942c192f: file_type=digital_pdf pages=1 text_len=971 |  |
-| INV-2024-0047 | sales_invoice | 100.0% | 31.6% | 9 | 0 | doc-eba86b7cfd: file_type=digital_pdf pages=1 text_len=1040 |  |
+| INV-2024-0031 | sales_invoice | 97.0% | 30.3% | 9 | 0 | doc-9f942c192f: file_type=digital_pdf pages=1 text_len=971 |  |
+| INV-2024-0047 | sales_invoice | 100.0% | 31.6% | 8 | 0 | doc-eba86b7cfd: file_type=digital_pdf pages=1 text_len=1040 |  |
 | IS-2024-Q4 | income_statement | 100.0% | 51.2% | 6 | 0 | doc-dd7566581f: file_type=digital_pdf pages=2 text_len=970 |  |
 | PAYSLIP-EMP-0007-APR2024 | payslip | 94.6% | 94.6% | 2 | 0 | doc-c6ca0ed7a1: file_type=digital_pdf pages=2 text_len=887 |  |
 | PAYSLIP-EMP-0012-APR2024 | payslip | 93.9% | 93.9% | 2 | 0 | doc-b4129481ed: file_type=digital_pdf pages=2 text_len=852 |  |
@@ -82,7 +82,6 @@
 | EXP-2024-0081 | Employee Signature | hallucinated (misplaced) | None | Marcus A. Thompson |
 | EXP-2024-0081 | Finance Approval Signature | hallucinated (misplaced) | None | Finance Dept. |
 | INV-2024-0031 | Bill To Contact | near | Mr. Robert Chen | Mr. Robert Chen — rchen@apexindustrial.com |
-| INV-2024-0031 | Vendor Name | hallucinated (misplaced) | None | NEXUS GLOBAL TRADING LLC |
 | INV-2024-0031 | Vendor Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
 | INV-2024-0031 | Vendor Phone | hallucinated (misplaced) | None | (212) 555-0148 |
 | INV-2024-0031 | Vendor Tax ID | hallucinated (misplaced) | None | 47-3821654 |
@@ -92,7 +91,6 @@
 | INV-2024-0031 | Payment Instructions - Cheque Payable To | hallucinated (misplaced) | None | NEXUS GLOBAL TRADING LLC |
 | INV-2024-0031 | Notes - Payment Received | hallucinated (misplaced) | None | Payment received via wire transfer Feb 10, 2024. |
 | INV-2024-0031 | Notes - Reference | hallucinated (misplaced) | None | WT-20240210-4421. |
-| INV-2024-0047 | Vendor Name | hallucinated (misplaced) | None | NEXUS GLOBAL TRADING LLC |
 | INV-2024-0047 | Vendor Address | hallucinated (misplaced) | None | 142 West 57th Street, Suite 1800, New York, NY 10019 |
 | INV-2024-0047 | Vendor Phone | hallucinated (misplaced) | None | (212) 555-0148 |
 | INV-2024-0047 | Vendor Tax ID | hallucinated (misplaced) | None | 47-3821654 |
