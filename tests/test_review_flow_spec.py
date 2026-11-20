@@ -359,7 +359,6 @@ def test_add_row_has_stable_identity_history_export_and_total_handling(
                           if row["Description"] == "Added item")
 
 
-@RULE_6
 def test_one_review_state_controls_legacy_approve_and_draft(
     client, db, review_case_factory
 ):

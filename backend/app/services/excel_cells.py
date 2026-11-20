@@ -740,14 +740,12 @@ def _add_review_legend(wb, doc_results, demo=False):
 
 
 def _is_draft(doc_results) -> bool:
-    """True when any document still has an open completeness reason (Run A,
-    A5): its export is a DRAFT and its file name says so."""
+    """True when any document is not settled: an open completeness reason
+    (Run A, A5) OR a value still owed a look (Run G, G4). Its export is a
+    DRAFT and its file name says so. The same test the review screen's
+    document state and the approve route use (`review.unsettled`)."""
     from app.core import review as _review
-    for d in doc_results or []:
-        ed = d.get_extracted_data()
-        if _review.attention_open(ed if isinstance(ed, dict) else {}):
-            return True
-    return False
+    return any(_review.unsettled(d.get_extracted_data()) for d in doc_results or [])
 
 
 def _marks_or_off(ws, marks):

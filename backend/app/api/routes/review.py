@@ -393,7 +393,7 @@ def mark_reviewed(job_id: int, doc_id: int, payload: ReviewMark,
                          for a in open_reasons]})
         ed = _apply_marks(stored, payload, stamp)
         values = R.document_values(ed)
-        open_ = R.summarise(values)["needs_review"] + len(R.attention_open(ed))
+        open_ = R.unsettled(ed)
         # The document is reviewed when nothing in it is still owed a look.
         cols = {"extraction_json": json.dumps(ed, default=str),
                 "reviewed": open_ == 0,
@@ -558,7 +558,7 @@ def add_row(job_id: int, doc_id: int, table: str, payload: AddRow,
             "values": given, "attention_id": payload.attention_id,
             "reflagged_totals": reflagged, "reason": "row added in review"})
         values = R.document_values(ed)
-        open_ = R.summarise(values)["needs_review"] + len(R.attention_open(ed))
+        open_ = R.unsettled(ed)
         cols = {"extraction_json": json.dumps(ed, default=str),
                 "reviewed": open_ == 0,
                 "reviewed_by": current_user.username if open_ == 0 else reviewed_by,

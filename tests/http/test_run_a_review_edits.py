@@ -197,10 +197,15 @@ class TestDraftExport:
         assert any(" · p." in v for v in audit_text)
 
     def test_once_settled_the_name_has_no_draft(self, client, auth, doc):
+        # Run G, G4: "settled" is ONE state — every completeness reason AND
+        # every value still owed a look. The flagged empty Total Deposits
+        # slot is settled too (confirmed empty), or the file stays a DRAFT.
         j, d = doc
-        client.post(f"/api/jobs/{j.id}/docs/{d.id}/review", headers=auth["acme"],
-                    json={"dispositions": [{"id": "att-1", "choice": "confirmed_absent"},
-                                           {"id": "att-2", "choice": "confirmed_absent"}]})
+        r = client.post(f"/api/jobs/{j.id}/docs/{d.id}/review", headers=auth["acme"],
+                        json={"dispositions": [{"id": "att-1", "choice": "confirmed_absent"},
+                                               {"id": "att-2", "choice": "confirmed_absent"}],
+                              "values": [{"ref": "B3", "disposition": "confirmed_empty"}]})
+        assert r.status_code == 200, r.text
         r, wb = self._book(client, auth, j.id)
         assert "_DRAFT" not in r.headers["content-disposition"]
         assert not str(wb["Legend"]["A1"].value).startswith("DRAFT")

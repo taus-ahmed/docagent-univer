@@ -6,7 +6,6 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 
 | Gap | Strict test | Implementation evidence | Observed failure |
 | --- | --- | --- | --- |
-| One review/approval/DRAFT state | `test_one_review_state_controls_legacy_approve_and_draft` | `backend/app/api/routes/extract.py:1022-1038` updates relational approval only; `backend/app/services/excel_cells.py:677-685` derives DRAFT only from open completeness items. | A document with an unresolved flagged value exports without `_DRAFT`. |
 
 Run G (G4) removed REVIEW RULES 1, 2, 3, 4 and 8 in one commit, because
 they share one change: a review value entry carries `disposition`
@@ -18,7 +17,11 @@ no warning comment. REVIEW RULE 7 came off with `GET .../history`
 `POST .../rows/{table}` (`routes/review.py::add_row`): a stable `_row_id`, an
 `add_row` event, the row in the exported band plus a "Rows added by hand"
 list on the Legend, and every total-labelled slot RE-FLAGGED (never
-rewritten) when the rows no longer sum to it.
+rewritten) when the rows no longer sum to it. REVIEW RULE 6 came off with
+`review.unsettled`: one count (unresolved values + open completeness reasons)
+behind the stored `reviewed`/`needs_review` columns, every edit, the approve
+route (refused while anything is owed; otherwise it writes the same document
+mark) and the export's `_DRAFT` name. All eight review rules now pass.
 
 The eight rows above are the target review contract in
 `tests/test_review_flow_spec.py`. Each marker names `REVIEW RULE 1` through

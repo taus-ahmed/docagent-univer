@@ -264,8 +264,11 @@ def _save_edit(doc, ed, current_user, db, stored=None):
     ed["edit_log"] = list(stored.get("edit_log") or []) + _edit_events(
         stored, ed, current_user.username, at)
     doc.set_extracted_data(ed)
-    open_ = bool(R.attention_open(ed))
+    # Run G, G4: the one review state — an edit settles the document only
+    # when nothing else on it is still owed a look.
+    open_ = R.unsettled(ed) > 0
     doc.reviewed = not open_
-    doc.reviewed_by = current_user.username
+    if not open_:
+        doc.reviewed_by = current_user.username
     doc.needs_review = open_
     db.commit()

@@ -1026,15 +1026,27 @@ def approve_document(job_id: int, doc_id: int,
     doc = db.query(DocumentResult).filter(DocumentResult.id==doc_id, DocumentResult.job_id==job_id).first()
     if not doc: raise HTTPException(status_code=404, detail="Document not found")
     from app.core import review as R
-    open_ = R.attention_open(doc.get_extracted_data() or {})
+    stored = doc.get_extracted_data() or {}
+    stored = stored if isinstance(stored, dict) else {}
+    open_ = R.attention_open(stored)
     if open_:
         # Run A, A5: approval can never set a completeness reason aside.
         raise HTTPException(status_code=409, detail={
             "message": (f"{len(open_)} completeness reason(s) are still open on "
                         f"this document; settle each one in review first."),
             "open": [{"id": a.get("id"), "text": a.get("text")} for a in open_]})
-    doc.reviewed=True; doc.reviewed_by=current_user.username; doc.needs_review=False
-    db.commit()
+    owed = R.summarise(R.export_values(stored))["needs_review"]
+    if owed:
+        # Run G, G4: approve is NOT a second, weaker review. It confirms a
+        # document that review has settled; it never settles values itself.
+        raise HTTPException(status_code=409, detail={
+            "message": (f"{owed} value(s) on this document still need review; "
+                        f"accept, correct or mark each one empty, or mark the "
+                        f"document reviewed, before approving."),
+            "open": []})
+    # The one review state: the same document mark `POST .../review` writes.
+    from app.api.routes.review import ReviewMark, mark_reviewed
+    mark_reviewed(job_id, doc_id, ReviewMark(scope="document"), db, current_user)
     return {"message": "Approved", "doc_id": doc_id}
 
 @router.delete("/jobs/{job_id}")

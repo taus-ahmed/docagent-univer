@@ -87,6 +87,28 @@ def test_a_total_that_still_matches_is_not_reflagged_and_is_never_rewritten(
     assert len({row["_row_id"] for row in stored["items_rows"]}) == 3
 
 
+def test_one_edit_does_not_settle_a_document_with_other_open_values(client, db,
+                                                                     review_case_factory):
+    from app.models.models import DocumentResult
+    case = review_case_factory(open_refs=("B2", "B4"), flag_empty=False, table_open=False)
+    r = client.patch(f"/api/jobs/{case.job_id}/docs/{case.doc_id}/fields/B2",
+                     headers=case.headers, json={"value": "Typed"})
+    assert r.status_code == 200
+    db.expire_all()
+    doc = db.get(DocumentResult, case.doc_id)
+    assert doc.needs_review and not doc.reviewed           # B4 is still owed a look
+    assert client.post(f"/api/jobs/{case.job_id}/docs/{case.doc_id}/approve",
+                       headers=case.headers).status_code == 409
+    assert _review(client, case, {"values": [
+        {"ref": "B4", "disposition": "accepted_as_is"}]}).status_code == 200
+    assert client.post(f"/api/jobs/{case.job_id}/docs/{case.doc_id}/approve",
+                       headers=case.headers).status_code == 200
+    db.expire_all()
+    doc = db.get(DocumentResult, case.doc_id)
+    assert doc.reviewed and not doc.needs_review
+    assert doc.get_extracted_data()["review"]["document_reviewed"] is True
+
+
 def test_add_row_settles_the_named_reason_and_shows_in_history(client, db,
                                                                review_case_factory):
     case = review_case_factory(

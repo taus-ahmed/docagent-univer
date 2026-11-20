@@ -573,6 +573,16 @@ def document_state(ed: Any, failed: bool = False) -> str:
     return "READY"
 
 
+def unsettled(ed: Any) -> int:
+    """How many things on a stored result still need a person: unresolved
+    values (a whole-document review mark resolves them) plus open
+    completeness reasons. ONE count behind the stored `reviewed` /
+    `needs_review` columns, the approve route, `document_state` and the
+    export's DRAFT name (Run G, G4): 0 means settled, nothing else does."""
+    ed = ed if isinstance(ed, dict) else {}
+    return summarise(export_values(ed))["needs_review"] + len(attention_open(ed))
+
+
 def apply_dispositions(ed: dict, items: Iterable[dict], stamp: dict) -> list[str]:
     """Record a reviewer's disposition per attention item, in place. Returns
     the ids it could not find (the caller answers 404). A disposition is
