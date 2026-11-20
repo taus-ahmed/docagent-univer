@@ -22,14 +22,14 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 | Run D D12: vertical scalar merge invents a table | `test_d12_a_vertical_merge_over_a_scalar_label_is_not_a_table_header` | A one-column merge is inherited as header text on every covered row before band detection. | `Customer` merged A1:A2 beside `Invoice Date` in B2 becomes a repeating band. |
 | Run D D13: warnings on valid layouts | `test_d13_owner_approved_header_only_tables_do_not_need_a_warning`, `test_d13_a_valid_horizontal_field_pair_is_not_warning_noise` | The warning pass does not account for the owner-approved ten-row header-only rule and warns whenever an implied right slot also has an unused cell below. | Valid header-only tables and valid horizontal fields produce warning noise. The committed audit finds 36 warnings, 33 of them on layouts that are otherwise fine under the recorded rules. |
 
-## Harness regression
+## Harness regression (resolved by Run E, E0)
 
-`test_harness_reader_does_not_hide_a_duplicate_total_row` is also a strict
-xfail. The Run C `sheet_reader` tail matcher treats an erroneous duplicate
-`Total` row inside a reserved band as the scalar template tail. The direct
-openpyxl assertion sees both `Total` rows; the new reader reports one clean
-table row and one scalar total, while the pre-Run C reader reports the extra
-table row. This is a test-tool blind spot, not an application defect.
+`test_harness_reader_does_not_hide_a_duplicate_total_row` passes: the reader
+now ends a band at the LAST place inside the reserved area where the
+template's own rows line up, so a duplicate `Total` band row is reported as a
+table row. Extraction cannot write that duplicate (`split_duplicate_totals`
+drops it, `tests/test_run_e_fixes.py`); only a human edit or a pre-Run C job
+can, so the writer is unchanged.
 
 Run C removed the three A6 rows (compact reserved bands, exactly three blank
 rows between documents, clean default columns): `excel_slot._write_slot_excel`

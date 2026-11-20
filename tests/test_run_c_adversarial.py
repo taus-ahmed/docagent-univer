@@ -370,11 +370,6 @@ DUPLICATE_TOTAL_GRID = grid_of({
 })
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("C1/C4 harness: tail matching hides a duplicate total row that "
-            "the pre-Run C reader reported"),
-)
 def test_harness_reader_does_not_hide_a_duplicate_total_row():
     """Direct XLSX evidence proves the new reader can hide an export defect.
 

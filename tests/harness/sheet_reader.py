@@ -164,13 +164,26 @@ def read_sheet(ws, shape):
                     return False
             return True
 
+        # Run E, E0: the tail is where the template's own rows start, and a
+        # compacted band can only have moved them UP — so the tail is the LAST
+        # place inside the reserved area (before a blank line) where they line
+        # up, never the first. Taking the first let a band row that merely
+        # repeats the total's label (`Total | 15` above the real `Total | 15`)
+        # end the band, and the reader reported a clean table where the
+        # export holds a duplicate row. A reader must show such a row.
+        tail_at = None
+        k = hdr_row + 1
+        while k <= reserved_end + 1 and rows.get(k):
+            if k > hdr_row + 1 and _tail_matches(k):
+                tail_at = k
+            k += 1
+
         while r <= max(rows):
             cells = rows.get(r)
             if not cells:
                 break                                   # blank line ends the band
             first = _norm(cells.get(headers[0][0], cells.get(lcol0)))
-            if (first in stops and r > reserved_end) or (r > hdr_row + 1
-                                                          and _tail_matches(r)):
+            if (first in stops and r > reserved_end) or r == tail_at:
                 break                                   # a total, or the next band
             vals = {}
             for col, h in headers:
