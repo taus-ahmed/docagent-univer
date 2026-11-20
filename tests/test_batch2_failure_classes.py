@@ -269,11 +269,6 @@ def test_03_explainer_pages_do_not_become_pay_data(name, label, bad_value, needl
     assert data["attention"], "no-real-data documents need one document-level explanation"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Rule: conspicuous sample placeholders are not recipient or payer "
-            "identity data"),
-)
 def test_04_specimen_placeholders_are_not_real_payer_or_recipient_data():
     """Rule reading: conspicuous instructional/sample tokens in a specimen are
     placeholders, not identities.  ``MR A SAMPLE`` could be a legal name in

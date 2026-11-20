@@ -9,6 +9,8 @@ was printed and still was not data:
   F2  an EXPLAINER page about a pay stub — `8. Net pay is total amount of
       pay check.`, `... will always balance to $0.00 ...` — answered with the
       list number or the example figure
+  F3  a SPECIMEN — `SAMPLE 2024 TAX FORM`, `MR A SAMPLE`, `ADD 1` ... `ADD 5`,
+      `FULL COMPANY NAME` — answered with the placeholders
 
 Every rule here REFUSES or FLAGS; none of them invents a value. A refused value
 is not written. When nothing the model offered survives, the document says so
@@ -77,6 +79,8 @@ def refusal(value, source, label, *, family, page_texts, specimen) -> str:
     `specimen_document(page_texts)`, computed once by the caller."""
     if is_fill_in(value):
         return "a fill-in blank, not a value"
+    if specimen and specimen_value(value):
+        return "a specimen placeholder (this is a sample form), not real data"
     if list_number(value, source):
         return "a list number on an explanatory line, not a value"
     # A pay document's figures are printed against labels; a figure inside a
@@ -88,5 +92,29 @@ def refusal(value, source, label, *, family, page_texts, specimen) -> str:
     return ""
 
 
+# ── F3: specimen placeholders ───────────────────────────────────────────────
+
+_SPECIMEN_MARKERS = (
+    re.compile(r"\bADD\s?[1-9]\b"),
+    re.compile(r"\bFULL\s+COMPANY\s+NAME\b", re.I),
+    re.compile(r"\b(?:MR|MRS|MS|DR)\.?\s+A\s+SAMPLE\b", re.I),
+)
+_SAMPLE_WORD = re.compile(r"\bSAMPLE\b")
+_SPECIMEN_VALUE = (
+    re.compile(r"^\s*ADD\s?\d{1,2}\s*$", re.I),
+    re.compile(r"\bFULL\s+COMPANY\s+NAME\b", re.I),
+    re.compile(r"\bSAMPLE\b", re.I),
+)
+
+
 def specimen_document(page_texts) -> bool:
-    return False
+    """A specimen prints `SAMPLE` AND at least one placeholder of its own kind
+    (`ADD 1`, `FULL COMPANY NAME`, `MR A SAMPLE`). `SAMPLE` alone is a stamp
+    (FlowParse's `SAMPLE DOCUMENT`), and a document carrying only that still
+    holds real values — so the word alone never decides."""
+    text = "\n".join(str(t or "") for t in page_texts or [])
+    return bool(_SAMPLE_WORD.search(text)) and any(p.search(text) for p in _SPECIMEN_MARKERS)
+
+
+def specimen_value(value) -> bool:
+    return any(p.search(str(value or "")) for p in _SPECIMEN_VALUE)

@@ -30,6 +30,19 @@ def test_f2_real_pay_lines_and_sentences_on_other_documents_are_data():
                       page_texts=[], specimen=False) == ""
 
 
+def test_f3_a_real_name_containing_sample_on_an_ordinary_document_is_data():
+    import real_data as RD
+    ordinary = ["SAMPLE DOCUMENT — FICTIONAL BUSINESS\nBill To: Sample & Sons Ltd"]
+    assert not RD.specimen_document(ordinary)
+    assert RD.refusal("Sample & Sons Ltd", "Bill To: Sample & Sons Ltd", "Bill To",
+                      family="invoice", page_texts=ordinary,
+                      specimen=RD.specimen_document(ordinary)) == ""
+    specimen = ["SAMPLE 2024 TAX FORM 1099-B\nMR A SAMPLE\nADD 1 Payer's Details"]
+    assert RD.specimen_document(specimen)
+    assert RD.refusal("ADD 3", "ADD 3", "Payer Address", family="form_1099",
+                      page_texts=specimen, specimen=True)
+
+
 def test_f1_one_grounded_value_means_the_form_is_not_blank():
     """A labels-and-blanks page with ONE value really filled in: nothing is
     cleared, and the invented answer keeps its ordinary flag."""
