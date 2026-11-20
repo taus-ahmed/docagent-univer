@@ -153,6 +153,43 @@ PLACEHOLDER = re.compile(
 #: Due`, `Grand Total`
 _TOTALISH = re.compile(r"\b(?:sub-?total|totals?|balance|due)\b", re.I)
 
+#: Run E review (overnight D1): a heading that names a PERIOD — a four-digit
+#: year, a quarter, a fiscal year, a half, a month. "Approver 2" carries a
+#: digit and names no period.
+_PERIOD_HEAD = re.compile(
+    r"\b(?:(?:19|20)\d{2}|Q[1-4]|FY\s*\d{0,4}|H[12]|"
+    r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|"
+    r"aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b",
+    re.I)
+
+#: a field LABEL is short; "Total amounts shown in USD" is a note (D1)
+_LABEL_WORDS = 3
+
+#: a heading that names a money column (D1: a side-by-side table has its own)
+_MONEY_HEAD = re.compile(
+    r"\b(?:amount|amt|total|charge|charges|debit|credit|balance|price|cost|fee"
+    r"|value|payment|paid|due|tax)\b", re.I)
+
+
+def _two_tables(m, static, r, left, right, last_row) -> bool:
+    """Run E review (overnight D1): are two heading runs one blank column
+    apart on row `r` two TABLES rather than one table with a spacer?
+
+    Two tables when each run names a money column of its own (`Code |
+    Amount` beside `Date | Description | Charge`), or when a later row labels
+    both runs' first columns (`Left total` under A, `Right total` under D).
+    The spacer case (`Date | Description | _ | Debit | Balance`) names its
+    money only on one side and closes in one total row, so it stays one."""
+    def money(run):
+        return any(_MONEY_HEAD.search(str(m.get((r, c), "") or "")) for c in run)
+
+    if money(left) and money(right):
+        return True
+    for rr in range(r + 1, last_row + 1):
+        if (rr, left[0]) in static and (rr, right[0]) in static:
+            return True
+    return False
+
 
 def is_placeholder(text) -> bool:
     """Is this cell text a placeholder for a value rather than a label?"""
@@ -756,7 +793,8 @@ def compute_shape(grid, log=None):
         for run in runs:
             prev = joined[-1] if joined else None
             if (prev and run[0] == prev[-1] + 2 and len(prev) >= 2
-                    and len(run) >= 2 and min(len(prev), len(run)) == 2):
+                    and len(run) >= 2 and min(len(prev), len(run)) == 2
+                    and not _two_tables(m, static, r, prev, run, rows[-1])):
                 joined[-1] = prev + run
             else:
                 joined.append(run)
@@ -1082,8 +1120,8 @@ def compute_shape(grid, log=None):
         # reading it as a matrix would take Name's and Date's slots away.
         if first and not contiguous and rest:
             contiguous = (all(_text_cols(r) == [first[0]] for r in rest)
-                          and all(re.search(r"\d", m[(non_blank[0], c)])
-                                  for c in first[1:]))
+                          and all(_PERIOD_HEAD.search(m[(non_blank[0], c)])
+                                  for c in first[1:]))   # D1: a period, not any digit
         if rest and contiguous and len(first) > max(len(_text_cols(r)) for r in rest):
             head = non_blank[0]
             heading_rows.add(head)
@@ -1135,7 +1173,8 @@ def compute_shape(grid, log=None):
         # table, not a field. Off a table's rows nothing changes.
         label_list = all(_text_cols(r) == [max_col] for r in body) and (
             len(body) >= 2 or not any(r in band_owned_rows for r in body)
-            or bool(_TOTALISH.search(m[(body[0], max_col)])))
+            or (bool(_TOTALISH.search(m[(body[0], max_col)]))
+                and len(str(m[(body[0], max_col)]).split()) <= _LABEL_WORDS))
         block_values = ([c for c in block_values if c <= max_col + 1]
                         if in_box or label_list else in_box)
 

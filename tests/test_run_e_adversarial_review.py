@@ -59,11 +59,6 @@ def test_e8_t14_native_table_metadata_is_invisible_and_therefore_silent():
     assert template_warnings(grid) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run E D6 treats any digit as a matrix-heading signal, so a "
-            "numbered form label is lost and extra matrix cells are invented"),
-)
 def test_d6_a_numbered_form_label_is_not_a_matrix_year_heading():
     grid = _grid({
         (0, 0): "Name", (0, 2): "Approver 2",
@@ -74,11 +69,6 @@ def test_d6_a_numbered_form_label_is_not_a_matrix_year_heading():
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run E D8 treats any lone note containing a total-ish word as a "
-            "scalar field, even when the text is explanatory prose"),
-)
 def test_d8_a_note_beside_a_table_may_contain_the_word_total():
     grid = _grid({
         (0, 0): "Date", (0, 1): "Description", (0, 2): "Amount",
@@ -88,11 +78,6 @@ def test_d8_a_note_beside_a_table_may_contain_the_word_total():
     assert _fields(grid) == [("B6", "Total")]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run E D7 joins header runs one blank column apart whenever either "
-            "run is two columns wide, merging two real side-by-side tables"),
-)
 def test_d7_two_tables_stay_separate_when_one_is_two_columns_wide():
     grid = _grid({
         (0, 0): "Code", (0, 1): "Amount",
