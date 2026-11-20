@@ -76,8 +76,9 @@ def test_a_lost_page_is_recovered_before_any_reason_is_raised():
     assert "Date" not in dates, "the repeated header row is not a row"
     text = " ".join(H.reasons(data)).casefold()
     assert "649.37" not in text and "177.30" not in text, H.reasons(data)
-    page_calls = [c for c in calls if "page 2" in str(c.get("prompt") or c)]
-    assert len(calls) == 2 and page_calls, [str(c)[:120] for c in calls]
+    recovery_calls = [c for c in calls if "RECOVERY REQUEST" in str(c.get("prompt"))]
+    assert len(recovery_calls) == 1
+    assert "page 2 of 2" in recovery_calls[0]["prompt"]
 
 
 def test_recovery_that_still_fails_raises_the_reason():

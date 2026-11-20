@@ -6,7 +6,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] A1 — wrong-slot and duplicate values: engine/ownership.py (box owner by geometry, checkbox X by x-position, unwitnessed duplicate cleared); completeness box-caption rule
 - [x] A2 — a row printed in another box never enters a box-coded band; Box 14 second entry flagged in plain words
 - [x] A3 — identifiers (name/locality/control) text; years plain; money labels always 2 decimals; Box d trimmed to its own box; printed space recovered from char gaps; ID slots not demoted as phone numbers
-- [ ] A4 — lost page recovery (mammoth page 2)
+- [x] A4 — recover_lost_pages: one page-targeted call per lost page (PAGE_RECOVERY_MAX_CALLS, default 4), merged in page order; a column header reprinted at the top of the next page is a continuation
 - [ ] A5 — silent empty slot (form title printed on the page)
 - [ ] A6 — consistency (combined vs single parity; fragment rows; temperature 0)
 - [ ] GATE A — full suite, harness, scoreboard, frontend

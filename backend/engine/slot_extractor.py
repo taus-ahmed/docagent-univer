@@ -602,6 +602,112 @@ def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
     return merged, fields_resp or last_resp, failed
 
 
+def _row_file_page(r, all_lines, page_lines, nums):
+    """The file page a table row was read from: geometry first, then the
+    model's prompt page mapped to file numbering; None when unknown."""
+    try:
+        pg = page_of(r.get("source", ""), r.get("page", 0), all_lines, page_lines)
+    except Exception:
+        pg = None
+    if pg:
+        return int(pg)
+    try:
+        k = int(r.get("page") or 0)
+    except (TypeError, ValueError):
+        return None
+    return nums[k - 1] if 1 <= k <= len(nums) else None
+
+
+def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
+                       inventory, doc_type, notes):
+    """Overnight A4: ask each page whose rows the answer lost, on its own.
+
+    A page qualifies for a band when the inventory counts at least 2
+    candidate rows of the band's kind on it, the page prints the band's
+    headings or directly follows a page that does, and the answer holds
+    none of its rows or fewer than half. Calls are capped by
+    PAGE_RECOVERY_MAX_CALLS (default 4; 0 turns recovery off). A page's
+    recovered rows replace its rows only when there are more of them; every
+    band's rows are then put back in page order."""
+    import llm_contract as C
+    import source_inventory as SI
+
+    cap = int(C.setting("PAGE_RECOVERY_MAX_CALLS", 4) or 0)
+    if cap <= 0:
+        return parsed
+    all_lines = flatten_pages(page_lines)
+    want = {}                                   # page index -> [band]
+    current = {}
+    for t in slots["tables"]:
+        kind = SI.band_kind(t)
+        rows = _table_rows_of(parsed, t, slots)
+        current[t["name"]] = rows
+        if not rows:
+            # a table missing WHOLE is the second request's job (one targeted
+            # call, then NEEDS_ATTENTION); recovery is for a LOST PAGE of a
+            # table that did come back
+            continue
+        got = {}
+        for r in rows:
+            n = _row_file_page(r, all_lines, page_lines, nums)
+            got[n] = got.get(n, 0) + 1
+        prev = False
+        for k, n in enumerate(nums):
+            lines = page_lines[k] if k < len(page_lines) else []
+            cand = (inventory["pages"].get(n) or {}).get(f"{kind}_rows", 0)
+            here = SI.page_has_band(lines, t)
+            if cand >= 2 and (here or prev) and got.get(n, 0) * 2 < cand:
+                want.setdefault(k, []).append(t)
+            prev = here or (prev and cand > 0)
+    if not want:
+        return parsed
+    tables = parsed.get("tables")
+    if not isinstance(tables, dict):
+        tables = parsed["tables"] = {}
+    for k in sorted(want)[:cap]:
+        n = nums[k]
+        sub = {"fields": [], "tables": want[k]}
+        p = build_prompt(sub, [pages[k]], doc_type) + (
+            f"\n\nRECOVERY REQUEST. Your previous answer left out the rows printed "
+            f"on page {n} of {len(nums)}. This is page {n} sent on its own. "
+            f"Return every row printed on THIS page; a heading row reprinted at "
+            f"the top of the page is not a row.")
+        img = [page_images[k]] if k < len(page_images) and page_images[k] else []
+        exp = {t["name"]: (inventory["pages"].get(n) or {}).get(
+            f"{SI.band_kind(t)}_rows", 0) for t in want[k]}
+        got_parsed, _resp = ask(p, sub, f"recover:page {n}", images=img,
+                                text=pages[k], expect=exp)
+        if not isinstance(got_parsed, dict):
+            notes.append(f"page {n}: recovery request returned no usable answer")
+            continue
+        for t in want[k]:
+            heads = table_headers(t)
+            new = []
+            for r in _table_rows_of(got_parsed, t, {"tables": want[k]}):
+                cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
+                if _echoed_header(cells, heads):
+                    continue
+                new.append({**r, "page": k + 1})
+            old = current[t["name"]]
+            mine = [r for r in old if _row_file_page(r, all_lines, page_lines, nums) == n]
+            if len(new) <= len(mine):
+                notes.append(f'{t["name"]}: recovery request for page {n} added no rows')
+                continue
+            kept = [r for r in old if not any(r is m for m in mine)]
+            current[t["name"]] = kept + new
+            notes.append(f'{t["name"]}: {len(new) - len(mine)} row(s) recovered from '
+                         f"page {n} by a page-targeted request")
+    for t in slots["tables"]:
+        rows = current[t["name"]]
+        order = {id(r): (_row_file_page(r, all_lines, page_lines, nums) or 0, i)
+                 for i, r in enumerate(rows)}
+        rows = sorted(rows, key=lambda r: order[id(r)])
+        if t["name"] not in tables and len(tables) == 1 and len(slots["tables"]) == 1:
+            tables.pop(next(iter(tables)))          # the model renamed the table
+        tables[t["name"]] = rows
+    return parsed
+
+
 def output_cap(slots, expected_rows) -> int:
     """maxOutputTokens for one call, sized from what the page holds.
 
@@ -1363,8 +1469,15 @@ def _reprints_block(page, nxt, located, pages_by_row, all_lines) -> bool:
         block.append(_line_text(ln))
     if not block:
         return False
-    on_next = {_line_text(ln) for ln in all_lines if line_page(ln) == nxt}
-    return any(b in on_next for b in block)
+    nxt_lines = [_line_text(ln) for ln in all_lines if line_page(ln) == nxt]
+    # Overnight A4: a single column-header line reprinted as the FIRST thing
+    # on the next page is a running header — the same table, continued
+    # (mammoth_2pg page 2 opens with "Date Description Debit Credit
+    # Balance"). A heading block printed further down the page, under a
+    # title or prose of its own, is still a new table (Berkshire).
+    if len(block) == 1 and block[0] in nxt_lines[:2]:
+        return False
+    return any(b in set(nxt_lines) for b in block)
 
 
 def select_region(located, all_lines, page_lines, headers=None):
@@ -1692,6 +1805,21 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             C.note_contract(attempts, *C.counts(parsed2, sub))
         contract_after = C.check_answer(parsed, slots, resp, expected)
 
+    # ── LOST PAGE RECOVERY (overnight A4) ──
+    # One call over a two-page statement came back with page 1's 37 rows and
+    # nothing of page 2's 11; the gate then reported page 2's amounts and
+    # repaired nothing. Before any completeness reason: a page the inventory
+    # shows holding rows of a band's kind, with none (or under half) of them
+    # in the answer, is asked again ON ITS OWN, at most
+    # PAGE_RECOVERY_MAX_CALLS times per document; its rows are merged in page
+    # order, a reprinted header row is never a row, and the gate then judges
+    # the merged answer — so a page still missing still raises its reason.
+    recovered_notes = []
+    if page_lines and slots["tables"] and not chunked and isinstance(parsed, dict):
+        parsed = recover_lost_pages(ask, parsed, slots, pages, page_lines,
+                                    page_images or [], nums, inventory,
+                                    default_doc_type, recovered_notes)
+
     # Declared identifier kinds (`id_type` on a value cell or a table
     # heading) — attached AFTER the prompt is built, so a declaration never
     # changes what the model is asked (Part 1.6).
@@ -1701,7 +1829,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # `grounded` is None when the value never reached span verification (it was
     # set aside for a different reason, which its flag names).
     field_prov = {}
-    extracted_fields, conf_map, flagged, notes = {}, {}, [], []
+    extracted_fields, conf_map, flagged, notes = {}, {}, [], list(recovered_notes)
     ungrounded = 0
     misplaced = 0
     dropped = 0
