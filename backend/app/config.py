@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     # extraction, its retries and recovery, shape inference, the image path).
     # 0 = as deterministic as the API allows; recorded on every attempt.
     EXTRACTION_TEMPERATURE: float = 0.0
+    # Overnight M1: models tried after GEMINI_MODEL answers 404, comma-separated.
+    # Empty (the default) = none: a 404 fails the document with the model named.
+    GEMINI_MODEL_FALLBACKS: str = ""
 
     # ── Model-call contract (engine/llm_contract.py) ──────────────────────────
     # Per-attempt HTTP timeout, the overall retry budget for one logical call

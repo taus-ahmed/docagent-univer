@@ -117,16 +117,24 @@ def _supports_thinking_config(model: str) -> bool:
 # ── Client ────────────────────────────────────────────────────────────────────
 
 class GeminiClient:
-    """Direct v1beta REST client. The model comes from GEMINI_MODEL; the
-    CANDIDATES list is walked only when a model answers 404."""
+    """Direct v1beta REST client. The model comes from GEMINI_MODEL.
+
+    Overnight M1: there is no built-in candidate list any more. It used to
+    walk gemini-2.5-flash-lite / gemini-2.5-flash / gemini-flash-latest /
+    gemini-flash-lite-latest whenever a model answered 404, so a retired or
+    mistyped model silently became another model's extraction. Fallbacks are
+    only what GEMINI_MODEL_FALLBACKS lists (comma-separated, default empty);
+    with none, a 404 fails the call with the model named."""
 
     BASE_URL    = "https://generativelanguage.googleapis.com/v1beta/models"
-    CANDIDATES  = [
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-flash",
-        "gemini-flash-latest",
-        "gemini-flash-lite-latest",
-    ]
+
+    @staticmethod
+    def fallbacks() -> list:
+        import os
+        raw = os.environ.get("GEMINI_MODEL_FALLBACKS")
+        if raw is None:
+            raw = C.setting("GEMINI_MODEL_FALLBACKS", "") or ""
+        return [m.strip().replace("models/", "") for m in str(raw).split(",") if m.strip()]
 
     def __init__(self, api_key: str = ""):
         self.api_key       = api_key or settings.GEMINI_API_KEY
@@ -223,7 +231,7 @@ class GeminiClient:
         n_images = sum(1 for p in parts if isinstance(p, dict) and "inlineData" in p)
 
         ordered = []
-        for m in ([model, self._good_model, self._preferred] + self.CANDIDATES):
+        for m in ([model or self._preferred] + self.fallbacks()):
             if m and m not in ordered:
                 ordered.append(m)
 
@@ -299,6 +307,16 @@ class GeminiClient:
                     "structured": bool(schema),
                 }
         err = last or C.LLMCallError(C.MODEL_NOT_FOUND, "no model answered")
+        if err.kind == C.MODEL_NOT_FOUND:
+            # M1: say WHICH model, and that nothing was substituted
+            tried = ", ".join(ordered)
+            err = C.LLMCallError(
+                C.MODEL_NOT_FOUND,
+                f"model not found (HTTP 404): {tried} — no other model was used"
+                + ("" if len(ordered) > 1 else
+                   "; set GEMINI_MODEL to an available model or list fallbacks in "
+                   "GEMINI_MODEL_FALLBACKS"),
+                status=getattr(err, "status", 404))
         err.attempts = attempts
         raise err
 
