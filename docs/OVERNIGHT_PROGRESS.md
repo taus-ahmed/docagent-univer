@@ -18,7 +18,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] C — merged origin/review/run-f; all 13 strict xfails fixed and their markers removed (F2 x3, F4 x4, F5, E9 x2, E11, E12 x2); _on_page refuses a value assembled across columns
 - [x] GATE C — pytest exit 0: 5235 tests, 0 failures, 0 errors (junit); harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0; frontend unchanged
 - [x] D1 — period cue (years, Q1-Q4, FY, H1/H2, months) for matrix headings; a total word makes a field only as a short label (<= 3 words); two runs a blank column apart are two tables when each names money or a later row labels both; 3 markers off
-- [ ] D2 — D13 warning-inventory test asserts content
+- [x] D2 — the D13 inventory test asserts F10's two formula warnings by grid and text
 - [ ] D3 — stale T9 ambiguity text
 - [ ] GATE D
 - [ ] E1 — review edits revert (owner note: API persists; stale frontend state — ReviewPanel does not update result.extracted_data, ResultsGrid.refresh() invalidates only the review query; refetch/invalidate the results query after EVERY review action, status and added rows too; frontend test)

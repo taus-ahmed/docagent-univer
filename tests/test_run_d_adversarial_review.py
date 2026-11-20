@@ -238,6 +238,12 @@ def test_d13_warning_inventory_is_reproducible_over_every_committed_template():
     assert len(grids) == 96
     # Run E, E8: was 33 grids / 36 warnings, 33 of them noise on valid
     # layouts. What remains is F10's two formula cells.
-    assert len(warned) == 1
-    assert sum(map(len, warned.values())) == 2
+    # Overnight D2: asserted by grid AND warning text, not by count — a
+    # different warning on a different grid must not pass in their place.
+    assert warned == {"scenario/F10": [
+        "Cell D1 holds '=B1*0.2', which looks like a formula. It is read as "
+        "a label and is not calculated.",
+        "Cell B2 holds '=SUM(B1,D1)', which looks like a formula. It is read "
+        "as a label and is not calculated.",
+    ]}
 
