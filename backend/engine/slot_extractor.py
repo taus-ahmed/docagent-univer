@@ -159,6 +159,9 @@ def printed_numbers(text) -> list[str]:
     `$ 19,6 94 $ 37,574` -> ['$19,694', '$37,574'].
     """
     text = _unify(text)
+    # B1 (overnight): a dot leader is not part of the number it leads to —
+    # "1 Interest Income .....70.00" prints 70.00 (jobs 53/54)
+    text = re.sub(r"(?:\.{2,}|…+)(?=[\d$£€(-])", " ", text)
     pieces = [_piece(m) for m in _NUM_PIECE.finditer(text)]
     out = []
     for p in pieces:
@@ -1162,6 +1165,52 @@ def value_on_line(value, text) -> bool:
     return bool(fv) and fv in _flat(text)
 
 
+def label_row_value(value, label, source, all_lines):
+    """B1 (overnight): the index of the line printing `value` beneath the
+    heading that names `label`, when `source` is a LABEL ROW — a line of
+    headings holding no number (job 40: "Beginning balance Withdrawals
+    Deposits Ending balance" over "$18,240.12 $10,309.62 ..."). The heading
+    is the phrase of adjacent words over the value; it must be the label or
+    one of its aliases (engine/aliases.py), "Total" aside. None otherwise."""
+    import aliases as AL
+    src = _flat(source)
+    if not src or printed_numbers(source):
+        return None
+    idx = next((i for i, ln in enumerate(all_lines) if _flat(_line_str(ln)) == src), None)
+    if idx is None:
+        return None
+    heads = [w for w in all_lines[idx] if str(w.get("text", "")).strip()]
+    groups, cur = [], []
+    for w in heads:
+        if cur and float(w["x0"]) - float(cur[-1]["x1"]) > 8:
+            groups.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        groups.append(cur)
+    names = {AL._norm(x) for x in [label] + AL.aliases_for(label)}
+    names |= {re.sub(r"^total\s+", "", n) for n in names}
+    key = _number_key(value)
+    page = line_page(all_lines[idx])
+    for j in (idx + 1, idx + 2):
+        if j >= len(all_lines) or line_page(all_lines[j]) != page:
+            break
+        for w in all_lines[j]:
+            t = str(w.get("text", ""))
+            hit = (key is not None and any(_number_key(x) == key for x in printed_numbers(t))) \
+                or (key is None and _flat(t) == _flat(value))
+            if not hit:
+                continue
+            cx = (float(w["x0"]) + float(w["x1"])) / 2
+            g = min(groups, key=lambda g: 0 if float(g[0]["x0"]) <= cx <= float(g[-1]["x1"])
+                    else min(abs(cx - float(g[0]["x0"])), abs(cx - float(g[-1]["x1"]))))
+            phrase = AL._norm(" ".join(str(x.get("text", "")) for x in g))
+            if phrase in names:
+                return j
+            return None
+    return None
+
+
 def value_lines(value, all_lines) -> list:
     """Indices of every line on which `value` is printed."""
     return [i for i, ln in enumerate(all_lines or [])
@@ -2081,6 +2130,39 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         field_prov[slot["ref"]].update(
                             source=source, reanchored=True,
                             page=page_of(source, 0, all_lines, page_lines, pick))
+            if not ok and all_lines and why == "source span not found in document" \
+                    and (in_line_order(value, pages, page) or canonical_value(value, all_lines)):
+                # B1 (overnight): the QUOTE is not on the page but the VALUE is,
+                # as an ordered run of the page's own words across lines. The
+                # model glued the line breaks ("14 Weavers YardShoreditchLondon",
+                # job 42): its quote is wrong, its value is not. Low is for a
+                # value neither its quote nor the page holds.
+                source = value
+                ok, why = verify_span(value, source, 0, pages)
+                if not ok and canonical_value(value, all_lines):
+                    # spelled by the page's own words in reading order within
+                    # its column (D9), though the flattened line also carries
+                    # the neighbouring box ("YOUR CITY, ... ZIP 14a Other")
+                    ok, why = True, ""
+                if ok:
+                    reanchored += 1
+                    field_prov[slot["ref"]].update(source=source, reanchored=True)
+            if not ok and all_lines and why == "value not found inside its own source span":
+                # B1: the quote is the LABEL ROW of a column-heading layout
+                # ("Beginning balance Withdrawals Deposits Ending balance",
+                # job 40) and the value is printed on the line beneath, under
+                # the heading that names this slot. Grounded by that line.
+                below = label_row_value(value, slot["row_label"], source, all_lines)
+                if below is not None:
+                    ok, why = verify_span(value, source, 0, pages,
+                                          record=_line_str(all_lines[below]))
+                    if ok:
+                        reanchored += 1
+                        field_prov[slot["ref"]].update(
+                            source=f"{source} / {_line_str(all_lines[below])}",
+                            reanchored=True,
+                            page=page_of(_line_str(all_lines[below]), 0, all_lines,
+                                         page_lines, below))
             field_prov[slot["ref"]]["grounded"] = ok
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
                                          inferred=inferred)
