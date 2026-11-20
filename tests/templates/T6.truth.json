@@ -4,10 +4,23 @@
   "sheets": [
     "Template"
   ],
-  "fields": [],
+  "fields": [
+    {
+      "label": "End left",
+      "label_cell": "A4",
+      "cell": "B4",
+      "sheet": "Template"
+    },
+    {
+      "label": "End right",
+      "label_cell": "F4",
+      "cell": "G4",
+      "sheet": "Template"
+    }
+  ],
   "bands": [
     {
-      "name": "left",
+      "name": "table_1",
       "sheet": "Template",
       "orientation": "rows",
       "header_row": 1,
@@ -24,7 +37,7 @@
       "write_rows": 5
     },
     {
-      "name": "right",
+      "name": "table_2",
       "sheet": "Template",
       "orientation": "rows",
       "header_row": 1,
@@ -44,7 +57,5 @@
   "formulas": [],
   "native_features": {},
   "write": {},
-  "prompt_ambiguities": [
-    "The gapped header row yields no table slot descriptions, so neither side is addressable."
-  ]
+  "prompt_ambiguities": []
 }

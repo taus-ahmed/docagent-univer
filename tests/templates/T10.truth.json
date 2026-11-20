@@ -24,11 +24,16 @@
       "sheet": "Template"
     },
     {
-      "label": "Total above",
-      "label_cell": "A18",
-      "cell": "B18",
-      "sheet": "Template",
-      "empty": true
+      "label": "End",
+      "label_cell": "A16",
+      "cell": "B16",
+      "sheet": "Template"
+    },
+    {
+      "label": "End",
+      "label_cell": "A22",
+      "cell": "B22",
+      "sheet": "Template"
     }
   ],
   "bands": [
@@ -59,7 +64,7 @@
       "orientation": "rows",
       "header_row": 7,
       "first_data_row": 8,
-      "reserved_rows": 2,
+      "reserved_rows": 3,
       "start_col": "A",
       "columns": [
         "Blank",
@@ -96,7 +101,7 @@
       "write_rows": 2
     },
     {
-      "name": "table_4",
+      "name": "Total above",
       "sheet": "Template",
       "orientation": "rows",
       "header_row": 19,
@@ -108,12 +113,7 @@
         "Qty",
         "Amount"
       ],
-      "totals_cells": [
-        {
-          "label": "Total above",
-          "cell": "B18"
-        }
-      ],
+      "totals_cells": [],
       "write_rows": 2
     }
   ],
@@ -121,6 +121,6 @@
   "native_features": {},
   "write": {},
   "prompt_ambiguities": [
-    "Totals have no explicit ownership; the prompt treats any detected total as an independent field."
+    "Without declared tables, geometry cannot distinguish a spacer from reserved capacity or a total above a table from its title."
   ]
 }

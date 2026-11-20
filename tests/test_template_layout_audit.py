@@ -33,51 +33,74 @@ from tests.template_layout.helpers import (
 
 
 PARSE_XFAIL = {
-    "F2": ("F2: `Invoice Date | _ | Approval Code` is F4's same-row-pair geometry; "
-           "the truth wants the cells below, F4's truth the cells right, and the "
-           "right cell is usable, so it is kept (Run D, D9 never guesses)"),
     "F3": "F3: separator columns do not extend the text-defined used range",
     "F10": "F10: formula cells participate in label geometry",
-    "T2": ("T2: the truth wants 0 reserved rows under a header-only band; "
-           "tests/test_prod_templates.py pins the same shape (production "
-           "bank_statement_101) at >= 5. Contradictory tests: owner's decision"),
-    "T13": ("T13: as T2 - 0 reserved rows wanted, while "
-            "tests/test_prod_templates.py requires >= 5 for the same shape"),
-    "T6": ("T6: both side-by-side bands are detected (Run D, D7), but the truth "
-           "names them left/right, which nothing in the grid prints, and gives "
-           "the closing End left/End right labels no slot although T1's Total "
-           "in the same position has one"),
-    "T10": ("T10: the truth needs three readings geometry cannot make: a blank row "
-            "before a total is a spacer, not a reserved row; `Total above` directly "
-            "over a header is a total, not the band's title; and the closing `End` "
-            "rows get no slot"),
     "T12": "T12: transposed bands require an editor declaration",
     "T14": "T14: Excel Table metadata is ignored and ten rows are invented",
-    "T15": ("T15: Owner/Reviewed beside the band are fields (Run D, D8), but the "
-            "truth gives the closing `End | _` row no slot although T1's "
-            "`Total | _` in the same position has one"),
     "T18": "T18: only the first worksheet enters the template grid",
 }
 
 
 WRITE_XFAIL = {
-    "F2": "F2: see the parse reason - values are written to the usable right-hand cells",
     "F3": "F3: values are written in adjacent cells instead of separated slots",
     "F9": "F9: number formats and dropdown validation are not in the grid contract",
     "F10": "F10: formula geometry creates wrong slots and misses intended values",
     "F12": "F12: hidden rows and columns are not preserved",
-    "T9": ("T9: the band now includes Item (Run D, D12), but the truth expects the "
-           "text Item in A2 while also keeping the A1:A2 merge that covers A2"),
-    "T10": "T10: see the parse reason",
-    "T11": ("T11: the subtotal row keeps its place and records go around it (Run D, "
-            "D12; tests/test_run_d_shape.py), but this test expects records 1-5 in "
-            "rows 2-6 contiguously AND the subtotal formula in E4: one cell, two values"),
     "T12": "T12: an undeclared transposed table is written as scalar fields",
     "T14": "T14: the Excel Table object is not recreated",
     "T18": "T18: secondary worksheets are not written",
-    "T21": ("T21: blocks are compact (Run C/D), but this test expects 2 blank rows "
-            "between documents; Run C's acceptance test requires exactly 3"),
 }
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=("F2: true label-above/value-below intent needs an explicit "
+            "'value below' setting in the editor"),
+)
+def test_f2_true_label_above_needs_an_explicit_editor_setting():
+    grid, _shape = shape_for("F2")
+    # Conceptual future declaration: production deliberately ignores unknown
+    # keys today and keeps the usable right-hand cells, exactly as F4 does.
+    grid["valueDirections"] = {"A1": "below", "C1": "below"}
+    from template_shape import compute_shape
+    shape = compute_shape(grid, log=lambda _m: None)
+    assert normalize_fields(shape) == [
+        {"label": "Invoice Date", "cell": "A2"},
+        {"label": "Approval Code", "cell": "C2"},
+    ]
+
+
+DECLARED_TABLE_INTENT = {
+    "T6": {
+        "fields": [],
+        "bands": [("left", 2), ("right", 2)],
+    },
+    "T10": {
+        "fields": [("Total direct", "B5"), ("Total after blank", "B11"),
+                   ("Total right", "F14"), ("Total above", "B18")],
+        "bands": [("table_1", 2), ("table_2", 2),
+                  ("table_3", 2), ("table_4", 2)],
+    },
+    "T15": {
+        "fields": [("Owner", "F2"), ("Reviewed", "F3")],
+        "bands": [("table", 3)],
+    },
+}
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [pytest.param(s, id=s, marks=pytest.mark.xfail(
+        strict=True, reason=f"{s}: needs declared tables"))
+     for s in DECLARED_TABLE_INTENT],
+)
+def test_owner_table_intent_needs_declared_tables(scenario):
+    _grid, shape = shape_for(scenario)
+    want = DECLARED_TABLE_INTENT[scenario]
+    got_fields = sorted((f["label"], f["cell"]) for f in normalize_fields(shape))
+    got_bands = [(b["name"], b["reserved_rows"]) for b in normalize_bands(shape)]
+    assert got_fields == sorted(want["fields"])
+    assert got_bands == want["bands"]
 
 
 def _params(xfails):
@@ -163,20 +186,36 @@ def _assert_band_values(out_ws, truth, doc_index, doc_offset, override):
                     assert out_ws.cell(row=b["first_data_row"] + ci + doc_offset,
                                        column=start_col + 1 + rec).value == expected
             continue
+        header_cells = b.get("header_cells") or []
         for ci, heading in enumerate(b["columns"]):
-            assert out_ws.cell(row=header_row, column=start_col + ci).value == heading
+            if header_cells:
+                ref = shift_cell(header_cells[ci], truth, doc_index, override, doc_offset)
+                assert out_ws[ref].value == heading
+            else:
+                assert out_ws.cell(row=header_row, column=start_col + ci).value == heading
         # The band's own growth starts immediately below its header.  Applying
         # its delta to first_data_row would incorrectly move a zero-reserved
         # header-only band below the rows it just created.
         first_row = header_row + 1
-        for ri in range(count):
+        interior_rows = {
+            desired_row(int(re.search(r"\d+", item["label_cell"]).group()),
+                        truth, doc_index, override) + doc_offset
+            for item in b.get("interior_rows") or []
+        }
+        record_rows = []
+        row = first_row
+        while len(record_rows) < count:
+            if row not in interior_rows:
+                record_rows.append(row)
+            row += 1
+        for ri, record_row in enumerate(record_rows):
             for ci, heading in enumerate(b["columns"]):
                 if heading in omitted:
                     expected = None
                 else:
                     expected = (None if ri == count - 1 and ci == len(b["columns"]) - 1
                                 else f"D{doc_index+1}:T{bi+1}:R{ri+1}:C{ci+1}")
-                assert out_ws.cell(row=first_row + ri, column=start_col + ci).value == expected
+                assert out_ws.cell(row=record_row, column=start_col + ci).value == expected
 
 
 def _shift_range(ref, truth, doc_index, override, doc_offset):
@@ -239,7 +278,7 @@ def _check_written_scenario(scenario, tmp_path, override=None):
         _assert_labels_and_fields(out[truth["sheets"][0]], truth, di, doc_offset, doc_override)
         _assert_band_values(out[truth["sheets"][0]], truth, di, doc_offset, doc_override)
         _assert_formulas_and_native(out, truth, di, doc_offset, doc_override)
-        doc_offset += desired_block_height(source_ws, truth, di, doc_override) + 2
+        doc_offset += desired_block_height(source_ws, truth, di, doc_override) + 3
 
 
 @pytest.mark.parametrize("scenario", _params(WRITE_XFAIL))

@@ -7,7 +7,6 @@
   "headers": {
     "Bank Name": {"value": "Lakeshore National Bank", "type": "text"},
     "Account Holder": {"value": "Redwood Landscaping LLC", "type": "text"},
-    "Account Number": {"value": "7301558842", "type": "identifier"},
     "Account Number Last 4": {"value": "8842", "type": "identifier"},
     "Account Type": {"value": "Business Checking", "type": "text"},
     "Statement Period Start": {"value": "09/01/2026", "type": "date"},
@@ -31,5 +30,5 @@
     "Total Deposits and Credits": {"value": 12445.50, "type": "money"},
     "Service Fees": {"value": 45.00, "type": "money"}
   },
-  "absent_slots": ["GL Account", "Memo"]
+  "absent_slots": ["Account Number", "GL Account", "Memo"]
 }

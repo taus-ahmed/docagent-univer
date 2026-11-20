@@ -52,7 +52,7 @@ The audit fixtures are real `.xlsx` files. Test tooling converts the first works
 
 For each row-oriented table, overflow is `max(0, extracted_rows - reserved_rows)`. A template row is shifted by the sum of overflows from bands ending above it ([`excel_slot.py:334-346`](../backend/app/services/excel_slot.py#L334)). Static text, scalar fields, table rows, styles, and safe merges all use that calculated row ([`excel_slot.py:361-375`](../backend/app/services/excel_slot.py#L361), [`excel_slot.py:436-535`](../backend/app/services/excel_slot.py#L436)). The code never calls `insert_rows`, never contracts a short/empty band, and never inserts a protective gap between two bands in the slot path. It also sums overflows independently, so it has no side-by-side-band grouping rule.
 
-Transposed bands grow rightward and do not shift rows ([`excel_slot.py:221-231`](../backend/app/services/excel_slot.py#L221), [`excel_slot.py:464-488`](../backend/app/services/excel_slot.py#L464)). Multiple documents repeat the full template block and use exactly two blank rows between blocks ([`excel_slot.py:233-240`](../backend/app/services/excel_slot.py#L233), [`excel_slot.py:537-538`](../backend/app/services/excel_slot.py#L537)).
+Transposed bands grow rightward and do not shift rows ([`excel_slot.py:221-231`](../backend/app/services/excel_slot.py#L221), [`excel_slot.py:464-488`](../backend/app/services/excel_slot.py#L464)). Multiple documents repeat the full template block and use exactly three blank rows between blocks (`GAP_BETWEEN_DOCS = 3`).
 
 ## Run D changes (DECISION-LOG §27)
 
@@ -65,16 +65,94 @@ checked against every committed grid:
 - A label with no usable right cell takes the empty cell below it; when both exist the right is kept (F2 itself is unchanged: its right cell is usable).
 - An empty merge just past a label's merge is its slot (F6).
 - Placeholder text (`____`, `[ ]`, `{{ }}`, `xxx`, `enter … here`, `TBD`) is an empty slot and is replaced on write (F11).
-- A header with nothing beneath it still reserves 10 rows: T2/T13 want 0, `tests/test_prod_templates.py` pins >= 5 for the same shape (owner's decision); since Run C the writer drops unused reserved rows either way.
+- A header with nothing beneath it reserves 10 rows. T2/T13 now agree with `tests/test_prod_templates.py`, which pins the same production shape at `>= 5`; since Run C the writer drops unused reserved rows, so the export is unchanged.
 - A cell covered by a one-column merge from above takes that merge's heading (T9).
 - A subtotal typed inside a table keeps its place on write; records go around it.
 - Writer: bands are written with their actual row count (Run C); a failed record keeps the template geometry (T20).
 - `template_warnings` reports formulas read as labels, shared rows, implied-or-below slots, unlabelled merged boxes, header-only tables and merges over tables.
 
-After Run D: 23/34 scenarios parse exactly and 22/34 round-trip exactly.
-Still strict-xfail: parse F2, F3, F10, T2, T6, T10, T12, T13, T14, T15, T18; write F2,
-F3, F9, F10, F12, T9, T10, T11, T12, T14, T18, T21. The reasons are written
-on each marker in `tests/test_template_layout_audit.py`.
+After the Part 1 owner rulings: 29/34 scenarios parse exactly and 27/34
+round-trip exactly. Strict-xfail: parse F3, F10, T12, T14, T18; write F3, F9,
+F10, F12, T12, T14, T18. Four separate strict tests retain F2's future editor
+setting and the T6/T10/T15 declared-table intent. The reasons are written on
+each marker in `tests/test_template_layout_audit.py`.
+
+## Part 1 owner rulings (authoritative)
+
+1. **T2 and T13 — reserved rows.** A header with nothing beneath it keeps the
+   production rule: ten synthetic rows, satisfying the `>= 5` production
+   regression. The audit previously expected zero. It now expects ten because
+   the same geometry must have one truth; unused rows are dropped, so the
+   exported workbook is identical.
+2. **T21 — document gap.** Exactly three blank rows separate document blocks.
+   This is the owner specification, the Run C acceptance result, and the
+   `GAP_BETWEEN_DOCS` constant. The audit's former `+ 2` offset was wrong.
+3. **F2 — horizontal unless explicitly vertical.** If the cell to a label's
+   right is usable, it is the value cell, consistent with F4. The below cell
+   is inferred only when the right cell is unusable. True vertical intent is
+   retained as a future strict xfail until the editor can save an explicit
+   **value below** setting.
+4. **T6, T10, and T15 — declarations decide table intent.** A labelled cell
+   with an empty neighbour is a slot, so `End | _` behaves exactly like
+   `Total | _`. Semantic table names, spacer-versus-capacity decisions, and
+   whether a closing row belongs to a table cannot come from geometry; those
+   owner-intent checks are isolated under strict `needs declared tables`
+   xfails for the editor's `Table ↓` / `Table →` declarations.
+5. **T9 and T11 — physically possible write truth.** In T9, `Item` remains at
+   A1, the anchor of merge A1:A2; A2 cannot also hold text. In T11, record rows
+   go around the structural subtotal row and E4 retains its formula; E4 cannot
+   hold a record amount and a formula simultaneously.
+6. **Watermark audit corpus.** The audit enumerates only committed files under
+   `tests/fixtures/acceptance`. Untracked owner material in `local_docs` must
+   never change a hermetic test's file, page, or hit counts.
+7. **Recorded bank golden.** `Bank_Recon` has no slot for the full account
+   number. `Account Number` is therefore recorded in `absent_slots`; the
+   available `Account Number Last 4` remains expected. This prevents an
+   impossible field from counting as a silent extraction defect.
+
+## Run D adversarial inventory
+
+The comparison baseline is the parent of D6 (`04f8b32`): D1-D5 are present,
+but none of D6-D13 is. The audit used 96 committed template grids (all 46
+sheets in the acceptance workbook, two production JSON grids, nine gold
+templates, five reconstructed round-2 templates, and the 34 scenario
+workbooks). No committed non-scenario template changed its slot map. Eight
+scenario maps changed:
+
+| Scenario | Exact old → new slot-map difference |
+| --- | --- |
+| F5 | Added I1 `Status`, H4 `Rate`, H5 `Reviewer`; bands unchanged. |
+| F6 | Added C1 `Legal Name`, C3 `Reporting Date`; bands unchanged. |
+| F10 | Removed C2 and D2 labelled `=SUM(B1,D1)`; added C2 labelled `Tax`; no bands in either version. |
+| F11 | Added B1 `Name`, B2 `Date`; bands unchanged. |
+| T6 | Removed extra scalar slots C4/D4 `End left` and H4/I4 `End right` (B4/G4 remain). Added `table_1` A:D and `table_2` F:I, each header row 1 with reserved rows 2-3; old version had no bands. |
+| T9 | Replaced band `Debit` (`Debit`, `Credit`) with band `Amount` (`Item`, `Debit`, `Credit`), retaining header row 2 and data rows 3-5. |
+| T10 | Added F14 `Total right`; bands unchanged. |
+| T15 | Added F2 `Owner`, F3 `Reviewed`; band unchanged. |
+
+Adversarial inputs found strict Run D regressions for: D5 (a correct
+all-page Grand Total hides a wrong page subtotal); D6 (a matrix heading with
+one empty heading cell becomes scalar fields); D7 (one table with an internal
+blank spacer becomes two tables); D8 (a static note beside a table becomes a
+field); D10 (a decorative empty merge beside a merged section heading becomes
+its slot); D11 (the legitimate exact label `TBD` is erased); and D12 (a
+vertical merge over a scalar label invents a band). D1-D4 and D9 survived the
+requested ambiguity, routing, repeated-ending, rotation, signed-number, and
+right-versus-below probes. `Total due TBD` is correctly not a placeholder.
+
+D13 emitted **36 warnings on 33 of the 96 grids**. Only three warnings point
+at a failing audit truth (F10's two formulas and T14's unsupported native table
+shape). The other 33 are noise under the recorded rules:
+
+- valid right-hand slots: F5, F6, F7, F12, T10, T15, plus three fields in
+  `gold/payslip_transposed`;
+- valid structural behavior: T6 shared-row growth and T11's preserved subtotal
+  formula;
+- owner-approved header-only bands: T2, T13, production
+  `bank_statement_101`, round-2 B1/B2, and acceptance sheets Index, W2_Full,
+  W2_Register, Pay_Full, Pay_Register, Bank_TxnOnly, Bank_Audit, Invest_Stmt,
+  AP_Register, AP_PayList, Rcpt_Register, Rcpt_SalesTicket, Chq_Log, X_Strip,
+  X_Bundle, Answers, and RunLog.
 
 ## Scenario results (before Run D)
 
