@@ -299,11 +299,6 @@ def test_04_specimen_placeholders_are_not_real_payer_or_recipient_data():
     _assert_clear_no_data_state(data)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Rule: numbered diagram callouts cannot satisfy nearby amount slots; "
-            "a missed printed value must be flagged-empty"),
-)
 def test_05_numbered_callout_is_not_accepted_as_the_labelled_amount():
     document = _document("callouts")
     source, page = _line(document, "1", "Your Account Value", "$125,310.49")

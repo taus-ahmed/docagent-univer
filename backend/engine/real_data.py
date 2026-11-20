@@ -11,6 +11,8 @@ was printed and still was not data:
       list number or the example figure
   F3  a SPECIMEN — `SAMPLE 2024 TAX FORM`, `MR A SAMPLE`, `ADD 1` ... `ADD 5`,
       `FULL COMPANY NAME` — answered with the placeholders
+  F4  a numbered DIAGRAM CALLOUT — `1 Your Account Value: $125,310.49` —
+      answered with the callout number
 
 Every rule here REFUSES or FLAGS; none of them invents a value. A refused value
 is not written. When nothing the model offered survives, the document says so
@@ -62,6 +64,19 @@ def list_number(value, source) -> bool:
     return len(toks) > 1 and toks[0] == v + "."
 
 
+def callout_number(value, source, label) -> bool:
+    """A bare one- or two-digit number printed IMMEDIATELY BEFORE the slot's
+    own label (`1 Your Account Value: $125,310.49`): a diagram callout
+    numbering the label, not the label's value."""
+    v = str(value or "").strip()
+    if not re.fullmatch(r"\d{1,2}", v):
+        return False
+    toks = [t.rstrip(":.,") for t in _words(source)]
+    lab = [w.rstrip(":.,") for w in _words(label) if w]
+    return bool(lab) and any(t == v and toks[i + 1:i + 1 + len(lab)] == lab
+                             for i, t in enumerate(toks))
+
+
 _FUNCTION = {"the", "a", "an", "is", "are", "will", "be", "for", "of", "to", "in",
              "your", "you", "this", "that", "and", "or", "on", "only", "always",
              "if", "it", "its", "as", "by", "with", "which", "when"}
@@ -83,6 +98,8 @@ def refusal(value, source, label, *, family, page_texts, specimen) -> str:
         return "a specimen placeholder (this is a sample form), not real data"
     if list_number(value, source):
         return "a list number on an explanatory line, not a value"
+    if callout_number(value, source, label):
+        return "a callout number printed before the label, not its value"
     # A pay document's figures are printed against labels; a figure inside a
     # SENTENCE is an example in the explanatory text ("the amounts will always
     # balance to $0.00"). Scoped to pay documents: a bill or a letter states

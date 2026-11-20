@@ -43,6 +43,14 @@ def test_f3_a_real_name_containing_sample_on_an_ordinary_document_is_data():
                       page_texts=specimen, specimen=True)
 
 
+def test_f4_a_count_after_its_label_is_data_a_callout_before_it_is_not():
+    import real_data as RD
+    kw = dict(family="bank_statement", page_texts=[], specimen=False)
+    assert RD.refusal("1", "1 Your Account Value: $125,310.49", "Your Account Value", **kw)
+    assert RD.refusal("2", "Dependents 2", "Dependents", **kw) == ""
+    assert RD.refusal("12", "Your Account Value 12", "Your Account Value", **kw) == ""
+
+
 def test_f1_one_grounded_value_means_the_form_is_not_blank():
     """A labels-and-blanks page with ONE value really filled in: nothing is
     cleared, and the invented answer keeps its ordinary flag."""
