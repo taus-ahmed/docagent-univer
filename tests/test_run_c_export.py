@@ -394,10 +394,17 @@ class TestC3NumbersAreNumbers:
 
     @pytest.mark.parametrize("label,text", [
         ("Code", "007"), ("Routing Number", "021000021"),
-        ("Invoice Number", "INV-2024-0031"), ("Date", "01/15/2024"),
+        ("Invoice Number", "INV-2024-0031"),
         ("SSN", "XXX-XX-1234"), ("Last 4", "1234"), ("Check #", "123456")])
     def test_identifiers_stay_text(self, ws, label, text):
         assert ws[label].value == text and ws[label].data_type == "s", label
+
+    def test_an_unambiguous_date_is_a_real_date(self, ws):
+        # Run G, G6 (owner ruling): 01/15/2024 has one meaning, so it is a
+        # date cell holding exactly 15 January 2024, shown mm/dd/yyyy.
+        from datetime import datetime
+        assert ws["Date"].is_date and ws["Date"].value == datetime(2024, 1, 15)
+        assert ws["Date"].number_format == "mm/dd/yyyy"
 
     def test_an_edited_value_that_does_not_parse_stays_text_and_lavender(self, ws):
         c = ws["Edited Note"]

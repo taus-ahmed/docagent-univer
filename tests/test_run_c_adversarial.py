@@ -516,12 +516,24 @@ def typed_cells():
 @pytest.mark.parametrize("label", [
     "ZIP Code", "SSN", "Masked SSN", "EIN", "Masked EIN", "Phone Number",
     "Routing Number", "Account Number", "Cheque Number", "Check Number",
-    "Invoice Number", "PO Number", "Date", "Last 4", "Customer ID", "Policy ID",
+    "Invoice Number", "PO Number", "Last 4", "Customer ID", "Policy ID",
 ])
 def test_c3_identifiers_and_dates_stay_exact_text(typed_cells, label):
     cell = typed_cells[label]
     assert cell.value == TYPING_VALUES[label]
     assert cell.data_type == "s"
+
+
+def test_c3_an_unambiguous_date_is_that_exact_date(typed_cells):
+    """Run G, G6 (owner ruling) replaced C3's "a date stays text" for the
+    `Date` case: 01/15/2024 can only be 15 January 2024 (no 15th month), so
+    it is a real date cell holding exactly that day, shown mm/dd/yyyy. A date
+    whose day/month order is open still stays text (tests/test_run_g_dates.py)."""
+    from datetime import datetime
+    cell = typed_cells["Date"]
+    assert TYPING_VALUES["Date"] == "01/15/2024"
+    assert cell.is_date and cell.value == datetime(2024, 1, 15)
+    assert cell.number_format == "mm/dd/yyyy"
 
 
 @pytest.mark.parametrize("label,expected", [

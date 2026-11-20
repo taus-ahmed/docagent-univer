@@ -197,13 +197,43 @@ def _download(client, auth, job_id, query=""):
     return openpyxl.load_workbook(io.BytesIO(r.content))
 
 
-def _sheet_text(ws):
+def _sheet_text(ws, dates=True):
     """Every value on the sheet, leaving out the Review status column's own
-    words and count, which name no document's value."""
+    words and count, which name no document's value.
+
+    `dates=False` also leaves out real DATE cells (Run G, G6): `str()` of one
+    is `2024-03-31 00:00:00`, whose digit runs (`03`, `00`) the page never
+    printed, so a number scan would see a leak that is only notation. Those
+    cells are checked as dates instead (`_date_cells`)."""
     return " | ".join(str(c.value) for row in ws.iter_rows()
                       for c in row if c.value is not None
+                      and (dates or not c.is_date)
                       and not str(c.value).startswith("Review status")
                       and str(c.value) not in ("Needs review", "OK", "Edited", "Reviewed"))
+
+
+def _date_cells(ws):
+    """The dates held in real date cells of a sheet."""
+    return {c.value.date() for row in ws.iter_rows() for c in row
+            if c.is_date and c.value is not None}
+
+
+_NUM_DATE = __import__("re").compile(
+    r"\b\d{1,2}[/.\-]\d{1,2}[/.\-]\d{4}\b|\b\d{4}-\d{2}-\d{2}\b"
+    r"|\b\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]{3,9}\.?,?\s+\d{4}\b"
+    r"|\b[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b")
+
+
+def _printed_dates(text):
+    """Every date the text could mean, read either day/month order."""
+    from dates import parse_date
+    out = set()
+    for t in _NUM_DATE.findall(str(text)):
+        for order in ("MDY", "DMY"):
+            d = parse_date(t, order)
+            if d.ok:
+                out.add(d.value)
+    return out
 
 
 # ── 1. five documents, one template, one job ─────────────────────────────────
@@ -378,7 +408,7 @@ class TestMixedBatchWithNoTemplate:
         the mapping has to be checked in both directions at once.
         """
         wb = _download(client, auth, mixed_job["id"])
-        per_sheet = {w.title: _numbers(_sheet_text(w)) for w in wb.worksheets
+        per_sheet = {w.title: _numbers(_sheet_text(w, dates=False)) for w in wb.worksheets
                      if w.title != "Legend"}
 
         claims = {t: sorted(s for s in MIXED if exclusive_numbers[s] & nums)
@@ -399,6 +429,15 @@ class TestMixedBatchWithNoTemplate:
             f"no value unique to these documents appears in any sheet — they "
             f"are missing from the workbook, not merely uncontaminated: "
             f"{unplaced}")
+
+        # Run G, G6: a real date cell is checked as a DATE — every one must be
+        # a date printed in the one document its sheet belongs to.
+        sheets = {w.title: w for w in wb.worksheets if w.title != "Legend"}
+        foreign = {t: sorted(str(d) for d in _date_cells(sheets[t])
+                             - _printed_dates(_own_text(c[0])))
+                   for t, c in claims.items() if len(c) == 1}
+        foreign = {t: v for t, v in foreign.items() if v}
+        assert not foreign, f"dates not printed in the sheet's own document: {foreign}"
 
         spread = {s: t for s, t in claimed_by.items() if len(t) > 1}
         assert not spread, (
