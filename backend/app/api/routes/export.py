@@ -206,6 +206,7 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
     )
 
     from app.core.export_marks import SheetMarks
+    from app.services.excel_cells import put_extracted
 
     wb = Workbook()
     wb.remove(wb.active)
@@ -251,7 +252,11 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
                     confidence = ""
 
                 ws.cell(row=i, column=1, value=col_name).font = Font(name="Calibri", bold=True, size=10)
-                vcell = ws.cell(row=i, column=2, value=str(value) if value else "")
+                vcell = ws.cell(row=i, column=2)
+                # Run E, E13/E14: the shared rule — a percentage or an amount
+                # is a number with its printed notation as a format, an
+                # identifier or a sentence stays text (excel_cells).
+                put_extracted(vcell, value, col_name, ext)
                 vcell.font = DATA_FONT
                 # The stored level is an identifier ("grounded"); the sheet
                 # shows the claim spelled out ("Verbatim from the document"),
@@ -345,6 +350,9 @@ def _build_excel(job, docs: list, template_columns: list | None, per_file: bool,
             for k, col_name in enumerate(col_names):
                 fd = ext.get(col_name)
                 if fd is not None:
+                    v = fd.get("value", "") if isinstance(fd, dict) else fd
+                    put_extracted(ws.cell(row=row_idx, column=first_value_col + k),
+                                  v if v is not None else "", col_name, full)
                     sm.field(ws.cell(row=row_idx, column=first_value_col + k), full,
                              ref=(fd.get("ref") if isinstance(fd, dict) else None),
                              label=col_name)

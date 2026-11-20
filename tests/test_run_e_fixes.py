@@ -346,6 +346,94 @@ def test_e12_lines_in_order_needs_consecutive_lines_in_order():
     assert not in_line_order("14 Weavers Yard Hackney London", [page], 1)       # not printed
 
 
+# ---------------------------------------------------------------------------
+# E13: a percentage is a number with a percent format, in every slot.
+
+_PCT_GRID = _grid({
+    (0, 0): "Purchase APR",
+    (1, 0): "Cash Advance APR",
+    (2, 0): "Note",
+    (4, 0): "Description", (4, 1): "Quantity", (4, 2): "Tax Rate", (4, 3): "Amount",
+    (9, 0): "Total",
+})
+
+
+def _pct_sheet():
+    from tests.test_run_c_adversarial import document, round_trip, stored
+    from slot_extractor import enumerate_slots
+    table = enumerate_slots(_PCT_GRID)["tables"][0]["name"]
+    result, _ = stored(
+        _PCT_GRID,
+        fields={"Purchase APR": "21.99%", "Cash Advance APR": "29.9 %",
+                "Note": "VAT charged at 20% on all lines", "Total": "1,200.00"},
+        rows={table: [
+            {"Description": "Brand refresh", "Quantity": "1", "Tax Rate": "20%", "Amount": "1,000.00"},
+            {"Description": "Print", "Quantity": "2", "Tax Rate": "5.5%", "Amount": "200.00"},
+        ]})
+    return round_trip([document(result)], _PCT_GRID)["Results"]
+
+
+def test_e13_field_percentages_are_numbers_showing_the_same_digits():
+    ws = _pct_sheet()
+    cells = {ws.cell(r, 1).value: ws.cell(r, 2) for r in range(1, ws.max_row + 1)
+             if ws.cell(r, 1).value}
+    apr, cash = cells["Purchase APR"], cells["Cash Advance APR"]
+    assert apr.data_type == "n" and apr.value == pytest.approx(0.2199)
+    assert apr.number_format == "0.00%"
+    assert cash.value == pytest.approx(0.299) and cash.number_format == "0.0%"
+
+
+def test_e13_a_percent_sign_inside_a_sentence_stays_text():
+    ws = _pct_sheet()
+    note = next(ws.cell(r, 2) for r in range(1, ws.max_row + 1)
+                if ws.cell(r, 1).value == "Note")
+    assert note.value == "VAT charged at 20% on all lines" and note.data_type == "s"
+
+
+def test_e13_a_table_tax_rate_column_holds_numbers():
+    ws = _pct_sheet()
+    head = next(r for r in range(1, ws.max_row + 1) if ws.cell(r, 3).value == "Tax Rate")
+    first, second = ws.cell(head + 1, 3), ws.cell(head + 2, 3)
+    assert first.value == pytest.approx(0.2) and first.number_format == "0%"
+    assert second.value == pytest.approx(0.055) and second.number_format == "0.0%"
+
+
+def test_e13_line_items_in_the_combined_export_hold_numbers():
+    import openpyxl
+    from app.services.excel_cells import write_line_items
+    ed = {"table_rows": [{"Description": "Brand refresh", "Tax Rate": "20%",
+                          "_source": "x", "_page": 1}]}
+    wb = openpyxl.Workbook()
+    write_line_items(wb.active, 1, ed)
+    vals = [c for row in wb.active.iter_rows() for c in row if c.value == 0.2]
+    assert vals and vals[0].number_format == "0%"
+
+
+@pytest.mark.parametrize("per_file", [True, False])
+def test_e13_the_export_py_field_cells_hold_numbers_too(per_file):
+    import io
+    import openpyxl
+    from types import SimpleNamespace
+    from app.api.routes.export import _build_excel
+    ed = {"extracted_data": {
+        "Purchase APR": {"value": "21.99%", "confidence": "high", "ref": "B1"},
+        "Note": {"value": "VAT charged at 20% on all lines", "confidence": "high", "ref": "B2"},
+        "Total": {"value": "$1,250.00", "confidence": "high", "ref": "B3"}},
+        "validation": {"confidence_map": {}, "flagged_fields": []}}
+    payload = json.dumps(ed)
+    doc = SimpleNamespace(id=1, filename="card.pdf", document_type="credit_card",
+                          overall_confidence="high", needs_review=False,
+                          get_extracted_data=lambda: json.loads(payload))
+    job = SimpleNamespace(id=1, total_docs=1, successful=1, failed=0, needs_review=0,
+                          total_time_sec=1.0)
+    wb = openpyxl.load_workbook(io.BytesIO(_build_excel(job, [doc], None, per_file)))
+    cells = [c for ws in wb.worksheets for row in ws.iter_rows() for c in row]
+    apr = [c for c in cells if c.value == pytest.approx(0.2199)]
+    assert apr and apr[0].number_format == "0.00%"
+    assert any(c.value == 1250.0 for c in cells)
+    assert any(c.value == "VAT charged at 20% on all lines" for c in cells)
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch
