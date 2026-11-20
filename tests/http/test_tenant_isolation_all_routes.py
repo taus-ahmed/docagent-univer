@@ -108,6 +108,7 @@ ROUTES = {
     ("GET", "/api/jobs/{job_id}/review"): "id",
     ("GET", "/api/jobs/{job_id}/charts"): "id",
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/review"): "id",
+    ("GET", "/api/jobs/{job_id}/docs/{doc_id}/history"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}/image"): "id",
 }

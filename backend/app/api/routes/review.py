@@ -410,6 +410,31 @@ def mark_reviewed(job_id: int, doc_id: int, payload: ReviewMark,
                                "same moment; nothing was marked. Try again.")
 
 
+@router.get("/jobs/{job_id}/docs/{doc_id}/history")
+def document_history(job_id: int, doc_id: int, db: Session = Depends(get_db),
+                     current_user: User = Depends(get_current_user)):
+    """The document's append-only history (Run G, G4): every edit,
+    correction, disposition and added row, oldest first, each with who
+    (`by`), when (`at`), what (`kind`, `ref` or `table`/`row`/`column`) and
+    `old` / `new`. Read-only; nothing here can change a value."""
+    _, doc = _doc_for(job_id, doc_id, current_user, db)
+    ed = doc.get_extracted_data() or {}
+    ed = ed if isinstance(ed, dict) else {}
+    events = [e for e in (ed.get("edit_log") or []) if isinstance(e, dict)]
+    for a in R.attention_items(ed):
+        d = a.get("disposition")
+        if isinstance(d, dict) and d.get("at"):
+            events.append({"kind": "attention", "attention_id": a.get("id"),
+                           "text": a.get("text"), "disposition": d.get("choice"),
+                           "note": d.get("note"), "by": d.get("by"), "at": d.get("at")})
+    rv = ed.get("review") or {}
+    if rv.get("document_reviewed") and rv.get("at"):
+        events.append({"kind": "document", "disposition": "document_reviewed",
+                       "by": rv.get("by"), "at": rv.get("at")})
+    events.sort(key=lambda e: str(e.get("at") or ""))
+    return {"doc_id": doc_id, "job_id": job_id, "events": events}
+
+
 # ── page images and boxes ────────────────────────────────────────────────────
 
 def _source_path(job, doc):

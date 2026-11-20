@@ -411,7 +411,6 @@ def test_one_review_state_controls_legacy_approve_and_draft(
     assert "_DRAFT" not in _export(client, dirty).headers["content-disposition"]
 
 
-@RULE_7
 def test_document_history_endpoint_returns_who_when_old_new_and_target(
     client, review_case_factory
 ):

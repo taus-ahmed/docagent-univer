@@ -8,14 +8,14 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 | --- | --- | --- | --- |
 | Add missing table row | `test_add_row_has_stable_identity_history_export_and_total_handling` | There is no `POST .../rows/{table}` route; `backend/app/services/edits.py:114-138` only replaces rows through a whole-document edit. | The target endpoint returns 404. |
 | One review/approval/DRAFT state | `test_one_review_state_controls_legacy_approve_and_draft` | `backend/app/api/routes/extract.py:1022-1038` updates relational approval only; `backend/app/services/excel_cells.py:677-685` derives DRAFT only from open completeness items. | A document with an unresolved flagged value exports without `_DRAFT`. |
-| Readable document history | `test_document_history_endpoint_returns_who_when_old_new_and_target` | `backend/app/services/edits.py:178-213` stores `edit_log`, but no history route exposes it. | `GET .../history` returns 404. |
 
 Run G (G4) removed REVIEW RULES 1, 2, 3, 4 and 8 in one commit, because
 they share one change: a review value entry carries `disposition`
 (`accepted_as_is` / `corrected` / `confirmed_empty`), stored on the value's
 mark and logged in `edit_log`; a table disposition marks one cell
 (`_reviewed_cells`); a confirmed-empty slot and a corrected value export with
-no warning comment.
+no warning comment. REVIEW RULE 7 came off with `GET .../history`
+(`routes/review.py::document_history`).
 
 The eight rows above are the target review contract in
 `tests/test_review_flow_spec.py`. Each marker names `REVIEW RULE 1` through
