@@ -245,6 +245,11 @@ def coerce_cell_value(value, label="", decimal_hint=None):
     if a.ok and not a.percent:
         n = excel_number(a.value)
         return txt if n is None else n
+    if a.ok and a.percent:
+        # Run E, E2 (C3): a percentage is a number too — "12.5%" is 0.125,
+        # and `cell_format` gives it a percent format so it still reads 12.5%.
+        n = excel_number(a.value / 100)
+        return txt if n is None else n
     return txt
 
 
@@ -383,6 +388,9 @@ def cell_format(value, label="", decimal_hint=None):
 
     from amounts import parse_amount
     a = parse_amount(txt, decimal_hint)
+    if a.percent:
+        # E2: exactly as many decimals as printed, as a percent
+        return f"0.{'0' * a.decimals}%" if a.decimals else "0%"
     sym = next((c for c in "$£€₹¥" if c in txt), "")
     accounting = txt.replace(sym, "").strip().startswith("(")
     frac = a.decimals

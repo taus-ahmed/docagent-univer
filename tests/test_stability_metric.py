@@ -36,9 +36,14 @@ class TestCoerceCellValue:
         assert coerce_cell_value("Janet Wu") == "Janet Wu"
         assert coerce_cell_value("1.5% monthly interest") == "1.5% monthly interest"
 
-    def test_a_percentage_is_text_not_a_number(self):
-        """It must not become 1.5 — the unit is part of the value."""
-        assert coerce_cell_value("1.5%") == "1.5%"
+    def test_a_percentage_is_its_fraction_never_the_bare_figure(self):
+        """It must not become 1.5 — the unit is part of the value. Since Run E
+        (E2 / C3) it is the number 0.015 with a percent format, so it still
+        reads 1.5% and now also sums and sorts."""
+        from app.api.routes.extract import cell_format
+        assert coerce_cell_value("1.5%") == 0.015
+        assert coerce_cell_value("1.5%") != 1.5
+        assert cell_format("1.5%") == "0.0%"
 
     def test_empty_writes_nothing(self):
         assert coerce_cell_value("") is None

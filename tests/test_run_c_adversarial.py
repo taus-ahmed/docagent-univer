@@ -543,10 +543,6 @@ def test_c3_amounts_are_numeric(typed_cells, label, expected):
     assert cell.data_type == "n"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="C3: a percentage is exported as text instead of a numeric percent cell",
-)
 def test_c3_percentage_is_a_number_with_a_percent_format(typed_cells):
     cell = typed_cells["Percentage"]
     assert cell.value == pytest.approx(0.125)
