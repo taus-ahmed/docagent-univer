@@ -18,6 +18,12 @@ outcome changed; correct->anything transitions are flagged REGRESSION.
 from __future__ import annotations
 
 import argparse
+import os
+
+# Overnight A6: the committed cache was recorded at temperature 0.1 and keys
+# on it; replay asks at that temperature. A --mode record run that wants the
+# production temperature sets EXTRACTION_TEMPERATURE=0 explicitly.
+os.environ.setdefault("EXTRACTION_TEMPERATURE", "0.1")
 import contextlib
 import io
 import json

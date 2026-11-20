@@ -30,6 +30,7 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `DATABASE_URL` | `postgresql://user:…@host:5432/db` | S E | the database (Railway provides it) |
 | `GEMINI_API_KEY` | `AIza…` | S E | the model provider key |
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | | the model (production runs flash-lite) |
+| `EXTRACTION_TEMPERATURE` | `0.0` | | sampling temperature of every extraction call; recorded per attempt. The offline suite and replay harness pin 0.1, the temperature the committed cache was recorded at |
 | `PRIMARY_LLM` / `LLM_FALLBACKS` | `gemini` / empty | | provider order; only Gemini is a real provider. `stub` is a DEV-ONLY offline fake ([OFFLINE-DEMO.md](OFFLINE-DEMO.md)); the backend refuses to start with it when `ENVIRONMENT` is `staging` or `production` |
 | `BATCH_SIZE`, `RATE_LIMIT_DELAY`, `MAX_RETRIES` | `5`, `2.0`, `3` | | pacing of model calls |
 | `LLM_CALL_TIMEOUT_S`, `LLM_RETRY_BUDGET_S`, `LLM_BACKOFF_BASE_S`, `LLM_MAX_ATTEMPTS` | `120`, `180`, `1.0`, `3` | | per-attempt timeout, overall retry budget, first backoff step, attempt cap for timeouts / 429 / 5xx (Retry-After honoured; quota, 400, 401/403 and policy blocks never retried) |

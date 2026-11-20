@@ -66,8 +66,25 @@ def _unreadable(file_path, doc):
             + " — check the file opens, and upload it again")
 
 
+def extraction_temperature() -> float:
+    """Overnight A6: the temperature of every extraction call —
+    EXTRACTION_TEMPERATURE from the environment, then settings, else 0."""
+    import os
+    raw = os.environ.get("EXTRACTION_TEMPERATURE")
+    if raw is None:
+        try:
+            from config import settings
+            raw = getattr(settings, "EXTRACTION_TEMPERATURE", 0.0)
+        except Exception:
+            raw = 0.0
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
-              temperature=0.1, **options):
+              temperature=None, **options):
     """
     One logical model call (vision-first, all images), returning
     (parsed_dict_or_None, response_or_None).
@@ -93,6 +110,8 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
 
     if not images and not text:
         return None, None
+    if temperature is None:
+        temperature = extraction_temperature()
     attempts, tokens = [], 0
 
     def call(**kw):
@@ -105,6 +124,9 @@ def _llm_json(orchestrator, prompt, system, images=None, text="", model=None,
             _log("LLM", f"call raised: {exc_brief(e)}")
             r = LLMResponse(raw_text="", success=False,
                             error=f"{type(e).__name__}: {e}", error_kind="exception")
+        for a in getattr(r, "attempts", None) or []:
+            if isinstance(a, dict):
+                a.setdefault("temperature", temperature)   # A6: per attempt
         attempts.extend(getattr(r, "attempts", None) or [])
         tokens += int(getattr(r, "tokens_used", 0) or 0)
         return r

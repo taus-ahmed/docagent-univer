@@ -11,6 +11,10 @@ import pytest
 # bcrypt at its minimum cost in tests: the scheme is the same, only slower
 # to compute in production (app/core/auth.py, BCRYPT_ROUNDS).
 os.environ.setdefault("BCRYPT_ROUNDS", "4")
+# Overnight A6: production extracts at EXTRACTION_TEMPERATURE=0. The
+# committed replay cache (tests/llm_cache) was recorded at 0.1 and keys on the
+# temperature, so the offline suite pins 0.1 to replay what was recorded.
+os.environ.setdefault("EXTRACTION_TEMPERATURE", "0.1")
 
 from tests.harness import bootstrap as _bs
 

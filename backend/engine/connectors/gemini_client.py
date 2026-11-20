@@ -243,6 +243,7 @@ class GeminiClient:
                 rec = C.new_attempt(m, retry=len(attempts), reason=reason,
                                     images=n_images)
                 rec["structured_output"] = bool(schema)
+                rec["temperature"] = temperature
                 t0 = time.monotonic()
                 try:
                     text, info = self._post(m, body, timeout)

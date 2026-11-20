@@ -2577,6 +2577,16 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     f"own — fill it only from the document"))
                 notes.append(f'{t["name"]}: cleared column {col!r} — every value '
                              f'was a copy of the same row\'s {src!r} ({n} rows)')
+            # A6 (overnight): ONE entity answered as fragments. Job 48 split
+            # pitt's single state/local line over three rows - PA, state ID
+            # and wages; state tax and local wages; local tax and locality.
+            # Rows after the band's one keyed row, with no key and columns
+            # disjoint from everything before them, are that row's parts.
+            import ownership as OW
+            rows_out, _merged = OW.merge_fragment_rows(rows_out, headers)
+            if _merged:
+                notes.append(f'{t["name"]}: {_merged} fragment row(s) merged into '
+                             f"the one entity row they complete")
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
             if len(rows_out) + len(totals) + len(dup_totals) < len(raw):

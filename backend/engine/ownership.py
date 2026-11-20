@@ -501,3 +501,42 @@ def foreign_box_rows(table_name, raw_rows, headers, lines):
         else:
             kept.append(r)
     return kept, out
+
+
+# ── fragment rows (A6) ──────────────────────────────────────────────────────
+
+def merge_fragment_rows(rows, headers):
+    """(rows, n merged). A band holding ONE entity — its key column (the
+    first heading) filled on exactly one row, the first — whose other rows
+    have no key and fill only columns no earlier row filled, is one row
+    answered in pieces: the pieces merge into it. Anything else (a second
+    key, an overlapping column) is left exactly as it is."""
+    if len(rows) < 2 or not headers:
+        return rows, 0
+    key = headers[0]
+
+    def filled(r):
+        return {h for h in headers if str(r.get(h, "") or "").strip()}
+
+    if not str(rows[0].get(key, "") or "").strip():
+        return rows, 0
+    if any(str(r.get(key, "") or "").strip() for r in rows[1:]):
+        return rows, 0
+    seen = filled(rows[0])
+    for r in rows[1:]:
+        f = filled(r)
+        if not f or f & seen:
+            return rows, 0
+        seen |= f
+    merged = dict(rows[0])
+    for r in rows[1:]:
+        for h in filled(r):
+            merged[h] = r[h]
+        bad = list(merged.get("_ungrounded") or []) + list(r.get("_ungrounded") or [])
+        if bad:
+            merged["_ungrounded"] = list(dict.fromkeys(bad))
+        order = ("low", "unverified", "grounded", "high")
+        a, b = str(merged.get("_confidence", "")), str(r.get("_confidence", ""))
+        if a in order and b in order and order.index(b) < order.index(a):
+            merged["_confidence"] = b
+    return [merged], len(rows) - 1

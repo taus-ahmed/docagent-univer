@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     LLM_FALLBACKS: str = ""
 
     GEMINI_MODEL: str = "gemini-2.5-flash"  # 2.0-flash retired (404); use a live model
+    # Overnight A6: sampling temperature of every EXTRACTION call (slot
+    # extraction, its retries and recovery, shape inference, the image path).
+    # 0 = as deterministic as the API allows; recorded on every attempt.
+    EXTRACTION_TEMPERATURE: float = 0.0
 
     # ── Model-call contract (engine/llm_contract.py) ──────────────────────────
     # Per-attempt HTTP timeout, the overall retry budget for one logical call

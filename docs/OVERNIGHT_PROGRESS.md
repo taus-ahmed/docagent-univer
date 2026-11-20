@@ -8,8 +8,8 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] A3 — identifiers (name/locality/control) text; years plain; money labels always 2 decimals; Box d trimmed to its own box; printed space recovered from char gaps; ID slots not demoted as phone numbers
 - [x] A4 — recover_lost_pages: one page-targeted call per lost page (PAGE_RECOVERY_MAX_CALLS, default 4), merged in page order; a column header reprinted at the top of the next page is a continuation
 - [x] A5 — one printed form title fills an empty Form Type (machine_read form_title); several are an empty-flagged slot naming them
-- [ ] A6 — consistency (combined vs single parity; fragment rows; temperature 0)
-- [ ] GATE A — full suite, harness, scoreboard, frontend
+- [x] A6 — parity test (alone vs combined: same record, same block); one-entity fragment rows merged; EXTRACTION_TEMPERATURE=0 on every extraction call, recorded per attempt (suite and replay pin 0.1 = the cache recording)
+- [x] GATE A — pytest exit 0: 5188 tests, 0 failures, 0 errors (junit); harness 98.7 / 98.2, 17/17, defects 0; replay scoreboard silent 0, false flags 0; frontend type-check, 64/64 tests, build OK
 - [ ] B1 — grounding Low only when quote AND value both missing (normalised)
 - [ ] B2 — "different column" decided by the value's own position
 - [ ] B3 — no false completeness reasons on blank form boxes

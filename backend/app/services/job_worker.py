@@ -86,10 +86,12 @@ def _extract_image_with_template(orchestrator, file_path: Path,
                 '"extracted_fields": {"field_name": "value"}, "table_rows": []}'
             )
 
+        from extractor import extraction_temperature
         extraction = orchestrator.llm.extract(
             image_b64=image_b64,
             prompt=prompt,
             system_instruction=system_instruction,
+            temperature=extraction_temperature(),    # overnight A6
         )
         elapsed = (t.time() - start) * 1000
 
