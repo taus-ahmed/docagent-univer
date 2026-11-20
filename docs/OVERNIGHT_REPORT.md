@@ -162,6 +162,9 @@ from staging with this code, then remove the marker.
   F2/F3/F9/F10/F12) that predate this run.
 - Harness replay: templated 98.7%, no-template 98.2%, structure 17/17 with
   17 exact row counts, invented 0, misfiled 0, defect rate 0.0% (both).
+  One no-template value changed form, not score: a period end now reads
+  `2024-12-31` (was `December 31, 2024`) — RUN-G item 10 makes period
+  start/end real dates; the scorer counts both correct.
 - Frozen scoreboard (`tests/acceptance/test_scoreboard.py`): silent defects
   35 before, 0 after; false flags 0 on every job (15, 19, 21, 25).
   (`python -m tests.tools.score_runs` still prints the RECORDED baseline

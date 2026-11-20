@@ -1,3 +1,5 @@
+ALL DONE
+
 # Overnight run — progress (branch fix/review-fixes, started at cd2dbd4)
 
 A restarted session reads this first and skips every item marked [x] or BLOCKED.
@@ -32,4 +34,5 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] H3 — core/password_policy.py (12+, not the username, not a common password or plain sequence) on create, admin reset, PUT /me, change-password and bootstrap; plain messages that never echo the password
 - [x] H4 — RAW_RESPONSE_RETENTION_DAYS (7; 0 = never stored), raw responses cleared at startup and daily (core/raw_retention.py); redaction test over the LLM-ATTEMPT line (no SSN, EIN, account, name, file name or prompt text)
 - [x] RUN-G — merged origin/review/run-g; 9 of 10 strict xfails in tests/test_batch1_real_defects.py now pass, markers removed (items 2, 4, 6 by A1/A3/A6; 1, 3, 5, 7, 8, 10 here). Item 9 BLOCKED: it asserts the 16 FROZEN staging exports, written by the old writer — no code change can alter them; the writer fix is proven on current output (B4)
-- [ ] FINISH — final checks, KNOWN_FAILING, TEMPLATE_RULES, OVERNIGHT_REPORT, push
+- [x] FORMAT — party-name rule keyed on the label's head noun (Employer ZIP), tested after the restart (c1902c3)
+- [x] FINISH — pytest 5,257 passed, 19 xfailed, 0 failed, 0 errors; harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0; frontend type-check, 73/73, build OK; KNOWN_FAILING, TEMPLATE_RULES, OVERNIGHT_REPORT written; pushed

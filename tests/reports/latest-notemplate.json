@@ -1,6 +1,6 @@
 {
- "run_id": "2026-11-20 12:07:54",
- "git_commit": "a1960ba",
+ "run_id": "2026-11-20 14:58:27",
+ "git_commit": "d797fd0",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -10627,7 +10627,7 @@
      "Period To": {
       "outcome": "hallucinated",
       "expected": null,
-      "actual": "December 31, 2024",
+      "actual": "2024-12-31",
       "type": "string",
       "in_gold_schema": false,
       "grounded": true,
@@ -18948,5 +18948,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-11-20 11:40:51"
+ "diff_against": "2026-11-20 12:07:54"
 }
