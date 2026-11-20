@@ -244,3 +244,41 @@ The exact captured slot-description lines are committed in `tests/templates/prom
 18. **T9 — multi-level headers.** Flatten merged header levels into complete unique column addresses, including the row-label column.
 19. **F6 — merged value cells.** Use the empty merge anchor as the writable slot and preserve the merged output range.
 20. **T12 — transposed tables.** Infer or explicitly import record-across-column tables without requiring a separate editor declaration.
+
+## Overnight run changes (2026-11-20)
+
+Shape (`engine/template_shape.py`, D1):
+
+- A heading row with an unnamed column (`Line item | _ | 2026`) reads as a
+  matrix only when its other headings name a **period**: a four-digit year,
+  Q1–Q4, FY, H1/H2 or a month. A numbered label (`Approver 2`) is a form
+  label, and `Name | _ | Approver 2` keeps its own slots.
+- A lone text beside a table's rows becomes a field when it names the
+  table's total **as a short label** (at most three words, T10's `Total
+  right`); a note such as `Total amounts shown in USD` is not a field.
+- Two heading runs one blank column apart are **two tables** when each names
+  a money column of its own, or a later row labels both runs' first columns
+  (`Code | Amount | _ | Date | Description | Charge`). The spacer case
+  (`Date | Description | _ | Debit | Balance`) is still one table; T6's two
+  four-column tables are still two.
+
+Slots and values (A1–A6, B1–B4, RUN-G):
+
+- A slot labelled `Box <code> …` takes only a value printed in its own box:
+  the nearest box code above-or-left of the printed value decides
+  (`engine/ownership.py`). Checkbox options of one box take an X only by
+  x-position under their own sub-heading. A value printed in another box
+  leaves the slot plainly empty (a note says why); a table row printed in
+  another box is kept out of a box-coded band and flagged visibly.
+- A label naming a period's start or end (`Statement Period Start`) is a
+  date slot; `Statement Period` alone is a range.
+- Money labels always show two decimals in the export; name, locality,
+  control, department and corporation labels hold text; a year label has
+  no thousands separator.
+- One entity answered as fragment rows (no key, disjoint columns) merges
+  into its one keyed row.
+- On a fillable form a band no filled box belongs to is confirmed empty by
+  the form (no completeness reason, no second request).
+- A label whose **last word** names a party (`Payer Name`, `Vendor`) holding
+  a bare figure is flagged; a label naming a property of a party
+  (`Employer ZIP`, `Employee SSN`) is not a name slot.

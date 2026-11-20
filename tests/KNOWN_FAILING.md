@@ -6,16 +6,21 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 
 | Gap | Strict test | Implementation evidence | Observed failure |
 | --- | --- | --- | --- |
-| Batch1 item 1: unprinted remit bank | `test_01_invoice_vendor_name_is_not_invented_as_remit_bank` | The post-model checks accept a grounded value without checking that its source is the requested bank slot. | `Harwood Design Studio Ltd` survives in `Remit To Bank` although the invoice prints no bank name. |
-| Batch1 item 2: W-2 cross-box values and marks | `test_02_w2_cross_box_value_and_checkbox_are_not_accepted` | Grounding validates that the characters occur, but not that `E 4107.00` belongs to Box 12 or that the one X is under Retirement Plan. | Box 11 keeps `4107`; the statutory mark is not reliably separated from the retirement mark. |
-| Batch1 item 3: Box 14 value moved into Box 12 | `test_03_box14_entry_never_moves_to_an_uncoded_box12_row` | A table row with an empty code and grounded amount is accepted without a required-code/band check. | `52.00 14X` survives as an uncoded Box 12 row. |
-| Batch1 item 4: exact identifiers and money format | `test_04_identifiers_remain_text_and_money_keeps_two_decimals` | The post-model/export seam does not repair a printed identifier separator, classify numeric locality as text, or retain cents for whole-number money. | Control number stays `0000005712UUQ`, locality becomes numeric `700102`, and `4107.00` exports with `#,##0` rather than `#,##0.00`. |
-| Batch1 item 5: second statement page omitted | `test_05_page_one_only_statement_is_recovered_or_needs_attention` | Completeness accepts a 37-row page-one answer even though page 2 prints 11 more dated rows. | The document is not recovered and has no page/row completeness reason. |
-| Batch1 item 6: split state/local row | `test_06c_split_state_local_row_is_merged_or_visibly_flagged` | Partial rows in one state/local band are neither merged nor subjected to a row-completeness rule. | One printed state/local record remains three silent rows. |
-| Batch1 item 7: false Low flags | `test_07_correct_values_are_not_low_but_real_errors_still_are` | Grounding/placement normalization does not tolerate dot leaders, joined line breaks, header-only quotes, and several form/table geometries. | Correct brokerage, bank-summary, address, statement-description, and W-2 name values are marked Low; the same test proves real errors still flag. |
-| Batch1 item 8: false completeness on fillable forms | `test_08_fillable_blank_boxes_do_not_create_false_completeness_reasons` | Source row inventory treats blank W-2 form boxes/instructions as missing line items. | The blank fillable W-2 says “about 2 line items” and “did not include the rows.” |
-| Batch1 item 9: Legend counts | `test_09_each_real_legend_count_equals_cells_actually_marked` | Legend totals include empty-flagged values for which the result block paints no grey cell. | Jobs 46, 48, and 51 report 3, 12, and 2 empty-flagged values but paint zero grey cells. |
-| Batch1 item 10: real Excel dates | `test_10_date_slots_export_as_real_dates` | `slot_type` does not classify statement-period start/end labels as date slots. | Jobs 40, 41, and 46 keep unambiguous period dates as text; the other mocked date jobs already write real dates. |
+| Batch1 item 9: Legend counts in the FROZEN staging exports | `test_09_each_real_legend_count_equals_cells_actually_marked` | BLOCKED (overnight run): the test reads the 16 real staging exports in `local_docs/batch1_exports`, written by the OLD writer, which marked only slots holding a value. No code change can alter those files; re-exporting needs the jobs' stored `extraction_json`, which is not in the repo. The writer was fixed in overnight B4 (every slot is visited; an empty-and-flagged slot is the grey cell with a comment) and is proven on current output by `tests/test_overnight_b4.py` and `tests/legend_check.py`. | Jobs 46, 48 and 51 report 3, 12 and 2 empty-flagged values and paint no grey cell. Remove this marker after re-exporting those three jobs from staging with the current code. |
+
+Overnight run (2026-11-20): batch-1 items 1-8 and 10 came off.
+Items 2, 4, 6 by A1 (`engine/ownership.py`: box owner by geometry, checkbox X
+by x-position), A3 (identifier text, printed spacing, money cents) and A6
+(one-entity fragment rows merged); items 1, 3, 5, 7, 8, 10 in the RUN-G
+commit (bank slot holding another party's name, a visible flag for a row of
+another box, page-geometry recovery and a per-page lost-page reason, a
+party-name slot holding a figure, fillable-form bands no filled box belongs
+to, period start/end as date slots). See docs/OVERNIGHT_REPORT.md.
+
+Run F adversarial review (`tests/test_run_f_adversarial_review.py`): all 13
+strict xfails came off in the overnight run, group C. Run E adversarial
+review (`tests/test_run_e_adversarial_review.py`): its 3 strict xfails came
+off in group D1.
 
 Run G (G4) removed REVIEW RULES 1, 2, 3, 4 and 8 in one commit, because
 they share one change: a review value entry carries `disposition`
