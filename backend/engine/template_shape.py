@@ -785,8 +785,17 @@ def compute_shape(grid, log=None):
             full = _sc(r) >= need
             trailing = not any(rr > r and not _sc(rr) for rr in span)
             below = [rr for rr in span if rr > r]
-            continues = any(not _sc(a) and not _sc(a + 1)
-                            and (a + 1) in span for a in below)
+            # Run E, E1 (C4): the table CONTINUES beneath a row only when a
+            # blank run below it is at least as long as the reserved run
+            # above it. `Notes`, two blank rows, `Prepared By` under three
+            # reserved rows is a separator gap, and the table ends at Notes;
+            # R3's `Subtotal` with six blank rows beneath stays inside.
+            reserved = r - 1 - hr
+            run_len, longest = 0, 0
+            for a in below:
+                run_len = 0 if _sc(a) else run_len + 1
+                longest = max(longest, run_len)
+            continues = longest >= 2 and longest >= reserved
             after = (r - 1 > hr and not continues
                      and not any(_sc(rr) for rr in range(hr + 1, r)))
             if full or trailing or after:

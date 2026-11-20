@@ -787,11 +787,6 @@ def test_c4_rule_ends_before_totals_notes_second_table_and_other_text(
     assert first["end_row"] == expected, name
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("C4: notes followed by two blank lines are swallowed into the table "
-            "instead of ending it"),
-)
 def test_c4_notes_still_end_the_table_when_two_blank_rows_follow_them():
     from template_shape import compute_shape
 
