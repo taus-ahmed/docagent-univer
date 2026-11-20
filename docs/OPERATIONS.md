@@ -32,6 +32,7 @@ Set in the Railway dashboard (backend) and Vercel (frontend). **S** = secret
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | | the model (production runs flash-lite) |
 | `EXTRACTION_TEMPERATURE` | `0.0` | | sampling temperature of every extraction call; recorded per attempt. The offline suite and replay harness pin 0.1, the temperature the committed cache was recorded at |
 | `GEMINI_MODEL_FALLBACKS` | empty | | models tried, in order, only after `GEMINI_MODEL` answers 404; empty = none, and a 404 fails the document naming the model (no silent switch) |
+| `RAW_RESPONSE_RETENTION_DAYS` | `7` | | days the provider's raw response is kept in `document_results.raw_llm_response` (it repeats SSNs and account numbers); cleared at startup and daily; `0` = never stored. The extraction itself is untouched |
 | `GEMINI_MODEL_PROFILES` | empty | | JSON overrides of the per-model request settings (temperature sent or not, thinking budget vs level, output cap); see docs/MODEL_MIGRATION.md |
 | `PRIMARY_LLM` / `LLM_FALLBACKS` | `gemini` / empty | | provider order; only Gemini is a real provider. `stub` is a DEV-ONLY offline fake ([OFFLINE-DEMO.md](OFFLINE-DEMO.md)); the backend refuses to start with it when `ENVIRONMENT` is `staging` or `production` |
 | `BATCH_SIZE`, `RATE_LIMIT_DELAY`, `MAX_RETRIES` | `5`, `2.0`, `3` | | pacing of model calls |

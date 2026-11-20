@@ -85,6 +85,9 @@ class Settings(BaseSettings):
     # {model-prefix: {temperature, thinking, thinking_level, max_output}}
     # overriding gemini_client.MODEL_PROFILES (docs/MODEL_MIGRATION.md).
     GEMINI_MODEL_PROFILES: str = ""
+    # Overnight H4: days a raw model response is kept (it repeats SSNs and
+    # account numbers); cleared at startup and daily. 0 = never stored.
+    RAW_RESPONSE_RETENTION_DAYS: int = 7
 
     # ── Model-call contract (engine/llm_contract.py) ──────────────────────────
     # Per-attempt HTTP timeout, the overall retry budget for one logical call

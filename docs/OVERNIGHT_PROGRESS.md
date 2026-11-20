@@ -30,6 +30,6 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] H1 — audit_events table (append-only via ORM listeners), core/audit.py (route hooks + middleware for templates, jobs, exports, review), GET /api/admin/audit (admin-only, paged, filtered, firm-scoped; in the all-routes isolation suite), /admin/audit page
 - [x] H2 — users.token_version ("tv" in every token, checked on every request); password change / self-set / admin reset, disable, delete, firm deactivation and POST /api/auth/logout-everywhere bump it; change-password returns this device's new token; "Sign out everywhere" button
 - [x] H3 — core/password_policy.py (12+, not the username, not a common password or plain sequence) on create, admin reset, PUT /me, change-password and bootstrap; plain messages that never echo the password
-- [ ] H4 — raw response retention + log redaction
+- [x] H4 — RAW_RESPONSE_RETENTION_DAYS (7; 0 = never stored), raw responses cleared at startup and daily (core/raw_retention.py); redaction test over the LLM-ATTEMPT line (no SSN, EIN, account, name, file name or prompt text)
 - [ ] RUN-G — merge origin/review/run-g before the final run; tests/test_batch1_real_defects.py (10 strict xfails) must pass, each marker removed when its fix lands
 - [ ] FINISH — final checks, KNOWN_FAILING, TEMPLATE_RULES, OVERNIGHT_REPORT, push

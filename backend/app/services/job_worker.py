@@ -1105,7 +1105,8 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
 
                         # FIX 5: capture the raw LLM response (empty for pdfplumber-only docs)
                         _raw_llm = ""
-                        if result.extraction_response is not None:
+                        from app.core.raw_retention import keep_raw
+                        if result.extraction_response is not None and keep_raw():
                             _raw_llm = getattr(result.extraction_response, "raw_text", "") or ""
 
                         doc = DocumentResult(

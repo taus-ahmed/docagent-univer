@@ -62,6 +62,10 @@ async def lifespan(app: FastAPI):
     # Opt-in retention (DATA_RETENTION_DAYS; 0 = off, nothing started)
     from app.core.retention import start_daily_purge
     retention_stop = start_daily_purge()
+    # Overnight H4: raw model responses are cleared after
+    # RAW_RESPONSE_RETENTION_DAYS (default 7) — now, then daily
+    from app.core.raw_retention import start_raw_purge
+    raw_stop = start_raw_purge()
 
     logger.info("DocAgent ready.")
     yield
@@ -76,6 +80,7 @@ async def lifespan(app: FastAPI):
     _sweep_temp_copies()
     if retention_stop is not None:
         retention_stop.set()
+    raw_stop.set()
 
     logger.info("DocAgent shutting down.")
 
