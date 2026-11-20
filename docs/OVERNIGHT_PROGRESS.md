@@ -25,7 +25,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] E2 — review lists every page of the document (ledger / inventory), page endpoint returns page_count, dialog has Previous / "Page n of N" / Next and the value list follows the page; frontend + API tests; manual check section F
 - [x] GATE E — pytest exit 0: 5241 tests, 0 failures, 0 errors; harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0; frontend type-check, 72/72 tests, build OK
 - [x] M1 — CANDIDATES (incl. gemini-flash-latest / -lite-latest) removed; GEMINI_MODEL_FALLBACKS (default empty); a 404 fails naming the model and saying none was substituted
-- [ ] M2 — store modelVersion in model_used; Legend + job detail
+- [x] M2 — job_worker.model_of stores the API's modelVersion (fallback: requested name); Legend says "Extracted by: <model>"; History job detail shows a Model badge
 - [ ] M3 — migration doc, per-model settings, tools/model_matrix.py
 - [ ] H1 — audit log
 - [ ] H2 — token revocation

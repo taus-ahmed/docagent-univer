@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { jobModels } from "@/lib/jobModel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
@@ -521,6 +522,11 @@ export default function HistoryPage() {
                   <span className="detail-title">Job #{selectedJob.id}</span>
                   <StatusBadge status={selectedJob.status} />
                   <AttentionBadge job={selectedJob} />
+                  {jobModels(results) && (
+                    <span className="badge badge-gray" title="The model that produced these values, as the API named it">
+                      Model {jobModels(results)}
+                    </span>
+                  )}
                   {selectedJob.pages_total != null && (
                     <span className="badge badge-gray">
                       pages processed {selectedJob.pages_processed} of {selectedJob.pages_total}

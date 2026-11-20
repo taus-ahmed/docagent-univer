@@ -776,6 +776,22 @@ def _firm_locale(schema_path):
         return None
 
 
+def model_of(resp) -> str:
+    """Overnight M2: the model that ANSWERED, as the API named it — Gemini's
+    `modelVersion` (e.g. `gemini-2.5-flash-001`), else the name requested,
+    else the last attempt's version; "vision_direct" when no engine response
+    exists (the image fallback). Stored in document_results.model_used."""
+    if resp is None:
+        return "vision_direct"
+    v = getattr(resp, "model_version", None)
+    if v:
+        return str(v)[:100]
+    for a in reversed(list(getattr(resp, "attempts", None) or [])):
+        if isinstance(a, dict) and a.get("model_version"):
+            return str(a["model_version"])[:100]
+    return str(getattr(resp, "model_used", "") or "unknown")[:100]
+
+
 def _run_extraction_sync(job_id, file_keys, schema_path, db_url, template_data,
                           project_dir, backend_dir, engine_dir, options=None,
                           selected_pages=None, original_filenames=None,
@@ -1115,8 +1131,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                                 or (result.validation.needs_review
                                     if result.validation else False)
                             ),
-                            model_used=(result.extraction_response.model_used
-                                        if result.extraction_response else "vision_direct"),
+                            model_used=model_of(result.extraction_response),
                             tokens_used=(result.extraction_response.tokens_used
                                          if result.extraction_response else 0),
                             latency_ms=result.processing_time_ms,

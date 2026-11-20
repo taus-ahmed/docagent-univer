@@ -815,6 +815,12 @@ def _add_review_legend(wb, doc_results, demo=False):
             value=(f"{total['low']} low · {total['unverified']} unverified · "
                    f"{total['empty_flagged']} empty and flagged · "
                    f"{total['values']} values in all"))
+    # Overnight M2: which model produced these values, as the API named it
+    models = sorted({str(getattr(d, "model_used", "") or "").strip()
+                     for d, _s, _f in per_doc} - {""})
+    if models:
+        lg.cell(row=top + 2, column=1,
+                value="Extracted by: " + ", ".join(models))
     lg.cell(row=top + 3, column=1, value="Mark").font = Font(bold=True)
     lg.cell(row=top + 3, column=2, value="Meaning").font = Font(bold=True)
     r = top + 4
