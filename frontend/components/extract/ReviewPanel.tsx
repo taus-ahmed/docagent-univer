@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { firstValueOn, pageNav } from "@/lib/reviewPages";
 import { extractApi, reviewApi, type DocumentResult, type PageMeta } from "@/lib/api";
 import {
   badgeFor, boxToPercent, detailText, locationNotFound, reasonText, recordLabel, stepOpen,
@@ -267,7 +268,15 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
   }, [sel]);
 
   const selBox = boxFor(current);
-  const pages = doc.pages.length ? doc.pages : [1];
+  // overnight E2: every page of the document, with previous / next
+  const nav = pageNav(doc.pages, page, meta?.page_count);
+  const pages = nav.pages;
+  const goPage = (p: number | null) => {
+    if (p == null) return;
+    setPage(p);
+    const i = firstValueOn(values, p);
+    if (i >= 0) setSel(i);              // the slot list follows the page
+  };
 
   return (
     <div role="dialog" aria-modal="true" aria-label={`Review ${doc.filename}`}
@@ -313,10 +322,17 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
           <div style={{ overflow: "auto", background: "var(--surface2)", padding: 12,
                         borderRight: "1px solid var(--border)" }}>
             {pages.length > 1 && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center",
+                            flexWrap: "wrap" }}>
+                <button className="btn btn-sm btn-secondary" aria-label="Previous page"
+                        disabled={nav.prev == null} onClick={() => goPage(nav.prev)}>‹ Previous</button>
+                <span style={{ fontSize: 12, color: "var(--text2)" }} aria-live="polite">{nav.label}</span>
+                <button className="btn btn-sm btn-secondary" aria-label="Next page"
+                        disabled={nav.next == null} onClick={() => goPage(nav.next)}>Next ›</button>
                 {pages.map(p => (
                   <button key={p} className={`btn btn-sm ${p === page ? "btn-primary" : "btn-secondary"}`}
-                          onClick={() => setPage(p)}>Page {p}</button>
+                          aria-current={p === page ? "page" : undefined}
+                          onClick={() => goPage(p)}>Page {p}</button>
                 ))}
               </div>
             )}

@@ -22,7 +22,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] D3 — T9 ambiguity text says what the prompt carries: Item / Debit / Credit
 - [x] GATE D — pytest exit 0: 5235 tests, 0 failures, 0 errors (18 skipped incl. xfails, down from 21); harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0
 - [x] E1 — lib/reviewRefresh.ts: every review action invalidates review, job-results, job and jobs; the Extract page reads results through the job-results query; frontend test + API test (edit and correct-and-accept persist in GET /results and the Excel)
-- [ ] E2 — multi-page navigation in the review dialog
+- [x] E2 — review lists every page of the document (ledger / inventory), page endpoint returns page_count, dialog has Previous / "Page n of N" / Next and the value list follows the page; frontend + API tests; manual check section F
 - [ ] GATE E
 - [ ] M1 — no -latest candidates; GEMINI_MODEL_FALLBACKS; 404 fails visibly
 - [ ] M2 — store modelVersion in model_used; Legend + job detail

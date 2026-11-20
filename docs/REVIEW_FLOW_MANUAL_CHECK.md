@@ -128,3 +128,19 @@ cell works. Use a fresh extraction job for each run of this list.
 27. API check (optional): `GET /api/jobs/{job}/docs/{doc}/history`.
     *Expected:* HTTP 200 with `events`, the same entries as the History panel.
     Another firm's job id answers 404.
+
+## F. Edits stay, and every page is reachable (overnight E1, E2)
+
+28. Open **Review** on a 1099 (e.g. `irs_1099int_mod3.pdf`), select **Form
+    Type**, click **Correct**, type a new value and click **Save and accept**.
+    *Expected:* the toast says it was saved; the dialog, the results grid and
+    a fresh download all show the NEW value — it does not revert. Repeat
+    with a plain **Edit** (double-click in the grid): the same.
+29. Stop the backend (or go offline) and try another correction.
+    *Expected:* a red toast "Not saved: …" and the value stays as it was.
+30. Open **Review** on a two-page document (e.g. `mammoth_2pg.pdf`).
+    *Expected:* above the page image: **‹ Previous**, "Page 1 of 2",
+    **Next ›** and one button per page. **Next ›** shows page 2 and, when
+    page 2 holds values, the value list jumps to the first of them;
+    **‹ Previous** is disabled on page 1 and **Next ›** on the last page.
+    A page with no extracted value is still listed and can be opened.

@@ -85,6 +85,16 @@ def _pages_of(ed: dict) -> list[int]:
     sp = ed.get("source_pages")
     if isinstance(sp, list) and len(sp) == 2 and all(isinstance(x, int) for x in sp):
         pages.update(range(sp[0], sp[1] + 1))
+    # Overnight E2: EVERY page of the document, not only the pages holding a
+    # value — mammoth_2pg's page 2 had lost its rows, so the dialog offered
+    # page 1 alone and the page the reviewer had to check was unreachable.
+    diag = ed.get("diagnostics") if isinstance(ed.get("diagnostics"), dict) else {}
+    for k in (diag.get("pages") or {}) if isinstance(diag.get("pages"), dict) else ():
+        if str(k).isdigit() and int(k) >= 1:
+            pages.add(int(k))
+    n = (diag.get("inventory") or {}).get("pages") if isinstance(diag.get("inventory"), dict) else None
+    if isinstance(n, int) and n >= 1 and not (isinstance(sp, list) and len(sp) == 2):
+        pages.update(range(1, n + 1))
     return sorted(pages)
 
 
@@ -885,7 +895,10 @@ def page_meta(job_id: int, doc_id: int, page: int, db: Session = Depends(get_db)
     return {"page": page, "origin": origin, "frame": frame,
             "width_pt": round(w, 1) if w else None,
             "height_pt": round(h, 1) if h else None,
-            "record_box_pt": region, "boxes": boxes}
+            "record_box_pt": region, "boxes": boxes,
+            # overnight E2: the dialog's previous/next and "page n of N"
+            "page_count": max(int(reading.get("pages") or 1), len(reading.get("lines") or [])),
+            }
 
 
 def boxes_for(ed, page, lines, region=None) -> list:

@@ -551,6 +551,8 @@ export const extractApi = {
 
 export interface PageMeta {
   page: number;
+  /** overnight E2: how many pages the document has (previous / next) */
+  page_count?: number;
   origin: "native" | "ocr" | "pre_ocr" | string;
   frame: string;
   width_pt: number | null;
