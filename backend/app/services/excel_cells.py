@@ -154,7 +154,10 @@ _ID_LABEL = re.compile(
     r"|routing|aba|account|acct|licen[cs]e|policy|serial|iban|swift|sort"
     r"|zip|postcode|postal|phone|tel|fax|mobile|mic|file|folio|batch"
     # Run C, C3: a cheque / check / PO / invoice slot named by that word alone
-    r"|cheque|check|chq|po|invoice)\b"
+    r"|cheque|check|chq|po|invoice"
+    # overnight A3: a NAME or a locality / control / state-ID box holding
+    # digits (W-2 Locality Name 700102) is text, never a quantity
+    r"|name|locality|control|dept|corp)\b"
     # `#` is not a word character, so `\b#\b` never matched "Check #"
     r"|#", re.I)
 
@@ -172,6 +175,28 @@ _QTY_LABEL = re.compile(
     r"|sum|due|paid|payment|charge|fee|tax|discount|credit|debit|value|units"
     r"|hours|days|percent|pct)\b|%",
     re.I)
+
+
+#: overnight A3 — a MONEY label always shows two decimals, even when the
+#: document printed a whole amount (43 shows 43.00). Counts are not money.
+_MONEY_LABEL = re.compile(
+    r"\b(amount|amt|total|subtotal|balance|price|cost|sum|due|paid|payment"
+    r"|charge|fee|tax|taxes|discount|credit|debit|wages|wage|tips|compensation"
+    r"|withheld|income|benefits|salary|pay|earnings|deductions|shipping"
+    r"|handling|freight|deposit|deposits|withdrawal|withdrawals|interest"
+    r"|dividends|proceeds|premium|rent|royalties)\b", re.I)
+_COUNT_LABEL = re.compile(
+    r"\b(qty|quantity|count|units|hours|hrs|days|percent|pct|rate|year|yr"
+    r"|line|item|items|no|number|seq)\b|%", re.I)
+_YEAR_LABEL = re.compile(r"\b(year|yr)\b", re.I)
+
+
+def labels_money(label) -> bool:
+    """A label naming an amount of money (A3), never a count or a rate."""
+    text = str(label or "")
+    if _COUNT_LABEL.search(text) and not re.search(r"\b(price|amount|cost)\b", text, re.I):
+        return False
+    return bool(_MONEY_LABEL.search(text))
 
 
 def labels_an_identifier(label) -> bool:
@@ -533,6 +558,11 @@ def cell_format(value, label="", decimal_hint=None):
     # but CSV, copy-as-values, print and anyone reading the sheet got the
     # rounded one, and nothing flagged it. Never fewer digits than the source,
     # and never more.
+    if _YEAR_LABEL.search(str(label or "")) and not frac and not sym \
+            and re.fullmatch(r"(1[89]|2[0-9])\d\d", txt):
+        return "0"                        # A3: a year has no thousands separator
+    if labels_money(label) or sym:
+        frac = max(frac, 2)               # A3: money always shows its cents
     base = f"#,##0.{'0' * frac}" if frac else _FMT_PLAIN
     if sym:
         base = f'"{sym}"{base}'

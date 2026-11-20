@@ -1443,6 +1443,45 @@ def as_page_source(page_or_source):
     return PdfplumberSource(page_or_source)
 
 
+def mark_printed_spaces(lines, chars):
+    """Overnight A3: a word the reader glued across a printed gap.
+
+    pdfplumber joins characters closer than its x-tolerance (3 pt), so a page
+    that positions `0000005712` and `UUQ` 1.9 pt apart — a space with no
+    space glyph — yields ONE word, `0000005712UUQ`. Where a gap inside a word
+    is at least 40% of the word's median character width (and 1 pt), the
+    word gets `spaced`: its text with a space at each such gap. Geometry
+    only — `text` is unchanged, so prompts and cached answers are too."""
+    by_row = {}
+    for c in chars or ():
+        t = c.get("text")
+        if not t or not str(t).strip():
+            continue
+        by_row.setdefault(int(float(c.get("top", 0))), []).append(c)
+    for ln in lines:
+        for w in ln:
+            text = str(w.get("text", ""))
+            if len(text) < 4 or " " in text:
+                continue
+            top, x0, x1 = float(w.get("top", 0)), float(w.get("x0", 0)), float(w.get("x1", 0))
+            cs = [c for r in (int(top) - 1, int(top), int(top) + 1) for c in by_row.get(r, ())
+                  if x0 - 0.5 <= float(c["x0"]) and float(c["x1"]) <= x1 + 0.5]
+            cs.sort(key=lambda c: float(c["x0"]))
+            if "".join(str(c["text"]) for c in cs) != text:
+                continue
+            widths = sorted(float(c["x1"]) - float(c["x0"]) for c in cs)
+            med = widths[len(widths) // 2]
+            out, gapped = [str(cs[0]["text"])], False
+            for a, b in zip(cs, cs[1:]):
+                gap = float(b["x0"]) - float(a["x1"])
+                if gap >= max(1.0, 0.4 * med):
+                    out.append(" ")
+                    gapped = True
+                out.append(str(b["text"]))
+            if gapped:
+                w["spaced"] = "".join(out)
+
+
 def read_page(page, widgets=(), stats=None):
     """(text, lines, repairs) for one pdfplumber page.
 
@@ -1508,6 +1547,10 @@ def read_page(page, widgets=(), stats=None):
     # `unchecked_overprint_pages`.
     if source.can(Capability.CHARACTER_GEOMETRY):
         mark_overprints(lines, overprinted_spans_from_chars(source.chars()))
+        try:
+            mark_printed_spaces(lines, source.chars())
+        except Exception:                 # geometry only, never fatal
+            pass
     elif stats is not None:
         stats["overprint_checked"] = False
     # THE PROMPT HAS TO BE FIXED TOO, or nothing is. `extract_text()` groups

@@ -451,7 +451,7 @@ def test_e14_the_1099_box_1_compensation_is_a_number():
     box1 = next(ws.cell(r, 2) for r in range(1, ws.max_row + 1)
                 if ws.cell(r, 1).value == "Box 1 Nonemployee Compensation")
     assert box1.data_type == "n" and box1.value == 15250.0
-    assert box1.number_format == "#,##0"
+    assert box1.number_format == "#,##0.00"      # overnight A3: money shows cents
     tin = next(ws.cell(r, 2) for r in range(1, ws.max_row + 1)
                if ws.cell(r, 1).value == "Payer TIN")
     assert tin.data_type == "s"                      # an identifier stays text

@@ -5,7 +5,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] CI1 — CI-only failures: git-ignored local_docs PDFs skip on CI with the file named; checkout fetch-depth 0 for `git show 56e80ca`; -ra --durations=20 (1f8e7a0)
 - [x] A1 — wrong-slot and duplicate values: engine/ownership.py (box owner by geometry, checkbox X by x-position, unwitnessed duplicate cleared); completeness box-caption rule
 - [x] A2 — a row printed in another box never enters a box-coded band; Box 14 second entry flagged in plain words
-- [ ] A3 — identifiers are text; control number spacing; money always 2 decimals
+- [x] A3 — identifiers (name/locality/control) text; years plain; money labels always 2 decimals; Box d trimmed to its own box; printed space recovered from char gaps; ID slots not demoted as phone numbers
 - [ ] A4 — lost page recovery (mammoth page 2)
 - [ ] A5 — silent empty slot (form title printed on the page)
 - [ ] A6 — consistency (combined vs single parity; fragment rows; temperature 0)

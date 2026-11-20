@@ -336,7 +336,8 @@ class TestTheLabelDecidesWhatADigitRunIs:
     def test_an_identifier_gets_no_number_format(self):
         from app.api.routes.extract import cell_format
         assert cell_format("222222", "NMLS ID") is None
-        assert cell_format("180000", "Total") == "#,##0"
+        # overnight A3: a money label always shows its cents
+        assert cell_format("180000", "Total") == "#,##0.00"
 
     def test_the_writer_passes_the_label_through(self):
         """End to end: the value reaches the sheet as text, not 222222.0."""

@@ -643,7 +643,10 @@ def _single_datum(value, label):
         return False
     if _PHONE.search(v) and not any(w in lab for w in ("phone", "tel", "mobile",
                                                        "fax", "contact no")):
-        return False
+        # A3: an IDENTIFIER slot (`Box d Control Number` = 0000005712 UUQ)
+        # holds a long digit run by definition; it is not a phone number.
+        if not (_ID_LABEL_HEAD.search(lab) and not _EMAIL.search(v)):
+            return False
     return True
 
 
@@ -2028,8 +2031,28 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # left plainly empty, because the page leaves it blank.
     if all_lines:
         import ownership as OW
+        _rewritten = []
         _cleared = OW.settle_fields(slots["fields"], extracted_fields, conf_map,
-                                    field_prov, all_lines, notes)
+                                    field_prov, all_lines, notes, _rewritten)
+        # A value trimmed to its own box or given back its printed space is
+        # graded again from scratch: the flag the longer string earned (more
+        # than one piece of information) belonged to the string, not the slot.
+        for _f in slots["fields"]:
+            if _f["ref"] not in _rewritten or _f["ref"] in _cleared:
+                continue
+            _v = extracted_fields[_f["ref"]]
+            _p = field_prov.setdefault(_f["ref"], {})
+            _ok = bool(_p.get("grounded")) or matches_loosely(_v, all_lines)
+            _p["grounded"] = _ok
+            _lvl, _why = confidence_for(_v, _p.get("source", ""), _f["row_label"],
+                                        _ok, inferred=inferred)
+            conf_map[_f["ref"]] = _lvl
+            flagged[:] = [x for x in flagged if not (isinstance(x, dict)
+                                                     and x.get("ref") == _f["row_label"])]
+            field_fail.pop(_f["ref"], None)
+            if _lvl not in CONFIDENT_LEVELS:
+                flagged.append(_flag(_f["row_label"], _v, _why))
+                failed(_f["ref"], CONTENT_CHECK_FAILED)
         if _cleared:
             _gone = {f["row_label"] for f in slots["fields"] if f["ref"] in _cleared}
             flagged[:] = [x for x in flagged

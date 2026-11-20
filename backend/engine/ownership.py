@@ -322,8 +322,77 @@ def unwitnessed_duplicates(fields, values, provenance, lines):
 
 # ── the pass over field slots ───────────────────────────────────────────────
 
-def settle_fields(fields, values, conf, provenance, lines, notes):
-    """Apply rules 1-3 to the field answers in place. Returns the refs cleared."""
+_IDENT = re.compile(r"\b(number|no|id|code|ref|control|account|serial)\b", re.I)
+
+
+def _run_on_line(value, lines):
+    """(line, [words]) where the words of `value` are printed consecutively."""
+    toks = str(value or "").split()
+    if not toks:
+        return None, []
+    for ln in lines:
+        ws = [w for w in ln if str(w.get("text", "")).strip()]
+        for i in range(len(ws) - len(toks) + 1):
+            if all(str(ws[i + k].get("text")) == toks[k] for k in range(len(toks))):
+                return ln, ws[i:i + len(toks)]
+    return None, []
+
+
+def own_box_part(value, label, lines):
+    """A3: the words of a box value printed inside its OWN box. Job 48 read
+    `0000005712UUQ CKR5 16260` for Box d, the line under `d Control number |
+    Dept. | Corp. | Employer use only`. The box ends where its caption line
+    prints a heading that is not a word of the slot's own label."""
+    own = slot_box(label)
+    if not own or len(str(value or "").split()) < 2:
+        return value
+    _ln, run = _run_on_line(value, lines)
+    if not run:
+        return value
+    first = run[0]
+    if box_owner(first, lines) is None or not same_box(own, box_owner(first, lines)):
+        return value
+    lab = _letters(_SLOT_BOX.sub("", str(label or "")))
+    for cap in lines:
+        for code, w in _codes_on(cap):
+            if not same_box(own, code) or w.get("page") != first.get("page"):
+                continue
+            dy = _f(first, "top") - _f(w, "top")
+            if not (0 < dy <= 40) or _f(w, "x0") > _f(first, "x0") + 2:
+                continue
+            after = [x for x in cap if _f(x, "x0") > _f(w, "x1")]
+            edge = next((_f(x, "x0") for x in after
+                         if len(_letters(x.get("text"))) >= 2
+                         and _letters(x.get("text")) not in lab), None)
+            if edge is None:
+                return value
+            kept = [x for x in run if _f(x, "x0") < edge - 1]
+            if kept and len(kept) < len(run):
+                return " ".join(str(x.get("text")) for x in kept)
+            return value
+    return value
+
+
+def printed_spacing(value, label, lines):
+    """A3: an identifier keeps the space the page prints inside it."""
+    if not (slot_box(label) or _IDENT.search(str(label or ""))):
+        return value
+    v = str(value or "").strip()
+    if not v or " " in v:
+        return value
+    for ln in lines:
+        for w in ln:
+            if str(w.get("text", "")) == v and w.get("spaced"):
+                return w["spaced"]
+    return value
+
+
+def settle_fields(fields, values, conf, provenance, lines, notes, rewritten=None):
+    """Apply rules 0-3 to the field answers in place. Returns the refs cleared;
+    refs whose value was rewritten (trimmed to their box, spacing restored) are
+    appended to `rewritten` for the caller to re-grade."""
+    if rewritten is None:
+        rewritten = []
     if not lines:
         return []
     cleared = []
@@ -339,6 +408,23 @@ def settle_fields(fields, values, conf, provenance, lines, notes):
         # a widget value (Run B form lane) is one value in one box: better
         # evidence than any reading of the flattened text layer
         return bool((provenance.get(f["ref"]) or {}).get("machine_read"))
+
+    # 0. a box value that runs into the neighbouring boxes, and an identifier
+    #    the reader glued across a printed space (A3)
+    for f in fields:
+        v = values.get(f["ref"])
+        if not str(v or "").strip() or _is_mark(v) or machine_read(f):
+            continue
+        fixed = own_box_part(v, f["row_label"], lines)
+        if fixed != v:
+            notes.append(f'{f["row_label"]}: kept only the part printed in its own '
+                         f'box ({str(v)[:40]!r} -> {fixed!r})')
+        spaced = printed_spacing(fixed, f["row_label"], lines)
+        if spaced != fixed:
+            notes.append(f'{f["row_label"]}: printed spacing kept ({spaced!r})')
+        if spaced != v:
+            values[f["ref"]] = spaced
+            rewritten.append(f["ref"])
 
     # 1. a box value printed in another box
     for f in fields:
