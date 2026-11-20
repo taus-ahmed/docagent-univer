@@ -1791,10 +1791,16 @@ def check_placement(row, columns, line, bands):
     if not line or not bands:
         return out
     cursor = None
+    keys = [col.get("key") or col.get("header") for col in columns]
     for col in columns:
         key = col.get("key") or col.get("header")
         value = row.get(key, "")
         if str(value or "").strip() == "":
+            continue
+        if _inside_another_cell(value, key, row, keys):
+            # Run E, E10: read out of another cell of the SAME row — the unit
+            # `pair` from `Pallet racking beam 2700mm (pair)` — so it sits
+            # where that cell sits by construction; no placement verdict.
             continue
         span = locate(value, line, after_x=cursor)
         if span is None:
@@ -1828,6 +1834,23 @@ def check_placement(row, columns, line, bands):
                else f"value does not sit under the {col.get('header')!r} column")
         out.append((key, why))
     return out
+
+
+def _inside_another_cell(value, key, row, keys) -> bool:
+    """Is `value` a whole word (or bracketed word) INSIDE a longer value of
+    another column of this row? `(pair)` in a description is; `120.00`
+    standing alone under the wrong amount column is not."""
+    v = str(value or "").strip().strip("()[]").casefold()
+    if not v:
+        return False
+    pat = re.compile(r"(?<![0-9a-z])" + re.escape(v) + r"(?![0-9a-z])")
+    for k in keys:
+        if k == key:
+            continue
+        other = str(row.get(k, "") or "").strip().casefold()
+        if len(other) > len(v) and pat.search(other):
+            return True
+    return False
 
 
 def _nearest(span, bands):

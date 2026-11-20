@@ -174,6 +174,39 @@ def test_e9_the_rule_is_asked_only_of_templates_with_two_text_columns():
     assert column_copy_hint(two) and column_copy_hint(one) == ""
 
 
+# ---------------------------------------------------------------------------
+# E10: a unit read from brackets inside the description is not misplaced.
+
+def _po_answer(parsed, units):
+    import copy
+    answer = copy.deepcopy(parsed)
+    for row, unit in zip(answer["tables"]["table"], units):
+        row["cells"]["Unit"] = unit
+    return answer
+
+
+def _placement_flags(ed):
+    return [f for f in ed["validation"]["flagged_fields"]
+            if "column" in str(f.get("reason", "")).casefold()
+            and "under" in str(f.get("reason", "")).casefold()]
+
+
+def test_e10_a_unit_in_brackets_inside_the_description_is_not_flagged():
+    out = _replay(19, lambda parsed: _po_answer(parsed, ["", "pair", "", "", "hours"]))
+    ed = out["extracted_data"]
+    rows = ed["table_rows"]
+    assert [r["Unit"] for r in rows] == ["", "pair", "", "", "hours"]
+    assert _placement_flags(ed) == []
+    assert all(r.get("_confidence") != "low" for r in rows)
+
+
+def test_e10_a_value_really_under_another_column_still_fires():
+    # the unit price written into Unit: it stands alone under UNIT PRICE
+    out = _replay(19, lambda parsed: _po_answer(parsed, ["", "42.00", "", "", ""]))
+    flags = _placement_flags(out["extracted_data"])
+    assert len(flags) == 1 and flags[0]["ref"] == "table[1].Unit"
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch
