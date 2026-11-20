@@ -185,11 +185,6 @@ def test_d11_total_due_tbd_is_a_legitimate_label_not_a_placeholder():
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D11: the legitimate label 'TBD' is erased as a "
-            "placeholder, so its field slot disappears"),
-)
 def test_d11_an_exact_tbd_label_can_be_real_template_text():
     grid = _grid({(0, 0): "TBD", (1, 0): "Approval"})
     assert _fields(grid) == [("B1", "TBD"), ("B2", "Approval")]

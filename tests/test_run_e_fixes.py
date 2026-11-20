@@ -82,6 +82,31 @@ def test_e7_a_two_level_header_still_inherits_its_vertical_merge():
         ["Item", "Debit", "Credit"]]
 
 
+def test_e7_tbd_in_a_slot_cell_stays_a_placeholder_and_is_never_exported():
+    import contextlib
+    import io
+    import json
+    import openpyxl
+    from types import SimpleNamespace
+    from slot_extractor import enumerate_slots
+    from app.api.routes.extract import _write_slot_excel
+
+    grid = _grid({(0, 0): "TBD", (1, 0): "Date", (1, 1): "TBD"})
+    assert _fields(grid) == [("B1", "TBD"), ("B2", "Date")]
+    slots = enumerate_slots(grid)
+    ed = {"template_type": "slot", "extracted_fields": {},
+          "slot_map": {"fields": slots["fields"], "tables": []},
+          "validation": {"confidence_map": {}, "flagged_fields": []}}
+    payload = json.dumps(ed)
+    doc = SimpleNamespace(filename="x.pdf", get_extracted_data=lambda: json.loads(payload))
+    wb = openpyxl.Workbook()
+    with contextlib.redirect_stdout(io.StringIO()):
+        _write_slot_excel(wb.active, [doc], grid, grid["cells"], openpyxl)
+    ws = wb.active
+    assert ws["A1"].value == "TBD"          # the label is written
+    assert ws["B2"].value is None           # the placeholder is not
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch

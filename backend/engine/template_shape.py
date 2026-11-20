@@ -159,6 +159,35 @@ def is_placeholder(text) -> bool:
     return bool(PLACEHOLDER.match(str(text or "").strip()))
 
 
+def placeholder_at(text_of, r, c) -> bool:
+    """Is the text at (r, c) a placeholder IN ITS PLACE? `text_of(r, c)`
+    returns a cell's text ('' when empty).
+
+    Run E, E7 (D11): every placeholder shape is one no label takes — except
+    the word `TBD`, which is also a real label. An exact `TBD` is a
+    placeholder only in a value position: when the nearest text to its left
+    on its row is a label. Alone in its row's first text it IS the label.
+    """
+    text = str(text_of(r, c) or "").strip()
+    if not is_placeholder(text):
+        return False
+    if text.casefold() != "tbd":
+        return True
+    for cc in range(c - 1, -1, -1):
+        left = str(text_of(r, cc) or "").strip()
+        if left:
+            return not is_placeholder(left)
+    return False
+
+
+def cells_text_of(cells):
+    """`text_of` for an editor grid's `cells` dict ("r,c" -> {value})."""
+    def text_of(r, c):
+        cell = (cells or {}).get(f"{r},{c}")
+        return str(cell.get("value") or "") if isinstance(cell, dict) else ""
+    return text_of
+
+
 def _matrix(grid):
     """{(row, col): text} for every cell in the used range; '' for empty.
 
@@ -197,8 +226,11 @@ def _matrix(grid):
 
     # A placeholder still widens the used range (it marks a slot the user
     # drew), and is then an EMPTY cell — a slot, not a label (D11).
+    def _raw_text(r, c):
+        return raw.get((r, c), "")
+
     for rc, txt in list(out.items()):
-        if txt and is_placeholder(txt):
+        if txt and placeholder_at(_raw_text, *rc):
             out[rc] = ""
 
     return out, {"extract_target_cells": marked,
