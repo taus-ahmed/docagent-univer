@@ -12,6 +12,7 @@ import {
   FILTERS, fieldsByLabel, matches, reasonText, recordLabel,
   type Filter, type ReviewDoc, type ReviewValue,
 } from "@/lib/review";
+import { gridAction } from "@/lib/reviewActions";
 import ReviewPanel, { Badge } from "@/components/extract/ReviewPanel";
 import toast from "react-hot-toast";
 
@@ -204,6 +205,29 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
     // object store the stored name is a temp name, and the demo's exports
     // drop it for the same reason.
     const fixed: ColDef[] = [
+      {
+        // Run G, G5: the dialog opens from THIS button only. A click on a row
+        // used to open it, which swallowed the double-click that edits.
+        colId: "_review",
+        headerName: "",
+        pinned: "left" as const,
+        width: 92,
+        editable: false,
+        sortable: false,
+        filter: false,
+        cellRenderer: ({ data }: ICellRendererParams) => (
+          <button type="button" className="btn btn-secondary btn-sm"
+                  aria-label={`Review ${String(data?._filename ?? "document")}`}
+                  style={{ padding: "0 8px", lineHeight: "22px" }}>
+            Review
+          </button>
+        ),
+        onCellClicked: ({ data }: any) => {
+          if (gridAction("_review", "click") === "review") {
+            setReviewId((data?._id as number | undefined) ?? null);
+          }
+        },
+      },
       ...(isDemo ? [] : [{
         field: "_filename",
         headerName: "File · page",
@@ -238,7 +262,7 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
             </span>
           ) : null,
         onCellClicked: ({ data }: any) => {
-          if (data._has_rows) {
+          if (data._has_rows && gridAction("_has_rows", "click") === "rows") {
             setExpandedId(prev => prev === data._id ? null : data._id);
           }
         },
@@ -351,7 +375,7 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
             )}
           </div>
           <div style={{ fontSize: 11, color: "var(--text3)" }}>
-            Click a row to review it against the page · double-click a cell to edit
+            Click a cell to select it · double-click a value to edit it · Review opens the page and the review actions
             {results.some(r => (r.extracted_data?.table_rows?.length ?? 0) > 0) && (
               <span style={{ marginLeft: 8, color: "var(--accent)" }}>
                 · Click row count to expand line items
@@ -395,12 +419,10 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
           columnDefs={colDefs}
           defaultColDef={{ sortable: true, resizable: true, filter: true }}
           onCellValueChanged={onCellValueChanged}
-          onRowClicked={e => {
-            const col = (e.event?.target as HTMLElement | null)?.closest?.("[col-id]")
-              ?.getAttribute("col-id");
-            if (col === "_has_rows") return;
-            setReviewId((e.data?._id as number | undefined) ?? null);
-          }}
+          // A single click only selects (AG Grid's own behaviour); a
+          // double-click edits a scalar value cell inline; the Review button
+          // opens the dialog (lib/reviewActions.ts::gridAction).
+          singleClickEdit={false}
           pagination
           paginationPageSize={25}
           paginationPageSizeSelector={[25, 50, 100]}

@@ -20,12 +20,16 @@ export interface ReviewValue {
   source: string | null;
   table?: string;
   row?: number;
+  /** Run G: a table row's stable id (rows added by hand always have one). */
+  row_id?: string | null;
   column?: string;
   status: ReviewStatus;
   reasons: string[];
   review_required: boolean;
   reviewed: boolean;
   resolved: boolean;
+  /** Run G: what a reviewer said about this value, if anything. */
+  disposition?: "accepted_as_is" | "corrected" | "confirmed_empty" | null;
 }
 
 export interface ReviewSummary {
@@ -215,6 +219,6 @@ export function exportWarning(s: ReviewSummary | undefined): string | null {
   const n = s.needs_review;
   return `${n} value${n === 1 ? "" : "s"} still need${n === 1 ? "s" : ""} review ` +
          `(${s.low} low, ${s.unverified} unverified, ${s.empty_flagged} empty and flagged). ` +
-         `They will be exported with a coloured fill, a comment saying why, and a ` +
-         `"Review status" column. Export anyway?`;
+         `They will be exported with a coloured fill and a comment saying why, and ` +
+         `the file will be named _DRAFT until every value is settled. Export anyway?`;
 }

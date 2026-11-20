@@ -6,8 +6,14 @@
 // box is drawn in that image's frame. A value with no box says why; nothing is
 // guessed.
 //
-// Keyboard: j / ↓ next value needing review, k / ↑ previous, a accept (mark
-// reviewed), e edit, Enter save, Esc cancel or close.
+// Keyboard: j / ↓ next value needing review, k / ↑ previous; on a flagged
+// value a accept as is, c correct, m mark empty; e edit any value; Enter
+// save, Esc cancel or close.
+//
+// Run G, G5: a flagged value offers three explicit actions (Accept as is,
+// Correct, Mark empty) and each is ONE request (lib/reviewActions.ts). A table
+// can take a row the extraction missed (Add row), and the History panel reads
+// the document's append-only history.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -16,6 +22,10 @@ import {
   badgeFor, boxToPercent, detailText, locationNotFound, reasonText, recordLabel, stepOpen,
   type AttentionItem, type ReasonMap, type ReviewDoc, type ReviewValue,
 } from "@/lib/review";
+import {
+  actionDone, actionsFor, addRowBody, historyLine, reviewBody, tablesOf, valueEntry,
+  type HistoryEvent, type ValueDisposition,
+} from "@/lib/reviewActions";
 
 interface Props {
   jobId: number;
@@ -51,7 +61,17 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
   const [imgError, setImgError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  /** "correct" = the typed text replaces the value AND accepts it (one
+   *  request); "edit" = a plain edit of a value that owes nothing. */
+  const [editMode, setEditMode] = useState<"correct" | "edit">("edit");
   const [busy, setBusy] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<HistoryEvent[] | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const tables = useMemo(() => tablesOf(result?.extracted_data), [result]);
+  const [addTable, setAddTable] = useState<string | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string>>({});
+  const [addReason, setAddReason] = useState<string>("");
   const listRef = useRef<HTMLDivElement>(null);
   const current = values[sel];
   const openAttention = (doc.attention ?? []).filter(a => !a.disposition);
@@ -88,20 +108,69 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
       : b.table === v.table && b.row === v.row && b.column === v.column));
   }, [meta]);
 
-  const accept = useCallback(async (v: ReviewValue | undefined) => {
+  const loadHistory = useCallback(async () => {
+    setHistoryError(null);
+    try {
+      setHistory((await reviewApi.history(jobId, doc.doc_id)).events);
+    } catch (e: any) {
+      setHistoryError(detailText(e, "The history could not be loaded"));
+    }
+  }, [jobId, doc.doc_id]);
+
+  const changed = useCallback(() => {
+    onChanged();
+    if (showHistory) loadHistory();
+  }, [onChanged, showHistory, loadHistory]);
+
+  /** Accept as is / Correct / Mark empty: one request each. */
+  const dispose = useCallback(async (v: ReviewValue | undefined, d: ValueDisposition,
+                                     value?: string) => {
     if (!v || busy) return;
+    let body;
+    try {
+      body = reviewBody([valueEntry(v, d, value)]);
+    } catch (e: any) {
+      toast.error(e?.message ?? "This value cannot be reviewed here");
+      return;
+    }
     setBusy(true);
     try {
-      await reviewApi.mark(jobId, doc.doc_id, {
-        values: [v.kind === "field" ? { ref: String(v.ref) }
-                                    : { table: String(v.table), row: Number(v.row) }],
-      });
-      toast.success("Marked reviewed");
-      onChanged();
+      await reviewApi.mark(jobId, doc.doc_id, body);
+      toast.success(actionDone(d));
+      setEditing(null);
+      changed();
     } catch (e: any) {
-      toast.error(detailText(e, "Could not save the review mark"));
+      toast.error(`Not saved: ${detailText(e, "Could not save the review mark")}`);
     } finally { setBusy(false); }
-  }, [busy, jobId, doc.doc_id, onChanged]);
+  }, [busy, jobId, doc.doc_id, changed]);
+
+  const accept = useCallback((v: ReviewValue | undefined) => {
+    if (v && !v.resolved) dispose(v, "accepted_as_is");
+  }, [dispose]);
+
+  const startEdit = useCallback((v: ReviewValue | undefined, mode: "correct" | "edit") => {
+    if (!v) return;
+    setEditMode(mode);
+    setEditing(String(v.value ?? ""));
+  }, []);
+
+  const addRow = useCallback(async () => {
+    const spec = tables.find(t => t.name === addTable);
+    if (!spec) return;
+    const body = addRowBody(spec, addValues, addReason || null);
+    if (!body) { toast.error("Type at least one value for the new row"); return; }
+    setBusy(true);
+    try {
+      const r = await reviewApi.addRow(jobId, doc.doc_id, spec.name, body);
+      toast.success(r.reflagged_totals.length
+        ? `Row added — check ${r.reflagged_totals.join(", ")}: the total no longer matches`
+        : "Row added");
+      setAddTable(null); setAddValues({}); setAddReason("");
+      changed();
+    } catch (e: any) {
+      toast.error(`Not added: ${detailText(e, "Could not add the row")}`);
+    } finally { setBusy(false); }
+  }, [tables, addTable, addValues, addReason, jobId, doc.doc_id, changed]);
 
   const save = useCallback(async (v: ReviewValue, text: string) => {
     setBusy(true);
@@ -122,11 +191,20 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
       if (result) result.extracted_data = saved.extracted_data as DocumentResult["extracted_data"];
       toast.success("Saved — marked as edited");
       setEditing(null);
-      onChanged();
+      changed();
     } catch (e: any) {
       toast.error(`Not saved: ${detailText(e, "Save failed")}`);
     } finally { setBusy(false); }
-  }, [jobId, doc.doc_id, result, onChanged]);
+  }, [jobId, doc.doc_id, result, changed]);
+
+  const submitEdit = useCallback((v: ReviewValue, text: string) => {
+    if (editMode === "correct") dispose(v, "corrected", text);
+    else save(v, text);
+  }, [editMode, dispose, save]);
+
+  useEffect(() => {
+    if (showHistory) loadHistory();
+  }, [showHistory, loadHistory]);
 
   const settle = useCallback(async (a: AttentionItem,
                                     choice: "confirmed_absent" | "entered_manually") => {
@@ -157,7 +235,8 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement | null;
-      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA");
+      const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA"
+                           || t.tagName === "SELECT");
       if (e.key === "Escape") {
         if (editing !== null) setEditing(null); else onClose();
         return;
@@ -171,13 +250,17 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
         const n = stepOpen(values, sel, -1); if (n >= 0) setSel(n);
       } else if (e.key === "a") {
         e.preventDefault(); accept(current);
+      } else if (e.key === "c" && current && !current.resolved) {
+        e.preventDefault(); startEdit(current, "correct");
+      } else if (e.key === "m" && current && actionsFor(current).length) {
+        e.preventDefault(); dispose(current, "confirmed_empty");
       } else if (e.key === "e" && current) {
-        e.preventDefault(); setEditing(String(current.value ?? ""));
+        e.preventDefault(); startEdit(current, current.resolved ? "edit" : "correct");
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [values, sel, current, editing, accept, onClose]);
+  }, [values, sel, current, editing, accept, dispose, startEdit, onClose]);
 
   useEffect(() => {
     listRef.current?.querySelector(`[data-idx="${sel}"]`)?.scrollIntoView({ block: "nearest" });
@@ -209,9 +292,13 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
                 ? `${doc.summary.needs_review} value${doc.summary.needs_review === 1 ? "" : "s"} need review`
                 : openAttention.length ? "no value needs review"
                 : "Nothing in this document needs review"}
-              {" · "}j/k next/previous · a accept · e edit · Esc close
+              {" · "}j/k next/previous · a accept · c correct · m mark empty · e edit · Esc close
             </div>
           </div>
+          <button className="btn btn-secondary btn-sm" aria-pressed={showHistory}
+                  onClick={() => setShowHistory(s => !s)}>
+            {showHistory ? "Hide history" : "History"}
+          </button>
           <button className="btn btn-secondary btn-sm" onClick={markDocument}
                   title={openAttention.length ? "Settle each completeness reason first" : undefined}
                   disabled={busy || doc.document_reviewed || openAttention.length > 0}>
@@ -263,6 +350,31 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
 
           {/* values */}
           <div ref={listRef} style={{ overflow: "auto", padding: 8 }}>
+            {showHistory && (
+              <div role="region" aria-label="History"
+                   style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 8,
+                            marginBottom: 8, background: "var(--surface2)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text1)", marginBottom: 4 }}>
+                  History (read-only)
+                </div>
+                {historyError && <p role="alert" style={{ fontSize: 11, color: "var(--red)" }}>{historyError}</p>}
+                {!historyError && history === null && (
+                  <p style={{ fontSize: 11, color: "var(--text3)" }}>Loading history…</p>
+                )}
+                {history !== null && history.length === 0 && (
+                  <p style={{ fontSize: 11, color: "var(--text3)" }}>Nothing has been changed or reviewed yet.</p>
+                )}
+                {history !== null && history.length > 0 && (
+                  <ol style={{ margin: 0, paddingLeft: 18 }}>
+                    {history.map((ev, i) => (
+                      <li key={i} style={{ fontSize: 11, color: "var(--text2)", padding: "2px 0" }}>
+                        {historyLine(ev)}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            )}
             {(doc.attention ?? []).length > 0 && (
               <div role="region" aria-label="Completeness"
                    style={{ border: "1px solid var(--red)", borderRadius: 6, padding: 8,
@@ -319,11 +431,17 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
                     <Badge v={v}/>
                   </div>
                   {active && editing !== null ? (
-                    <form onSubmit={e => { e.preventDefault(); save(v, editing); }}
+                    <form onSubmit={e => { e.preventDefault(); submitEdit(v, editing); }}
+                          onClick={e => e.stopPropagation()}
                           style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                      <input className="input" autoFocus value={editing} aria-label={`Edit ${v.label}`}
+                      <input className="input" autoFocus value={editing}
+                             aria-label={`${editMode === "correct" ? "Correct" : "Edit"} ${v.label}`}
                              onChange={e => setEditing(e.target.value)} style={{ flex: 1 }}/>
-                      <button className="btn btn-primary btn-sm" type="submit" disabled={busy}>Save</button>
+                      <button className="btn btn-primary btn-sm" type="submit" disabled={busy}>
+                        {editMode === "correct" ? "Save and accept" : "Save"}
+                      </button>
+                      <button className="btn btn-secondary btn-sm" type="button" disabled={busy}
+                              onClick={() => setEditing(null)}>Cancel</button>
                     </form>
                   ) : (
                     <div style={{ fontSize: 13, color: "var(--text1)", wordBreak: "break-word" }}>
@@ -344,15 +462,29 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
                   )}
                   {active && (
                     <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
-                      {!v.resolved && (
+                      {editing === null && actionsFor(v).map(a => (
+                        <button key={a.id} title={a.hint}
+                                className={`btn btn-sm ${a.id === "accepted_as_is" ? "btn-primary" : "btn-secondary"}`}
+                                disabled={busy}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  if (a.id === "corrected") startEdit(v, "correct");
+                                  else dispose(v, a.id);
+                                }}>
+                          {a.label} ({a.key})
+                        </button>
+                      ))}
+                      {editing === null && v.resolved && (
                         <button className="btn btn-secondary btn-sm" disabled={busy}
-                                onClick={e => { e.stopPropagation(); accept(v); }}>Accept (a)</button>
-                      )}
-                      {editing === null && (
-                        <button className="btn btn-secondary btn-sm" disabled={busy}
-                                onClick={e => { e.stopPropagation(); setEditing(String(v.value ?? "")); }}>
+                                onClick={e => { e.stopPropagation(); startEdit(v, "edit"); }}>
                           Edit (e)
                         </button>
+                      )}
+                      {v.disposition && (
+                        <span style={{ fontSize: 10.5, color: "var(--text3)" }}>
+                          {v.disposition === "accepted_as_is" ? "Accepted as is"
+                            : v.disposition === "corrected" ? "Corrected" : "Confirmed empty"}
+                        </span>
                       )}
                       <span style={{ fontSize: 10.5, color: "var(--text3)" }}>
                         {!v.page ? "No page recorded for this value, so no box."
@@ -366,6 +498,52 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
                 </div>
               );
             })}
+            {tables.length > 0 && !doc.failed && (
+              <div role="region" aria-label="Add a missing row"
+                   style={{ borderTop: "1px solid var(--border)", marginTop: 8, paddingTop: 8 }}>
+                {addTable === null ? (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {tables.map(t => (
+                      <button key={t.name} className="btn btn-secondary btn-sm" disabled={busy}
+                              onClick={() => { setAddTable(t.name); setAddValues({}); }}>
+                        Add row to {t.name}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <form onSubmit={e => { e.preventDefault(); addRow(); }}
+                        style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text1)" }}>
+                      New row in {addTable} — typed by you, marked as edited
+                    </div>
+                    {(tables.find(t => t.name === addTable)?.columns ?? []).map(c => (
+                      <label key={c} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                        <span style={{ width: 120, color: "var(--text3)" }}>{c}</span>
+                        <input className="input" style={{ flex: 1 }} aria-label={`New row ${c}`}
+                               value={addValues[c] ?? ""}
+                               onChange={e => setAddValues(s => ({ ...s, [c]: e.target.value }))}/>
+                      </label>
+                    ))}
+                    {openAttention.length > 0 && (
+                      <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                        <span style={{ width: 120, color: "var(--text3)" }}>Answers</span>
+                        <select className="input" style={{ flex: 1 }} value={addReason}
+                                aria-label="Completeness reason this row answers"
+                                onChange={e => setAddReason(e.target.value)}>
+                          <option value="">no completeness reason</option>
+                          {openAttention.map(a => <option key={a.id} value={a.id}>{a.text}</option>)}
+                        </select>
+                      </label>
+                    )}
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn btn-primary btn-sm" type="submit" disabled={busy}>Add row</button>
+                      <button className="btn btn-secondary btn-sm" type="button" disabled={busy}
+                              onClick={() => setAddTable(null)}>Cancel</button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

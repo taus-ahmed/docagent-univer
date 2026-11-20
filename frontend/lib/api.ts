@@ -2,6 +2,7 @@ import { tokenValid } from "./session-gate";
 import type { ChartsResponse } from "./charts";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import type { JobReview, ReasonMap, ReviewSummary, ReviewValue } from "./review";
+import type { HistoryEvent, ValueEntry } from "./reviewActions";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -588,13 +589,26 @@ export const reviewApi = {
   },
   mark: async (jobId: number, docId: number, body: {
     scope?: "values" | "document";
-    values?: ({ ref: string } | { table: string; row: number })[];
+    /** Run G: an entry may carry a disposition (lib/reviewActions.ts). */
+    values?: ({ ref: string } | { table: string; row: number } | ValueEntry)[];
     reviewed?: boolean;
     /** Run A: settle completeness reasons, one choice per reason id. */
     dispositions?: { id: string; choice: "confirmed_absent" | "entered_manually"; note?: string }[];
   }) => {
     const res = await api.post(`/api/jobs/${jobId}/docs/${docId}/review`, body);
     return res.data as { summary: ReviewSummary; values: ReviewValue[]; document_reviewed: boolean };
+  },
+  /** Run G: add a row the extraction missed; returns its stable row id. */
+  addRow: async (jobId: number, docId: number, table: string,
+                 body: { values: Record<string, string>; attention_id?: string }) => {
+    const res = await api.post(
+      `/api/jobs/${jobId}/docs/${docId}/rows/${encodeURIComponent(table)}`, body);
+    return res.data as { row_id: string; row: number; reflagged_totals: string[] };
+  },
+  /** Run G: the document's append-only history, oldest first. */
+  history: async (jobId: number, docId: number) => {
+    const res = await api.get(`/api/jobs/${jobId}/docs/${docId}/history`);
+    return res.data as { events: HistoryEvent[] };
   },
 };
 
