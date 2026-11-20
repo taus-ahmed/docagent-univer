@@ -1764,6 +1764,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         unprinted_cols = []
 
     # ── field slots ──
+    # Run F: an answer that is printed and still not data (a fill-in blank,
+    # and the kinds real_data.py lists) is REFUSED here, before anything is
+    # written.
+    import real_data as RD
+    from validators import family_of as _family_of
+    _family = _family_of(default_doc_type)
+    _specimen = RD.specimen_document(pages)
+    refused = []                         # [(slot, value, why)]
+    offered = 0                          # non-empty answers the model gave
     answers = parsed.get("fields") or {}
     if isinstance(answers, dict):
         for sid, ans in answers.items():
@@ -1776,6 +1785,14 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             else:
                 value, source, page = ans, "", 0
             if str(value).strip() == "":
+                continue
+            offered += 1
+            _why_not = RD.refusal(value, source, slot["row_label"], family=_family,
+                                  page_texts=pages, specimen=_specimen)
+            if _why_not:
+                refused.append((slot, value, _why_not))
+                notes.append(f'{slot["row_label"]}: answer {str(value)[:40]!r} '
+                             f"refused — {_why_not}")
                 continue
             mr = machine_read.get(slot["slot_id"])
             if mr and str(value) == mr["entry"]["value"]:
@@ -2573,6 +2590,45 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             for r in rows:
                 r["_confidence"] = origin_floor(r["_confidence"])
 
+    # ── IS ANY OF IT DATA? (Run F, real_data.py) ──
+    label_by_ref = {f["ref"]: f["row_label"] for f in slots["fields"]}
+    rows_kept = sum(len(rs) for rs in tables_out.values())
+    # F1: a BLANK FORM answered anyway. When the pages are labels and blanks
+    # and NOT ONE answered value grounds, the answers are inventions: they
+    # are cleared with their per-slot flags, and the document says once that
+    # it holds no data. One grounded value and this does not apply — the
+    # ordinary flags stand.
+    blank_cleared = []
+    if (extracted_fields and not rows_kept and RD.blank_form_pages(pages)
+            and not any(verify_span(v, v, 0, pages)[0] or in_line_order(v, pages)
+                        for v in extracted_fields.values())):
+        for ref in list(extracted_fields):
+            blank_cleared.append(label_by_ref.get(ref, ref))
+            extracted_fields.pop(ref, None)
+            conf_map.pop(ref, None)
+            field_prov.pop(ref, None)
+            field_fail.pop(ref, None)
+        gone = set(blank_cleared)
+        flagged[:] = [f for f in flagged if f.get("ref") not in gone]
+        ungrounded = 0
+        notes.append(f"blank form: {len(gone)} answer(s) cleared — no answered "
+                     f"value is printed on these labels-and-blanks pages")
+    # Refusals are visible where other data survives; where nothing does,
+    # the document-level "No data found" below says it once.
+    no_data = (offered or any(isinstance(v, list) and v for v in
+                              (parsed.get("tables") or {}).values())) \
+        and not extracted_fields and not rows_kept and (refused or blank_cleared)
+    if not no_data:
+        for slot, value, why in refused:
+            flagged.append(_flag(slot["row_label"], value, f"refused: {why}"))
+    no_data_text = ""
+    if no_data:
+        kinds = sorted({why for _s, _v, why in refused}
+                       | ({"invented values on a blank form"} if blank_cleared else set()))
+        no_data_text = ("No data found: the document holds no filled values for "
+                        "this template — every answer offered was refused ("
+                        + "; ".join(kinds) + "), so nothing was extracted.")
+
     # PER-VALUE ORIGIN AND REVIEW (Gate 2). On EVERY value, native or not, so
     # a reader never has to guess what an absent key means. The only reasons
     # recorded here are owed to origin; a native value carries none.
@@ -2633,6 +2689,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     for ref, why in cov["flag_slots"].items():
         flagged.append(_flag(label_of.get(ref, ref), "", f"{EMPTY_FLAGGED}: {why}"))
     attention = list(cov["reasons"])
+    if no_data_text:
+        attention.insert(0, no_data_text)
     for n, why in sorted(page_failed.items()):
         attention.append(
             f"The field slots could not be extracted ({why}); only table rows "

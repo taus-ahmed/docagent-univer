@@ -223,11 +223,6 @@ def test_01_copied_unprinted_column_is_not_silent_and_description_survives():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Rule: label-only blank documents must discard underscores and "
-            "inventions, leave slots unflagged, and expose document-level no-data"),
-)
 def test_02_blank_form_discards_underscores_and_inventions_without_slot_flags():
     document = _document("blank_po")
     date_source, date_page = _line(document, "Date:", "___", page=1)
