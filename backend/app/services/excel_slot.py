@@ -16,7 +16,9 @@ from app.services.excel_legacy import _write_table_excel
 from app.services.excel_cells import cell_format
 from app.services.excel_cells import coerce_cell_value
 from app.services.excel_cells import keep_precision_note
+from app.services.excel_cells import money_hint
 from app.services.excel_cells import precision_flag
+from app.services.excel_cells import us_money_document
 from app.services.excel_cells import provenance_edited_note
 from app.services.excel_cells import provenance_note
 from app.services.excel_cells import provenance_note_size
@@ -412,28 +414,31 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
     #: the decimal separator the document being written uses, from its own
     #: unambiguous numbers (engine/amounts.document_hint); per document.
     doc_hint = [None]
+    doc_us = [False]          # Run E, E14: the document writes money the US way
 
     def put(r, c, value, label=""):
         cell = ws.cell(row=r + 1, column=c + 1)
         if isinstance(cell, MergedCell):
             return None
-        out = coerce_cell_value(value, label, doc_hint[0])
+        hint = money_hint(label, doc_hint[0], doc_us[0])
+        out = coerce_cell_value(value, label, hint)
         if out is not None:
             cell.value = out
             # D8 — the cell keeps the number AND the notation the document
             # printed it with. Without this the export drops the currency
             # symbol and the trailing cents, which is what an accountant
             # actually looks at.
-            fmt = cell_format(value, label, doc_hint[0])
+            fmt = cell_format(value, label, hint)
             if fmt:
                 cell.number_format = fmt
-            precision_flag(cell, value, doc_hint[0])
+            precision_flag(cell, value, hint)
             return cell
         return None
 
     for doc in doc_results:
         ed = doc.get_extracted_data()
         doc_hint[0] = _document_hint_of(ed)
+        doc_us[0] = us_money_document(ed)
         if not isinstance(ed, dict):
             continue
         slot_map = ed.get("slot_map") or {}

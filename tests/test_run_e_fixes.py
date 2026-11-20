@@ -434,6 +434,67 @@ def test_e13_the_export_py_field_cells_hold_numbers_too(per_file):
     assert any(c.value == "VAT charged at 20% on all lines" for c in cells)
 
 
+# ---------------------------------------------------------------------------
+# E14: money in the form lane is thousands, not European decimals.
+
+def _write_record(ed, grid):
+    from tests.test_run_c_adversarial import document, round_trip
+    return round_trip([document(ed)], grid)["Results"]
+
+
+def test_e14_the_1099_box_1_compensation_is_a_number():
+    from tests.contract.run_a_driver import template_grid
+    out = _replay(25, lambda parsed: parsed)
+    ed = out["extracted_data"]
+    assert ed["extracted_fields"]["B10"] == "15,250"
+    ws = _write_record(ed, template_grid("F1099_NEC_MISC"))
+    box1 = next(ws.cell(r, 2) for r in range(1, ws.max_row + 1)
+                if ws.cell(r, 1).value == "Box 1 Nonemployee Compensation")
+    assert box1.data_type == "n" and box1.value == 15250.0
+    assert box1.number_format == "#,##0"
+    tin = next(ws.cell(r, 2) for r in range(1, ws.max_row + 1)
+               if ws.cell(r, 1).value == "Payer TIN")
+    assert tin.data_type == "s"                      # an identifier stays text
+
+
+def _money_ed(value, label, **extra):
+    from tests.test_run_c_adversarial import stored
+    grid = _grid({(0, 0): label})
+    result, _ = stored(grid, fields={label: value})
+    result.update(extra)
+    return result, grid
+
+
+@pytest.mark.parametrize("other", [None, "$40.00", "12.50"])
+def test_e14_a_us_money_document_reads_the_comma_as_thousands(other):
+    """A W-2 by type; or another extracted amount in dollars; or another
+    extracted amount written with a decimal point."""
+    from tests.test_run_c_adversarial import stored
+    labels = ["Wages", "Notes"] + (["Fee"] if other else [])
+    grid = _grid({(i, 0): lab for i, lab in enumerate(labels)})
+    fields = {"Wages": "1,234", "Notes": "see attached"}
+    if other:
+        fields["Fee"] = other
+    result, _ = stored(grid, fields=fields)
+    result["document_type"] = "invoice" if other else "w2"
+    ws = _write_record(result, grid)
+    wages = next(ws.cell(r, 2) for r in range(1, ws.max_row + 1)
+                 if ws.cell(r, 1).value == "Wages")
+    assert wages.data_type == "n" and wages.value == 1234.0
+
+
+def test_e14_without_us_evidence_an_ambiguous_amount_stays_text():
+    result, grid = _money_ed("1,234", "Amount", document_type="invoice")
+    ws = _write_record(result, grid)
+    assert ws["B1"].value == "1,234" and ws["B1"].data_type == "s"
+
+
+def test_e14_a_non_money_label_is_not_reinterpreted():
+    result, grid = _money_ed("15,250", "Reference", document_type="form_1099")
+    ws = _write_record(result, grid)
+    assert ws["B1"].data_type == "s"
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch

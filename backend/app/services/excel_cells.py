@@ -322,7 +322,7 @@ def put_extracted(cell, value, label="", ed=None, numeric=True):
     if value is None or str(value).strip() == "":
         cell.value = ""
         return None
-    hint = document_hint_of(ed)
+    hint = money_hint(label, document_hint_of(ed), us_money_document(ed))
     out = coerce_cell_value(value, label, hint) if numeric else None
     if isinstance(out, float):
         cell.value = out
@@ -347,6 +347,44 @@ def document_hint_of(ed):
             texts += [v for r in rows if isinstance(r, dict)
                       for c, v in r.items() if not str(c).startswith("_")]
     return document_hint(texts, ed.get("locale"))
+
+
+#: Run E, E14: a slot whose label says it holds MONEY
+MONEY_LABEL = re.compile(
+    r"\b(?:compensation|wages|tax|taxes|amount|total|income|interest|dividends?"
+    r"|rents?|royalt(?:y|ies))\b|\bbox\s*\d+", re.I)
+_US_FORM = re.compile(r"1099|1098|\bw-?2\b|form_w2|\birs\b", re.I)
+
+
+def us_money_document(ed) -> bool:
+    """Run E, E14: does this result come from a document that writes money the
+    US way — a US IRS form, an extracted amount written with `$`, or other
+    extracted amounts using a decimal point? Only the document type and the
+    values themselves count, not the quotes: the stricter reading, so an
+    amount nothing else on the record settles stays the text it was."""
+    from amounts import document_hint
+    if not isinstance(ed, dict):
+        return False
+    if _US_FORM.search(str(ed.get("document_type") or "")):
+        return True
+    texts = [str(v) for v in (ed.get("extracted_fields") or {}).values()]
+    for k, rows in ed.items():
+        if k.endswith("_rows") and isinstance(rows, list):
+            texts += [str(v) for r in rows if isinstance(r, dict) for v in r.values()]
+    if any("$" in t for t in texts):
+        return True
+    return document_hint(texts) == "."
+
+
+def money_hint(label, hint, us_money) -> str | None:
+    """The decimal hint for one cell: the document's own when it has one; for
+    a MONEY-labelled cell of a US-money document, "." — so `15,250` in Box 1
+    is fifteen thousand two hundred and fifty, never a European 15.25."""
+    if hint:
+        return hint
+    if us_money and MONEY_LABEL.search(str(label or "")):
+        return "."
+    return None
 
 
 def keep_precision_note(cell, text):
