@@ -981,6 +981,10 @@ def compute_shape(grid, log=None):
             continue
         if (mr, mc) in m and (mr, mc) not in static:
             empty_merges.add((mr, mc))
+    # value columns of UNMERGED labels: an open cell directly right of one (D10)
+    pair_cols = {c + 1 for (r, c) in static
+                 if merge_cols.get((r, c), 1) == 1 and (r, c) not in claimed
+                 and (r, c + 1) in m and (r, c + 1) not in static}
     skip_rows = ((band_rows | set(header_rows)) - band_owned_rows) | section_rows
     all_cols = range(max_col + 1)
 
@@ -1067,6 +1071,12 @@ def compute_shape(grid, log=None):
         for r in body:
             for c in _text_cols(r):
                 k = merge_cols.get((r, c), 1)
+                # Run E, E7 (D10): a merged text whose span covers the value
+                # column of an UNMERGED label elsewhere (`Invoice Summary` over
+                # A1:B1, `Total | _` below) is a heading over that block, and
+                # the empty merge beside it is decoration, not its slot.
+                if k > 1 and any(cc in pair_cols for cc in range(c + 1, c + k)):
+                    continue
                 if k > 1 and (r, c + k) in empty_merges:
                     beside.add(c + k)
         block_values = sorted((headed | beside) - set(block_labels))

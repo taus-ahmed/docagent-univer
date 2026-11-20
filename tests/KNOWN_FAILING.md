@@ -6,7 +6,6 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 
 | Gap | Strict test | Implementation evidence | Observed failure |
 | --- | --- | --- | --- |
-| Run D D10: decorative merge becomes a slot | `test_d10_a_merged_section_heading_does_not_own_a_decorative_empty_merge` | Any empty merge immediately after a merged text cell is assigned to that text. | Merged heading `Invoice Summary` over A1:B1 plus decorative empty C1:D1 creates field C1. |
 | Run D D11: legitimate `TBD` label erased | `test_d11_an_exact_tbd_label_can_be_real_template_text` | Exact `TBD` is unconditionally converted to an empty placeholder. | A row label `TBD` disappears and its B1 field slot is lost. (`Total due TBD` is correctly left alone.) |
 | Run D D13: warnings on valid layouts | `test_d13_owner_approved_header_only_tables_do_not_need_a_warning`, `test_d13_a_valid_horizontal_field_pair_is_not_warning_noise` | The warning pass does not account for the owner-approved ten-row header-only rule and warns whenever an implied right slot also has an unused cell below. | Valid header-only tables and valid horizontal fields produce warning noise. The committed audit finds 36 warnings, 33 of them on layouts that are otherwise fine under the recorded rules. |
 

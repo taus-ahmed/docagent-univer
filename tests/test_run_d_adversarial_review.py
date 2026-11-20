@@ -167,11 +167,6 @@ def test_d9_below_is_used_only_when_the_right_cell_is_not_usable():
     assert ("A2", "Approver") in _fields(blocked)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D10: an empty decorative merge beside a merged "
-            "section heading is treated as that heading's value slot"),
-)
 def test_d10_a_merged_section_heading_does_not_own_a_decorative_empty_merge():
     grid = _grid(
         {(0, 0): "Invoice Summary", (2, 0): "Total"},
