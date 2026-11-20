@@ -688,7 +688,13 @@ def row_sum_checks(slots, tables_out, page_lines, page_numbers=None) -> list:
             if not printed:
                 continue
             s = sum(vals, Decimal(0))
-            if any(p == abs(s) for p in printed):
+            # Run E, E6 (D5): when EVERY page of the band prints its own total
+            # line, each page is checked first — a Grand Total that equals the
+            # all-page sum must not hide a page whose subtotal is wrong.
+            pages_of = {p for p, _v in pairs}
+            per_page = (len(pages_of) >= 2 and None not in pages_of
+                        and all(printed_on({p}) for p in pages_of))
+            if not per_page and any(p == abs(s) for p in printed):
                 continue
             # Run D, D5: a band whose rows run over several pages, each page
             # closing with its OWN subtotal, is checked page by page — the

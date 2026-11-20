@@ -90,11 +90,6 @@ def test_d4_parenthesized_amounts_are_negative_without_a_less_label():
     assert SI.row_sum_checks(slots, rows, page, [1]) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D5: a correct Grand Total short-circuits the per-page "
-            "checks and hides an incorrect page subtotal"),
-)
 def test_d5_a_correct_grand_total_must_not_hide_a_wrong_page_subtotal():
     rows = {"table": [
         {"Description": "A", "Amount": "40.00", "_page": 1},

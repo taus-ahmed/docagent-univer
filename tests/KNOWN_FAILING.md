@@ -6,7 +6,6 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 
 | Gap | Strict test | Implementation evidence | Observed failure |
 | --- | --- | --- | --- |
-| Run D D5: Grand Total hides a bad page subtotal | `test_d5_a_correct_grand_total_must_not_hide_a_wrong_page_subtotal` | `row_sum_checks` accepts any printed amount equal to the all-page sum before it enters the per-page branch. | Page 1 rows total `100.00` but print `Subtotal 90.00`; page 2 is correct and prints `Grand Total 200.00`. The result is incorrectly empty. |
 | Run D D6: gapped matrix heading becomes fields | `test_d6_a_matrix_heading_may_have_one_intentionally_empty_cell` | Heading detection now requires every heading cell between the first and last text to be non-empty. | `Line item | _ | 2026` over `Revenue`/`Expenses` loses C2/C3 and invents B1/D1 scalar slots. |
 | Run D D7: one table split at a spacer column | `test_d7_a_blank_spacer_inside_one_table_does_not_make_two_tables` | Header detection splits every contiguous text run into a separate band. | `Date | Description | _ | Debit | Balance` becomes two tables instead of one table with an intentional visual spacer. |
 | Run D D8: side note becomes a field | `test_d8_a_note_beside_a_table_is_not_a_scalar_field` | A pure label list at the right edge implies a value column even when the text is a static note. | `Amounts in USD` beside a three-column table creates bogus slot F2. |
