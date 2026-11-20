@@ -496,6 +496,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Overnight H1: the append-only audit log for the routes it names.
+    from app.core.audit import install_middleware as _install_audit
+    _install_audit(app)
+
     # Every /api/ response is one firm's data: no shared cache (a proxy, a
     # CDN, the frontend's edge) may keep it. A route that sets its own policy
     # keeps it — the page image is "private", cacheable by the viewer's own

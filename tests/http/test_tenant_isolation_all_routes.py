@@ -64,6 +64,7 @@ ROUTES = {
     ("POST", "/api/auth/change-password"): "self",
     ("POST", "/api/admin/tenants"): "body",
     ("GET", "/api/admin/tenants"): "list",
+    ("GET", "/api/admin/audit"): "list",
     ("POST", "/api/admin/tenants/{client_id}/deactivate"): "id",
     ("POST", "/api/admin/tenants/{client_id}/activate"): "id",
     ("POST", "/api/extract/upload"): "body",
@@ -353,7 +354,8 @@ def test_firm_a_records_survive_every_attack(client, firms, db):
 
 LIST_ROUTES = [("GET", "/api/jobs"), ("GET", "/api/templates"), ("GET", "/api/schemas"),
                ("GET", "/api/watch"), ("GET", "/api/admin/users"),
-               ("GET", "/api/auth/me"), ("GET", "/api/admin/tenants")]
+               ("GET", "/api/auth/me"), ("GET", "/api/admin/tenants"),
+               ("GET", "/api/admin/audit")]
 
 
 @pytest.mark.parametrize("route", LIST_ROUTES, ids=lambda r: r[1])

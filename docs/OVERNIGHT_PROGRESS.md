@@ -27,7 +27,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] M1 — CANDIDATES (incl. gemini-flash-latest / -lite-latest) removed; GEMINI_MODEL_FALLBACKS (default empty); a 404 fails naming the model and saying none was substituted
 - [x] M2 — job_worker.model_of stores the API's modelVersion (fallback: requested name); Legend says "Extracted by: <model>"; History job detail shows a Model badge
 - [x] M3 — docs/MODEL_MIGRATION.md (facts from Google's pages, 2026-11-20, unverified live); gemini_client.MODEL_PROFILES + GEMINI_MODEL_PROFILES (2.5 request unchanged, 3.x: no temperature, thinkingLevel); 3.x prices; live_cap env-configurable, never removable; tools/model_matrix.py written, NOT run
-- [ ] H1 — audit log
+- [x] H1 — audit_events table (append-only via ORM listeners), core/audit.py (route hooks + middleware for templates, jobs, exports, review), GET /api/admin/audit (admin-only, paged, filtered, firm-scoped; in the all-routes isolation suite), /admin/audit page
 - [ ] H2 — token revocation
 - [ ] H3 — password policy
 - [ ] H4 — raw response retention + log redaction

@@ -8,6 +8,7 @@ GET  /api/admin/stats         — system stats
 POST /api/admin/tenants       — create a firm + its first admin (platform admin)
 GET  /api/admin/tenants       — firms, user counts, page usage (platform admin)
 POST /api/admin/tenants/{id}/deactivate | activate — every user of a firm
+GET  /api/admin/audit         — the firm's audit log, paged and filtered (H1)
 """
 
 from datetime import datetime, timedelta
@@ -17,11 +18,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core import audit
 from app.core.auth import hash_password, is_one_time
 from app.core.permissions import PLATFORM_ADMIN, require, role_of
 from app.core.demo import is_demo_user
 from app.core.confidence import CONFIDENT_LEVELS
-from app.models import get_db, User, ExtractionJob, DocumentResult
+from app.models import get_db, User, ExtractionJob, DocumentResult, AuditEvent
 from app.schemas.schemas import (
     CLIENT_ID_PATTERN, UserCreate, UserUpdate, UserResponse, SystemStats,
 )
@@ -77,6 +79,8 @@ def create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    audit.record(db, "user.create", actor=current_admin, client_id=user.client_id,
+                 target_type="user", target_id=user.id)
     return _user_to_response(user)
 
 
@@ -122,6 +126,16 @@ def update_user(
 
     db.commit()
     db.refresh(user)
+    if payload.password is not None:
+        audit.record(db, "password.reset", actor=current_admin, client_id=user.client_id,
+                     target_type="user", target_id=user.id)
+    if payload.is_active is not None:
+        audit.record(db, "user.enable" if payload.is_active else "user.disable",
+                     actor=current_admin, client_id=user.client_id,
+                     target_type="user", target_id=user.id)
+    if any(getattr(payload, k, None) is not None for k in ("display_name", "email", "role"))             or "client_id" in payload.model_fields_set:
+        audit.record(db, "user.update", actor=current_admin, client_id=user.client_id,
+                     target_type="user", target_id=user.id)
     return _user_to_response(user)
 
 
@@ -144,6 +158,8 @@ def deactivate_user(
 
     user.is_active = False
     db.commit()
+    audit.record(db, "user.delete", actor=current_admin, client_id=user.client_id,
+                 target_type="user", target_id=user.id)
     return {"message": f"User '{user.username}' deactivated", "id": user_id}
 
 
@@ -282,3 +298,53 @@ def deactivate_tenant(client_id: str, db: Session = Depends(get_db),
 def activate_tenant(client_id: str, db: Session = Depends(get_db),
                     _: User = Depends(require("tenant.all"))):
     return _set_tenant(db, client_id, True)
+
+
+@router.get("/audit")
+def audit_log(
+    page: int = 1,
+    page_size: int = 50,
+    action: Optional[str] = None,
+    actor: Optional[str] = None,
+    outcome: Optional[str] = None,
+    since: Optional[datetime] = None,
+    until: Optional[datetime] = None,
+    client_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require("user.manage")),
+):
+    """Overnight H1: the audit log, newest first. A firm's administrator sees
+    only their firm's events (the `client_id` parameter is ignored for them);
+    a platform administrator sees every firm's, or one firm's with it."""
+    page = max(1, int(page))
+    page_size = max(1, min(int(page_size), 200))
+    q = db.query(AuditEvent)
+    if _is_super_admin(current_admin):
+        if client_id:
+            q = q.filter(AuditEvent.client_id == client_id)
+    else:
+        q = q.filter(AuditEvent.client_id == current_admin.client_id)
+    if action:
+        q = q.filter(AuditEvent.action == action)
+    if actor:
+        q = q.filter(AuditEvent.actor == actor)
+    if outcome:
+        q = q.filter(AuditEvent.outcome == outcome)
+    if since:
+        q = q.filter(AuditEvent.at >= since)
+    if until:
+        q = q.filter(AuditEvent.at <= until)
+    total = q.count()
+    rows = (q.order_by(AuditEvent.at.desc(), AuditEvent.id.desc())
+             .offset((page - 1) * page_size).limit(page_size).all())
+    from app.core.audit import ACTIONS
+    return {
+        "page": page, "page_size": page_size, "total": total,
+        "actions": list(ACTIONS),
+        "events": [{"id": e.id, "at": e.at.isoformat() if e.at else None,
+                    "client_id": e.client_id, "actor_id": e.actor_id,
+                    "actor": e.actor, "action": e.action,
+                    "target_type": e.target_type, "target_id": e.target_id,
+                    "outcome": e.outcome, "request_id": e.request_id}
+                   for e in rows],
+    }

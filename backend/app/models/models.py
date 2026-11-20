@@ -353,6 +353,44 @@ def create_db_engine(database_url: str = None):
     return engine
 
 
+class AuditEvent(Base):
+    """Overnight H1 — who did what, append-only.
+
+    One row per security-relevant action: sign-in (success and failure),
+    sign-out, user create / disable / delete, password change and reset,
+    template create / edit / delete, job create and delete, export download,
+    review actions. It records the ACTOR, the TIME, the TARGET (a type and an
+    id) and the OUTCOME — never document contents, values, file names,
+    passwords, addresses or other personal data, and never the caller's IP.
+    `client_id` is the firm the event belongs to; the read endpoint is scoped
+    by it. Rows are never updated or deleted by the application: the ORM
+    refuses both (see the listeners below)."""
+    __tablename__ = "audit_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    client_id = Column(String(100), nullable=True, index=True)
+    actor_id = Column(Integer, nullable=True, index=True)
+    actor = Column(String(100), nullable=True)     # the account's username
+    action = Column(String(50), nullable=False, index=True)
+    target_type = Column(String(50), nullable=True)
+    target_id = Column(String(100), nullable=True)
+    outcome = Column(String(20), nullable=False, default="ok")
+    request_id = Column(String(64), nullable=True)
+
+    __table_args__ = (Index("ix_audit_client_at", "client_id", "at"),)
+
+
+def _audit_is_append_only(_mapper, _connection, target):
+    raise RuntimeError("audit_events is append-only: rows are never updated or deleted")
+
+
+from sqlalchemy import event as _sa_event  # noqa: E402
+
+_sa_event.listen(AuditEvent, "before_update", _audit_is_append_only)
+_sa_event.listen(AuditEvent, "before_delete", _audit_is_append_only)
+
+
 engine = create_db_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

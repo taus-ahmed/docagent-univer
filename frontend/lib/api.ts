@@ -748,7 +748,25 @@ export const driveApi = {
 
 // --- Admin API ---
 
+/** Overnight H1: one audit event. No document contents or personal data. */
+export interface AuditEvent {
+  id: number; at: string | null; client_id: string | null;
+  actor_id: number | null; actor: string | null; action: string;
+  target_type: string | null; target_id: string | null;
+  outcome: string; request_id: string | null;
+}
+export interface AuditPage {
+  page: number; page_size: number; total: number;
+  actions: string[]; events: AuditEvent[];
+}
+
 export const adminApi = {
+  /** GET /api/admin/audit — the firm's audit log, newest first (admin only). */
+  audit: async (params: { page?: number; page_size?: number; action?: string;
+                          actor?: string; outcome?: string }): Promise<AuditPage> => {
+    const res = await api.get<AuditPage>("/api/admin/audit", { params });
+    return res.data;
+  },
   stats: async (): Promise<SystemStats> => {
     const res = await api.get<SystemStats>("/api/admin/stats");
     return res.data;

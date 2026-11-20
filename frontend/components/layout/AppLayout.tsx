@@ -17,6 +17,7 @@ const NAV = [
 const ADMIN_NAV = [
   { href: "/analytics", label: "Analytics", icon: "analytics" },
   { href: "/admin",     label: "Admin",     icon: "admin"     },
+  { href: "/admin/audit", label: "Audit log", icon: "history"   },
 ];
 
 const SIDEBAR_MIN = 180;

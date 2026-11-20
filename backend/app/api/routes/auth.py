@@ -6,6 +6,7 @@ POST /api/auth/logout
 """
 
 from datetime import datetime, timedelta
+from typing import Optional
 from collections import defaultdict
 from threading import Lock
 
@@ -15,8 +16,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.auth import (
     verify_password, needs_rehash, verify_unknown_user, create_access_token,
-    get_current_user, hash_password, is_one_time,
+    get_current_user, get_optional_user, hash_password, is_one_time,
 )
+from app.core import audit
 from app.core.permissions import permissions_of
 from app.core.demo import is_demo_user
 from app.core import demo_audit
@@ -131,6 +133,11 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
             db, getattr(user, "client_id", None), demo_audit.LOGIN_FAILED,
             user_id=getattr(user, "id", None),
             detail={"username": payload.username, "ip": ip})
+        # H1: the firm's audit log. A username matching no account is not
+        # written anywhere (it may be a password typed into the wrong box).
+        audit.record(db, "login.failed", actor=user,
+                     target_type="user" if user else None,
+                     target_id=getattr(user, "id", None), outcome="failed")
         # Same message for both cases — don't reveal whether username exists
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,6 +166,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     # reason a successful login fails. A no-op for every non-demo tenant.
     demo_audit.record(db, user, demo_audit.LOGIN,
                       detail={"username": user.username, "ip": ip})
+    audit.record(db, "login.ok", actor=user, target_type="user", target_id=user.id)
 
     token = create_access_token(
         data={"sub": str(user.id), "role": user.role, "client_id": user.client_id},
@@ -218,6 +226,9 @@ def update_me(
 
     db.commit()
     db.refresh(current_user)
+    if payload.password is not None:
+        audit.record(db, "password.change", actor=current_user,
+                     target_type="user", target_id=current_user.id)
 
     return UserResponse(
         id=current_user.id,
@@ -251,10 +262,17 @@ def change_password(
     db.commit()
     db.refresh(current_user)
     print(f"[AUTH] user {current_user.id} changed their password", flush=True)
+    audit.record(db, "password.change", actor=current_user,
+                 target_type="user", target_id=current_user.id)
     return get_me(current_user)
 
 
 @router.post("/logout")
-def logout():
-    """Client should discard the token. Stateless JWT — no server-side action."""
+def logout(db: Session = Depends(get_db),
+           current_user: Optional[User] = Depends(get_optional_user)):
+    """Client should discard the token. Stateless JWT; recorded in the
+    audit log when the caller presents a valid token (H1)."""
+    if current_user is not None:
+        audit.record(db, "logout", actor=current_user,
+                     target_type="user", target_id=current_user.id)
     return {"message": "Logged out. Discard your token on the client."}
