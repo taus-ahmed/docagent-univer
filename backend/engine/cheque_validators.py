@@ -153,6 +153,10 @@ def _digits(v) -> str:
     return re.sub(r"\D", "", str(v or ""))
 
 
+#: labels that name a US routing number specifically; `Transit` alone does not
+_ROUTING_ONLY = re.compile(r"\b(?:routing|aba)\b", re.I)
+
+
 def _routing_ok(d: str) -> bool:
     """Exactly nine digits passing 3(d1+d4+d7) + 7(d2+d5+d8) + (d3+d6+d9) ≡ 0
     (mod 10) — the ABA check digit, applied only to nine digits."""
@@ -218,9 +222,32 @@ def bottom_line(ctx):
     routing = [f for f in role.get("routing", []) if f["ref"] in ctx.values
                and _digits(ctx.values[f["ref"]])]
     accounts = [f for f in role.get("account", []) if f["ref"] in ctx.values]
+    micr_transit = transit_number(find_micr_line(ctx.pages)) if ctx.pages else ""
     for f in routing:
         ref, d = f["ref"], _digits(ctx.values[f["ref"]])
         if _routing_ok(d):
+            # Run E, E5 (C7): both values can pass the checksum by
+            # coincidence; the MICR band's own transit field (between its
+            # sentinels) says which of them is the routing number.
+            for a in accounts:
+                ad = _digits(ctx.values[a["ref"]])
+                if micr_transit and ad == micr_transit and d != micr_transit:
+                    said = (f"possible_swap: the MICR band's transit field reads "
+                            f"{ad}, which is the account value, and the routing "
+                            f"value {d} is not in that position — suggested: "
+                            f"{f['row_label']} = {ad}, {a['row_label']} = {d}. "
+                            f"Not changed: check the cheque's bottom line.")
+                    out.append(CheckResult(
+                        "bottom_line", FAIL, [ref, a["ref"]], POSSIBLE_SWAP,
+                        evidence={ref: {"suggested": ad}, a["ref"]: {"suggested": d}},
+                        flags=[(f["row_label"], ctx.values[ref], said),
+                               (a["row_label"], ctx.values[a["ref"]], said)],
+                        notes=[said]))
+            continue
+        if len(d) != 9 and not _ROUTING_ONLY.search(str(f.get("row_label", ""))):
+            # E5: the ABA checksum is a US rule for exactly nine digits. A
+            # slot labelled only `Transit` that holds another length is a
+            # non-US transit number (Canada's is five digits), not a failure.
             continue
         why = ("is not 9 digits" if len(d) != 9 else "fails the ABA checksum")
         out.append(CheckResult(

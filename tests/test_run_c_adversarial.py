@@ -840,10 +840,6 @@ def test_c7_european_figure_notation_cross_checks_against_words():
     assert len(result) == 1 and result[0].status == "pass"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="C7: a legitimate non-US transit number is falsely required to be ABA",
-)
 def test_c7_non_us_transit_number_is_not_failed_as_an_aba_routing_number():
     fields = [{"ref": "B1", "row_label": "Transit Number"}]
     assert "routing_checksum_failed" not in _bottom_reasons(
@@ -851,10 +847,6 @@ def test_c7_non_us_transit_number_is_not_failed_as_an_aba_routing_number():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="C7: checksum alone accepts the all-zero value as a routing number",
-)
 def test_c7_nine_digits_that_are_not_a_routing_number_are_rejected():
     fields = [{"ref": "B1", "row_label": "Routing Number"}]
     assert "routing_checksum_failed" in _bottom_reasons(
@@ -862,11 +854,6 @@ def test_c7_nine_digits_that_are_not_a_routing_number_are_rejected():
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("C7: a routing/account swap is missed when the account number "
-            "happens to pass the ABA checksum"),
-)
 def test_c7_checksum_valid_account_number_does_not_hide_a_swap():
     fields = [
         {"ref": "B1", "row_label": "Routing Number"},

@@ -78,6 +78,8 @@ def aba_is_valid(routing: str) -> bool:
     d = [int(c) for c in str(routing or "") if c.isdecimal()]
     if len(d) != 9:
         return False
+    if not any(d):
+        return False          # Run E, E5 (C7): 000000000 passes the sum, names no bank
     total = (3 * (d[0] + d[3] + d[6])
              + 7 * (d[1] + d[4] + d[7])
              + (d[2] + d[5] + d[8]))
