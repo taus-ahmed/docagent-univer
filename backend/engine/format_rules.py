@@ -189,7 +189,10 @@ def check_type(value, label):
     """(ok, normalised or None, reason). Empty values are never checked."""
     v = str(value or "").strip()
     kind = slot_type(label)
-    if v and _PARTY_NAME.search(str(label or "")) and _BARE_FIGURE.match(v) \
+    words = re.findall(r"[a-z]+", str(label or "").casefold())
+    # the label's HEAD NOUN names a party ("Payer Name", "Vendor"), not a
+    # property of one ("Employer ZIP", "Employee SSN")
+    if v and words and _PARTY_NAME.fullmatch(words[-1]) and _BARE_FIGURE.match(v) \
             and not _ID_WORDS.search(str(label or "")):
         return False, None, "a name field holds a figure, not a name"
     if not v or not kind:
