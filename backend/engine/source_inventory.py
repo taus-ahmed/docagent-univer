@@ -345,6 +345,29 @@ def _is_box_caption(ws, wi, label, own) -> bool:
     return hit >= set(stems)
 
 
+#: Overnight A5 — a slot asking which FORM the document is.
+FORM_TYPE_LABEL = re.compile(r"\s*(form|document|doc)(\s+(type|name|title|kind))?\s*:?\s*$",
+                             re.I)
+_FORM_TITLE = re.compile(
+    r"\bForm\s+((?:W-2[A-Z]?|W-9|1099-[A-Z]{1,4}|1098(?:-[A-Z]{1,2})?|SSA-1099|"
+    r"1040(?:-[A-Z]{1,3})?|1042-S|5498(?:-[A-Z]{1,3})?|W-4))\b")
+
+
+def form_titles(lines) -> list:
+    """[(title, line text)] — each distinct printed form title (`Form
+    1099-DIV`), first occurrence, in reading order. A footnote marker glued
+    to the title (`1099-DIV*`) is not part of it."""
+    out, seen = [], set()
+    for ln in lines or []:
+        text = _line_text(ln)
+        for m in _FORM_TITLE.finditer(text):
+            t = f"Form {m.group(1)}"
+            if t not in seen:
+                seen.add(t)
+                out.append((t, text))
+    return out
+
+
 def slot_area_amounts(lines, label) -> list:
     """Amounts that sit where `label`'s value would: the first amount to the
     right of a label word on its own line, else the amount on the NEXT line
@@ -494,6 +517,7 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
     fields = slots.get("fields") or []
     raw_fields = raw_fields if isinstance(raw_fields, dict) else {}
     empty = [f for f in fields if f["ref"] not in (extracted_fields or {})]
+    titles_all = form_titles([ln for n in numbers for ln in (lines_of.get(n) or [])])
     printed_empty = 0
     flagged_amounts = []
     for f in empty:
@@ -518,6 +542,12 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             why = f"amount {val} printed near this label (page {n}) is not in any cell"
             flagged_amounts.append({"page": n, "value": val, "context": ctx,
                                     "slot": label})
+        elif FORM_TYPE_LABEL.match(label) and len(titles_all) >= 2:
+            # A5: the page answers this slot, in several ways; which one is
+            # meant is not said, so the empty slot says so with the evidence
+            why = (f"the page prints {len(titles_all)} form titles ("
+                   + ", ".join(t for t, _x in titles_all[:5])
+                   + ") and nothing says which one this slot means")
         elif quoted and not form_lane:
             why = "the model quoted this label from the page but returned no value"
         elif printed and widgets_missing:

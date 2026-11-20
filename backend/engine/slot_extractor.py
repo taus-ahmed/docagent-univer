@@ -2231,6 +2231,27 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     f["row_label"], shown,
                     f"{name} has a {nth} entry {shown} that has no slot"))
 
+    # ── A FORM TITLE THE PAGE PRINTS (overnight A5) ──
+    # Job 54: Form Type came back empty, unflagged, on a page printing its
+    # answer. One distinct printed title fills the slot, grounded on the line
+    # that prints it; several are reported by the completeness gate with the
+    # titles as evidence (the slot cannot choose between them).
+    if all_lines:
+        _titles = SI.form_titles(all_lines)
+        if len(_titles) == 1:
+            for f in slots["fields"]:
+                if f["ref"] in extracted_fields or not SI.FORM_TYPE_LABEL.match(f["row_label"]):
+                    continue
+                title, line = _titles[0]
+                title = title[len("Form "):]          # "1099-INT", as gold writes it
+                extracted_fields[f["ref"]] = title
+                conf_map[f["ref"]] = confident
+                field_prov[f["ref"]] = {"source": line, "grounded": True,
+                                        "page": page_of(line, 0, all_lines, page_lines),
+                                        "machine_read": "form_title"}
+                notes.append(f'{f["row_label"]}: {title!r} read from the form title '
+                             f"the page prints")
+
     unanswered = [f for f in slots["fields"] if f["ref"] not in extracted_fields]
     if unanswered:
         notes.append(f"{len(unanswered)} field slot(s) returned no value: "

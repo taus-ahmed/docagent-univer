@@ -84,7 +84,17 @@ def test_an_empty_model_answer_is_completed_from_the_form_fields(rel, sheet, doc
     for label in gold["absent_slots"]:
         assert not str(by_label.get(label) or "").strip(), label
     prov = data["field_provenance"]
-    assert all(p.get("machine_read") == "form_field" for p in prov.values())
+    refs = {v.get("ref"): k for k, v in data["extracted_data"].items()}
+    # every widget slot is machine-read from its form field; Form Type, which
+    # no widget holds, is read from the printed form title (overnight A5)
+    # and must then equal the golden value
+    for ref, p in prov.items():
+        if refs.get(ref) == "Form Type":
+            assert p.get("machine_read") == "form_title", p
+            assert values_equal(gold["headers"]["Form Type"]["value"],
+                                by_label.get("Form Type"), "identifier")
+        else:
+            assert p.get("machine_read") == "form_field", (refs.get(ref), p)
 
 
 def test_the_prompt_carries_label_value_pairs_and_only_for_forms():
