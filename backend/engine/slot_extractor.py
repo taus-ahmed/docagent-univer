@@ -50,6 +50,7 @@ from micr import field_role, find_micr_line, parse_micr
 from validators import FAIL, UNREADABLE, CheckContext, run_checks
 from total_row_validators import split_duplicate_totals
 from text_layer import (canonical_value, check_placement, column_bands,
+                        set_column_anchors,
                         find_line, flatten_pages, line_page, matches_loosely,
                         overprinted_value, page_for_prompt_page, record_span,
                         source_occurrences, unprinted_headers)
@@ -2373,6 +2374,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # placement wrong on a guessed column would demote correct values,
             # which is the failure this is meant to prevent.
             bands = column_bands(all_lines, headers) if all_lines else {}
+            if bands:
+                # B2 (overnight): each column's own alignment in this table's
+                # rows, so a value is judged by where its column's values sit
+                # and not only by the heading printed over them.
+                set_column_anchors(bands, raw, t.get("columns") or [], all_lines)
             if bands:
                 # a count only: a band's name and headings are template text
                 _log("PLACE", f"column bands read from the document for "

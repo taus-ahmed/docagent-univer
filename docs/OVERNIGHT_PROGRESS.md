@@ -11,7 +11,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] A6 — parity test (alone vs combined: same record, same block); one-entity fragment rows merged; EXTRACTION_TEMPERATURE=0 on every extraction call, recorded per attempt (suite and replay pin 0.1 = the cache recording)
 - [x] GATE A — pytest exit 0: 5188 tests, 0 failures, 0 errors (junit); harness 98.7 / 98.2, 17/17, defects 0; replay scoreboard silent 0, false flags 0; frontend type-check, 64/64 tests, build OK
 - [x] B1 — dot leaders no longer hide a number; a glued-line quote yields to the value the page spells; a label-row quote grounds the value beneath its own heading (alias-matched). A quote found with the value not in it stays Low (protected)
-- [ ] B2 — "different column" decided by the value's own position
+- [x] B2 — placement also accepts a value aligned with its own column's values (set_column_anchors: modal left/right edge of >= 3 values that overlap the heading); a description written into Date still fires; McGuire case pinned (not reproducible on current code)
 - [ ] B3 — no false completeness reasons on blank form boxes
 - [ ] B4 — Legend counts equal marked cells
 - [ ] GATE B

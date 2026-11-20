@@ -1816,6 +1816,53 @@ def locate(value, line, after_x=None):
     return None
 
 
+def set_column_anchors(bands, raw_rows, columns, all_lines):
+    """B2 (overnight): a column's left and right edges as its OWN values sit
+    in this table. mammoth_2pg centres `Description` over x 212-278 while
+    every description starts at x 100, so a short one (`ATM WITHDRAWAL`,
+    ending at 209) overlapped no heading and 28 correct cells went red. An
+    edge counts when at least 3 of the column's values that DO overlap their
+    heading share it (to 1.5 pt). Recorded beside `bands` (`_ANCHORS`)."""
+    from collections import Counter
+    anchors = {}
+    keys = [(c.get("key") or c.get("header"), c.get("header")) for c in columns]
+    lefts, rights = {}, {}
+    for r in raw_rows or []:
+        if not isinstance(r, dict):
+            continue
+        cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
+        line = find_line(all_lines, r.get("source", "")) if r.get("source") else None
+        if not line:
+            continue
+        for key, head in keys:
+            band = bands.get(head) or bands.get(key)
+            v = cells.get(key) if isinstance(cells, dict) else None
+            if not band or not str(v or "").strip():
+                continue
+            span = locate(v, line)
+            if span is None or not (span[0] < band[1] and band[0] < span[1]):
+                continue
+            lefts.setdefault(head, Counter())[round(span[0] / 1.5)] += 1
+            rights.setdefault(head, Counter())[round(span[1] / 1.5)] += 1
+    for head in set(lefts) | set(rights):
+        lx, ln_ = (lefts.get(head) or Counter()).most_common(1)[0] if lefts.get(head) else (None, 0)
+        rx, rn = (rights.get(head) or Counter()).most_common(1)[0] if rights.get(head) else (None, 0)
+        anchors[head] = (lx * 1.5 if ln_ >= 3 else None, rx * 1.5 if rn >= 3 else None)
+    if len(_ANCHORS) > 256:
+        _ANCHORS.clear()
+    _ANCHORS[id(bands)] = (bands, anchors)
+
+
+#: id(bands) -> (bands, anchors); `column_bands` returns a plain dict, which
+#: cannot carry an attribute, so anchors are kept beside it for its lifetime.
+_ANCHORS: dict = {}
+
+
+def _anchors_of(bands):
+    hit = _ANCHORS.get(id(bands))
+    return hit[1] if hit and hit[0] is bands else {}
+
+
 def check_placement(row, columns, line, bands):
     """[(key, reason)] for every cell whose value sits in the wrong column.
 
@@ -1858,6 +1905,10 @@ def check_placement(row, columns, line, bands):
             continue                                   # flush right: correct
         if span[0] < band[1] and band[0] < span[1]:
             continue                                   # overlaps its column
+        own = _anchors_of(bands).get(col.get("header")) or _anchors_of(bands).get(key)
+        if own and ((own[0] is not None and abs(span[0] - own[0]) <= 1.5)
+                    or (own[1] is not None and abs(span[1] - own[1]) <= 1.5)):
+            continue      # B2: aligned with its own column's values, by position
         # Run B: the same word may be printed twice on the line - a card's
         # category `Payment` after the description `PAYMENT RECEIVED`. Before
         # calling the value misplaced, look at its later occurrences; this can
