@@ -207,6 +207,60 @@ def test_e10_a_value_really_under_another_column_still_fires():
     assert len(flags) == 1 and flags[0]["ref"] == "table[1].Unit"
 
 
+# ---------------------------------------------------------------------------
+# E11: minus/dash variants, non-breaking spaces and currency placement.
+
+import pytest  # noqa: E402
+
+_VARIANTS = {
+    "minus sign U+2212": "−",
+    "en dash U+2013": "–",
+    "em dash U+2014": "—",
+    "hyphen U+2010": "‐",
+    "non-breaking hyphen U+2011": "‑",
+}
+
+
+@pytest.mark.parametrize("name", sorted(_VARIANTS))
+def test_e11_a_printed_dash_variant_grounds_a_minus_answer(name):
+    from slot_extractor import verify_span
+    dash = _VARIANTS[name]
+    page = f"Service charge {dash}45.00 Balance 1,200.00"
+    source = f"Service charge {dash}45.00"
+    assert verify_span("-45.00", source, 1, [page]) == (True, "")
+    assert verify_span("-45.00", "Service charge -45.00", 1, [page]) == (True, "")
+    assert verify_span(f"{dash}45.00", source, 1, [page]) == (True, "")
+
+
+@pytest.mark.parametrize("space", [" ", " ", " "])
+def test_e11_a_non_breaking_space_in_a_quote_or_value_grounds(space):
+    from slot_extractor import verify_span
+    page = f"Total{space}due $1,234.50"
+    assert verify_span("$1,234.50", "Total due $1,234.50", 1, [page]) == (True, "")
+    assert verify_span(f"${space}1,234.50", f"Total{space}due $1,234.50", 1, [page]) == (True, "")
+    assert verify_span(f"Total{space}due", "Total due", 1, [page]) == (True, "")
+
+
+@pytest.mark.parametrize("printed,answer", [
+    ("-$45.00", "$-45.00"),
+    ("$-45.00", "-$45.00"),
+    ("45.00 €", "€45.00"),
+    ("€45.00", "45.00€"),
+    ("(£12.00)", "-£12.00"),
+])
+def test_e11_currency_symbol_placement_does_not_decide_grounding(printed, answer):
+    from slot_extractor import verify_span
+    page = f"Adjustment {printed} posted"
+    assert verify_span(answer, f"Adjustment {printed}", 1, [page]) == (True, "")
+
+
+def test_e11_a_different_number_still_fails():
+    from slot_extractor import verify_span
+    page = "Service charge −45.00"
+    assert verify_span("-46.00", "Service charge −45.00", 1, [page])[0] is False
+    assert verify_span("45.00", "Service charge −45.00", 1, [page])[0] is False
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch

@@ -57,7 +57,22 @@ from text_layer import (canonical_value, check_placement, column_bands,
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
 
-_DASHES = {"–": "-", "—": "-", "−": "-", "‐": "-", "‑": "-"}
+_DASHES = {"–": "-", "—": "-", "−": "-", "‐": "-", "‑": "-", "﹣": "-", "－": "-"}
+#: Run E, E11: the spaces a PDF prints that are not U+0020
+_SPACES = {" ": " ", " ": " ", " ": " ", " ": " ", " ": " "}
+
+
+def _unify(s) -> str:
+    """Every minus and dash variant as `-`, every non-breaking or thin space
+    as a space — BEFORE numbers are read or compared. A typographic minus
+    (U+2212) is how many statements print a negative, and `−45.00` failed to
+    ground against an answer of `-45.00`."""
+    t = str(s or "")
+    for k, v in _DASHES.items():
+        t = t.replace(k, v)
+    for k, v in _SPACES.items():
+        t = t.replace(k, v)
+    return t
 
 
 def _flag(ref, value, reason) -> dict:
@@ -83,10 +98,7 @@ def _flag(ref, value, reason) -> dict:
 
 def _flat(s) -> str:
     """Collapse whitespace, unify dashes, drop case — for span matching."""
-    t = str(s or "")
-    for k, v in _DASHES.items():
-        t = t.replace(k, v)
-    return re.sub(r"\s+", " ", t).strip().casefold()
+    return re.sub(r"\s+", " ", _unify(s)).strip().casefold()
 
 
 # ── printed numbers ──────────────────────────────────────────────────────────
@@ -146,7 +158,7 @@ def printed_numbers(text) -> list[str]:
 
     `$ 19,6 94 $ 37,574` -> ['$19,694', '$37,574'].
     """
-    text = str(text or "")
+    text = _unify(text)
     pieces = [_piece(m) for m in _NUM_PIECE.finditer(text)]
     out = []
     for p in pieces:
@@ -163,11 +175,12 @@ def printed_numbers(text) -> list[str]:
 def _number_key(s):
     """A printed number reduced to what it SAYS: sign, digits, decimal point.
     None when `s` is not purely a number in some notation."""
-    t = re.sub(r"\s", "", str(s or ""))
-    m = re.fullmatch(r"(\()?(-)?([$£€])?(-)?(\d[\d,]*(?:\.\d+)?)(\))?", t)
-    if not m or bool(m.group(1)) != bool(m.group(6)):
+    t = re.sub(r"\s", "", _unify(s))
+    # E11: the currency symbol before or after the figure, the sign either side
+    m = re.fullmatch(r"(\()?(-)?([$£€])?(-)?(\d[\d,]*(?:\.\d+)?)([$£€])?(-)?(\))?", t)
+    if not m or bool(m.group(1)) != bool(m.group(8)) or (m.group(3) and m.group(6)):
         return None
-    neg = bool(m.group(1) or m.group(2) or m.group(4))
+    neg = bool(m.group(1) or m.group(2) or m.group(4) or m.group(7))
     return ("-" if neg else "") + m.group(5).replace(",", "")
 
 
