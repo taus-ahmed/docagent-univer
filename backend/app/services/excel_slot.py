@@ -19,6 +19,7 @@ from app.services.excel_cells import keep_precision_note
 from app.services.excel_cells import money_hint
 from app.services.excel_cells import precision_flag
 from app.services.excel_cells import us_money_document
+from app.services.excel_cells import DATE_FORMAT, date_note, date_order_of, excel_date
 from app.services.excel_cells import provenance_edited_note
 from app.services.excel_cells import provenance_note
 from app.services.excel_cells import provenance_note_size
@@ -415,11 +416,22 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
     #: unambiguous numbers (engine/amounts.document_hint); per document.
     doc_hint = [None]
     doc_us = [False]          # Run E, E14: the document writes money the US way
+    doc_order = [None]        # Run G, G6: the day/month order the record fixes
 
     def put(r, c, value, label=""):
         cell = ws.cell(row=r + 1, column=c + 1)
         if isinstance(cell, MergedCell):
             return None
+        # G6: a date slot holding one unambiguous date is a real date
+        d, note = excel_date(value, label, doc_order[0])
+        if d is not None:
+            cell.value = d
+            cell.number_format = DATE_FORMAT
+            return cell
+        if note:
+            cell.value = str(value).strip()
+            date_note(cell, note)
+            return cell
         hint = money_hint(label, doc_hint[0], doc_us[0])
         out = coerce_cell_value(value, label, hint)
         if out is not None:
@@ -439,6 +451,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         ed = doc.get_extracted_data()
         doc_hint[0] = _document_hint_of(ed)
         doc_us[0] = us_money_document(ed)
+        doc_order[0] = date_order_of(ed)
         if not isinstance(ed, dict):
             continue
         slot_map = ed.get("slot_map") or {}

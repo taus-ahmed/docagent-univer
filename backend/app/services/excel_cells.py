@@ -307,6 +307,96 @@ def precision_flag(cell, value, decimal_hint=None):
     return True
 
 
+# ── Run G, G6: real Excel dates ──────────────────────────────────────────────
+#: The display format of every date cell the export writes.
+DATE_FORMAT = "mm/dd/yyyy"
+DATE_AMBIGUOUS_NOTE = ("Kept as text: this date can be read day-first or "
+                       "month-first, and nothing on the document says which.")
+DATE_TWO_DIGIT_NOTE = ("Kept as text: the year is printed with two digits, so "
+                       "the document does not say which century it is.")
+_DATE_IN_QUOTE = re.compile(r"(?<![\d/.\-])\d{1,2}[/.\-]\d{1,2}[/.\-]\d{4}(?![\d/.\-])")
+_ORDER_MEMO: list = [None, None]
+
+
+def date_order_of(ed):
+    """"DMY", "MDY" or None: the day/month order THIS record fixes — its
+    locale, else every unambiguous numeric date it holds (its values and the
+    page lines they were quoted from) agreeing on one order (a day above 12
+    settles it). engine/dates.py::document_order; memoised per record."""
+    if _ORDER_MEMO[0] is ed and ed is not None:
+        return _ORDER_MEMO[1]
+    from dates import document_order
+    texts = []
+    if isinstance(ed, dict):
+        texts += [str(v) for v in (ed.get("extracted_fields") or {}).values()]
+        for p in (ed.get("field_provenance") or {}).values():
+            if isinstance(p, dict) and p.get("source"):
+                texts += _DATE_IN_QUOTE.findall(str(p["source"]))
+        for k, rows in ed.items():
+            if isinstance(k, str) and k.endswith("_rows") and isinstance(rows, list):
+                for r in rows:
+                    if not isinstance(r, dict):
+                        continue
+                    texts += [str(v) for c, v in r.items() if not str(c).startswith("_")]
+                    texts += _DATE_IN_QUOTE.findall(str(r.get("_source") or ""))
+    order, _how = document_order(texts, ed.get("locale") if isinstance(ed, dict) else None)
+    _ORDER_MEMO[0], _ORDER_MEMO[1] = ed, order
+    return order
+
+
+def excel_date(value, label="", order=None):
+    """(date or None, note or None) for one value of a DATE slot.
+
+    A value becomes a real date only when it is a whole date by itself and its
+    meaning is fixed: an ISO or month-name date, a numeric date whose day is
+    above 12, or one whose order the record fixes (`order`). Day-first or
+    month-first with nothing to say which, or a two-digit year, stays the
+    printed text with a note saying why. A date inside a sentence, a range
+    ("09/01/2026 to 09/30/2026") or anything not shaped like one date is not
+    a date value and is left alone (no note). A slot whose label does not say
+    date is never touched."""
+    from format_rules import slot_type
+    from dates import looks_like_a_date, parse_date
+    if slot_type(label) != "date":
+        return None, None
+    txt = str(value or "").strip()
+    if not txt or not looks_like_a_date(txt):
+        return None, None
+    d = parse_date(txt, order)
+    if d.ambiguous:
+        return None, DATE_AMBIGUOUS_NOTE
+    if not d.ok:
+        return None, None
+    if d.two_digit_year:
+        return None, DATE_TWO_DIGIT_NOTE
+    return d.value, None
+
+
+def date_note(cell, note):
+    """Put a date's kept-as-text note on a cell, ahead of any comment."""
+    if not note:
+        return
+    from openpyxl.comments import Comment
+    text = note + (f"\n\n{cell.comment.text}" if cell.comment else "")
+    w, h = provenance_note_size(text)
+    cell.comment = Comment(text, "DocAgent", width=w, height=h)
+
+
+def put_date(cell, value, label, ed):
+    """Write `value` as a real date when `excel_date` allows it; True if the
+    cell was written (as a date, or as text with its note)."""
+    d, note = excel_date(value, label, date_order_of(ed))
+    if d is not None:
+        cell.value = d
+        cell.number_format = DATE_FORMAT
+        return True
+    if note:
+        cell.value = value if isinstance(value, str) else str(value)
+        date_note(cell, note)
+        return True
+    return False
+
+
 def put_extracted(cell, value, label="", ed=None, numeric=True):
     """Write one extracted value the way every writer does (Review-3 F3).
 
@@ -321,6 +411,8 @@ def put_extracted(cell, value, label="", ed=None, numeric=True):
     """
     if value is None or str(value).strip() == "":
         cell.value = ""
+        return None
+    if numeric and put_date(cell, value, label, ed):
         return None
     hint = money_hint(label, document_hint_of(ed), us_money_document(ed))
     out = coerce_cell_value(value, label, hint) if numeric else None
@@ -388,9 +480,12 @@ def money_hint(label, hint, us_money) -> str | None:
 
 
 def keep_precision_note(cell, text):
-    """`text` with the cell's precision note in front, when it carries one."""
-    if cell.comment and cell.comment.text.startswith(PRECISION_NOTE):
-        return f"{PRECISION_NOTE}\n\n{text}"
+    """`text` with the cell's precision (or date kept-as-text) note in front,
+    when it carries one."""
+    if cell.comment:
+        for note in (PRECISION_NOTE, DATE_AMBIGUOUS_NOTE, DATE_TWO_DIGIT_NOTE):
+            if cell.comment.text.startswith(note):
+                return f"{note}\n\n{text}"
     return text
 
 
