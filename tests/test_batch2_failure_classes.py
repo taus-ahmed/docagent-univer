@@ -196,11 +196,6 @@ def _assert_clear_no_data_state(data: dict) -> None:
     ), (state, notes)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Rule: values absent from the source must be cleared or visibly "
-            "flagged; copied columns cannot silently pass"),
-)
 def test_01_copied_unprinted_column_is_not_silent_and_description_survives():
     document = _document("po_units")
     source, page = _line(document, "00010", "1,175.00", page=1)

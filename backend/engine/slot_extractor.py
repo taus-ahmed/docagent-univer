@@ -335,13 +335,19 @@ def copied_columns(rows, keys, printed=None) -> list:
             if a in taken or b in taken or _same_column_name(a, b):
                 continue
             filled = [r for r in rows if _txt(r, a) or _txt(r, b)]
-            if len(filled) < 2 or any(_txt(r, a) != _txt(r, b) for r in filled):
+            if not filled or any(_txt(r, a) != _txt(r, b) for r in filled):
                 continue
             if all(parse_amount(_txt(r, a)).ok for r in filled):
                 continue
             copy, src = b, a
             if printed(b) and not printed(a):
                 copy, src = a, b
+            # Two rows make a copy; ONE does when the page prints the source
+            # column's heading and not the copy's (Batch 2, test_01: a
+            # one-line PO whose Memo repeats its Description, no Memo printed).
+            need = 1 if (printed(src) and not printed(copy)) else 2
+            if len(filled) < need:
+                continue
             out.append((copy, src))
             taken.add(copy)
     return out

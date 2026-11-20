@@ -66,7 +66,6 @@ answers. No provider or remote service is involved.
 
 | Rule gap | Strict test(s) | Observed application failure |
 | --- | --- | --- |
-| Values absent from the source must be cleared or visibly flagged | `test_01_copied_unprinted_column_is_not_silent_and_description_survives` | A fabricated `Memo` copied verbatim from `Description` is accepted as grounded even though the purchase order prints no Memo column. |
 | A label-only blank document has empty, unflagged slots plus a document-level no-data state | `test_02_blank_form_discards_underscores_and_inventions_without_slot_flags` | Underscores and invented purchase-order/company values survive as extracted fields instead of producing a blank-document result. |
 | Explanatory or sample prose is not transaction/pay data | `test_03_explainer_pages_do_not_become_pay_data[ou_check_stub]`, `test_03_explainer_pages_do_not_become_pay_data[saltlake_paycheck]` | Numbers quoted from prose/examples are accepted as pay values and the document is silently READY. |
 | Conspicuous specimen placeholders are not real payer/recipient identities | `test_04_specimen_placeholders_are_not_real_payer_or_recipient_data` | `FULL COMPANY NAME`, `ADD 1`, and `MR A SAMPLE` are accepted as real extracted identities/address. |
