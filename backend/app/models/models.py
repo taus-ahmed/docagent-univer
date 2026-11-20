@@ -34,6 +34,10 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_login = Column(DateTime, nullable=True)
+    #: Overnight H2: a token carries the version it was issued at ("tv");
+    #: disabling the account, changing or resetting its password and "log out
+    #: everywhere" bump it, so every older token stops working at once.
+    token_version = Column(Integer, nullable=False, default=0, server_default="0")
 
     # Relationships
     jobs = relationship("ExtractionJob", back_populates="user", lazy="select")

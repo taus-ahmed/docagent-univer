@@ -17,6 +17,7 @@ from app.config import settings
 from app.core.auth import (
     verify_password, needs_rehash, verify_unknown_user, create_access_token,
     get_current_user, get_optional_user, hash_password, is_one_time,
+    revoke_tokens, token_for,
 )
 from app.core import audit
 from app.core.permissions import permissions_of
@@ -169,7 +170,8 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     audit.record(db, "login.ok", actor=user, target_type="user", target_id=user.id)
 
     token = create_access_token(
-        data={"sub": str(user.id), "role": user.role, "client_id": user.client_id},
+        data={"sub": str(user.id), "role": user.role, "client_id": user.client_id,
+              "tv": int(user.token_version or 0)},          # H2: revocable
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
@@ -223,9 +225,11 @@ def update_me(
         if len(payload.password) < 6:
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
         current_user.password_hash = hash_password(payload.password)
+        revoke_tokens(current_user)             # H2: every other session ends
 
     db.commit()
     db.refresh(current_user)
+    fresh = token_for(current_user) if payload.password is not None else (None, None)
     if payload.password is not None:
         audit.record(db, "password.change", actor=current_user,
                      target_type="user", target_id=current_user.id)
@@ -241,6 +245,7 @@ def update_me(
         is_demo=is_demo_user(current_user),
         permissions=permissions_of(current_user),
         must_change_password=is_one_time(current_user.password_hash),
+        access_token=fresh[0], expires_in=fresh[1],
     )
 
 
@@ -259,12 +264,27 @@ def change_password(
         raise HTTPException(status_code=400,
                             detail="Choose a password different from the current one")
     current_user.password_hash = hash_password(payload.new_password)
+    revoke_tokens(current_user)                 # H2: every other session ends
     db.commit()
     db.refresh(current_user)
     print(f"[AUTH] user {current_user.id} changed their password", flush=True)
     audit.record(db, "password.change", actor=current_user,
                  target_type="user", target_id=current_user.id)
-    return get_me(current_user)
+    # this device stays signed in with a token at the new version
+    tok, secs = token_for(current_user)
+    return get_me(current_user).model_copy(update={"access_token": tok, "expires_in": secs})
+
+
+@router.post("/logout-everywhere")
+def logout_everywhere(current_user: User = Depends(get_current_user),
+                      db: Session = Depends(get_db)):
+    """Overnight H2: every token this account holds — this one included —
+    stops working now."""
+    revoke_tokens(current_user)
+    db.commit()
+    audit.record(db, "logout.everywhere", actor=current_user,
+                 target_type="user", target_id=current_user.id)
+    return {"message": "Signed out on every device. Sign in again to continue."}
 
 
 @router.post("/logout")

@@ -260,9 +260,17 @@ export const authApi = {
     return res.data;
   },
   changePassword: async (current_password: string, new_password: string): Promise<User> => {
-    const res = await api.post<User>("/api/auth/change-password",
-                                     { current_password, new_password });
+    const res = await api.post<User & { access_token?: string; expires_in?: number }>(
+      "/api/auth/change-password", { current_password, new_password });
+    // Overnight H2: a password change revokes every token of the account;
+    // the response carries this device's new one.
+    if (res.data.access_token) setToken(res.data.access_token, res.data.expires_in ?? 3600);
     return res.data;
+  },
+  /** Overnight H2: sign out on every device (this one too). */
+  logoutEverywhere: async (): Promise<void> => {
+    await api.post("/api/auth/logout-everywhere");
+    removeToken();
   },
 };
 

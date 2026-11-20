@@ -156,6 +156,10 @@ class TestTheRoutes:
                                "new_password": "a-long-new-password-1"})
         assert ok.status_code == 200, ok.text
         assert ok.json()["must_change_password"] is False
+        # overnight H2: the change revokes every older token; the response
+        # carries this device's new one, which opens the account
+        assert client.get("/api/jobs", headers=h).status_code == 401
+        h = {"Authorization": f"Bearer {ok.json()['access_token']}"}
         assert client.get("/api/jobs", headers=h).status_code == 200
         assert _login(client, "onb_api_admin", made["one_time_password"]).status_code == 401
         assert _login(client, "onb_api_admin", "a-long-new-password-1").status_code == 200

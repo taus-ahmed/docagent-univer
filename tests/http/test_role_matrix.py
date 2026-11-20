@@ -56,12 +56,16 @@ def people(db, users):
 
 
 @pytest.fixture(scope="module")
-def headers(people):
+def headers(db, people):
     from app.core.auth import create_access_token
     h = {"anon": {}}
+    db.expire_all()
     for name, u in people.items():
+        # overnight H2: at the account's CURRENT token version — an earlier
+        # module may have changed a shared account's password
         tok = create_access_token({"sub": str(u.id), "role": u.role,
-                                   "client_id": u.client_id})
+                                   "client_id": u.client_id,
+                                   "tv": int(u.token_version or 0)})
         h[name] = {"Authorization": f"Bearer {tok}"}
     return h
 

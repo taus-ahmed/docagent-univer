@@ -160,6 +160,18 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
+    # Overnight H2: a token issued before the account's last revocation (a
+    # password change or reset, a disable, "log out everywhere") is refused.
+    # A token without "tv" predates versions and counts as version 0.
+    try:
+        issued_at = int(payload.get("tv", 0) or 0)
+    except (TypeError, ValueError):
+        issued_at = -1
+    if issued_at != int(getattr(user, "token_version", 0) or 0):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This sign-in is no longer valid; sign in again",
+        )
     if (request is not None and is_one_time(user.password_hash)
             and (request.method, request.url.path) not in ONE_TIME_ALLOWED):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
@@ -199,3 +211,21 @@ def get_optional_user(
         return get_current_user(credentials, db)
     except HTTPException:
         return None
+
+
+def revoke_tokens(user) -> None:
+    """Overnight H2: every token this account holds stops working. The
+    caller commits."""
+    user.token_version = int(getattr(user, "token_version", 0) or 0) + 1
+
+
+def token_for(user):
+    """(access token, seconds) for `user` at its current token version."""
+    from datetime import timedelta as _td
+    from app.config import settings as _s
+    minutes = _s.ACCESS_TOKEN_EXPIRE_MINUTES
+    tok = create_access_token(
+        data={"sub": str(user.id), "role": user.role, "client_id": user.client_id,
+              "tv": int(getattr(user, "token_version", 0) or 0)},
+        expires_delta=_td(minutes=minutes))
+    return tok, minutes * 60

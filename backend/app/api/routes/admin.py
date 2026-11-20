@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core import audit
-from app.core.auth import hash_password, is_one_time
+from app.core.auth import hash_password, is_one_time, revoke_tokens
 from app.core.permissions import PLATFORM_ADMIN, require, role_of
 from app.core.demo import is_demo_user
 from app.core.confidence import CONFIDENT_LEVELS
@@ -108,6 +108,7 @@ def update_user(
             raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
         user.password_hash = hash_password(
             payload.password, one_time=bool(payload.must_change_password))
+        revoke_tokens(user)                     # H2: a reset ends their sessions
     if payload.role is not None:
         if user.id == current_admin.id and payload.role != user.role:
             raise HTTPException(status_code=400, detail="Cannot change your own role")
@@ -123,6 +124,8 @@ def update_user(
         if user.id == current_admin.id:
             raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
         user.is_active = payload.is_active
+        if not payload.is_active:
+            revoke_tokens(user)                 # H2: disabled = signed out now
 
     db.commit()
     db.refresh(user)
@@ -157,6 +160,7 @@ def deactivate_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     user.is_active = False
+    revoke_tokens(user)                         # H2
     db.commit()
     audit.record(db, "user.delete", actor=current_admin, client_id=user.client_id,
                  target_type="user", target_id=user.id)

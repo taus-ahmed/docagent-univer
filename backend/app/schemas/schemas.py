@@ -40,6 +40,10 @@ class UserResponse(BaseModel):
     #: the behaviour. False whenever the variable is unset, which is the
     #: shipped default.
     is_demo: bool = False
+    #: Overnight H2: set ONLY by a password change, which revokes every other
+    #: token of the account — the caller's new one, so this device stays in.
+    access_token: Optional[str] = None
+    expires_in: Optional[int] = None
 
 #: A firm id is used verbatim as its storage prefix (core/storage.py
 #: `_tenant_segment`), so it must already be a safe path segment: two ids that

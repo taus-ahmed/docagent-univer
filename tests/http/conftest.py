@@ -139,16 +139,45 @@ def users(db):
     }
 
 
-@pytest.fixture(scope="session")
-def auth(users):
-    """name -> Authorization header for that principal."""
-    from app.core.auth import create_access_token
-    out = {}
-    for name, u in users.items():
+class _LiveHeaders(dict):
+    """name -> Authorization header, minted when READ at the account's
+    CURRENT token version (overnight H2). A test that changes a shared
+    user's password revokes that user's earlier tokens; the next test asking
+    for `auth[name]` gets a valid one, while a header a test saved before the
+    revocation stays revoked — which is what the revocation tests check."""
+
+    def __init__(self, users, sessionmaker):
+        super().__init__({name: None for name in users})
+        self._users, self._sm = users, sessionmaker
+
+    def __getitem__(self, name):
+        from app.core.auth import create_access_token
+        from app.models.models import User
+        u = self._users[name]
+        s = self._sm()
+        try:
+            row = s.get(User, u.id)
+            tv = int(getattr(row, "token_version", 0) or 0) if row else 0
+        finally:
+            s.close()
         tok = create_access_token({"sub": str(u.id), "role": u.role,
-                                   "client_id": u.client_id})
-        out[name] = {"Authorization": f"Bearer {tok}"}
-    return out
+                                   "client_id": u.client_id, "tv": tv})
+        return {"Authorization": f"Bearer {tok}"}
+
+    def items(self):
+        return [(k, self[k]) for k in self.keys()]
+
+    def values(self):
+        return [self[k] for k in self.keys()]
+
+    def get(self, name, default=None):
+        return self[name] if name in self._users else default
+
+
+@pytest.fixture(scope="session")
+def auth(app, users):
+    """name -> Authorization header for that principal (see _LiveHeaders)."""
+    return _LiveHeaders(users, app.state._sessionmaker)
 
 
 @pytest.fixture(scope="session")

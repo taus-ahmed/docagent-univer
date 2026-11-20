@@ -62,6 +62,7 @@ ROUTES = {
     ("GET", "/api/auth/me"): "self",
     ("PUT", "/api/auth/me"): "self",
     ("POST", "/api/auth/change-password"): "self",
+    ("POST", "/api/auth/logout-everywhere"): "self",
     ("POST", "/api/admin/tenants"): "body",
     ("GET", "/api/admin/tenants"): "list",
     ("GET", "/api/admin/audit"): "list",

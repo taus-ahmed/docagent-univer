@@ -99,6 +99,9 @@ def set_tenant_active(db, client_id: str, active: bool) -> int:
     for u in db.query(User).filter(User.client_id == client_id).all():
         if u.is_active != active:
             u.is_active = active
+            if not active:
+                # H2: reactivating the firm later must not revive old tokens
+                u.token_version = int(u.token_version or 0) + 1
             n += 1
     db.commit()
     print(f"[TENANT] {n} users {'re' if active else 'de'}activated", flush=True)

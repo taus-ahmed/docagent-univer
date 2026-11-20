@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
 import { seesAdminArea } from "@/lib/permissions";
 import DemoBanner from "./DemoBanner";
+import { authApi } from "@/lib/api";
 
 const NAV = [
   { href: "/extract",   label: "Extract",   icon: "extract"   },
@@ -118,6 +119,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <button className="sb-signout" onClick={()=>setChangingPassword(v=>!v)}>
             Change password
+          </button>
+          <button className="sb-signout" title="Ends every session of this account, on every device"
+                  onClick={async ()=>{
+                    try { await authApi.logoutEverywhere(); } catch { /* signed out below anyway */ }
+                    logout(); router.replace("/login");
+                  }}>
+            Sign out everywhere
           </button>
           <button className="sb-signout" onClick={()=>{logout();router.replace("/login");}}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>

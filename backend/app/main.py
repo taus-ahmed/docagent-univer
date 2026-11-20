@@ -123,6 +123,10 @@ def _run_migrations():
             """ALTER TABLE users
                ADD COLUMN IF NOT EXISTS last_login TIMESTAMP""",
 
+            # Overnight H2: per-user token version (revocation)
+            """ALTER TABLE users
+               ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0""",
+
             # Add schema_id to extraction_jobs if missing
             """ALTER TABLE extraction_jobs
                ADD COLUMN IF NOT EXISTS schema_id VARCHAR(100)""",
