@@ -1829,8 +1829,23 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                       {t["name"]: [r.get("cells", r) for r in _table_rows_of(parsed, t, slots)]
                        for t in slots["tables"]},
                       parsed.get("fields"), page_lines or [], nums,
-                      form_lane=bool(form_entries))
+                      form_lane=bool(form_entries), form_entries=form_entries)
     ref_to_id = {f["ref"]: f["slot_id"] for f in slots["fields"]}
+    # B3 (overnight): a fillable form whose every filled figure is already in
+    # a cell confirms its empty tables itself — no second request for them.
+    form_says_empty = bool(pre.get("form_confirms_empty"))
+    if form_says_empty:
+        retry_tables = []
+    if form_entries:
+        # an empty BOX on a fillable form is the form saying the slot is
+        # empty; only a slot a filled widget matches is worth asking again
+        def _backed(sid):
+            f = next((x for x in slots["fields"] if x["slot_id"] == sid), None)
+            if f is None:
+                return True
+            entry, _strong = FF.match(f["row_label"], form_entries)
+            return bool(entry and str(entry.get("value") or "").strip())
+        retry_ids = [sid for sid in retry_ids if _backed(sid)]
     retry_ids += [ref_to_id[r] for r in pre["flag_slots"] if r in ref_to_id]
     retry_ids = list(dict.fromkeys(retry_ids))
     retry_tables = list(dict.fromkeys(retry_tables))
@@ -2983,7 +2998,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # absent — GL Account and PO number must not make noise.
     cov = SI.coverage(inventory, slots, extracted_fields, tables_out,
                       parsed.get("fields"), page_lines or [], nums,
-                      form_lane=bool(form_entries))
+                      form_lane=bool(form_entries), form_entries=form_entries)
     label_of = {f["ref"]: f["row_label"] for f in slots["fields"]}
     # B6: the TOTAL cell carries both numbers. The slot holding the printed
     # total is flagged when the template has one; otherwise the table is.
@@ -3008,7 +3023,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             f"Page {n} could not be extracted ({why}); the table rows printed "
             f"on it are missing. The other pages were kept.")
     for fl in contract_after:
-        if fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE):
+        if fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE) and not (
+                form_says_empty and cov.get("form_confirms_empty")):
             names = ", ".join(repr(x) for x in fl["tables"])
             attention.append(f"The model's answer did not include the rows of "
                              f"table {names}, and a second request did not "

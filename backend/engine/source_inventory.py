@@ -368,6 +368,49 @@ def form_titles(lines) -> list:
     return out
 
 
+_VALUE_TOKEN = re.compile(r"\d")
+
+
+def _counts_as_missed(f, label, numbers, lines_of, form_lane, form_entries) -> bool:
+    """B3 (overnight): does an EMPTY slot whose label is printed count towards
+    "N of M field slots are empty while their labels are printed"?
+
+    On a fillable form, only when a FILLED widget matches the slot: an empty
+    box is the document confirming the slot is empty (job 52, irs_1099int_mod3).
+    On a text layer, only when the label's whole caption is printed with a
+    value-like token (a digit) within the next three words, and that token is
+    not the start of another caption (mammoth_2pg: "Account Type" is not
+    printed — "Account:" is the account number's label)."""
+    if form_lane:
+        if not form_entries:
+            return False
+        try:
+            import form_fields as FF
+            entry, _strong = FF.match(label, form_entries)
+        except Exception:
+            return False
+        return bool(entry and str(entry.get("value") or "").strip())
+    stems = _stems(label)
+    if not stems:
+        return False
+    for n in numbers:
+        for li, wi in label_lines(lines_of.get(n) or [], label):
+            ws = _words((lines_of.get(n) or [])[li])
+            hit, k = set(), wi
+            while k < len(ws):
+                m = [st for st in stems if _word_matches(st, ws[k].get("text", ""))]
+                if not m:
+                    break
+                hit.update(m)
+                k += 1
+            if hit < set(stems):
+                continue
+            nxt = [str(w.get("text", "")) for w in ws[k:k + 3]]
+            if any(_VALUE_TOKEN.search(t) for t in nxt):
+                return True
+    return False
+
+
 def slot_area_amounts(lines, label) -> list:
     """Amounts that sit where `label`'s value would: the first amount to the
     right of a label word on its own line, else the amount on the NEXT line
@@ -421,7 +464,8 @@ def _norm_text(s) -> str:
 
 
 def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
-             page_lines=None, page_numbers=None, form_lane=False) -> dict:
+             page_lines=None, page_numbers=None, form_lane=False,
+             form_entries=None) -> dict:
     """Compare the extraction with the inventory.
 
     Returns {"reasons": [plain sentences], "flag_slots": {ref: why},
@@ -470,6 +514,11 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
         return False
 
     widget_unplaced = [(n, v) for n, v in widget_all if not widget_placed(v)]
+    # B3 (overnight): on a fillable form, every filled AMOUNT widget in a cell
+    # means the form's figures are all accounted for; the inventory's "rows"
+    # there are those widget values written into the text layer.
+    form_amounts_placed = bool(form_lane and widget_all) and not any(
+        amount_of(str(v).strip()) is not None for _n, v in widget_unplaced)
     widgets_missing = (len(widget_unplaced) >= 3
                        and len(widget_unplaced) * 2 >= len(widget_all))
     if widgets_missing:
@@ -504,6 +553,8 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
         cand = sum(pages.get(n, {}).get(f"{kind}_rows", 0) for n in k["cand_pages"])
         got = k["got"]
         what = "transaction lines" if kind == "dated" else "line items"
+        if form_amounts_placed:
+            continue          # B3: the form itself says these bands are empty
         if cand >= 2 and got == 0:
             reasons.append(f"The page has about {cand} {what} but 0 were "
                            f"extracted (table {', '.join(repr(x) for x in k['names'])}).")
@@ -555,7 +606,8 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
         if why:
             flag_slots[f["ref"]] = why
         if printed:
-            printed_empty += 1
+            if _counts_as_missed(f, label, numbers, lines_of, form_lane, form_entries):
+                printed_empty += 1
         elif not why:
             absent.append(label)
 
@@ -597,6 +649,7 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
 
     return {"reasons": reasons, "flag_slots": flag_slots, "absent": absent,
             "row_sums": row_sums,
+            "form_confirms_empty": form_amounts_placed,
             "empty_bands": sorted(empty_band),
             "widget_values": len(widget_all),
             "widget_unplaced": [{"page": n, "value": str(v)[:60]}
