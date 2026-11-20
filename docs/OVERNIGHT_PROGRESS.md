@@ -16,7 +16,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] B4 — slot writer marks EVERY slot, so an empty-and-flagged slot is the grey cell with a comment the Legend counts; tests/legend_check.py (real exports before: 3 of 16 disagree — jobs 46, 48, 51)
 - [x] GATE B — pytest exit 0: 5213 tests, 0 failures, 0 errors (junit); harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0; frontend unchanged since GATE A (type-check, 64/64, build OK there)
 - [x] C — merged origin/review/run-f; all 13 strict xfails fixed and their markers removed (F2 x3, F4 x4, F5, E9 x2, E11, E12 x2); _on_page refuses a value assembled across columns
-- [ ] GATE C
+- [x] GATE C — pytest exit 0: 5235 tests, 0 failures, 0 errors (junit); harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0; frontend unchanged
 - [ ] D1 — three Run E strict xfails
 - [ ] D2 — D13 warning-inventory test asserts content
 - [ ] D3 — stale T9 ambiguity text
