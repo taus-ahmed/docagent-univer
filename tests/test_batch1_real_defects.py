@@ -220,7 +220,6 @@ def _is_open(data: dict, ref: str) -> bool:
     return any(str(flag.get("ref")) in {ref, label} for flag in _flags(data))
 
 
-@ITEM_1
 def test_01_invoice_vendor_name_is_not_invented_as_remit_bank():
     document = _document("invoice")
     source, page = _line(document, "Payment within 30 days", "Harwood")
@@ -233,7 +232,6 @@ def test_01_invoice_vendor_name_is_not_invented_as_remit_bank():
     assert _value(data, "Remit To Bank") == ""
 
 
-@ITEM_2
 def test_02_w2_cross_box_value_and_checkbox_are_not_accepted():
     document = _document("pitt")
     box12_source, page = _line(document, "E", "4107.00", page=1)
@@ -263,7 +261,6 @@ def test_02_w2_cross_box_value_and_checkbox_are_not_accepted():
     assert not problems, problems
 
 
-@ITEM_3
 def test_03_box14_entry_never_moves_to_an_uncoded_box12_row():
     document = _document("pitt")
     source, page = _line(document, "52.00", "14X", page=1)
@@ -287,7 +284,6 @@ def test_03_box14_entry_never_moves_to_an_uncoded_box12_row():
     assert not moved and visible, {"rows": rows, "review": _visible_review_text(data)}
 
 
-@ITEM_4
 def test_04_identifiers_remain_text_and_money_keeps_two_decimals():
     document = _document("pitt")
     control_source, page = _line(document, "0000005712UUQ", "CKR5", page=1)
@@ -344,7 +340,6 @@ def _mammoth_page_one_answer(grid: dict) -> tuple[dict, dict]:
     return table, _answer(tables={table["name"]: rows})
 
 
-@ITEM_5
 def test_05_page_one_only_statement_is_recovered_or_needs_attention():
     grid = _grid(
         {"0,0": "Date", "0,1": "Description", "0,2": "Amount"},
@@ -408,7 +403,6 @@ def test_06b_same_1099_answer_has_identical_single_and_combined_blocks():
         two.value, two.fill.fgColor.rgb, bool(two.comment))
 
 
-@ITEM_6
 def test_06c_split_state_local_row_is_merged_or_visibly_flagged():
     source, page = (
         "15 State Employer's state ID no. 16 State wages, tips, etc. "
@@ -445,7 +439,6 @@ def _assert_no_open_refs(data: dict, refs: list[str], case: str, failures: list[
         failures.append(f"{case}: {bad} were incorrectly marked low/unverified")
 
 
-@ITEM_7
 def test_07_correct_values_are_not_low_but_real_errors_still_are():
     failures: list[str] = []
 
@@ -575,7 +568,6 @@ def _w2_blank_grid() -> dict:
     ])
 
 
-@ITEM_8
 def test_08_fillable_blank_boxes_do_not_create_false_completeness_reasons():
     grid = _w2_blank_grid()
     slots = _slots(grid)
@@ -694,7 +686,6 @@ DATE_CASES = [
 NON_DATE_JOBS = {43, 44, 48, 49, 50, 51, 52, 53, 54, 55}
 
 
-@ITEM_10
 def test_10_date_slots_export_as_real_dates():
     assert {case[0] for case in DATE_CASES} | NON_DATE_JOBS == set(range(40, 56))
     companions = {

@@ -323,6 +323,11 @@ def unwitnessed_duplicates(fields, values, provenance, lines):
 # ── the pass over field slots ───────────────────────────────────────────────
 
 _IDENT = re.compile(r"\b(number|no|id|code|ref|control|account|serial)\b", re.I)
+#: a slot naming a bank (not a bank ACCOUNT number or sort code)
+_BANK_SLOT = re.compile(r"\bbank\b(?!\s*(?:account|acct|no|number|code|sort|routing|#))", re.I)
+_BANK_WORDS = re.compile(
+    r"\b(?:bank|banque|banco|bancorp|credit\s+union|building\s+society|savings|trust"
+    r"|financial|treasury|plc\s+bank|n\.?a\.?)\b", re.I)
 
 
 def _run_on_line(value, lines):
@@ -463,6 +468,32 @@ def settle_fields(fields, values, conf, provenance, lines, notes, rewritten=None
                 provenance[f["ref"]] = {"source": "X", "page": None,
                                         "grounded": True, "machine_read": "checkbox"}
                 notes.append(f'{f["row_label"]}: X read from its own column')
+
+    # 4. Run G review (batch 1, item 1): a BANK slot answered with another
+    #    party's name. Job 42 put the vendor's own name into Remit To Bank
+    #    from "Payment within 30 days to Harwood Design Studio Ltd · Sort code
+    #    ..."; no bank is printed. Cleared when the value names no bank, its
+    #    quote prints no word of the label, and the page prints the value
+    #    again on another line that says nothing of a bank (a party block or
+    #    the letterhead). A bank named once in a payment line is kept.
+    for f in fields:
+        v = values.get(f["ref"])
+        lab = str(f.get("row_label") or "")
+        if not str(v or "").strip() or machine_read(f) or not _BANK_SLOT.search(lab):
+            continue
+        if _BANK_WORDS.search(str(v)):
+            continue
+        src = str((provenance.get(f["ref"]) or {}).get("source") or "")
+        if _BANK_WORDS.search(src) or witnessed(lab, v, src, lines):
+            continue
+        qi = _line_index(src, lines)
+        want = re.sub(r"\s+", " ", str(v)).strip().casefold()
+        elsewhere = [i for i, ln in enumerate(lines) if i != qi and want in
+                     " ".join(str(w.get("text", "")) for w in ln).casefold()]
+        if elsewhere and not any(_BANK_WORDS.search(
+                " ".join(str(w.get("text", "")) for w in lines[i])) for i in elsewhere):
+            clear(f, f"{str(v)[:40]!r} is a party named elsewhere on the page; "
+                     f"no bank is printed for {lab!r}")
 
     # 3. unwitnessed duplicates
     for ref, keeper in unwitnessed_duplicates(fields, values, provenance, lines):

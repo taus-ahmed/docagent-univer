@@ -698,6 +698,12 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
                 cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
                 if _echoed_header(cells, heads):
                     continue
+                # Run G review (batch 1, item 5): a row is recovered only if
+                # its line is printed on THIS page; an answer repeating
+                # another page's rows recovers nothing
+                at = _row_file_page({**r, "page": 0}, all_lines, page_lines, nums)
+                if at is not None and at != n:
+                    continue
                 new.append({**r, "page": k + 1})
             old = current[t["name"]]
             mine = [r for r in old if _row_file_page(r, all_lines, page_lines, nums) == n]
@@ -1238,6 +1244,13 @@ def label_row_value(value, label, source, all_lines):
                     else min(abs(cx - float(g[0]["x0"])), abs(cx - float(g[-1]["x1"]))))
             phrase = AL._norm(" ".join(str(x.get("text", "")) for x in g))
             if phrase in names:
+                return j
+            # the heading's words are all words of the label or an alias
+            # ("Deposits" over "Total Deposits and Credits")
+            filler = {"total", "and", "of", "the", "for", "&"}
+            label_words = {w for n in names for w in n.split()} - filler
+            heading = set(phrase.split()) - filler
+            if heading and heading <= label_words:
                 return j
             return None
     return None
@@ -1867,6 +1880,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     form_says_empty = bool(pre.get("form_confirms_empty"))
     if form_says_empty:
         retry_tables = []
+    # Run G review (item 8): on a fillable form a band no FILLED box belongs
+    # to is confirmed empty by the form — no second request, no reason
+    unbacked_tables = set()
+    if form_entries:
+        unbacked_tables = {t["name"] for t in slots["tables"]
+                           if not SI.band_widget_backed(t, form_entries)}
+        retry_tables = [n for n in retry_tables if n not in unbacked_tables]
     if form_entries:
         # an empty BOX on a fillable form is the form saying the slot is
         # empty; only a slot a filled widget matches is worth asking again
@@ -2411,6 +2431,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 for _row, _owner in _foreign:
                     notes.append(f'{t["name"]}: a row printed in box {_owner} '
                                  f"was not placed in this table")
+                    _cells = _row.get("cells") if isinstance(_row.get("cells"), dict) else _row
+                    _shown = " ".join(str(v) for k, v in (_cells or {}).items()
+                                      if not str(k).startswith("_") and str(v or "").strip())
+                    # Run G review (batch 1, item 3): VISIBLY — the entry
+                    # belongs to box {_owner}, which has no room for it here
+                    flagged.append(_flag(
+                        f'{t["name"]}[not this box]', _shown,
+                        f"{_shown} is printed in box {_owner}, not in this table; "
+                        f"it has no slot here (extra entry)"))
             # PLACEMENT (D6). Grounding says the value is in the document; it
             # cannot say the value belongs in THIS column, because a flattened
             # line carries no columns. The document's own heading line does:
@@ -3068,8 +3097,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             f"on it are missing. The other pages were kept.")
     for fl in contract_after:
         if fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE) and not (
-                form_says_empty and cov.get("form_confirms_empty")):
-            names = ", ".join(repr(x) for x in fl["tables"])
+                form_says_empty and cov.get("form_confirms_empty")) and any(
+                x not in unbacked_tables for x in fl["tables"]):
+            names = ", ".join(repr(x) for x in fl["tables"] if x not in unbacked_tables)
             attention.append(f"The model's answer did not include the rows of "
                              f"table {names}, and a second request did not "
                              f"return them either.")

@@ -155,6 +155,20 @@ _NOT_MONEY = re.compile(
     r"description|period|percent|rate|apr|%|count|qty|quantity|units|year|"
     r"state|locality|plan|employee|employer|account)\b", re.I)
 _DATE_LABEL = re.compile(r"\bdate\b", re.I)
+#: Run G review (batch 1, item 10): a period's START or END is one date —
+#: "Statement Period Start" — while "Statement Period" alone is a range.
+_PERIOD_BOUND = re.compile(
+    r"\b(?:period|statement|billing|coverage)\s+(?:start|end|begin|beginning|ending|from|to)\b"
+    r"|\b(?:start|end|beginning|ending)\s+of\s+(?:the\s+)?period\b", re.I)
+#: Run G review (batch 1, item 7): a slot naming a PARTY ("Payer Name",
+#: "Vendor", "Employee Name") never holds a bare figure.
+_PARTY_NAME = re.compile(
+    r"\b(?:name|payer|payee|recipient|vendor|supplier|customer|employer|employee"
+    r"|bank|company|merchant|holder)\b", re.I)
+_BARE_FIGURE = re.compile(r"^[$£€]?\s*-?\(?\d[\d,]*(?:\.\d+)?\)?-?$")
+#: ...unless the label also names an identifier — or a W-2 LOCALITY, whose
+#: "name" is printed as a number (pitt_sample_w2: Locality Name 700102)
+_ID_WORDS = re.compile(r"\b(?:id|no|number|tin|ein|ssn|code|account|acct|locality|#)\b", re.I)
 
 
 def slot_type(label) -> str:
@@ -163,6 +177,8 @@ def slot_type(label) -> str:
     when it also says `payment` or `tax`."""
     s = str(label or "")
     if _DATE_LABEL.search(s) and not re.search(r"\b(range|period)\b", s, re.I):
+        return "date"
+    if _PERIOD_BOUND.search(s):
         return "date"
     if _MONEY_LABEL.search(s) and not _NOT_MONEY.search(s):
         return "money"
@@ -173,6 +189,9 @@ def check_type(value, label):
     """(ok, normalised or None, reason). Empty values are never checked."""
     v = str(value or "").strip()
     kind = slot_type(label)
+    if v and _PARTY_NAME.search(str(label or "")) and _BARE_FIGURE.match(v) \
+            and not _ID_WORDS.search(str(label or "")):
+        return False, None, "a name field holds a figure, not a name"
     if not v or not kind:
         return True, None, ""
     if kind == "money":

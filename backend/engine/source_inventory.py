@@ -345,6 +345,22 @@ def _is_box_caption(ws, wi, label, own) -> bool:
     return hit >= set(stems)
 
 
+def band_widget_backed(table, form_entries) -> bool:
+    """Run G review (batch 1, item 8): does a FILLED form widget belong to
+    this band — a strong match (box id, or most of the words) between one of
+    its column headings and a filled entry? On a fillable form a band no
+    filled box belongs to is confirmed empty by the form itself."""
+    try:
+        import form_fields as FF
+    except Exception:
+        return True
+    for c in table.get("columns") or []:
+        entry, strong = FF.match(str(c.get("header") or ""), form_entries or [])
+        if entry is not None and strong and str(entry.get("value") or "").strip():
+            return True
+    return False
+
+
 #: Overnight A5 — a slot asking which FORM the document is.
 FORM_TYPE_LABEL = re.compile(r"\s*(form|document|doc)(\s+(type|name|title|kind))?\s*:?\s*$",
                              re.I)
@@ -555,12 +571,35 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
         what = "transaction lines" if kind == "dated" else "line items"
         if form_amounts_placed:
             continue          # B3: the form itself says these bands are empty
+        if form_lane and form_entries is not None and not any(
+                band_widget_backed(t, form_entries) for t in slots.get("tables") or []
+                if t["name"] in k["names"]):
+            continue          # Run G review (item 8): no filled box belongs to them
         if cand >= 2 and got == 0:
             reasons.append(f"The page has about {cand} {what} but 0 were "
                            f"extracted (table {', '.join(repr(x) for x in k['names'])}).")
         elif cand - got >= 3 and got * 4 < cand * 3:
             reasons.append(f"The page has about {cand} {what} but only {got} "
                            f"were extracted (table {', '.join(repr(x) for x in k['names'])}).")
+    # Run G review (batch 1, item 5): a whole PAGE lost. The document-level
+    # shortfall above tolerates a quarter missing, which is exactly one page
+    # of a two-page statement (mammoth_2pg: 37 of 48). A page that prints
+    # the band with 2+ candidate rows and not one extracted row is a reason
+    # of its own. Judged only where rows say which page they were read from.
+    for t in slots.get("tables") or []:
+        rows = (tables_out or {}).get(t["name"]) or []
+        if not rows or not all(isinstance(r, dict) and r.get("_page") for r in rows):
+            continue
+        got_pages = {int(r["_page"]) for r in rows}
+        kind = band_kind(t)
+        what = "transaction lines" if kind == "dated" else "line items"
+        if form_lane and form_entries is not None and not band_widget_backed(t, form_entries):
+            continue
+        for n in rows_report[t["name"]]["matching_pages"]:
+            cand = pages.get(n, {}).get(f"{kind}_rows", 0)
+            if cand >= 2 and n not in got_pages:
+                reasons.append(f"Page {n} prints about {cand} {what} of table "
+                               f"{t['name']!r} but none of them were extracted.")
     empty_band = {name for name, r in rows_report.items()
                   if r["extracted"] == 0 and r["candidates"] >= 2}
 
