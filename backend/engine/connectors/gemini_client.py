@@ -108,6 +108,57 @@ def classify_http(code: int, body: bytes) -> str:
     return C.TRANSIENT if code >= 500 else C.INVALID_REQUEST
 
 
+# ── per-model request settings (overnight M3, docs/MODEL_MIGRATION.md) ───────
+#
+# gemini-2.5-* keeps today's behaviour exactly: temperature sent,
+# thinkingConfig.thinkingBudget when a budget is set. Google's Gemini 3.x
+# pages (read 2026-11-20) say temperature/top_p/top_k are deprecated (ignored
+# now, an error in later generations) and that thinking_level replaces
+# thinking_budget; gemini-3.8-flash rejects "minimal". Those profiles are
+# NOT verified against a live call — the owner's model matrix run is that
+# check — and every key can be overridden with GEMINI_MODEL_PROFILES, a JSON
+# object {model-prefix: {key: value}}.
+#
+#   temperature    bool      send generationConfig.temperature
+#   thinking       "budget"  thinkingConfig.thinkingBudget (2.5)
+#                  "level"   thinkingConfig.thinkingLevel (3.x)
+#   thinking_level str|None  the level to send ("low", "medium", ...)
+#   max_output     int       cap on maxOutputTokens
+MODEL_PROFILES = {
+    "gemini-2.5": {"temperature": True, "thinking": "budget",
+                   "thinking_level": None, "max_output": 65536},
+    "gemini-3.5-flash-lite": {"temperature": False, "thinking": "level",
+                              "thinking_level": "minimal", "max_output": 65536},
+    "gemini-3.6-flash": {"temperature": False, "thinking": "level",
+                         "thinking_level": "low", "max_output": 64000},
+    "gemini-3.8-flash": {"temperature": False, "thinking": "level",
+                         "thinking_level": "low", "max_output": 65536},
+    "gemini-3": {"temperature": False, "thinking": "level",
+                 "thinking_level": "low", "max_output": 65536},
+}
+
+
+def model_profile(model: str) -> dict:
+    """The request settings for `model`: the longest matching prefix of
+    MODEL_PROFILES, then GEMINI_MODEL_PROFILES' overrides. An unknown model
+    gets the gemini-2.5 profile — today's request shape."""
+    import os
+    m = (model or "").lower().replace("models/", "")
+    table = {k: dict(v) for k, v in MODEL_PROFILES.items()}
+    raw = os.environ.get("GEMINI_MODEL_PROFILES") or C.setting("GEMINI_MODEL_PROFILES", "") or ""
+    if raw:
+        try:
+            for k, v in json.loads(raw).items():
+                if isinstance(v, dict):
+                    table.setdefault(str(k).lower(), {}).update(v)
+        except (ValueError, AttributeError):
+            print("[GEMINI] GEMINI_MODEL_PROFILES is not a JSON object — ignored", flush=True)
+    hit = max((k for k in table if m.startswith(k)), key=len, default=None)
+    out = dict(MODEL_PROFILES["gemini-2.5"])
+    out.update(table.get(hit, {}))
+    return out
+
+
 def _supports_thinking_config(model: str) -> bool:
     m = (model or "").lower()
     return m.startswith("gemini-2.5") or m.startswith("gemini-3") \
@@ -202,12 +253,19 @@ class GeminiClient:
 
     def _gen_config(self, model, temperature, max_tokens, response_schema,
                     thinking_budget, force_json=True) -> dict:
-        gen = {"temperature": temperature, "maxOutputTokens": max_tokens}
+        prof = model_profile(model)
+        cap = int(prof.get("max_output") or max_tokens)
+        gen = {"maxOutputTokens": min(int(max_tokens), cap)}
+        if prof.get("temperature", True):
+            gen = {"temperature": temperature, **gen}
         if force_json:
             gen["responseMimeType"] = "application/json"
         if response_schema:
             gen["responseSchema"] = response_schema
-        if thinking_budget is not None and _supports_thinking_config(model):
+        if prof.get("thinking") == "level":
+            if prof.get("thinking_level"):
+                gen["thinkingConfig"] = {"thinkingLevel": str(prof["thinking_level"])}
+        elif thinking_budget is not None and _supports_thinking_config(model):
             gen["thinkingConfig"] = {"thinkingBudget": int(thinking_budget)}
         return gen
 

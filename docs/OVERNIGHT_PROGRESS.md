@@ -26,7 +26,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] GATE E — pytest exit 0: 5241 tests, 0 failures, 0 errors; harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0; frontend type-check, 72/72 tests, build OK
 - [x] M1 — CANDIDATES (incl. gemini-flash-latest / -lite-latest) removed; GEMINI_MODEL_FALLBACKS (default empty); a 404 fails naming the model and saying none was substituted
 - [x] M2 — job_worker.model_of stores the API's modelVersion (fallback: requested name); Legend says "Extracted by: <model>"; History job detail shows a Model badge
-- [ ] M3 — migration doc, per-model settings, tools/model_matrix.py
+- [x] M3 — docs/MODEL_MIGRATION.md (facts from Google's pages, 2026-11-20, unverified live); gemini_client.MODEL_PROFILES + GEMINI_MODEL_PROFILES (2.5 request unchanged, 3.x: no temperature, thinkingLevel); 3.x prices; live_cap env-configurable, never removable; tools/model_matrix.py written, NOT run
 - [ ] H1 — audit log
 - [ ] H2 — token revocation
 - [ ] H3 — password policy

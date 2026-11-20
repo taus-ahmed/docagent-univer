@@ -139,6 +139,12 @@ DEFAULT_PRICES = {
     "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
     "gemini-flash-lite-latest": {"input": 0.10, "output": 0.40},
     "gemini-flash-latest": {"input": 0.30, "output": 2.50},
+    # Overnight M3, Google's model pages read 2026-11-20 (docs/MODEL_MIGRATION.md).
+    # gemini-3.8-flash is $0.75 / $3.75 introductory until 2026-12-31; the
+    # STANDARD rate is listed so a cost cap never under-counts.
+    "gemini-3.5-flash-lite": {"input": 0.30, "output": 2.50},
+    "gemini-3.6-flash": {"input": 1.50, "output": 7.50},
+    "gemini-3.8-flash": {"input": 1.50, "output": 7.50},
 }
 
 

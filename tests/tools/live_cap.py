@@ -33,6 +33,35 @@ PRICE_OUT = 2.50
 FAILED_CALL_USD = 0.02
 
 
+#: Overnight M3: the caps may be SET from the environment (LIVE_CAP_MAX_CALLS,
+#: LIVE_CAP_MAX_USD) but never removed: a value must be a positive, finite
+#: number under these ceilings, or the run refuses to start.
+HARD_CEILING_CALLS = 200
+HARD_CEILING_USD = 5.00
+
+
+def limits() -> tuple:
+    """(max calls, max USD) for this session — the environment's values,
+    validated, else MAX_CALLS / MAX_USD. Raises ValueError rather than ever
+    returning an unlimited cap."""
+    import math
+    import os
+    raw_c = os.environ.get("LIVE_CAP_MAX_CALLS")
+    raw_u = os.environ.get("LIVE_CAP_MAX_USD")
+    try:
+        calls = MAX_CALLS if raw_c is None else int(float(raw_c))
+        usd = MAX_USD if raw_u is None else float(raw_u)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError("LIVE_CAP_MAX_CALLS / LIVE_CAP_MAX_USD must be finite numbers")
+    if raw_c is not None and (not math.isfinite(float(raw_c))):
+        raise ValueError("LIVE_CAP_MAX_CALLS must be finite")
+    if not 1 <= calls <= HARD_CEILING_CALLS:
+        raise ValueError(f"LIVE_CAP_MAX_CALLS must be 1..{HARD_CEILING_CALLS}")
+    if not (math.isfinite(usd) and 0 < usd <= HARD_CEILING_USD):
+        raise ValueError(f"LIVE_CAP_MAX_USD must be > 0 and <= {HARD_CEILING_USD}")
+    return calls, usd
+
+
 class CapReached(BaseException):
     """BaseException on purpose: engine code catches ``Exception`` in places,
     and a refused call must stop the measurement, not become a retry."""
@@ -52,7 +81,17 @@ def _save(state: dict) -> None:
     _STATE.write_text(json.dumps(state, indent=1), encoding="utf-8")
 
 
-def cost_of(prompt_tokens, output_tokens, thinking_tokens) -> float:
+def cost_of(prompt_tokens, output_tokens, thinking_tokens, model=None) -> float:
+    """USD for one request: the engine's price table for `model` when it has
+    one (llm_contract.cost_estimate), else the Gemini 2.5 Flash rates."""
+    if model:
+        try:
+            import llm_contract as C
+            est = C.cost_estimate(prompt_tokens, output_tokens, thinking_tokens, model)
+            if est is not None:
+                return est
+        except Exception:
+            pass
     return ((prompt_tokens or 0) * PRICE_IN
             + ((output_tokens or 0) + (thinking_tokens or 0)) * PRICE_OUT) / 1e6
 
@@ -67,7 +106,10 @@ def install(state_file, label: str = "") -> None:
         return
     real_post = GeminiClient._post
 
+    max_calls, max_usd = limits()      # validated once, at install
+
     def capped_post(self, model, body, timeout):
+        MAX_CALLS, MAX_USD = max_calls, max_usd  # noqa: N806 (the caps in force)
         state = _load()
         if state["calls"] >= MAX_CALLS:
             print(f"[LIVE-CAP] REFUSED: {state['calls']} of {MAX_CALLS} calls used",
@@ -97,7 +139,7 @@ def install(state_file, label: str = "") -> None:
             _save(state)
             raise
         usd = cost_of(info.get("prompt_tokens"), info.get("output_tokens"),
-                      info.get("thinking_tokens"))
+                      info.get("thinking_tokens"), info.get("model_version") or model)
         state = _load()
         state["usd"] += usd
         state["log"][-1].update(
@@ -122,6 +164,7 @@ def set_label(label: str) -> None:
 
 def summary() -> dict:
     state = _load()
-    print(f"[LIVE-CAP] total {state['calls']}/{MAX_CALLS} calls, "
-          f"${state['usd']:.4f} of ${MAX_USD:.2f}", flush=True)
+    calls, usd = limits()
+    print(f"[LIVE-CAP] total {state['calls']}/{calls} calls, "
+          f"${state['usd']:.4f} of ${usd:.2f}", flush=True)
     return state

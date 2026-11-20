@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     # Overnight M1: models tried after GEMINI_MODEL answers 404, comma-separated.
     # Empty (the default) = none: a 404 fails the document with the model named.
     GEMINI_MODEL_FALLBACKS: str = ""
+    # Overnight M3: per-model request settings, a JSON object
+    # {model-prefix: {temperature, thinking, thinking_level, max_output}}
+    # overriding gemini_client.MODEL_PROFILES (docs/MODEL_MIGRATION.md).
+    GEMINI_MODEL_PROFILES: str = ""
 
     # ── Model-call contract (engine/llm_contract.py) ──────────────────────────
     # Per-attempt HTTP timeout, the overall retry budget for one logical call
