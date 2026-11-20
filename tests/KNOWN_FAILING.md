@@ -66,7 +66,10 @@ answers. No provider or remote service is involved.
 
 | Rule gap | Strict test(s) | Observed application failure |
 | --- | --- | --- |
-| Repeated labels across statements require a visible binding decision | `test_07_generic_net_income_does_not_silently_blend_multiple_statements` | After `Service revenue` selects the service income statement, `Net income` silently accepts a citation from the retained-earnings section because it happens to carry the same number. |
+
+All six strict xfails above came off in Run F (one commit each: test_01 with
+the E9 copied-column check, F1 blank form, F2 explainer pages, F3 specimen
+placeholders, F4 callout numbers, F5 statements), `engine/real_data.py`.
 
 ## Template layout audit
 

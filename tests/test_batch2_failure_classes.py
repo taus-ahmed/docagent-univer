@@ -351,11 +351,6 @@ def test_06_duplicate_blank_band_labels_stay_empty_and_unassigned():
     assert data["document_state"] == "READY"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Rule: repeated labels across multiple statements require a visible "
-            "statement choice or ambiguity flag"),
-)
 def test_07_generic_net_income_does_not_silently_blend_multiple_statements():
     document = _document("statements")
     revenue_source, revenue_page = _line(document, "Service revenue", "$2,750")

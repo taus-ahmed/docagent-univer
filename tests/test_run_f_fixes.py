@@ -51,6 +51,20 @@ def test_f4_a_count_after_its_label_is_data_a_callout_before_it_is_not():
     assert RD.refusal("12", "Your Account Value 12", "Your Account Value", **kw) == ""
 
 
+def test_f5_a_label_in_one_statement_only_is_not_ambiguous():
+    import real_data as RD
+    one = [B.D.words(1, ["Income Statement", "Service revenue $2,750",
+                         "Net income $945", "Statement of Retained Earnings",
+                         "Retained earnings, beginning 1,000"])]
+    two = [B.D.words(1, ["Income Statement", "Net income $945",
+                         "Statement of Retained Earnings", "Net income 945"])]
+    single = [B.D.words(1, ["Income Statement", "Net income $945", "Net income 945"])]
+    assert RD.statements_printing("Service revenue", one) == []
+    assert RD.statements_printing("Net income", one) == []
+    assert len(RD.statements_printing("Net income", two)) == 2
+    assert RD.statements_printing("Net income", single) == []
+
+
 def test_f1_one_grounded_value_means_the_form_is_not_blank():
     """A labels-and-blanks page with ONE value really filled in: nothing is
     cleared, and the invented answer keeps its ordinary flag."""

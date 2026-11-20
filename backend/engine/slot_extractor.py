@@ -2613,6 +2613,21 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         ungrounded = 0
         notes.append(f"blank form: {len(gone)} answer(s) cleared — no answered "
                      f"value is printed on these labels-and-blanks pages")
+    # F5: a label printed in two or more STATEMENTS on one page. Nothing on
+    # the slot says which statement it means, so the value is low and the
+    # ambiguity is said — the stricter of "choose one" and "flag it", because
+    # a choice made silently is the failure being fixed.
+    for ref in list(extracted_fields):
+        lab = label_by_ref.get(ref, "")
+        under = RD.statements_printing(lab, page_lines)
+        if under:
+            flagged.append(_flag(
+                lab, extracted_fields[ref],
+                f"ambiguous: {lab!r} is printed in {len(under)} statements on "
+                f"this page ({'; '.join(under[:3])}) — check which statement "
+                f"this value belongs to"))
+            conf_map[ref] = LOW
+            failed(ref, CONTENT_CHECK_FAILED)
     # Refusals are visible where other data survives; where nothing does,
     # the document-level "No data found" below says it once.
     no_data = (offered or any(isinstance(v, list) and v for v in

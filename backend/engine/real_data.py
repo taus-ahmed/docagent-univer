@@ -13,6 +13,8 @@ was printed and still was not data:
       `FULL COMPANY NAME` — answered with the placeholders
   F4  a numbered DIAGRAM CALLOUT — `1 Your Account Value: $125,310.49` —
       answered with the callout number
+  F5  two STATEMENTS on one page sharing a label (`Net income` in the income
+      statement and again in the retained-earnings statement)
 
 Every rule here REFUSES or FLAGS; none of them invents a value. A refused value
 is not written. When nothing the model offered survives, the document says so
@@ -107,6 +109,41 @@ def refusal(value, source, label, *, family, page_texts, specimen) -> str:
     if family == "payslip" and prose_sentence(source) and re.search(r"\d", str(value or "")):
         return "a figure quoted from explanatory text, not pay data"
     return ""
+
+
+# ── F5: one label, several statements on one page ───────────────────────────
+
+_STATEMENT_TITLE = re.compile(
+    r"^\s*(?:income\s+statement|balance\s+sheet|statement\s+of\s+[a-z ,']+"
+    r"|cash\s+flow\s+statement)\b", re.I)
+
+
+def _line_text(ln):
+    return " ".join(str(w.get("text", "")) for w in ln)
+
+
+def statements_printing(label, page_lines) -> list:
+    """The statement titles under which `label` begins a line, on a page that
+    prints two or more statement titles. [] when the page is one statement or
+    the label appears under at most one of them."""
+    want = " ".join(_words(label))
+    if not want:
+        return []
+    out = []
+    for lines in page_lines or []:
+        titles, current, under = 0, None, []
+        for ln in lines or []:
+            t = _line_text(ln)
+            if _STATEMENT_TITLE.match(t):
+                titles += 1
+                current = t.strip()
+                continue
+            if current and " ".join(_words(t)).startswith(want + " ") \
+                    and current not in under:
+                under.append(current)
+        if titles >= 2 and len(under) >= 2:
+            out.extend(under)
+    return out
 
 
 # ── F3: specimen placeholders ───────────────────────────────────────────────
