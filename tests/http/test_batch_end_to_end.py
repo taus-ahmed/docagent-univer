@@ -653,10 +653,20 @@ class TestFlaggedFieldsHaveOneShape:
     the shape rather than the symptom.
     """
 
+    # Run E (E12): the five statements' only flag was a FALSE one — the bank
+    # name printed wrapped (`FIRST NATIONAL BANK OF NEW` / `YORK`), now
+    # grounded. As the assertion below says, pick a batch that flags: both
+    # jobs are checked, and the mixed one carries real flags (INV-2024-0031's
+    # PAID stamp).
+    @staticmethod
+    def _both(client, auth, templated_job, mixed_job):
+        return (_results_for(client, auth, templated_job["id"], STATEMENTS)
+                + _results_for(client, auth, mixed_job["id"], MIXED))
+
     def test_the_engine_emits_dicts_with_ref_value_reason(self, templated_job,
-                                                          client, auth):
+                                                          mixed_job, client, auth):
         seen = 0
-        for d in _results_for(client, auth, templated_job["id"], STATEMENTS):
+        for d in self._both(client, auth, templated_job, mixed_job):
             for f in ((d["extracted_data"] or {})
                       .get("validation", {}).get("flagged_fields", [])):
                 seen += 1
@@ -669,11 +679,11 @@ class TestFlaggedFieldsHaveOneShape:
             "nothing — pick a batch that does")
 
     def test_a_flagged_document_still_saves_with_its_warning(self, templated_job,
-                                                             client, auth):
+                                                             mixed_job, client, auth):
         """The regression itself: a document with flags must reach the database
         WITH its warning text, not be counted as a failure."""
         flagged_docs = [
-            d for d in _results_for(client, auth, templated_job["id"], STATEMENTS)
+            d for d in self._both(client, auth, templated_job, mixed_job)
             if (d["extracted_data"] or {}).get("validation", {}).get("flagged_count")
         ]
         assert flagged_docs, "no flagged document in this batch to check"
