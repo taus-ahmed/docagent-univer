@@ -805,11 +805,6 @@ def _word(text, x0, top):
     return {"text": text, "x0": x0, "x1": x0 + 40, "top": top, "bottom": top + 10}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("C6: a unique source-quote line without the value gets the highlight "
-            "even when the actual value is elsewhere"),
-)
 def test_c6_unique_quote_without_value_does_not_box_the_wrong_line():
     from app.api.routes.review import find_box
 

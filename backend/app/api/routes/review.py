@@ -512,6 +512,24 @@ def find_box(lines, quote, value, region=None, near=None) -> tuple[Optional[list
             spans = _value_spans(words, value)
             if spans:
                 return _words_box(spans[0]), "value"
+            # Run E, E3 (C6): the quote's line does not print the value (a
+            # label quoted on one line, its amount on another). Box the value
+            # itself — nearest its label when it is printed more than once —
+            # and fall back to the quote's line only when it is nowhere.
+            k = _key(value)
+            if k and (len(k) >= 3 or re.search(r"\d", k)):
+                cands = [_words_box(s)
+                         for ln in (lines or [])
+                         for ws in [[w for w in ln if str(w.get("text", "")).strip()]]
+                         if ws and _inside(ws, region)
+                         for s in _value_spans(ws, value)]
+                if len(cands) == 1:
+                    return cands[0], "value"
+                if cands:
+                    pick = (_nearest(cands, _anchor_boxes(lines, near, region))
+                            or cands[0])
+                    return pick, (f"ambiguous: printed in {len(cands)} places on "
+                                  f"this page; showing the one nearest its label")
         return _words_box(words), "line"
 
     # no unique quote line: look for the value itself
