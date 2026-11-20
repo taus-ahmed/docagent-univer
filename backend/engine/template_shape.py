@@ -1271,12 +1271,23 @@ def template_warnings(grid, shape=None) -> list[str]:
     blocked by them. Each names the cell or table it is about.
 
       formula      a cell starting with `=` is read as a label, not calculated
-      shared rows  two tables on the same rows grow as one block
-      two slots    a label with an empty cell to its right AND an empty cell
-                   below it, on a row that is not blank: the right one is used
+                   (not inside a table's rows: a subtotal formula drawn there
+                   keeps its place in the export, Run D D12)
       no label     an empty merged box that no label points at is never filled
-      no rows      a table header with no empty rows beneath it
-      merge/table  a merge over a table's rows is not recreated in the export
+      no rows      a table header whose drawn (styled) rows beneath it are
+                   outside the text the engine reads, e.g. an Excel Table
+      merge/table  a merge over a table's rows that the export cannot recreate
+
+    Run E, E8 (D13): it used to warn on VALID layouts too — every header-only
+    table (the owner-approved ten reserved rows), every implied right-hand
+    slot, two tables sharing rows (they grow by the larger, which is the
+    design), a one-row merge inside a table (recreated since E4) and a
+    subtotal formula inside a table. 33 of 36 warnings over the 96 committed
+    grids were such noise; a check that warns on good templates is ignored.
+    "Right or below" is not warned at all: the owner's ruling (F2) is that a
+    usable right cell wins, and every truth file agrees, so it is not an
+    ambiguity. An Excel Table (T14) is invisible here — the editor grid holds
+    no Table metadata, and T14's grid is identical to T2's.
     """
     shape = shape or compute_shape(grid, log=lambda _m: None)
     try:
@@ -1285,40 +1296,21 @@ def template_warnings(grid, shape=None) -> list[str]:
         return []
     out = []
     static = {rc: t for rc, t in m.items() if t}
-    for (r, c), t in sorted(static.items()):
-        if str(t).startswith("="):
-            out.append(f"Cell {_ref(r, c)} holds {str(t)[:40]!r}, which looks like a "
-                       f"formula. It is read as a label and is not calculated.")
     bands = [b for b in shape.get("repeat_bands") or [] if b.get("orientation") != "columns"]
-    for i, a in enumerate(bands):
-        for b in bands[i + 1:]:
-            lo = max(a.get("header_row", a["start_row"]), b.get("header_row", b["start_row"]))
-            hi = min(a["end_row"], b["end_row"])
-            if lo <= hi:
-                out.append(f"Tables {a['name']!r} and {b['name']!r} share rows "
-                           f"{lo + 1}-{hi + 1}. When one grows, everything below "
-                           f"both moves down by the larger of the two.")
-    slots = {(f["row"], f["col"]) for f in shape.get("field_slots") or []}
     band_cells = {(r, c["col"]) for b in bands
                   for r in range(b.get("header_row", b["start_row"]), b["end_row"] + 1)
                   for c in b.get("columns") or []}
-    last_drawn = max((c for (_r, c) in static), default=-1)
-    for f in shape.get("field_slots") or []:
-        # Only where the right-hand slot is IMPLIED (past everything drawn):
-        # a right cell inside the drawing is an ordinary pair, and saying
-        # "or below" there would warn on every two-column form.
-        if f.get("below") or f["col"] <= last_drawn:
-            continue
-        left = [c for c in range(f["col"]) if (f["row"], c) in static]
-        if not left:
-            continue
-        lc = max(left)
-        below = (f["row"] + 1, lc)
-        if (below in m and below not in static and below not in slots
-                and below not in band_cells):
-            out.append(f"Label {f['row_label']!r} at {_ref(f['row'], lc)} has an empty "
-                       f"cell to its right ({f['ref']}) and one below it "
-                       f"({_ref(*below)}). The cell to the right is used.")
+    for (r, c), t in sorted(static.items()):
+        if str(t).startswith("=") and (r, c) not in band_cells:
+            out.append(f"Cell {_ref(r, c)} holds {str(t)[:40]!r}, which looks like a "
+                       f"formula. It is read as a label and is not calculated.")
+    cells = (grid or {}).get("cells") or {}
+
+    def _styled(rc):
+        cell = cells.get(f"{rc[0]},{rc[1]}")
+        return isinstance(cell, dict) and bool(cell.get("style"))
+
+    slots = {(f["row"], f["col"]) for f in shape.get("field_slots") or []}
     for key, span in (grid.get("merges") or {}).items():
         try:
             r, c = map(int, str(key).split(","))
@@ -1332,6 +1324,8 @@ def template_warnings(grid, shape=None) -> list[str]:
             out.append(f"The merged box {rng} is empty and no label points at it, "
                        f"so it will not be filled.")
         for b in bands:
+            if nr == 1 and b["start_row"] <= r <= b["end_row"]:
+                break                     # one row of the body: recreated (E4)
             if r <= b["end_row"] and r + nr - 1 >= b["start_row"] and \
                     b["start_row"] <= b["end_row"]:
                 out.append(f"The merge {rng} covers rows of table {b['name']!r}. "
@@ -1340,10 +1334,17 @@ def template_warnings(grid, shape=None) -> list[str]:
                 break
     drawn_rows = {r for (r, _c) in m}
     for b in bands:
-        if not any(r in drawn_rows for r in range(b["start_row"], b["end_row"] + 1)):
+        if any(r in drawn_rows for r in range(b["start_row"], b["end_row"] + 1)):
+            continue
+        # A header-only table is a valid shape (ten reserved rows, the
+        # owner's ruling). It is worth a word only when the user DREW rows
+        # beneath it — styled, empty, so outside the text the engine reads.
+        under = b.get("header_row", b["start_row"] - 1) + 1
+        if any(_styled((under, c["col"])) for c in b.get("columns") or []):
             out.append(f"Table {b['name']!r} (header on row {b.get('header_row', 0) + 1}) "
-                       f"has no empty rows beneath its header. Its rows are added "
-                       f"below the header and push everything under it down.")
+                       f"has rows drawn beneath its header that hold no text, so "
+                       f"the engine does not see them: its rows are added below "
+                       f"the header and push everything under it down.")
     return out
 
 

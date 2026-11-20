@@ -201,21 +201,11 @@ def test_d12_a_vertical_merge_over_a_scalar_label_is_not_a_table_header():
     ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D13: the template check warns on the owner-approved "
-            "header-only shape even though its ten reserved rows are correct"),
-)
 def test_d13_owner_approved_header_only_tables_do_not_need_a_warning():
     grid = _grid({(0, 0): "Item", (0, 1): "Qty", (0, 2): "Amount"})
     assert template_warnings(grid) == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=("Run D item D13: the template check warns about a below cell on "
-            "a valid horizontal pair whose usable right cell is authoritative"),
-)
 def test_d13_a_valid_horizontal_field_pair_is_not_warning_noise():
     grid = _grid({(0, 0): "Name", (2, 0): "Notes"})
     assert _fields(grid) == [("B1", "Name"), ("B3", "Notes")]
@@ -246,6 +236,8 @@ def test_d13_warning_inventory_is_reproducible_over_every_committed_template():
     warnings = {name: template_warnings(grid) for name, grid in grids}
     warned = {name: items for name, items in warnings.items() if items}
     assert len(grids) == 96
-    assert len(warned) == 33
-    assert sum(map(len, warned.values())) == 36
+    # Run E, E8: was 33 grids / 36 warnings, 33 of them noise on valid
+    # layouts. What remains is F10's two formula cells.
+    assert len(warned) == 1
+    assert sum(map(len, warned.values())) == 2
 

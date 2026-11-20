@@ -71,6 +71,18 @@ checked against every committed grid:
 - Writer: bands are written with their actual row count (Run C); a failed record keeps the template geometry (T20).
 - `template_warnings` reports formulas read as labels, shared rows, implied-or-below slots, unlabelled merged boxes, header-only tables and merges over tables.
 
+Run E changes (each pinned by a strict xfail that came off in the same commit):
+
+- C4/E1: a table continues beneath a row only when a blank run below it is at least as long as the reserved run above it (`Notes`, two blanks, `Prepared By` ends the table at Notes).
+- D6/E7: a heading row may leave one column unnamed when every row beneath names itself only in its first column and the other headings carry a digit (`Line item | _ | 2026`).
+- D7/E7: heading runs one blank column apart are one table when either side is only two headings wide; T6's four-and-four stay two tables.
+- D8/E7: on a table's own rows, a lone right-edge text implies a value column only when it names a total (T10); otherwise it is a note. A list of two or more is still fields (T15).
+- D10/E7: a merged text whose span covers an unmerged label's value column is a heading; the empty merge beside it is not its slot (F6 unchanged).
+- D11/E7: an exact `TBD` is a placeholder only in a value position (a label to its left on its row); elsewhere it is a label.
+- D12/E7: a one-column merge is inherited as a heading only when its top row has a heading beside it (T9); a row whose texts all sit right of the row above starts its own field block.
+- C1/E4: a one-row merge inside a table's body is written on every record row, never over a value.
+- D13/E8: `template_warnings` reports formulas read as labels (not inside a table's rows), unlabelled merged boxes, merges over several table rows, and header-only tables only when rows were drawn under them. Shared rows, implied-right slots, header-only tables, one-row body merges and subtotal formulas are valid and silent. Over the 96 committed grids: 36 warnings on 33 grids before, 2 on 1 (F10's formulas) after. T14's Excel Table is not visible in the editor grid (identical to T2), so it gets no warning.
+
 After the Part 1 owner rulings: 29/34 scenarios parse exactly and 27/34
 round-trip exactly. Strict-xfail: parse F3, F10, T12, T14, T18; write F3, F9,
 F10, F12, T12, T14, T18. Four separate strict tests retain F2's future editor
