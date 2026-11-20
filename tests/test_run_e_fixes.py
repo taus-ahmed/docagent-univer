@@ -107,6 +107,73 @@ def test_e7_tbd_in_a_slot_cell_stays_a_placeholder_and_is_never_exported():
     assert ws["B2"].value is None           # the placeholder is not
 
 
+# ---------------------------------------------------------------------------
+# E9: a column filled by copying another column of the same row.
+
+_BANK_LINES = [
+    ("09/02/2026", "ACH DEBIT — BLUE RIVER WHOLESALE INV 8841", "1,254.00", "", "16,986.12"),
+    ("09/03/2026", "ACH CREDIT — MAPLE & MAIN LLC PAYMENT", "", "4,980.00", "21,966.12"),
+    ("09/05/2026", "POS PURCHASE — HOME SUPPLY #2214", "320.45", "", "21,645.67"),
+]
+
+
+def _bank_answer(parsed, memo):
+    import copy
+    answer = copy.deepcopy(parsed)
+    rows = []
+    for date, desc, wd, dep, bal in _BANK_LINES:
+        cells = {"Date": date, "Description": desc, "Check Number": "",
+                 "Withdrawal": wd, "Deposit": dep, "Running Balance": bal,
+                 "GL Account": "", "Memo": desc if memo else ""}
+        source = " ".join(x for x in (date, desc, wd, dep, bal) if x)
+        rows.append({"cells": cells, "source": source, "page": 1})
+    answer["tables"] = {"table": rows}
+    return answer
+
+
+def _replay(job, answer):
+    import contextlib
+    import io
+    from tests.contract.run_a_driver import replay_job
+    with contextlib.redirect_stdout(io.StringIO()):
+        return replay_job(job, lambda _n, _kw, parsed: answer(parsed))
+
+
+def test_e9_a_memo_copied_from_the_description_is_cleared_and_said():
+    out = _replay(15, lambda parsed: _bank_answer(parsed, memo=True))
+    ed = out["extracted_data"]
+    rows = ed["table_rows"]
+    assert [r["Description"] for r in rows] == [d for _x, d, *_r in _BANK_LINES]
+    assert [r["Memo"] for r in rows] == ["", "", ""]
+    flags = [f for f in ed["validation"]["flagged_fields"] if f["ref"] == "table[Memo]"]
+    assert len(flags) == 1 and "'Description'" in flags[0]["reason"]
+    assert ed["validation"]["copied_column_count"] == 1
+    assert ed["needs_review"] is True
+    from slot_extractor import COLUMN_COPY_RULE
+    assert any(COLUMN_COPY_RULE in str(v) for v in out["calls"][0].values())
+
+
+def test_e9_a_memo_the_model_left_empty_is_not_flagged():
+    out = _replay(15, lambda parsed: _bank_answer(parsed, memo=False))
+    ed = out["extracted_data"]
+    assert ed["validation"]["copied_column_count"] == 0
+    assert not [f for f in ed["validation"]["flagged_fields"] if f["ref"] == "table[Memo]"]
+
+
+def test_e9_same_named_columns_and_amount_columns_are_not_copies():
+    from slot_extractor import copied_columns
+    rows = [{"Item Description": "Bolt", "Description": "Bolt", "Amount": "5.00", "Debit": "5.00"},
+            {"Item Description": "Nut", "Description": "Nut", "Amount": "2.00", "Debit": "2.00"}]
+    assert copied_columns(rows, ["Item Description", "Description", "Amount", "Debit"]) == []
+
+
+def test_e9_the_rule_is_asked_only_of_templates_with_two_text_columns():
+    from slot_extractor import column_copy_hint
+    two = {"tables": [{"columns": [{"header": "Description"}, {"header": "Memo"}]}]}
+    one = {"tables": [{"columns": [{"header": "Description"}, {"header": "Amount"}]}]}
+    assert column_copy_hint(two) and column_copy_hint(one) == ""
+
+
 def test_e0_a_disagreeing_duplicate_is_kept_and_both_are_low():
     from slot_extractor import enumerate_slots
     from total_row_validators import split_duplicate_totals, total_row_mismatch

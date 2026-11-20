@@ -267,6 +267,73 @@ def cheque_bottom_line_hint(doc_type, slots, page_origins, file_type="") -> str:
     return CHEQUE_BOTTOM_LINE
 
 
+#: free-text table columns, the ones a model fills by copying a neighbour
+_FREE_TEXT_COL = re.compile(
+    r"\b(?:description|desc|memo|notes?|reference|ref|comments?|details?|"
+    r"narrative|particulars|payee|remarks?)\b", re.I)
+
+COLUMN_COPY_RULE = (
+    "TABLE COLUMNS: never copy a value from one column into another. A column "
+    "the document prints nothing for in a row is left EMPTY (\"\") in that "
+    "row, even when a neighbouring column holds text that could fit it.\n")
+
+
+def column_copy_hint(slots) -> str:
+    """Run E, E9: the no-copying rule, for a template whose table has TWO OR
+    MORE free-text columns (`Description` and `Memo`) — the shape in which a
+    model filled Memo with each row's Description. Empty for every other
+    template, so their prompts and recorded answers are byte-identical."""
+    for t in slots.get("tables") or []:
+        heads = [h for h in table_headers(t) if _FREE_TEXT_COL.search(str(h or ""))]
+        if len(heads) >= 2:
+            return COLUMN_COPY_RULE
+    return ""
+
+
+def _same_column_name(a, b) -> bool:
+    """Two columns the author drew separately are the same column only when
+    their headings agree once qualifiers are dropped (`Item Description` /
+    `Description`). A synonym group does not make them one: a template that
+    draws both `Description` and `Memo` means two things."""
+    import aliases as AL
+    na, nb = AL._norm(a), AL._norm(b)
+    if na == nb:
+        return True
+    core = lambda s: " ".join(w for w in s.split() if w not in AL._QUALIFIERS)  # noqa: E731
+    return bool(core(na)) and core(na) == core(nb)
+
+
+def copied_columns(rows, keys, printed=None) -> list:
+    """Run E, E9: [(copy, source)] for two text columns holding the same
+    value on every row either fills, over two or more rows — one is a copy of
+    the other, not a reading. The SOURCE is the column whose own heading the
+    document prints (`DESCRIPTION`, not `MEMO`); when that does not decide,
+    the later column is the copy. Amount columns are left alone: a
+    debit-only statement legitimately repeats an amount."""
+    from amounts import parse_amount
+    printed = printed or (lambda _h: False)
+
+    def _txt(r, k):
+        return str(r.get(k, "") or "").strip()
+
+    out, taken = [], set()
+    for i, a in enumerate(keys):
+        for b in keys[i + 1:]:
+            if a in taken or b in taken or _same_column_name(a, b):
+                continue
+            filled = [r for r in rows if _txt(r, a) or _txt(r, b)]
+            if len(filled) < 2 or any(_txt(r, a) != _txt(r, b) for r in filled):
+                continue
+            if all(parse_amount(_txt(r, a)).ok for r in filled):
+                continue
+            copy, src = b, a
+            if printed(b) and not printed(a):
+                copy, src = a, b
+            out.append((copy, src))
+            taken.add(copy)
+    return out
+
+
 def build_prompt(slots, page_texts, doc_type="", extra=""):
     """`extra` is appended after the document text: the form-field lane (B1)
     and the meaning-match guidance (B2). It is empty for a document that
@@ -1413,6 +1480,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     wording = [] if inferred else AL.hints(slots, grid, _lines_all)
     extra += AL.prompt_block(wording)
     extra += cheque_bottom_line_hint(default_doc_type, slots, page_origins, file_type)
+    extra += column_copy_hint(slots)
     prompt = build_prompt(slots, pages, default_doc_type, extra)
 
     # ── SOURCE INVENTORY + RESPONSE CONTRACT (Run A, A2/A3) ──
@@ -1573,6 +1641,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     reanchored = 0          # B4: quotes replaced by the line printing the value
     opening_rows = 0        # opening-balance lines left out of a transaction table
     duplicate_total_rows = 0  # a total line repeating its own slot (Run C, C4.1)
+    copied_cols = 0           # a column copied from another column (Run E, E9)
     all_lines = flatten_pages(page_lines)
     regions_warned = []
     # WHICH CHECK FAILED, per value. A value made low by a failed check used
@@ -2201,6 +2270,25 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                              f"sheet already holds in its own slot below the "
                              f"table ({shown[:80]!r})")
             duplicate_total_rows += len(dup_totals)
+            # Run E, E9: a column filled by copying another column of the same
+            # row (Memo = Description on every row, the page printing no memo)
+            # is CLEARED — the document never said it — and said visibly, once
+            # per column; the source column is untouched.
+            for col, src in copied_columns(
+                    rows_out, table_headers(t),
+                    lambda h: bool(_lines_all) and AL.phrase_printed(_lines_all, h)):
+                n = sum(1 for r in rows_out if str(r.get(col, "") or "").strip())
+                for r in rows_out:
+                    if str(r.get(col, "") or "").strip():
+                        r[col] = ""
+                copied_cols += 1
+                flagged.append(_flag(
+                    f'{t["name"]}[{col}]', "",
+                    f"column cleared: on all {n} rows it held a copy of the same "
+                    f"row's {src!r}, and the document prints no {col!r} of its "
+                    f"own — fill it only from the document"))
+                notes.append(f'{t["name"]}: cleared column {col!r} — every value '
+                             f'was a copy of the same row\'s {src!r} ({n} rows)')
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
             if len(rows_out) + len(totals) + len(dup_totals) < len(raw):
@@ -2568,6 +2656,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "label_wording": AL.diagnostics(slots, all_lines),
             "opening_row_count": opening_rows,
             "duplicate_total_row_count": duplicate_total_rows,
+            "copied_column_count": copied_cols,
             # What the family's validators record at document level
             # (routing_checksum, micr_band_unreadable, ...).
             **check_validation,
