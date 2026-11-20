@@ -20,7 +20,7 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] D1 — period cue (years, Q1-Q4, FY, H1/H2, months) for matrix headings; a total word makes a field only as a short label (<= 3 words); two runs a blank column apart are two tables when each names money or a later row labels both; 3 markers off
 - [x] D2 — the D13 inventory test asserts F10's two formula warnings by grid and text
 - [x] D3 — T9 ambiguity text says what the prompt carries: Item / Debit / Credit
-- [ ] GATE D
+- [x] GATE D — pytest exit 0: 5235 tests, 0 failures, 0 errors (18 skipped incl. xfails, down from 21); harness 98.7 / 98.2, 17/17, defects 0; scoreboard silent 0, false flags 0
 - [ ] E1 — review edits revert (owner note: API persists; stale frontend state — ReviewPanel does not update result.extracted_data, ResultsGrid.refresh() invalidates only the review query; refetch/invalidate the results query after EVERY review action, status and added rows too; frontend test)
 - [ ] E2 — multi-page navigation in the review dialog
 - [ ] GATE E
