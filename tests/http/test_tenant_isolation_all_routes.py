@@ -109,6 +109,7 @@ ROUTES = {
     ("GET", "/api/jobs/{job_id}/charts"): "id",
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/review"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/history"): "id",
+    ("POST", "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}/image"): "id",
 }
@@ -123,6 +124,8 @@ BODIES = {
     ("PUT", "/api/templates/{template_id}"): {"name": "hijacked"},
     ("PUT", "/api/admin/users/{user_id}"): {"display_name": "hijacked"},
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/review"): {"scope": "document"},
+    ("POST", "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}"):
+        {"values": {"Amount": "1.00"}},
 }
 
 

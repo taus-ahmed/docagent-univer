@@ -317,7 +317,6 @@ def test_confirmed_empty_clears_the_flag_and_exports_a_clean_empty_slot(
     assert not any("Optional code" in comment or "NEEDS REVIEW" in comment for comment in comments)
 
 
-@RULE_5
 def test_add_row_has_stable_identity_history_export_and_total_handling(
     client, db, review_case_factory
 ):

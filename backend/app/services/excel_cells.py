@@ -715,6 +715,25 @@ def _add_review_legend(wb, doc_results, demo=False):
                                  s["unverified"], s["empty_flagged"],
                                  s["attention"]), 1):
             lg.cell(row=r, column=col, value=v)
+    # Run G, G4: rows a person ADDED are written into their band like any
+    # other row (marked edited there); this list says which they are, with
+    # the values exactly as typed, who and when — the file must not pass a
+    # hand-entered row off as one the extraction found.
+    added = []
+    for i, (d, _s, _f) in enumerate(per_doc, 1):
+        ed = d.get_extracted_data()
+        for e in ((ed or {}).get("edit_log") or []) if isinstance(ed, dict) else []:
+            if isinstance(e, dict) and e.get("kind") == "add_row":
+                added.append((f"document {i}" if demo else (d.filename or f"document {i}"), e))
+    if added:
+        r += 2
+        lg.cell(row=r, column=1, value="Rows added by hand").font = Font(bold=True)
+        for name, e in added:
+            r += 1
+            vals = " · ".join(f"{k}: {v}" for k, v in (e.get("values") or {}).items())
+            lg.cell(row=r, column=1, value=f"{name} — {e.get('table')}")
+            lg.cell(row=r, column=2, value=(f"{vals} (added by {e.get('by')}, "
+                                            f"{e.get('at')})"))
     lg.column_dimensions["A"].width = 40
     lg.column_dimensions["B"].width = 90
     return n

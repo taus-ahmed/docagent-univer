@@ -410,6 +410,170 @@ def mark_reviewed(job_id: int, doc_id: int, payload: ReviewMark,
                                "same moment; nothing was marked. Try again.")
 
 
+# ── adding a missing table row (Run G, G4) ───────────────────────────────────
+
+class AddRow(BaseModel):
+    #: {column key: value} — only the table's own columns
+    values: dict[str, str]
+    #: the open completeness reason this row answers ("a printed row is
+    #: missing"); it is settled as entered_manually by the same write
+    attention_id: Optional[str] = None
+    #: where the row goes (0 = first); default the end of the table
+    position: Optional[int] = None
+
+
+_TOTAL_LABEL = re.compile(r"\b(?:sub\s*-?\s*total|total|amount\s+due|balance\s+due)\b", re.I)
+
+
+def _amount(s):
+    """A plain amount as Decimal, or None (`$1,234.50`, `(20.00)`, `-5`)."""
+    from decimal import Decimal, InvalidOperation
+    t = str(s or "").strip()
+    if not t:
+        return None
+    neg = t.startswith("(") and t.endswith(")")
+    t = re.sub(r"[\s$£€₹¥,()]", "", t).replace("−", "-")
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", t):
+        return None
+    try:
+        d = Decimal(t)
+    except InvalidOperation:
+        return None
+    return -d if neg else d
+
+
+def _amount_column(rows, columns):
+    """The table's one amount column: every filled cell a plain amount. When
+    several qualify, the one headed amount/total/value; None when that still
+    leaves more than one (no guess)."""
+    numeric = [c for c in columns
+               if any(str(r.get(c, "")).strip() for r in rows)
+               and all(_amount(r.get(c)) is not None
+                       for r in rows if str(r.get(c, "")).strip())]
+    if len(numeric) == 1:
+        return numeric[0]
+    named = [c for c in numeric if re.search(r"amount|total|value", c, re.I)]
+    return named[0] if len(named) == 1 else None
+
+
+def _recheck_totals(ed: dict, table: str, rows: list, columns: list) -> list:
+    """After a person adds a row, every TOTAL-labelled field slot is checked
+    again against the table's amount column. A total that no longer equals
+    the rows' sum — or cannot be checked — is RE-FLAGGED, never rewritten:
+    a total is the document's printed figure, and only a person may change
+    it. Returns the refs flagged."""
+    fields = [f for f in (ed.get("slot_map") or {}).get("fields") or []
+              if f.get("ref") and _TOTAL_LABEL.search(str(f.get("row_label") or ""))]
+    if not fields:
+        return []
+    col = _amount_column(rows, columns)
+    total = (sum((_amount(r.get(col)) or 0) for r in rows) if col else None)
+    prov = ed.setdefault("field_provenance", {})
+    val = ed.setdefault("validation", {})
+    flagged = []
+    for f in fields:
+        ref = str(f["ref"])
+        v = (ed.get("extracted_fields") or {}).get(ref, "")
+        got = _amount(v)
+        if col is not None and got is not None and got == total:
+            continue
+        why = (f"total no longer matches the {table} rows after a row was added: "
+               f"the rows sum to {total:.2f}" if col is not None and got is not None
+               else f"total could not be rechecked after a row was added to {table}")
+        val.setdefault("flagged_fields", []).append({"ref": ref, "value": v, "reason": why})
+        p = prov.setdefault(ref, {})
+        p["review_required"] = True
+        p["review_reasons"] = list(dict.fromkeys(list(p.get("review_reasons") or [])
+                                                 + ["totals_mismatch"]))
+        p.pop("reviewed", None)        # a check that changed owes a fresh look
+        flagged.append(ref)
+    return flagged
+
+
+@router.post("/jobs/{job_id}/docs/{doc_id}/rows/{table}", status_code=201)
+def add_row(job_id: int, doc_id: int, table: str, payload: AddRow,
+            db: Session = Depends(get_db),
+            current_user: User = Depends(get_current_user)):
+    """Add a row the extraction missed. The row gets a stable `_row_id`
+    (returned), is marked typed-by-a-person, is logged, and goes into the
+    exported band like any other row. Total slots are re-flagged when the
+    rows no longer sum to them; a named completeness reason is settled as
+    entered_manually by the same write."""
+    import json
+    import uuid
+    from sqlalchemy import select
+    from app.core.confidence import EDITED
+    _, doc = _doc_for(job_id, doc_id, current_user, db, "job.review")
+    stamp = {"by": current_user.username, "at": datetime.utcnow().isoformat() + "Z"}
+    for _attempt in range(MARK_ATTEMPTS):
+        old, reviewed_by = db.execute(select(DocumentResult.extraction_json,
+                                             DocumentResult.reviewed_by)
+                                      .where(DocumentResult.id == doc.id)).one()
+        db.rollback()
+        try:
+            ed = json.loads(old) if old else {}
+        except ValueError:
+            ed = {}
+        if not isinstance(ed, dict) or not ed:
+            raise HTTPException(status_code=422, detail="This document has no stored result")
+        spec = next((t for t in (ed.get("slot_map") or {}).get("tables") or []
+                     if str(t.get("name")) == table), None)
+        key = dict(R.table_keys(ed)).get(table)
+        if spec is None or key is None:
+            raise HTTPException(status_code=404, detail=f"No table {table!r} on this document")
+        columns = [str(c.get("key") or c.get("header")) for c in spec.get("columns") or []]
+        unknown = [k for k in payload.values if k not in columns]
+        if unknown:
+            raise HTTPException(status_code=422, detail=(
+                f"Not a column of {table}: {', '.join(unknown)}"))
+        given = {k: str(v) for k, v in payload.values.items() if str(v).strip()}
+        if not given:
+            raise HTTPException(status_code=422, detail="The new row has no values")
+        rows = ed.get(key)
+        rows = rows if isinstance(rows, list) else []
+        ed[key] = rows
+        for r in rows:
+            if isinstance(r, dict) and not r.get("_row_id"):
+                r["_row_id"] = f"r-{uuid.uuid4().hex[:12]}"
+        row_id = f"added-{uuid.uuid4().hex[:12]}"
+        row = {c: given.get(c, "") for c in columns}
+        row.update({"_row_id": row_id, "_added": stamp, "_confidence": EDITED,
+                    "_edited": sorted(given), "_original": {c: "" for c in given}})
+        pos = len(rows) if payload.position is None else payload.position
+        if not 0 <= pos <= len(rows):
+            raise HTTPException(status_code=422, detail="Position is outside the table")
+        rows.insert(pos, row)
+        if payload.attention_id is not None:
+            a = next((a for a in R.attention_open(ed)
+                      if str(a.get("id")) == str(payload.attention_id)), None)
+            if a is None:
+                raise HTTPException(status_code=404, detail=(
+                    f"No open reason {payload.attention_id} on this document"))
+            a["disposition"] = {"choice": "entered_manually",
+                                "note": f"row added to {table}", **stamp}
+        reflagged = _recheck_totals(ed, table, [r for r in rows if isinstance(r, dict)],
+                                    columns)
+        ed.setdefault("edit_log", []).append({
+            **stamp, "kind": "add_row", "table": table, "row": pos, "row_id": row_id,
+            "values": given, "attention_id": payload.attention_id,
+            "reflagged_totals": reflagged, "reason": "row added in review"})
+        values = R.document_values(ed)
+        open_ = R.summarise(values)["needs_review"] + len(R.attention_open(ed))
+        cols = {"extraction_json": json.dumps(ed, default=str),
+                "reviewed": open_ == 0,
+                "reviewed_by": current_user.username if open_ == 0 else reviewed_by,
+                "needs_review": open_ > 0}
+        if _swap(db, doc.id, old, cols):
+            return {"doc_id": doc_id, "table": table, "row": pos, "row_id": row_id,
+                    "reflagged_totals": reflagged,
+                    "summary": R.summarise(values),
+                    "attention": R.attention_items(ed),
+                    "document_state": R.document_state(ed)}
+    raise HTTPException(status_code=409,
+                        detail="This document was changed by someone else at the "
+                               "same moment; nothing was added. Try again.")
+
+
 @router.get("/jobs/{job_id}/docs/{doc_id}/history")
 def document_history(job_id: int, doc_id: int, db: Session = Depends(get_db),
                      current_user: User = Depends(get_current_user)):
