@@ -193,7 +193,7 @@ shape). The other 33 are noise under the recorded rules:
 | T6 | no | no | A blank column between side-by-side headers prevents both bands from being detected. |
 | T7 | yes | yes | Borders do not affect parsing and basic borders survive writing. |
 | T8 | yes | yes | Bordered and unbordered stacked bands stay distinct. |
-| T9 | no | no | The merged `Item` header is omitted; only Debit/Credit form a band. |
+| T9 | no | no | The merged `Item` header heads the first column: the band is `Item / Debit / Credit`; the two-level `Amount` heading is flattened. |
 | T10 | no | no | A spacer becomes capacity, same-row totals disappear, and totals have no band ownership. |
 | T11 | yes | no | The wide band includes the subtotal row, but writing ordinary records overwrites it. |
 | T12 | no | no | Transposed inference is unavailable without an editor declaration. |

@@ -331,7 +331,7 @@
       "columns (use EXACTLY these keys): Item | Debit | Credit"
     ],
     "ambiguities": [
-      "The merged Item header is omitted; the prompt exposes only a two-column Debit/Credit band."
+      "The merged Item header heads the band's first column; the prompt exposes a three-column Item/Debit/Credit band, and the two-level Amount heading is flattened into Debit and Credit."
     ]
   }
 }

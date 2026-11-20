@@ -320,7 +320,7 @@ def scenarios():
     setv(ws, "A6", "Prepared by"); blank(ws, "B6")
     out.append((wb, truth("T9", "two-level merged headers", [field("Prepared by", "A6", "B6", empty=True)],
         [band("Amount", 2, 3, 3, "A", ["Item", "Debit", "Credit"])],
-        prompt_ambiguities=["The merged Item header is omitted; the prompt exposes only a two-column Debit/Credit band."],
+        prompt_ambiguities=["The merged Item header heads the band's first column; the prompt exposes a three-column Item/Debit/Credit band, and the two-level Amount heading is flattened into Debit and Credit."],
         native={"merged_ranges": ["A1:A2", "B1:C1"]})))
 
     wb, ws = new_book()
