@@ -443,6 +443,13 @@ _FORM_METADATA = re.compile(
     r"|\b(?:print|reset|submit|clear)(?:\s*(?:form|button))?\s*$", re.I)
 
 
+def _placeholder(text) -> bool:
+    """Run Q, Q5/Q6: dummy text printed on a sample form (9999.99, XX,XXX.00,
+    YOUR CITY, ...) - evidence a box is empty, never a missed value."""
+    import real_data as RD
+    return RD.placeholder_value(text)
+
+
 def prose_beside_label(label, numbers, lines_of, caption_words=()):
     """Run N, N7 (review B3): (page, text) when an EMPTY slot's whole label is
     printed with a WORD value right after it on the same line — `Employee
@@ -485,6 +492,12 @@ def prose_beside_label(label, numbers, lines_of, caption_words=()):
                     break
                 val.append(t)
             if val and val[0][:1].isupper() and len(" ".join(val)) >= 3:
+                # Run Q, Q5/Q6: printed dummy text ("YOUR CITY, YOUR STATE,
+                # ZIP", "YOUR PHONE") beside a label is evidence the box is
+                # EMPTY, not a missed value
+                rest = " ".join(str(w.get("text", "")) for w in ws[k:k + 8])
+                if _placeholder(" ".join(val)) or _placeholder(rest):
+                    continue
                 return n, " ".join(val)
     return None
 
@@ -724,7 +737,7 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
                 printed = True
             for li, w in slot_area_amounts(lines, label):
                 v = amount_of(w["text"])
-                if v is not None and v not in placed:
+                if v is not None and v not in placed and not _placeholder(w["text"]):
                     area_vals.append((n, _clean(w["text"]),
                                       _context(lines[li], _words(lines[li]).index(w))))
         ans = raw_fields.get(f.get("slot_id")) if f.get("slot_id") else None

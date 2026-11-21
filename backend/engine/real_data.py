@@ -226,3 +226,48 @@ def specimen_document(page_texts) -> bool:
 
 def specimen_value(value) -> bool:
     return any(p.search(str(value or "")) for p in _SPECIMEN_VALUE)
+
+
+# ── Run Q, Q6: placeholder text is not a value ──────────────────────────────
+#
+# ONE RULE FOR ALL: dummy text printed on a form or a sample is not a value.
+# The answer is treated as EMPTY - no value, no flag, a note only - because
+# the document shows nothing was filled there (jobs 64, 74, 75, 79, 81, 84).
+# A real masked number keeps its digits (XXX-XX-1234, 40-200XXXX) and STAYS;
+# a bare "X" is a tick in a box and stays.
+_PLACEHOLDER_VALUE = (
+    re.compile(r"^\$?\s*X{1,3}(?:,X{3})*\.(?:XX|00)$", re.I),       # XX,XXX.00
+    re.compile(r"^\$?\s*X{1,3}(?:,X{3})+$", re.I),                    # X,XXX
+    re.compile(r"^\$?\s*9{4,}\.9{2}$"),                               # 9999.99
+    re.compile(r"^9{6,}$"),                                           # 99999999
+    re.compile(r"^0{1,2}/0{1,2}/(?:0{2}|0{4})$"),                     # 00/00/00
+    re.compile(r"^(?:19|20)XX$", re.I),                               # 20XX
+    re.compile(r"^<[^<>]{1,80}>$"),                                   # <Company Name>
+    re.compile(r"^\s*your\s+(?:city|state|zip|phone|name|address|company|e-?mail|"
+               r"message|street|title|website|fax|logo)\b[\w ,.]*$", re.I),
+    re.compile(r"^\s*city\s*,?\s*state\s*,?\s*(?:and\s+)?zip(?:\s*code)?\s*$", re.I),
+    re.compile(r"^\s*designation\s*\(if\s+any\)\s*$", re.I),
+    re.compile(r"^[X*#]{3,}(?:[-\s][X*#]{2,})*$", re.I),              # XXXX, XXX-XX-XXXX
+    re.compile(r"^\s*(?:_\s*){3,}$"),                                 # _ _ _ _
+)
+
+
+def placeholder_value(value) -> bool:
+    v = str(value or "").strip()
+    if not v:
+        return False
+    return any(p.match(v) for p in _PLACEHOLDER_VALUE)
+
+
+def printed_label_as_value(value, page_texts) -> bool:
+    """The value is a LABEL the page prints - followed by its own colon -
+    used as a value (job 60: Pay Group = "Business Unit", printed
+    "Business Unit:"). Text only: a value with a digit is never a label."""
+    v = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(v.split()) < 2 or re.search(r"\d", v):
+        return False
+    # EVERY place the page prints this text, it is followed by a colon - it
+    # is only ever a label there. One plain occurrence and it may be a value.
+    rx = re.compile(r"(?<![\w])" + re.escape(v).replace(r"\ ", r"\s+") + r"(?![\w])(\s*:)?", re.I)
+    hits = [m for t in page_texts or [] for m in rx.finditer(str(t or ""))]
+    return bool(hits) and all(m.group(1) for m in hits)

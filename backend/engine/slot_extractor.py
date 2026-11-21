@@ -2140,6 +2140,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 value, source, page = ans, "", 0
             if str(value).strip() == "":
                 continue
+            # Run Q, Q6: dummy text (XX,XXX.00, 00/00/00, YOUR CITY, <Name>,
+            # a printed label used as a value) is not a value. EMPTY, with a
+            # note and NO flag: the document shows nothing was filled there.
+            if RD.placeholder_value(value) or RD.printed_label_as_value(value, pages):
+                notes.append(f'{slot["row_label"]}: {str(value)[:40]!r} is placeholder '
+                             f"text, not a value - left empty")
+                continue
             offered += 1
             _why_not = RD.refusal(value, source, slot["row_label"], family=_family,
                                   page_texts=pages, specimen=_specimen)
@@ -3102,6 +3109,18 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         for rows in tables_out.values():
             for r in rows:
                 r["_confidence"] = origin_floor(r["_confidence"])
+
+    # Run Q, Q6: a table cell holding placeholder text is emptied too - the
+    # same rule as a field, with a note and no flag.
+    for tname, rows in tables_out.items():
+        for r in rows:
+            for k in [k for k in r if not str(k).startswith("_")]:
+                if RD.placeholder_value(r.get(k)):
+                    notes.append(f"{tname}: {str(r[k])[:40]!r} under {k!r} is "
+                                 f"placeholder text, not a value - left empty")
+                    r[k] = ""
+                    if isinstance(r.get("_ungrounded"), list) and k in r["_ungrounded"]:
+                        r["_ungrounded"].remove(k)
 
     # ── IS ANY OF IT DATA? (Run F, real_data.py) ──
     label_by_ref = {f["ref"]: f["row_label"] for f in slots["fields"]}

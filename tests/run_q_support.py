@@ -111,7 +111,7 @@ def make_pdf(path, pages, size=10, w=612.0, h=792.0):
 def template(fields=(), tables=(), doc_type="other", start_row=0):
     """A grid: field labels down column A (value in B), then each table as a
     heading row with empty rows beneath. tables: [(name_or_None, [headers])]."""
-    cells, r = {}, start_row
+    cells, r, regions = {}, start_row, []
     for lab in fields:
         cells[f"{r},0"] = {"value": lab}
         r += 1
@@ -122,9 +122,14 @@ def template(fields=(), tables=(), doc_type="other", start_row=0):
             r += 1
         for c, hd in enumerate(heads):
             cells[f"{r},{c}"] = {"value": hd}
+        # declared, as the editor does: a two-column band at the bottom of a
+        # grid is otherwise ambiguous and skipped (by design)
+        regions.append({"type": "table", "r1": r, "c1": 0, "r2": r + 5,
+                        "c2": max(1, len(heads) - 1), "orientation": "rows",
+                        **({"name": name} if name else {})})
         r += 6
     return {"layout": {"cells": cells, "colWidths": [120] * 26, "merges": {},
-                       "repeatRows": [], "regions": []},
+                       "repeatRows": [], "regions": regions},
             "doc_type": doc_type, "mode": "layout"}
 
 
