@@ -255,7 +255,6 @@ def test_control_a4_a_truly_empty_page_does_not_trigger_recovery(monkeypatch):
     assert not any("RECOVERY REQUEST" in str(c.get("prompt")) for c in calls)
 
 
-@A4_CAP_GAP
 def test_a4_recovery_cap_must_report_the_eligible_page_it_did_not_call(monkeypatch):
     from config import settings
 
@@ -298,6 +297,8 @@ def test_a4_recovery_cap_must_report_the_eligible_page_it_did_not_call(monkeypat
     has_page_6 = any(r.get("Description") == "P6R1" for r in rows)
     assert has_page_6 or "page 6" in _attention_text(data), (
         "page 6 must be recovered or kept visibly missing")
+    # Run N, N6: the reason makes the document NEEDS_ATTENTION
+    assert has_page_6 or data.get("document_state") == "NEEDS_ATTENTION"
 
 
 # A5 ------------------------------------------------------------------------

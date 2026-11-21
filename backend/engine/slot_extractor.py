@@ -630,7 +630,7 @@ def _row_file_page(r, all_lines, page_lines, nums):
 
 
 def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
-                       inventory, doc_type, notes):
+                       inventory, doc_type, notes, not_recovered=None):
     """Overnight A4: ask each page whose rows the answer lost, on its own.
 
     A page qualifies for a band when the inventory counts at least 2
@@ -639,7 +639,11 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
     none of its rows or fewer than half. Calls are capped by
     PAGE_RECOVERY_MAX_CALLS (default 4; 0 turns recovery off). A page's
     recovered rows replace its rows only when there are more of them; every
-    band's rows are then put back in page order."""
+    band's rows are then put back in page order.
+
+    Run N, N6 (review A4): a qualifying page past the cap is never silently
+    left out. (file page, [table names], candidate rows) is appended to
+    `not_recovered` for the caller to raise as a NEEDS-ATTENTION reason."""
     import llm_contract as C
     import source_inventory as SI
 
@@ -675,6 +679,14 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
     tables = parsed.get("tables")
     if not isinstance(tables, dict):
         tables = parsed["tables"] = {}
+    if not_recovered is not None:
+        for k in sorted(want)[cap:]:
+            n = nums[k]
+            cand = max((inventory["pages"].get(n) or {}).get(
+                f"{SI.band_kind(t)}_rows", 0) for t in want[k])
+            not_recovered.append((n, [t["name"] for t in want[k]], cand))
+            notes.append(f"page {n}: not recovered - PAGE_RECOVERY_MAX_CALLS "
+                         f"({cap}) was reached")
     for k in sorted(want)[:cap]:
         n = nums[k]
         sub = {"fields": [], "tables": want[k]}
@@ -1980,11 +1992,12 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # PAGE_RECOVERY_MAX_CALLS times per document; its rows are merged in page
     # order, a reprinted header row is never a row, and the gate then judges
     # the merged answer — so a page still missing still raises its reason.
-    recovered_notes = []
+    recovered_notes, not_recovered = [], []
     if page_lines and slots["tables"] and not chunked and isinstance(parsed, dict):
         parsed = recover_lost_pages(ask, parsed, slots, pages, page_lines,
                                     page_images or [], nums, inventory,
-                                    default_doc_type, recovered_notes)
+                                    default_doc_type, recovered_notes,
+                                    not_recovered)
 
     # Declared identifier kinds (`id_type` on a value cell or a table
     # heading) — attached AFTER the prompt is built, so a declaration never
@@ -3176,6 +3189,18 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             f"were read." if n == 0 else
             f"Page {n} could not be extracted ({why}); the table rows printed "
             f"on it are missing. The other pages were kept.")
+    # Run N, N6: a lost page the recovery cap did not reach, by name. Raised
+    # unless the final answer holds rows read from that page after all.
+    for n, names, cand in not_recovered:
+        have = any(isinstance(r, dict) and r.get("_page") == n
+                   for x in names for r in (tables_out.get(x) or []))
+        if have:
+            continue
+        attention.append(
+            f"Page {n} was not recovered: it prints about {cand} rows of table "
+            f"{', '.join(repr(x) for x in names)} that the answer left out, and "
+            f"the limit of page recovery requests (PAGE_RECOVERY_MAX_CALLS) was "
+            f"reached before page {n}. Its rows are missing.")
     for fl in contract_after:
         if fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE) and not (
                 form_says_empty and cov.get("form_confirms_empty")) and any(
