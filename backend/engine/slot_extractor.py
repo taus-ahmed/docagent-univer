@@ -1297,7 +1297,27 @@ def quote_row_lines(value, source, all_lines):
         return None
     rows = [i for i, ln in enumerate(all_lines) if ln
             and set(rest) <= set(_words_of(_line_str(ln)))]
-    return rows or None
+    if rows:
+        return rows
+    # Run Q, Q4 (review N2 gap): the ROW LABEL itself may wrap - "Opening" /
+    # "Balance 100.00". Up to three consecutive lines name the row when
+    # together they hold every word and EACH holds at least one of them, so
+    # the window is the label and not a label plus an unrelated line. Every
+    # line of the window is returned; value_off_its_row then judges the
+    # value against that row only, never against wherever else the figure is
+    # printed ("Closing / Balance 170.00").
+    need = set(rest)
+    out = []
+    for i in range(len(all_lines)):
+        for span in (2, 3):
+            win = all_lines[i:i + span]
+            if len(win) < span or not all(win):
+                continue
+            ws = [set(_words_of(_line_str(ln))) & need for ln in win]
+            if all(ws) and set().union(*ws) == need:
+                out.extend(range(i, i + span))
+                break
+    return sorted(set(out)) or None
 
 
 def value_off_its_row(value, source, all_lines) -> bool:
@@ -1318,11 +1338,25 @@ def value_off_its_row(value, source, all_lines) -> bool:
         # the quote's own, never a line carrying another row's label
         # (`Closing Balance 170.00`)
         block = [i]
+        # Run Q, Q4 (review N2 gap): a continuation line BELOW may also carry
+        # a companion column's text ("Supplier site visit Pacific Steel
+        # Code A-17" under "Purpose"). It is still this row's line when it
+        # BEGINS with the quote's own words not printed on the label line,
+        # in order - the value continuing, then something else beside it.
+        # A line carrying another row's label ("Closing Balance 170.00")
+        # does not begin with this quote's words and stays out.
+        own = [w for w in _words_of(source)
+               if w not in set(_words_of(_line_str(all_lines[i])))]
         for step in (-1, 1):
             j = i + step
             while 0 <= j < len(all_lines) and abs(j - i) <= 3:
                 ln = all_lines[j]
-                if not ln or not set(_words_of(_line_str(ln))) <= quote:
+                if not ln:
+                    break
+                lw = _words_of(_line_str(ln))
+                if not set(lw) <= quote:
+                    if step == 1 and j == i + 1 and own and lw[:len(own)] == own:
+                        block.append(j)
                     break
                 block.append(j)
                 j += step

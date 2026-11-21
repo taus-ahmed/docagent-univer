@@ -122,7 +122,6 @@ def test_n2_control_the_same_amount_on_two_rows_grounds_on_the_named_row():
     assert "Opening Balance" not in H.flagged_refs(data)
 
 
-@N2_WRAPPED_LABEL_GAP
 def test_n2_wrapped_label_does_not_let_a_wrong_duplicate_amount_reanchor():
     grid = H.column_grid(["Opening Balance"])
     lines = D.words(1, [
@@ -164,7 +163,6 @@ def test_n2_control_a_complete_multiline_quote_keeps_its_correct_value():
     assert "Purpose" not in H.flagged_refs(data)
 
 
-@N2_NEIGHBOUR_DETAIL_GAP
 def test_n2_correct_neighbouring_value_survives_unquoted_companion_text():
     grid = H.column_grid(["Purpose"])
     lines = D.words(1, [
