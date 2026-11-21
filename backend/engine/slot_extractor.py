@@ -1904,7 +1904,32 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     chunked = bool(min_pages and len(pages) >= min_pages and slots["tables"]
                    and page_lines)
     page_failed = {}
-    if chunked:
+    # Run Q, Q12: A BLANK FILLABLE FORM NEEDS NO MODEL CALL. smartsheet_mileage
+    # (two 1885 x 1457 pt pages, 268 AcroForm widgets, none filled) failed
+    # twice on staging after ~42 s with no reason. Every widget is empty and
+    # the text layer prints no amount and no dated row - there is nothing to
+    # read, so the document is answered "absent" for every slot and finishes
+    # through the ordinary gates (blank form, READY) without asking anyone.
+    blank_widgets = None
+    if str(file_path).lower().endswith(".pdf") and not any(
+            v for v in (widget_values or {}).values()):
+        try:
+            from text_layer import widget_census
+            n_w, n_filled = widget_census(file_path)
+            if n_w >= 10 and n_filled == 0 and not inventory["totals"].get("amounts") \
+                    and not inventory["totals"].get("dated_rows"):
+                blank_widgets = n_w
+        except Exception as e:                       # a shortcut, never fatal
+            _log("SLOT", f"widget census unreadable: {type(e).__name__}")
+    if blank_widgets:
+        _log("SLOT", f"blank fillable form: {blank_widgets} widgets, none filled, "
+                     f"no amount on the page - no model call")
+        parsed = {"fields": {f["slot_id"]: {"value": "", "source": "", "page": 0,
+                                            "status": "absent"}
+                             for f in slots["fields"]},
+                  "tables": {t["name"]: [] for t in slots["tables"]}}
+        resp = None
+    elif chunked:
         parsed, resp, page_failed = page_at_a_time(
             ask, slots, pages, page_lines, page_images or [], nums, inventory,
             default_doc_type)
@@ -1979,7 +2004,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                       {t["name"]: [r.get("cells", r) for r in _table_rows_of(parsed, t, slots)]
                        for t in slots["tables"]},
                       parsed.get("fields"), page_lines or [], nums,
-                      form_lane=bool(form_entries), form_entries=form_entries)
+                      form_lane=bool(form_entries) or bool(blank_widgets),
+                      form_entries=form_entries)
     ref_to_id = {f["ref"]: f["slot_id"] for f in slots["fields"]}
     # B3 (overnight): a fillable form whose every filled figure is already in
     # a cell confirms its empty tables itself — no second request for them.
@@ -2006,6 +2032,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     retry_ids += [ref_to_id[r] for r in pre["flag_slots"] if r in ref_to_id]
     retry_ids = list(dict.fromkeys(retry_ids))
     retry_tables = list(dict.fromkeys(retry_tables))
+    if blank_widgets:
+        # Run Q, Q12: every box of the form is empty - nothing to ask again
+        retry_ids, retry_tables = [], []
     contract_after = contract_first
     if retry_ids or retry_tables:
         sub = {"fields": [f for f in slots["fields"] if f["slot_id"] in retry_ids],
@@ -2053,6 +2082,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # set aside for a different reason, which its flag names).
     field_prov = {}
     extracted_fields, conf_map, flagged, notes = {}, {}, [], list(recovered_notes)
+    if blank_widgets:
+        notes.append(f"blank fillable form: {blank_widgets} form fields, none "
+                     f"filled, and no amount printed - the model was not asked")
     ungrounded = 0
     misplaced = 0
     dropped = 0
@@ -3229,7 +3261,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # absent — GL Account and PO number must not make noise.
     cov = SI.coverage(inventory, slots, extracted_fields, tables_out,
                       parsed.get("fields"), page_lines or [], nums,
-                      form_lane=bool(form_entries), form_entries=form_entries)
+                      form_lane=bool(form_entries) or bool(blank_widgets),
+                      form_entries=form_entries)
     label_of = {f["ref"]: f["row_label"] for f in slots["fields"]}
     # B6: the TOTAL cell carries both numbers. The slot holding the printed
     # total is flagged when the template has one; otherwise the table is.

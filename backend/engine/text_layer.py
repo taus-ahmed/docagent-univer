@@ -1964,3 +1964,39 @@ def _nearest(span, bands):
     if not bands:
         return None
     return min(bands.items(), key=lambda kv: abs(span[1] - kv[1][1]))[0]
+
+
+def widget_census(path):
+    """Run Q, Q12: (form widgets, of them FILLED) over the whole file - text,
+    choice and checkbox widgets; a checkbox counts as filled when it is on.
+    (0, 0) when the file has no AcroForm or cannot be read. Reads only the
+    annotations: no rendering, no OCR, no model."""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(str(path))
+    except Exception:
+        return 0, 0
+    total = filled = 0
+    for page in reader.pages:
+        for ref in (page.get("/Annots") or []):
+            try:
+                obj = ref.get_object()
+                if str(obj.get("/Subtype")) != "/Widget":
+                    continue
+                parent = obj.get("/Parent").get_object() \
+                    if obj.get("/Parent") is not None else None
+                ft = str(obj.get("/FT") or (parent.get("/FT") if parent else "") or "")
+                if ft not in ("/Tx", "/Ch", "/Btn"):
+                    continue
+                total += 1
+                if ft == "/Btn":
+                    state = str(obj.get("/AS") or obj.get("/V") or "/Off")
+                    filled += state not in ("/Off", "", "None")
+                else:
+                    v = obj.get("/V")
+                    if v is None and parent is not None:
+                        v = parent.get("/V")
+                    filled += bool(str(v or "").strip())
+            except Exception:
+                continue
+    return total, filled

@@ -134,6 +134,9 @@ class JobListItem(BaseModel):
     created_at: datetime
     completed_at: Optional[datetime]
     total_time_sec: float
+    #: Run Q, Q12: why a failed or partial job failed, as the job detail shows
+    #: it - the documents' own reasons or the error class, never their content.
+    error_message: Optional[str] = None
     user_id: Optional[int] = None
     #: Set after a hard delete (`DELETE /api/jobs/{id}/data`): the record stays
     #: so history adds up, its files and results are gone.

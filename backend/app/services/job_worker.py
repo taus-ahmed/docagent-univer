@@ -30,6 +30,36 @@ from cancellation import watching
 # --imports-end--
 
 
+_FAILURE_KIND_TEXT = {      # llm_contract's failure kinds, in plain words
+    "invalid_json": "the model's answer could not be read (not valid JSON)",
+    "empty": "the model returned an empty answer",
+    "no_candidate": "the model returned no answer",
+    "max_tokens": "the model's answer was cut off (output limit reached)",
+    "transient": "the model service did not answer (timeout or a temporary error)",
+    "quota_exhausted": "the model service refused the request (quota exhausted)",
+    "auth": "the model service refused the request (authentication)",
+    "invalid_request": "the model service refused the request (invalid request)",
+    "model_not_found": "the configured model was not found",
+    "blocked": "the model service blocked the request (policy)",
+    "exception": "the model call raised an error",
+    "cap": "a call limit was reached",
+}
+
+
+def failure_reason_text(result) -> str:
+    """Run Q, Q12: why a document failed, from the engine's own failure kind
+    and state - never from document content. Always non-empty."""
+    ed = getattr(result, "extracted_data", None) or {}
+    kind = str(ed.get("failure_kind") or "").strip()
+    resp = getattr(result, "extraction_response", None)
+    kind = kind or str(getattr(resp, "error_kind", "") or "").strip()
+    why = _FAILURE_KIND_TEXT.get(kind.lower(), "")
+    if not why and kind:
+        why = f"failure kind {kind!r}"
+    return ("Extraction failed: " + (why or "no reason was returned by the engine")
+            + ". Try again; if it fails again, report the job number.")
+
+
 def _extract_with_template(orchestrator, file_path: Path, template_data: dict,
                             selected_pages: Optional[list] = None,
                             batch_schemas: Optional[dict] = None):
@@ -1035,6 +1065,14 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         has_flags = bool(flagged_fields) or (
                             validation_data.get("flagged_count", 0) > 0)
                         error_msg      = result.error if hasattr(result, 'error') and result.error else ""
+                        # Run Q, Q12: a FAILED document always says why. Jobs
+                        # 68 and 70 failed with "1 of 1 document(s) failed."
+                        # and nothing else, because the result carried no
+                        # error text. The engine's own failure kind (never a
+                        # document's content) is the reason then.
+                        if not result.success and not error_msg and not (
+                                result.validation and result.validation.errors):
+                            error_msg = failure_reason_text(result)
 
                         # H1: for financial doc types, any low-confidence numeric field
                         #     escalates the entire document to needs_review=True
@@ -1269,7 +1307,12 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
             job = session.query(ExtractionJob).filter_by(id=job_id).first()
             if job and job.status != "cancelled":
                 job.status = "failed"
-                job.error_message = str(e)
+                # Run Q, Q12: the error CLASS and a safe sentence - never the
+                # exception's message, which can quote a document, and never
+                # empty (an exception without args stored "")
+                job.error_message = (f"The job stopped on an internal error "
+                                     f"({exc_brief(e)}); no document content "
+                                     f"is shown here. Try again, or contact support.")
                 job.completed_at = datetime.utcnow()
                 session.commit()
         except Exception:

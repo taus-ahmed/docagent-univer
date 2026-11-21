@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { jobModels } from "@/lib/jobModel";
+import { failureLine, jobModels } from "@/lib/jobModel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
@@ -501,6 +501,12 @@ export default function HistoryPage() {
                       )}
                     </div>
                     <div className="job-sub">{fmt(job.created_at)}</div>
+                    {/* Run Q, Q12: a failed job says why, in the list too */}
+                    {failureLine(job) && (
+                      <div className="job-sub" style={{ color: "var(--red)" }} title={job.error_message ?? ""}>
+                        {failureLine(job)}
+                      </div>
+                    )}
                     <div className="job-counts">
                       <span className="job-count" style={{ color: "var(--text3)" }}>{job.total_docs} docs</span>
                       {job.successful > 0 && <span className="job-count" style={{ color: "var(--green)" }}>✓ {job.successful}</span>}

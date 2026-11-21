@@ -9,3 +9,13 @@ export function jobModels(results: { model_used?: string | null }[]): string {
   }
   return seen.join(", ");
 }
+
+/** Run Q, Q12: the one line a failed (or partly failed) job shows in the
+ *  job list - the job's own stored reason, shortened; never blank for a
+ *  failed job. "" for every other status. */
+export function failureLine(job: { status?: string; error_message?: string | null }): string {
+  if (job.status !== "failed" && job.status !== "partial") return "";
+  const m = String(job.error_message ?? "").trim();
+  if (!m) return job.status === "failed" ? "Failed — no reason was recorded for this job" : "";
+  return m.length > 140 ? m.slice(0, 137) + "…" : m;
+}
