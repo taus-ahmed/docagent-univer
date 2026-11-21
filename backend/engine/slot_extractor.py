@@ -1309,18 +1309,28 @@ def value_off_its_row(value, source, all_lines) -> bool:
     if rows is None:
         return False
     quote = set(_words_of(source))
+    vwords = set(_words_of(value))
+    is_number = _number_key(value) is not None
     for i in rows:
-        if value_on_line(value, _line_str(all_lines[i])):
+        # the quote may wrap, below its label or above it (EXP-2024-0081
+        # prints `... Pacific Steel, Los` over `Purpose: Angeles`): a
+        # neighbouring line is part of the row only when EVERY word on it is
+        # the quote's own, never a line carrying another row's label
+        # (`Closing Balance 170.00`)
+        block = [i]
+        for step in (-1, 1):
+            j = i + step
+            while 0 <= j < len(all_lines) and abs(j - i) <= 3:
+                ln = all_lines[j]
+                if not ln or not set(_words_of(_line_str(ln))) <= quote:
+                    break
+                block.append(j)
+                j += step
+        if any(value_on_line(value, _line_str(all_lines[j])) for j in block):
             return False
-        # the quote may wrap: a following line counts as the same row only
-        # when EVERY word on it is the quote's own (`Total Due` / `1,234`),
-        # never a line carrying another row's label (`Closing Balance 170.00`)
-        for j in range(i + 1, min(i + 4, len(all_lines))):
-            ln = all_lines[j]
-            if not ln or not set(_words_of(_line_str(ln))) <= quote:
-                break
-            if value_on_line(value, _line_str(ln)):
-                return False
+        if not is_number and vwords and vwords <= {
+                w for j in block for w in _words_of(_line_str(all_lines[j]))}:
+            return False           # a text value spelled across its own row
     return True
 
 
