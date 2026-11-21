@@ -1262,6 +1262,56 @@ def value_lines(value, all_lines) -> list:
             if ln and value_on_line(value, _line_str(ln))]
 
 
+def _words_of(text) -> list:
+    return [w for w in re.split(r"[^0-9a-z]+", str(text or "").casefold()) if w]
+
+
+def quote_row_lines(value, source, all_lines):
+    """Run N, N2 (review B1): the lines the QUOTE's own words identify, or
+    None when the quote names no row.
+
+    A quote the page does not hold verbatim still says which row it was read
+    from: `Opening Balance 170.00` names the row printing "Opening Balance".
+    Its words left over once the value's own are removed (letters only, so a
+    figure cannot identify a row) must ALL appear, as whole words, on a line
+    for that line to be the quote's row. No such line — a glued line break
+    (`YardShoreditchLondon`), a quote that is only the value — and the quote
+    names no row (None), which leaves the older re-anchoring rules to judge.
+    """
+    vw = set(_words_of(value))
+    rest = [w for w in _words_of(source)
+            if w not in vw and re.search(r"[a-z]", w) and len(w) >= 2]
+    if not rest or not all_lines:
+        return None
+    rows = [i for i, ln in enumerate(all_lines) if ln
+            and set(rest) <= set(_words_of(_line_str(ln)))]
+    return rows or None
+
+
+def value_off_its_row(value, source, all_lines) -> bool:
+    """True when the quote names a row and the value, as a whole token, is on
+    none of the lines of that row — a value read from a DIFFERENT row (a
+    Closing Balance for an Opening Balance) is never grounded by moving its
+    quote to wherever the figure happens to be printed."""
+    rows = quote_row_lines(value, source, all_lines)
+    if rows is None:
+        return False
+    quote = set(_words_of(source))
+    for i in rows:
+        if value_on_line(value, _line_str(all_lines[i])):
+            return False
+        # the quote may wrap: a following line counts as the same row only
+        # when EVERY word on it is the quote's own (`Total Due` / `1,234`),
+        # never a line carrying another row's label (`Closing Balance 170.00`)
+        for j in range(i + 1, min(i + 4, len(all_lines))):
+            ln = all_lines[j]
+            if not ln or not set(_words_of(_line_str(ln))) <= quote:
+                break
+            if value_on_line(value, _line_str(ln)):
+                return False
+    return True
+
+
 def reanchor_row(cells, headers, all_lines, claimed=()):
     """The first unclaimed line printing EVERY non-empty value of this row,
     or None. All of them, so a row cannot be anchored by one shared amount."""
@@ -2178,13 +2228,28 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     continue
 
             ok, why = verify_span(value, source, page, pages)
+            # (a quote printed verbatim on one line is its own row already)
+            off_row = (bool(all_lines) and why in ("", "source span not found in document")
+                       and not (ok and any(_flat(source) in _flat(_line_str(ln))
+                                           for ln in all_lines if ln))
+                       and value_off_its_row(value, source, all_lines))
+            if off_row:
+                ok = False
+                # Run N, N2: the quote names its row and that row does not
+                # print the value — the figure was taken from another row.
+                why = ("the value is not printed on the row its quote names "
+                       "— it was read from a different row")
             if not ok and all_lines and why == "source span not found in document":
+                # Run N, N2: a quote naming its row re-anchors only to that row.
+                rows = quote_row_lines(value, source, all_lines)
                 # B4: grounding is about the VALUE. A quote the page does not
                 # hold is replaced by the line that prints the value -
                 # preferring one that also carries a word of the slot's label.
                 # A quote the page DOES hold with the value not in it stays
                 # ungrounded: that is a value taken from somewhere else.
                 cands = value_lines(value, all_lines)
+                if rows is not None:
+                    cands = [i for i in cands if i in rows]
                 if cands:
                     lab = [w for w in re.split(r"[^0-9a-z]+", slot["row_label"].casefold())
                            if len(w) >= 3]

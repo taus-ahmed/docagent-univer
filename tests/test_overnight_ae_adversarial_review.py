@@ -396,7 +396,6 @@ def test_control_b1_numbers_ground_as_whole_tokens_and_missing_values_stay_low()
     assert not verify_span("70.00", "Penalty 170.00", 1, ["Penalty 170.00"])[0]
 
 
-@B1_REANCHOR_GAP
 def test_b1_wrong_value_on_another_row_is_not_grounded_via_an_invented_quote():
     grid = H.column_grid(["Opening Balance"])
     lines = D.words(1, [
