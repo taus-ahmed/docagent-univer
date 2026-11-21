@@ -3,7 +3,7 @@
 A restarted session reads this first and skips every item marked [x] or BLOCKED.
 
 - [x] N0 — migration safety answered in docs/RUN_N_REPORT.md: SAFE TO DEPLOY (raw responses >7 days cleared at first boot)
-- [ ] N1 — merge origin/review/run-h (7 strict xfails, docs/OVERNIGHT_AE_REVIEW.md)
+- [x] N1 — merged origin/review/run-h; KNOWN_FAILING conflict kept both sides; 22 passed, 7 strict xfails confirmed
 - [ ] N2 — B1: grounding is per row / line / cell, whole token
 - [ ] N3 — B2: wrong-column by the value's own position, not a Description copy
 - [ ] N4 — A1: an X equidistant between two checkbox columns is never silently assigned
