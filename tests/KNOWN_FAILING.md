@@ -8,6 +8,15 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 | --- | --- | --- | --- |
 | Batch1 item 9: Legend counts in the FROZEN staging exports | `test_09_each_real_legend_count_equals_cells_actually_marked` | BLOCKED (overnight run): the test reads the 16 real staging exports in `local_docs/batch1_exports`, written by the OLD writer, which marked only slots holding a value. No code change can alter those files; re-exporting needs the jobs' stored `extraction_json`, which is not in the repo. The writer was fixed in overnight B4 (every slot is visited; an empty-and-flagged slot is the grey cell with a comment) and is proven on current output by `tests/test_overnight_b4.py` and `tests/legend_check.py`. | Jobs 46, 48 and 51 report 3, 12 and 2 empty-flagged values and paint no grey cell. Remove this marker after re-exporting those three jobs from staging with the current code. |
 
+Run Q (2026-11-21): the 7 strict xfails of the Run N adversarial review
+(`tests/test_run_n_adversarial_review.py`, merged from origin/review/run-n)
+came off: N2 x2 (a wrapped row label names its row; a continuation line with
+companion text keeps its value), N4 (an X inside exactly one option is that
+option's), N5 x2 (a shared key's text never merges two records), N6 (a capped
+page holding under half its rows is named), N7 (form-metadata widgets never
+create attention). Each was run against its parent commit first and failed on
+its defect assertion. See docs/RUN_Q_REPORT.md.
+
 Run N (2026-11-20): the 7 strict xfails of the overnight A-E adversarial review
 (`tests/test_overnight_ae_adversarial_review.py`, merged from origin/review/run-h)
 came off: B1 (N2, a value grounds only on the row its quote names), B2 (N3, a
