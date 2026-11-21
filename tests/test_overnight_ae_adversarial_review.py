@@ -348,7 +348,6 @@ def test_control_a6_real_single_entity_fragments_merge_and_temperature_is_zero(m
     assert calls and all(c.get("temperature") == 0.0 for c in calls)
 
 
-@A6_FRAGMENT_GAP
 def test_a6_two_real_rows_with_disjoint_cells_are_not_merged_into_one_entity():
     grid = _table_grid(["Account", "Debit", "Credit"])
     name = H.table_name(grid, "Rows")

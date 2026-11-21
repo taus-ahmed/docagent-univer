@@ -571,7 +571,7 @@ def foreign_box_rows(table_name, raw_rows, headers, lines):
 
 # ── fragment rows (A6) ──────────────────────────────────────────────────────
 
-def merge_fragment_rows(rows, headers):
+def merge_fragment_rows(rows, headers, quotes=None):
     """(rows, n merged). A band holding ONE entity — its key column (the
     first heading) filled on exactly one row, the first — whose other rows
     have no key and fill only columns no earlier row filled, is one row
@@ -588,10 +588,30 @@ def merge_fragment_rows(rows, headers):
         return rows, 0
     if any(str(r.get(key, "") or "").strip() for r in rows[1:]):
         return rows, 0
+    # Run N, N5 (review A6): disjoint columns are not proof of one entity —
+    # two real rows (Checking-A's debit, Savings-B's credit with its key
+    # missed) are disjoint too. A piece belongs to the keyed row only when it
+    # was read from the SAME record: the same quoted line, or a quote that
+    # prints the keyed row's own key as a whole word. No quote, no merge.
+    # `quotes(row)` is the model's own quote for the row (before re-anchoring
+    # moved it to a line); without one, the row's `_source`.
+    def quote(r):
+        q = quotes(r) if quotes else None
+        q = q if q else r.get("_source", "")
+        return re.sub(r"\s+", " ", str(q or "")).strip().casefold()
+
+    k0 = str(rows[0].get(key, "") or "").strip()
+    src0 = quote(rows[0])
+    kpat = re.compile(r"(?<![0-9a-z])" + re.escape(k0.casefold()) + r"(?![0-9a-z])")
+
+    def same_record(r):
+        s = quote(r)
+        return bool(s) and (s == src0 or bool(kpat.search(s)))
+
     seen = filled(rows[0])
     for r in rows[1:]:
         f = filled(r)
-        if not f or f & seen:
+        if not f or f & seen or not same_record(r):
             return rows, 0
         seen |= f
     merged = dict(rows[0])

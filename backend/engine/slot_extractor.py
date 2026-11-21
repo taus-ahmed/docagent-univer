@@ -2572,11 +2572,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # cannot reach into a neighbouring record.
             seen_rows, claimed_lines, rows_out = set(), set(), []
             located = []
+            # Run N, N5: the quote the MODEL gave each row, before re-anchoring
+            # rewrites it — what the fragment merge asks "same record?" of.
+            quote_of_cells, quote_of_row = {}, {}
             for r in raw:
                 if not isinstance(r, dict):
                     continue
                 cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
                 source, page = r.get("source", ""), r.get("page", 0)
+                quote_of_cells[id(cells)] = str(source or "")
                 key = _flat(source)
                 occurrences = (source_occurrences(all_lines, source)
                                if (all_lines and key) else [])
@@ -2766,6 +2770,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     row["_ungrounded"] = unverified_cols
                 if row_why:
                     row_fail.append((row, row_why))
+                quote_of_row[id(row)] = quote_of_cells.get(id(cells), source)
                 rows_out.append(row)
             rows_out, totals = split_total_rows(rows_out, table_headers(t))
             for row in totals:
@@ -2826,7 +2831,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # Rows after the band's one keyed row, with no key and columns
             # disjoint from everything before them, are that row's parts.
             import ownership as OW
-            rows_out, _merged = OW.merge_fragment_rows(rows_out, headers)
+            rows_out, _merged = OW.merge_fragment_rows(
+                rows_out, headers, quotes=lambda _r: quote_of_row.get(id(_r)))
             if _merged:
                 notes.append(f'{t["name"]}: {_merged} fragment row(s) merged into '
                              f"the one entity row they complete")
