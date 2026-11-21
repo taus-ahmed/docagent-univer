@@ -32,7 +32,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -880,6 +880,83 @@ def _job_states(db, job_id) -> dict:
 def get_job(job_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     job = _get_job_or_404(job_id, current_user, db)
     return JobStatus.model_validate(job).model_copy(update=_job_states(db, job.id))
+
+
+class _StoredSource(_IncomingUpload):
+    """A source file already in storage under an earlier job (Run Q, UI1).
+    Read from storage on every `read()`, so a re-run holds one file's bytes
+    at a time, exactly as an upload does."""
+
+    __slots__ = ("_storage", "_key")
+
+    def __init__(self, filename, storage, key):
+        super().__init__(filename)
+        self._storage, self._key = storage, key
+
+    async def read(self) -> bytes:
+        data = self._storage.get_bytes(self._key)
+        if data is None:
+            raise HTTPException(status_code=409, detail=(
+                "The files of this job are no longer stored (deleted or past "
+                "retention). Upload them again to extract them."))
+        return data
+
+
+@router.post("/jobs/{job_id}/rerun", response_model=ExtractUploadResponse, status_code=202)
+async def rerun_job(
+    job_id: int,
+    body: dict = Body(default={}),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    storage=Depends(get_storage),
+):
+    """Run Q, UI1: extract a finished job's stored files again as a NEW job.
+
+    `{"template_id": <id> | null}` - another template, or none. The original
+    job, its results, its review marks and its download are not touched; the
+    new job goes through the ordinary upload path (`_start_extraction_job`:
+    the same validation, quota, tenant and template checks).
+    """
+    try:
+        check_uploads_enabled(current_user)
+    except HTTPException as exc:
+        demo_audit.record(db, current_user, demo_audit.UPLOAD_REFUSED,
+                          detail=demo_audit.refusal_detail(exc))
+        raise
+    job = _get_job_or_404(job_id, current_user, db, "job.upload")
+    if getattr(job, "deleted_at", None):
+        raise HTTPException(status_code=409, detail=(
+            "This job was deleted; its files are gone. Upload them again."))
+    if job.status in ("pending", "processing"):
+        raise HTTPException(status_code=409, detail="This job is still running.")
+    raw_tid = (body or {}).get("template_id")
+    try:
+        template_id = int(raw_tid) if raw_tid not in (None, "") else None
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="template_id must be a number or null")
+    seen, sources = set(), []
+    for d in (db.query(DocumentResult).filter(DocumentResult.job_id == job.id)
+              .order_by(DocumentResult.id).all()):
+        key = d.s3_key
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        sources.append(_StoredSource(d.original_filename or d.filename or Path(key).name,
+                                     storage, key))
+    if not sources:
+        raise HTTPException(status_code=409, detail=(
+            "The files of this job are no longer stored (deleted or past "
+            "retention). Upload them again to extract them."))
+    return await _start_extraction_job(
+        sources,
+        requested_client_id=job.client_id,
+        template_id=template_id,
+        options=None,
+        selected_pages=None,
+        db=db,
+        current_user=current_user,
+        storage=storage,
+    )
 
 @router.get("/jobs/{job_id}/results", response_model=list[DocumentResultResponse])
 def get_job_results(job_id: int, doc_type: Optional[str]=None, needs_review: Optional[bool]=None,

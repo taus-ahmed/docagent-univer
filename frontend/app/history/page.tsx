@@ -8,6 +8,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { extractApi, exportApi, templatesApi, type JobStatus, type DocumentResult, type ColumnTemplate } from "@/lib/api";
 import toast from "react-hot-toast";
 import { confirmExport } from "@/lib/confirm-export";
+import NewExtractionButton from "@/components/extract/NewExtractionButton";
 import { useAuthStore } from "@/lib/auth-store";
 import { mayCancel, mayDelete } from "@/lib/permissions";
 
@@ -312,6 +313,10 @@ export default function HistoryPage() {
   const selectedJob    = jobs.find(j => j.id === selectedJobId);
   const user = useAuthStore(s => s.user);
   const qc = useQueryClient();
+  // Run Q, UI1: the templates a New extraction may use
+  const { data: allTemplates = [] } = useQuery<ColumnTemplate[]>({
+    queryKey: ["templates"], queryFn: () => templatesApi.list(),
+  });
   const running = (s?: string) => s === "pending" || s === "processing";
 
   const handleDelete = async (jobId: number) => {
@@ -595,6 +600,11 @@ export default function HistoryPage() {
                           Download ZIP
                         </button>
                       )}
+                      <NewExtractionButton jobId={selectedJob.id} templates={allTemplates}
+                        onStarted={(newId) => {
+                          qc.invalidateQueries({ queryKey: ["jobs"] });
+                          setSelectedJobId(newId);
+                        }}/>
                     </>
                   )}
                   {selectedJob.status === "partial" && (

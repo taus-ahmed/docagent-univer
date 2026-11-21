@@ -3,6 +3,7 @@ import type { ChartsResponse } from "./charts";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import type { JobReview, ReasonMap, ReviewSummary, ReviewValue } from "./review";
 import type { HistoryEvent, ValueEntry } from "./reviewActions";
+import { rerunBody } from "./jobTemplate";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -489,6 +490,14 @@ export const extractApi = {
 
   getJob: async (jobId: number): Promise<JobStatus> => {
     const res = await api.get<JobStatus>(`/api/jobs/${jobId}`);
+    return res.data;
+  },
+
+  /** Run Q, UI1: extract a finished job's stored files again as a NEW job,
+   *  with another template or none. The original job is not touched. */
+  rerun: async (jobId: number, templateId: number | null): Promise<{ job_id: number; message: string; total_files: number; status: string }> => {
+    const res = await api.post(`/api/jobs/${jobId}/rerun`,
+                                                     rerunBody(templateId));
     return res.data;
   },
 

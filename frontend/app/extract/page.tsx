@@ -6,6 +6,8 @@ import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
+import NewExtractionButton from "@/components/extract/NewExtractionButton";
+import { templateOfJob } from "@/lib/jobTemplate";
 import { confirmExport } from "@/lib/confirm-export";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
@@ -622,6 +624,9 @@ export default function ExtractPage() {
     finally { setCancelling(false); }
   };
   const hasResults = results.length > 0;
+  // Run Q, UI1: the results are shown with the template the JOB ran with.
+  // The picker chooses the template for the NEXT extraction only.
+  const jobTemplate = templateOfJob(jobStatus, templates);
 
   const filteredTemplates = templateSearch.trim()
     ? templates.filter(t =>
@@ -1029,6 +1034,15 @@ export default function ExtractPage() {
                       Download ZIP
                     </button>
                   )}
+                  <NewExtractionButton jobId={activeJobId} templates={templates}
+                    onStarted={(newId) => {
+                      // the finished job is left exactly as it is (History keeps it);
+                      // this page follows the new one
+                      prevStatus.current = "";
+                      setResults([]);
+                      setIsExtracting(true);
+                      setActiveJobId(newId);
+                    }}/>
                   <label style={{ display: "inline-flex", alignItems: "center", gap: 4,
                                   fontSize: 11, color: "var(--text-muted, #6b7280)" }}>
                     <input type="checkbox" checked={includeAudit}
@@ -1045,7 +1059,7 @@ export default function ExtractPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
           {hasResults ? (
             <>
-              <ResultsGrid results={results} jobId={activeJobId!} template={selectedTemplate}/>
+              <ResultsGrid results={results} jobId={activeJobId!} template={jobTemplate}/>
               {selectedOptions.length > 0 && (
                 <InsightsPanel results={results} options={selectedOptions} jobId={activeJobId}/>
               )}

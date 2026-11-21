@@ -72,6 +72,7 @@ ROUTES = {
     ("GET", "/api/jobs"): "list",
     ("GET", "/api/jobs/{job_id}"): "id",
     ("GET", "/api/jobs/{job_id}/export"): "id",
+    ("POST", "/api/jobs/{job_id}/rerun"): "id",
     ("GET", "/api/jobs/{job_id}/export/zip"): "id",
     ("GET", "/api/jobs/{job_id}/results"): "id",
     ("GET", "/api/jobs/{job_id}/inferred-templates"): "id",
@@ -126,6 +127,7 @@ BODIES = {
     ("PUT", "/api/templates/{template_id}"): {"name": "hijacked"},
     ("PUT", "/api/admin/users/{user_id}"): {"display_name": "hijacked"},
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/review"): {"scope": "document"},
+    ("POST", "/api/jobs/{job_id}/rerun"): {"template_id": None},
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}"):
         {"values": {"Amount": "1.00"}},
 }
