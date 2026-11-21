@@ -1933,9 +1933,14 @@ def check_placement(row, columns, line, bands):
 def _inside_another_cell(value, key, row, keys) -> bool:
     """Is `value` a whole word (or bracketed word) INSIDE a longer value of
     another column of this row? `(pair)` in a description is; `120.00`
-    standing alone under the wrong amount column is not."""
+    standing alone under the wrong amount column is not.
+
+    Run N, N3 (review B2): a FIGURE is never exempted this way. `70.00` inside
+    a Description `Service 70.00` is the same printed word the Amount cell
+    claims, and whether it belongs to Amount is decided by where that word
+    sits — so a figure is judged by its own position like any other value."""
     v = str(value or "").strip().strip("()[]").casefold()
-    if not v:
+    if not v or re.search(r"\d", v):
         return False
     pat = re.compile(r"(?<![0-9a-z])" + re.escape(v) + r"(?![0-9a-z])")
     for k in keys:

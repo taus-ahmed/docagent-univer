@@ -437,7 +437,6 @@ def test_control_b2_value_really_under_another_column_is_flagged():
     assert any(f.get("ref") == f"{name}[0].Amount" for f in flags)
 
 
-@B2_NESTED_AMOUNT_GAP
 def test_b2_amount_found_only_inside_description_still_gets_a_placement_flag():
     grid = _table_grid(["Description", "Amount"])
     name = H.table_name(grid, "Rows")
