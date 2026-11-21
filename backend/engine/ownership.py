@@ -236,6 +236,15 @@ def checkbox_marks(group, lines):
                 # another (within TIE_PT) has no owner the page can name. It
                 # is never handed to the first option: every tied option gets
                 # None — "the page does not say" — and the caller flags it.
+                #
+                # Run Q (review N4 gap): CONTAINMENT IS DECISIVE. An X whose
+                # centre is inside exactly one option's span belongs to it,
+                # however close the next option starts - the tie tolerance
+                # is for an X sitting between options, not inside one.
+                inside = [r for d, r in ds if d == 0.0]
+                if len(inside) == 1:
+                    out[inside[0]] = True
+                    continue
                 tied = [r for d, r in ds if d - ds[0][0] <= TIE_PT]
                 if len(tied) > 1:
                     for r in tied:

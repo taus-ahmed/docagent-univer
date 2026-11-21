@@ -246,7 +246,6 @@ def test_n4_control_just_outside_the_tolerance_belongs_to_the_spanned_option():
     assert "ambig" not in H.flag_text(data)
 
 
-@N4_INSIDE_EDGE_GAP
 def test_n4_an_x_inside_alpha_is_not_a_tie_at_the_exact_tolerance_edge():
     data = _checkbox_result(40.5)
 
