@@ -391,7 +391,6 @@ def test_n6_control_names_every_wholly_missing_page_beyond_the_cap(monkeypatch):
     assert data["document_state"] == "NEEDS_ATTENTION"
 
 
-@N6_PARTIAL_PAGE_GAP
 def test_n6_names_partially_missing_pages_beyond_the_cap(monkeypatch):
     data, calls = _many_page_case(monkeypatch, partial_beyond_cap=True)
     attention = _attention_text(data)

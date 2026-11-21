@@ -3201,14 +3201,19 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             f"on it are missing. The other pages were kept.")
     # Run N, N6: a lost page the recovery cap did not reach, by name. Raised
     # unless the final answer holds rows read from that page after all.
+    # Run Q, Q1c: "holds rows" means the SAME test the planner used to call
+    # the page deficient - at least half its candidate rows. One surviving
+    # row used to excuse the page, so a page reading 1 of 4 was silent.
     for n, names, cand in not_recovered:
-        have = any(isinstance(r, dict) and r.get("_page") == n
-                   for x in names for r in (tables_out.get(x) or []))
-        if have:
+        have = sum(1 for x in names for r in (tables_out.get(x) or [])
+                   if isinstance(r, dict) and r.get("_page") == n)
+        if have * 2 >= cand:
             continue
+        held = (f"the answer holds only {have} of them" if have
+                else "the answer left them out")
         attention.append(
             f"Page {n} was not recovered: it prints about {cand} rows of table "
-            f"{', '.join(repr(x) for x in names)} that the answer left out, and "
+            f"{', '.join(repr(x) for x in names)}, {held}, and "
             f"the limit of page recovery requests (PAGE_RECOVERY_MAX_CALLS) was "
             f"reached before page {n}. Its rows are missing.")
     for fl in contract_after:
