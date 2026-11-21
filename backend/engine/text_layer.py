@@ -527,6 +527,14 @@ def canonical_value(value, lines):
     flat = [(w, li) for li, ln in enumerate(lines) for w in ln]
     if not flat:
         return None
+    # Run Q (found by Q3): a value the page prints as ONE word is that word.
+    # The walk matches characters ignoring whitespace, so `130.00` printed
+    # whole on the Subtotal line also "spelled" the run `1` `30.00` (a Qty and
+    # an Amount on a line above it), and the Subtotal came back as "1 30.00".
+    exact = [w for w, _li in flat
+             if re.sub(r"\s+", "", str(w.get("text", ""))).casefold() == target]
+    if exact:
+        return _join([exact[0]], flat), False
     gutter = gutter_for_page(lines)
     return _walk(flat, target, False, gutter) or \
         _walk(flat, target, True, gutter)
