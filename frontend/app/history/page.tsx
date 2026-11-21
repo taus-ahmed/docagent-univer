@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { failureLine, jobModels } from "@/lib/jobModel";
+import { failureLine, jobModels, plainStatus } from "@/lib/jobModel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
@@ -12,7 +12,8 @@ import NewExtractionButton from "@/components/extract/NewExtractionButton";
 import { useAuthStore } from "@/lib/auth-store";
 import { mayCancel, mayDelete } from "@/lib/permissions";
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ job }: { job: Parameters<typeof plainStatus>[0] & { status: string } }) {
+  const status = job.status;
   const map: Record<string, string> = {
     completed: "badge-green",
     partial: "badge-amber",
@@ -21,7 +22,10 @@ function StatusBadge({ status }: { status: string }) {
     pending: "badge-gray",
     cancelled: "badge-gray",
   };
-  return <span className={`badge ${map[status] ?? "badge-gray"}`}>{status}</span>;
+  // Run Q, UI3: plain words; the raw status is the tooltip
+  const label = plainStatus(job);
+  const cls = label === "Needs review" ? "badge-amber" : (map[status] ?? "badge-gray");
+  return <span className={`badge ${cls}`} title={status}>{label}</span>;
 }
 
 /** Run A: shown BESIDE the status, so a completed job holding a document the
@@ -493,7 +497,7 @@ export default function HistoryPage() {
                   <div className="job-meta">
                     <div className="job-id-row">
                       <span className="job-id">Job #{job.id}</span>
-                      <StatusBadge status={job.status} />
+                      <StatusBadge job={job} />
                       <AttentionBadge job={job} />
                       {job.deleted_at && <span className="badge badge-gray">deleted</span>}
                       {job.schema_id && (
@@ -531,7 +535,7 @@ export default function HistoryPage() {
               <>
                 <div className="detail-header">
                   <span className="detail-title">Job #{selectedJob.id}</span>
-                  <StatusBadge status={selectedJob.status} />
+                  <StatusBadge job={selectedJob} />
                   <AttentionBadge job={selectedJob} />
                   {jobModels(results) && (
                     <span className="badge badge-gray" title="The model that produced these values, as the API named it">

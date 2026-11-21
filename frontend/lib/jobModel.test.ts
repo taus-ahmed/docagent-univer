@@ -20,3 +20,15 @@ test("Run Q, Q12: a failed job always shows a reason line in the list", () => {
   assert.equal(failureLine({ status: "completed", error_message: "x" }), "");
   assert.ok(failureLine({ status: "partial", error_message: "y".repeat(300) }).length <= 140);
 });
+
+import { plainStatus } from "./jobModel.ts";
+
+test("Run Q, UI3: plain-words status labels", () => {
+  assert.equal(plainStatus({ status: "completed" }), "Done");
+  assert.equal(plainStatus({ status: "completed", needs_review: 2 }), "Needs review");
+  assert.equal(plainStatus({ status: "completed", needs_attention: 1 }), "Needs review");
+  assert.equal(plainStatus({ status: "completed", total_docs: 1, blank_forms: 1 }), "Blank form");
+  assert.equal(plainStatus({ status: "completed", total_docs: 2, blank_forms: 1 }), "Done");
+  assert.equal(plainStatus({ status: "failed" }), "Failed");
+  assert.equal(plainStatus({ status: "processing" }), "Running");
+});

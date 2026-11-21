@@ -8,6 +8,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
 import NewExtractionButton from "@/components/extract/NewExtractionButton";
 import { templateOfJob } from "@/lib/jobTemplate";
+import { jobModels } from "@/lib/jobModel";
 import { confirmExport } from "@/lib/confirm-export";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
@@ -614,7 +615,6 @@ export default function ExtractPage() {
   const isCancelled = jobStatus?.status === "cancelled";
   const [cancelling, setCancelling] = useState(false);
   // Run C, C2: the download holds only the template's fields unless asked.
-  const [includeAudit, setIncludeAudit] = useState(false);
   const handleCancel = async () => {
     if (!activeJobId || !confirm("Cancel this extraction? Files that already finished keep their results; the rest are listed as cancelled.")) return;
     setCancelling(true);
@@ -1004,7 +1004,7 @@ export default function ExtractPage() {
                   <button className="btn btn-primary btn-sm" onClick={async () => {
                     if (!(await confirmExport(activeJobId))) return;
                     try {
-                      const blob = await exportApi.templateExport(activeJobId, includeAudit);
+                      const blob = await exportApi.templateExport(activeJobId, false);
                       exportApi.downloadBlob(blob, `job_${activeJobId}_results.xlsx`);
                       toast.success("Downloaded");
                     } catch { toast.error("Export failed"); }
@@ -1020,7 +1020,7 @@ export default function ExtractPage() {
                     <button className="btn btn-secondary btn-sm" onClick={async () => {
                       if (!(await confirmExport(activeJobId))) return;
                       try {
-                        const blob = await exportApi.zipExport(activeJobId, includeAudit);
+                        const blob = await exportApi.zipExport(activeJobId, false);
                         exportApi.downloadBlob(blob, `job_${activeJobId}_documents.zip`);
                         toast.success("Downloaded");
                       } catch { toast.error("Export failed"); }
@@ -1043,12 +1043,28 @@ export default function ExtractPage() {
                       setIsExtracting(true);
                       setActiveJobId(newId);
                     }}/>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: 4,
-                                  fontSize: 11, color: "var(--text-muted, #6b7280)" }}>
-                    <input type="checkbox" checked={includeAudit}
-                           onChange={e => setIncludeAudit(e.target.checked)} />
-                    Include source and review columns
-                  </label>
+                  {/* Run Q, UI3: the clean file is the default download; the
+                      audit version (Source and Review status columns) is a
+                      secondary choice, never a checkbox that silently changes
+                      what the primary button does */}
+                  <button className="btn btn-secondary btn-sm"
+                    title="The same workbook with the Source and Review status columns"
+                    onClick={async () => {
+                      if (!(await confirmExport(activeJobId))) return;
+                      try {
+                        const blob = await exportApi.templateExport(activeJobId, true);
+                        exportApi.downloadBlob(blob, `job_${activeJobId}_results_audit.xlsx`);
+                        toast.success("Downloaded");
+                      } catch { toast.error("Export failed"); }
+                    }}>
+                    Download with audit columns
+                  </button>
+                  {jobModels(results) && (
+                    <span style={{ fontSize: 11, color: "var(--text3)" }}
+                          title="The model that produced these values, as the API named it">
+                      Extracted by {jobModels(results)}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
