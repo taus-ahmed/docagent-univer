@@ -21,7 +21,7 @@ import { inlineConfirmation } from "@/lib/toastConfig";
 import { firstValueOn, pageNav } from "@/lib/reviewPages";
 import { extractApi, reviewApi, type DocumentResult, type PageMeta } from "@/lib/api";
 import {
-  badgeFor, boxToPercent, detailText, locationNotFound, reasonText, recordLabel, stepOpen,
+  acceptAllConfirmation, badgeFor, boxToPercent, detailText, locationNotFound, reasonText, recordLabel, stepOpen,
   type AttentionItem, type ReasonMap, type ReviewDoc, type ReviewValue,
 } from "@/lib/review";
 import {
@@ -224,6 +224,10 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
   }, [jobId, doc.doc_id, onChanged]);
 
   const markDocument = useCallback(async () => {
+    // Run Q, Q13: accepting everything at once says how many Low values it
+    // accepts as they stand, and asks first
+    const ask = acceptAllConfirmation(doc.summary);
+    if (ask && !window.confirm(ask)) return;
     setBusy(true);
     try {
       await reviewApi.mark(jobId, doc.doc_id, { scope: "document" });
@@ -235,7 +239,7 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
       toast.error(detailText(e, "Could not save the review mark"));
     }
     finally { setBusy(false); }
-  }, [jobId, doc.doc_id, onChanged]);
+  }, [jobId, doc.doc_id, doc.summary, onChanged]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

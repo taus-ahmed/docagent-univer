@@ -38,6 +38,8 @@ export interface ReviewSummary {
   low: number;
   unverified: number;
   empty_flagged: number;
+  /** Run Q, Q13: Low values a person accepted as they stood */
+  accepted_after_low?: number;
   documents?: number;
   documents_needing_review?: number;
   documents_needing_attention?: number;
@@ -221,4 +223,26 @@ export function exportWarning(s: ReviewSummary | undefined): string | null {
          `(${s.low} low, ${s.unverified} unverified, ${s.empty_flagged} empty and flagged). ` +
          `They will be exported with a coloured fill and a comment saying why, and ` +
          `the file will be named _DRAFT until every value is settled. Export anyway?`;
+}
+
+
+/** Run Q, Q13: the line a job or document shows once values flagged Low
+ *  were accepted as they stood. "" when none were. */
+export function acceptedAfterLowText(n: number | undefined | null): string {
+  const k = Number(n ?? 0);
+  if (!k) return "";
+  return `${k} value${k === 1 ? "" : "s"} accepted after being flagged Low`;
+}
+
+/** Run Q, Q13: the confirmation the whole-document "Mark document reviewed"
+ *  (accept everything) asks first, naming how many Low values it accepts as
+ *  they stand. "" when nothing Low is open: no question needed. */
+export function acceptAllConfirmation(summary: { low?: number; needs_review?: number } | null | undefined): string {
+  const low = Number(summary?.low ?? 0);
+  if (!low) return "";
+  const rest = Math.max(0, Number(summary?.needs_review ?? 0) - low);
+  return `Mark this document reviewed? This accepts ${low} value${low === 1 ? "" : "s"} ` +
+    `flagged Low as ${low === 1 ? "it stands" : "they stand"}` +
+    (rest ? ` and ${rest} other value${rest === 1 ? "" : "s"} that need review` : "") +
+    `. Each keeps its original reasons and is counted as "accepted after being flagged Low".`;
 }

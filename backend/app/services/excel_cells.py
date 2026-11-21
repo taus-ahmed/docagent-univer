@@ -776,7 +776,8 @@ def _add_review_legend(wb, doc_results, demo=False):
     _add_charts_sheet(wb, doc_results)
     lg = wb.create_sheet("Legend")
     per_doc, total = [], {"values": 0, "needs_review": 0, "low": 0,
-                          "unverified": 0, "empty_flagged": 0}
+                          "unverified": 0, "empty_flagged": 0,
+                          "accepted_after_low": 0}
     attention_docs, attention_open = 0, 0
     for d in doc_results:
         ed = d.get_extracted_data()
@@ -815,6 +816,16 @@ def _add_review_legend(wb, doc_results, demo=False):
             value=(f"{total['low']} low · {total['unverified']} unverified · "
                    f"{total['empty_flagged']} empty and flagged · "
                    f"{total['values']} values in all"))
+    # Run Q, Q13: "Nothing needs review" never hides values a person accepted
+    # after the machine flagged them Low - said here, per document below, and
+    # each such cell keeps its original reasons in its comment
+    if total["accepted_after_low"]:
+        n_acc = total["accepted_after_low"]
+        lg.cell(row=top + 1, column=3,
+                value=(f"{n_acc} value{'' if n_acc == 1 else 's'} accepted after "
+                       f"being flagged Low (pale green; the original reasons are "
+                       f"in each cell's comment)")).font = Font(bold=True,
+                                                                color="FF9C5700")
     # Overnight M2: which model produced these values, as the API named it
     models = sorted({str(getattr(d, "model_used", "") or "").strip()
                      for d, _s, _f in per_doc} - {""})
@@ -835,7 +846,7 @@ def _add_review_legend(wb, doc_results, demo=False):
     r += 2
     for col, head in enumerate(("Document", "Values", "Need review", "Low",
                                 "Unverified", "Empty, flagged",
-                                "Needs attention"), 1):
+                                "Needs attention", "Accepted after Low"), 1):
         lg.cell(row=r, column=col, value=head).font = Font(bold=True)
     for i, (d, s, failed) in enumerate(per_doc, 1):
         r += 1
@@ -844,7 +855,7 @@ def _add_review_legend(wb, doc_results, demo=False):
             name += " — FAILED, no values extracted"
         for col, v in enumerate((name, s["values"], s["needs_review"], s["low"],
                                  s["unverified"], s["empty_flagged"],
-                                 s["attention"]), 1):
+                                 s["attention"], s["accepted_after_low"]), 1):
             lg.cell(row=r, column=col, value=v)
     # Run G, G4: rows a person ADDED are written into their band like any
     # other row (marked edited there); this list says which they are, with

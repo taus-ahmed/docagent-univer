@@ -88,7 +88,7 @@ def test_document_values_cover_fields_and_cells():
     assert all(c["reasons"] == ["totals_mismatch"] for c in cells)
     s = R.summarise(vals)
     assert s == {"values": 5, "needs_review": 4, "low": 2, "unverified": 1,
-                 "empty_flagged": 1}
+                 "empty_flagged": 1, "accepted_after_low": 0}  # Run Q, Q13
 
 
 def test_a_reviewed_document_resolves_every_value():

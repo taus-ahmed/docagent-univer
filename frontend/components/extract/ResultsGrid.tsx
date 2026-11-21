@@ -10,7 +10,7 @@ import "ag-grid-community/styles/ag-theme-alpine.css";
 import { extractApi, reviewApi, type DocumentResult, type ColumnTemplate } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import {
-  FILTERS, fieldsByLabel, matches, reasonText, recordLabel,
+  FILTERS, acceptedAfterLowText, fieldsByLabel, matches, reasonText, recordLabel,
   type Filter, type ReviewDoc, type ReviewValue,
 } from "@/lib/review";
 import { gridAction } from "@/lib/reviewActions";
@@ -369,6 +369,12 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
                     ? `${s.needs_review} value${s.needs_review === 1 ? "" : "s"} need review, ${s.low} low`
                     : (s.documents_needing_attention ?? 0) > 0 ? "no value needs review"
                     : "nothing needs review"}
+              </span>
+            )}
+            {/* Run Q, Q13: accepted-after-Low is never invisible */}
+            {s && acceptedAfterLowText(s.accepted_after_low) && (
+              <span style={{ fontSize: 12, marginLeft: 8, fontWeight: 600, color: "var(--amber,#b45309)" }}>
+                · {acceptedAfterLowText(s.accepted_after_low)}
               </span>
             )}
             {template && (

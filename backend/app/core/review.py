@@ -526,7 +526,14 @@ def summarise(values: list[dict]) -> dict:
             "needs_review": len(unresolved),
             "low": sum(1 for v in unresolved if v["status"] == "low"),
             "unverified": sum(1 for v in unresolved if v["status"] == "unverified"),
-            "empty_flagged": sum(1 for v in unresolved if v["status"] == "empty_flagged")}
+            "empty_flagged": sum(1 for v in unresolved if v["status"] == "empty_flagged"),
+            # Run Q, Q13: a value the machine called LOW that a person then
+            # accepted as it stands (a value mark, or the whole-document
+            # mark) - never a corrected one, which is "edited". Jobs 57, 64
+            # and 66 read "Nothing needs review" with wrong values accepted
+            # this way, and nothing said how many.
+            "accepted_after_low": sum(1 for v in values
+                                      if v["resolved"] and v["status"] == "low")}
 
 
 # ── completeness: attention reasons and the document state (Run A, A4/A5) ──
