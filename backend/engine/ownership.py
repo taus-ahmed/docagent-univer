@@ -614,8 +614,18 @@ def merge_fragment_rows(rows, headers, quotes=None):
     kpat = re.compile(r"(?<![0-9a-z])" + re.escape(k0.casefold()) + r"(?![0-9a-z])")
 
     def same_record(r):
+        # Run Q, Q7 (review N5 gap): the key printed in the piece's quote is
+        # NOT proof on its own - two real records can share a key's TEXT
+        # (`Household 100.00` / `Household 250.00`, `PA ID-A` / `PA ID-B`),
+        # and the second record's key cell is exactly what the model missed.
+        # A piece is the same record only when its quote is the keyed row's
+        # quote, or one quote is a fragment of the other AND prints the key.
         s = quote(r)
-        return bool(s) and (s == src0 or bool(kpat.search(s)))
+        if not s:
+            return False
+        if s == src0:
+            return True
+        return bool(kpat.search(s)) and bool(src0) and (s in src0 or src0 in s)
 
     seen = filled(rows[0])
     for r in rows[1:]:

@@ -301,7 +301,6 @@ def test_n5_control_distinct_quotes_without_the_first_key_do_not_merge():
     ],
     ids=["shared-account-label", "shared-state"],
 )
-@N5_REPEATED_KEY_GAP
 def test_n5_repeated_key_text_does_not_merge_two_real_records(
     headers, printed, first_cells, second_cells
 ):
