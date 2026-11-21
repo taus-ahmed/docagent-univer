@@ -1,3 +1,5 @@
+ALL DONE
+
 # Run N — progress (branch fix/review-fixes, started at 873537c)
 
 A restarted session reads this first and skips every item marked [x] or BLOCKED.
@@ -10,4 +12,4 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] N5 — A6: fragment rows merge only when each was quoted from the keyed row's record (same quote, or a quote printing its key); marker off
 - [x] N6 — A4: a lost page past PAGE_RECOVERY_MAX_CALLS is named in a NEEDS-ATTENTION reason (page, table, row count); marker off
 - [x] N7 — B3: each filled widget in no cell is named with its value (address lines of a captured party excepted); a word value beside an empty slot's whole caption is reported; markers off
-- [ ] N8 — full suite, harness, scoreboard, frontend; KNOWN_FAILING; report
+- [x] N8 — pytest 5,288 passed, 19 xfailed, 0 failed; harness 98.7 / 98.2, 17/17, defects 0, Low/flag cells identical to pre-N2; scoreboard silent 0, false flags 0; frontend 73/73, type-check, build OK; KNOWN_FAILING and RUN_N_REPORT written
