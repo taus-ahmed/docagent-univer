@@ -417,6 +417,16 @@ def _continues_a_numbered_run(pages_of, i):
 #: line so prose ("see page 2 for details") never counts.
 _BARE_PAGE = re.compile(r"^\s*page\s+(\d{1,3})\s*$", re.I | re.M)
 
+#: Run Q, Q1: a report FOOTER that ends in the page number - "Report
+#: generated: 06/24/2026 14:36 Page 5". The City of Mobile vendor list (job
+#: 72) prints only this, and without it the eight-page report was cut into
+#: three documents at pages 5 and 6; the rows of pages 2-4 were then asked
+#: for under the first slice and lost with no warning. Anchored to the END of
+#: a line and only ever a VETO (n must equal the page's place in its run), so
+#: at worst prose ending "... page 5" on a fifth page keeps two documents
+#: together - an under-split, the visible direction (DECISION-LOG).
+_TRAILING_PAGE = re.compile(r"\S.*?\bpage\s+(\d{1,3})\s*$", re.I | re.M)
+
 
 def _states_its_own_position(text, offset):
     """The page prints a bare "Page n", and n is where it sits in its run.
@@ -425,8 +435,9 @@ def _states_its_own_position(text, offset):
     would continue. Only n >= 2 counts: "Page 1" says nothing about
     continuation, and a restart is `_restarts_its_own_numbering`'s job.
     """
+    t = str(text or "")
     return any(int(m.group(1)) >= 2 and int(m.group(1)) == offset + 1
-               for m in _BARE_PAGE.finditer(str(text or "")))
+               for rx in (_BARE_PAGE, _TRAILING_PAGE) for m in rx.finditer(t))
 
 
 def _restarts_its_own_numbering(pages_of, i):
