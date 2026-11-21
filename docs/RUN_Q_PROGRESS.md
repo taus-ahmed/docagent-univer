@@ -22,7 +22,7 @@ Read this first on a restart; skip items marked done.
 - [ ] Q12 no fail reason / smartsheet_mileage
 - [ ] Q13 bulk accept
 - [ ] Q14 batch 1 leftovers
-- [ ] Q15 tools/audit_exports.py
+- [x] Q15 tools/audit_exports.py (before numbers in RUN_Q_REPORT.md)
 - [ ] UI1 new extraction
 - [ ] UI2 notifications
 - [ ] UI3 friendlier results page
