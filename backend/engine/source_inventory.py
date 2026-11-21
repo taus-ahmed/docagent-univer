@@ -787,8 +787,16 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             f"{m['table']!r} sum to {m['row_sum']} in column {m['column']!r}, "
             f"but the page prints a total of {shown}.")
 
+    # ── row count against a printed count (Run Q, Q1b) ──
+    row_counts = row_count_checks(slots, tables_out, page_lines)
+    for m in row_counts:
+        reasons.append(
+            f"row_count_mismatch: the document prints {m['printed']} "
+            f"{m['noun']} (\"{m['line']}\") but {m['rows']} row(s) of table "
+            f"{m['table']!r} were extracted.")
+
     return {"reasons": reasons, "flag_slots": flag_slots, "absent": absent,
-            "row_sums": row_sums,
+            "row_sums": row_sums, "row_counts": row_counts,
             "form_confirms_empty": form_amounts_placed,
             "empty_bands": sorted(empty_band),
             "widget_values": len(widget_all),
@@ -978,6 +986,75 @@ def row_sum_checks(slots, tables_out, page_lines, page_numbers=None) -> list:
                 printed = grand
             out.append({"table": t["name"], "column": header, "rows": len(vals),
                         "row_sum": str(s), "printed": [str(p) for p in printed]})
+    return out
+
+
+#: Run Q, Q1b — a document stating how many rows it holds. Three printed
+#: shapes, each measured on a real statement or report:
+#:   "Total Invoices Count 90"   "Number of Checks 8"   "90 INVOICES 237,183.08"
+#: The noun is what ties the count to a table: it must be a stem of the
+#: table's name or one of its headings (a generic noun - transactions, items -
+#: may stand for a template's only table).
+_COUNT_NOUNS = r"(invoices?|checks?|cheques?|transactions?|items?|deposits?|withdrawals?|batches?|payments?)"
+_COUNT_SHAPES = [
+    re.compile(r"\b(?:number|no\.?|count|#)\s+of\s+" + _COUNT_NOUNS + r"\s*:?\s*(\d{1,5})\b", re.I),
+    re.compile(r"\btotal\s+" + _COUNT_NOUNS + r"\s+count\s*:?\s*(\d{1,5})\b", re.I),
+    re.compile(r"\b" + _COUNT_NOUNS + r"\s+count\s*:?\s*(\d{1,5})\b", re.I),
+    # "90 INVOICES 237,183.08": the count opens the line and an amount follows
+    re.compile(r"^\s*(\d{1,5})\s+" + _COUNT_NOUNS + r"\b(?=.*\d[\d,]*\.\d{2})", re.I),
+]
+
+
+def _count_on(txt):
+    """(noun, count) when this line states a row count, else None."""
+    for k, rx in enumerate(_COUNT_SHAPES):
+        m = rx.search(txt)
+        if m:
+            noun, n = (m.group(2), m.group(1)) if k == 3 else (m.group(1), m.group(2))
+            return noun.casefold(), int(n)
+    return None
+
+
+def row_count_checks(slots, tables_out, page_lines) -> list:
+    """Run Q, Q1b: a printed row count against the rows extracted.
+
+    Reports only - nothing is changed and nothing is "corrected". Several
+    lines may state a count (a subtotal per vendor and a report total); ANY
+    one equal to the extracted row count settles a table, so a per-section
+    count can never accuse a table whose report total agrees. Only a table
+    whose candidates exist and none of which agree is reported, with the
+    largest printed count (the total, by construction of the shapes above).
+    """
+    tables = [t for t in (slots.get("tables") or [])]
+    if not tables:
+        return []
+    found = []
+    for page in page_lines or []:
+        for ln in page or []:
+            txt = _line_text(ln)
+            got = _count_on(txt)
+            if got:
+                found.append((got[0], got[1], txt.strip()[:80]))
+    if not found:
+        return []
+    out = []
+    for t in tables:
+        stems = _head_stems(t.get("name", "")) + [
+            s for c in (t.get("columns") or []) for s in _head_stems(c.get("header") or "")]
+        # a SPECIFIC noun ("checks") must name this table; only a generic one
+        # ("transactions", "items") may stand for a template's single table -
+        # "Number of Checks 8" says nothing about a transactions band
+        mine = [(noun, n, txt) for noun, n, txt in found
+                if any(_word_matches(s, noun) for s in stems)
+                or (len(tables) == 1 and noun.rstrip("s") in ("transaction", "item"))]
+        if not mine:
+            continue
+        rows = [r for r in ((tables_out or {}).get(t["name"]) or []) if isinstance(r, dict)]
+        if any(n == len(rows) for _noun, n, _txt in mine):
+            continue
+        noun, n, txt = max(mine, key=lambda x: x[1])
+        out.append({"table": t["name"], "rows": len(rows), "printed": n,
+                    "noun": noun, "line": txt})
     return out
 
 
