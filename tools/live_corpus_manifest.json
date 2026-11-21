@@ -1,0 +1,184 @@
+{
+ "note": "Round A/B/C jobs 56-84 (29). 68-70: smartsheet_mileage (failed/cancelled, no export). File names from each export's Legend.",
+ "jobs": [
+  {
+   "job": 56,
+   "files": [
+    "carson_bank_6pg.pdf"
+   ]
+  },
+  {
+   "job": 57,
+   "files": [
+    "portland_po_distributed.pdf"
+   ]
+  },
+  {
+   "job": 58,
+   "files": [
+    "tcnj_financials.pdf"
+   ]
+  },
+  {
+   "job": 59,
+   "files": [
+    "virtus_1099b.pdf"
+   ]
+  },
+  {
+   "job": 60,
+   "files": [
+    "saltlake_paycheck.pdf"
+   ]
+  },
+  {
+   "job": 61,
+   "files": [
+    "utah_paystub_1.pdf"
+   ]
+  },
+  {
+   "job": 62,
+   "files": [
+    "utah_paystub_2.pdf",
+    "utah_paystub_1.pdf"
+   ]
+  },
+  {
+   "job": 63,
+   "files": [
+    "gallatin_po_4pg.pdf"
+   ]
+  },
+  {
+   "job": 64,
+   "files": [
+    "virtus_1099b.pdf"
+   ]
+  },
+  {
+   "job": 65,
+   "files": [
+    "utah_paystub_1.pdf"
+   ]
+  },
+  {
+   "job": 66,
+   "files": [
+    "ou_check_stub.pdf"
+   ]
+  },
+  {
+   "job": 67,
+   "files": [
+    "fidelity_brokerage.pdf"
+   ]
+  },
+  {
+   "job": 68,
+   "files": [
+    "smartsheet_mileage.pdf"
+   ]
+  },
+  {
+   "job": 69,
+   "files": [
+    "smartsheet_mileage.pdf"
+   ]
+  },
+  {
+   "job": 70,
+   "files": [
+    "smartsheet_mileage.pdf"
+   ]
+  },
+  {
+   "job": 71,
+   "files": [
+    "calif_restaurant_2006.jpg",
+    "circle_k_2005.jpg",
+    "circuit_city_1987.jpg",
+    "shell_mastercard.jpg"
+   ]
+  },
+  {
+   "job": 72,
+   "files": [
+    "mobile_vendor_list_8pg.pdf"
+   ]
+  },
+  {
+   "job": 73,
+   "files": [
+    "fiserv_merchant_5pg.pdf"
+   ]
+  },
+  {
+   "job": 74,
+   "files": [
+    "wsu_invoice_2pg.pdf"
+   ]
+  },
+  {
+   "job": 75,
+   "files": [
+    "wells_read_statement.pdf"
+   ]
+  },
+  {
+   "job": 76,
+   "files": [
+    "irs6744_brokerage_1099DIV_MISC_INT_B.pdf"
+   ]
+  },
+  {
+   "job": 77,
+   "files": [
+    "irs_1098_joe_angela.pdf"
+   ]
+  },
+  {
+   "job": 78,
+   "files": [
+    "irs6744_1099NEC_1099K_garcia.pdf"
+   ]
+  },
+  {
+   "job": 79,
+   "files": [
+    "irs6744_1099R_ssa1099.pdf"
+   ]
+  },
+  {
+   "job": 80,
+   "files": [
+    "irs_1099int_mod12.pdf"
+   ]
+  },
+  {
+   "job": 81,
+   "files": [
+    "irs_w2_2021.pdf"
+   ]
+  },
+  {
+   "job": 82,
+   "files": [
+    "adp_w2_interactive.pdf"
+   ]
+  },
+  {
+   "job": 83,
+   "files": [
+    "adp_w2_interactive.pdf",
+    "irs_w2_2021.pdf"
+   ]
+  },
+  {
+   "job": 84,
+   "files": [
+    "boa_how_to_read.pdf"
+   ]
+  }
+ ]
+}
