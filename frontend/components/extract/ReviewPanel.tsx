@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { inlineConfirmation } from "@/lib/toastConfig";
 import { firstValueOn, pageNav } from "@/lib/reviewPages";
 import { extractApi, reviewApi, type DocumentResult, type PageMeta } from "@/lib/api";
 import {
@@ -61,6 +62,8 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
   const [img, setImg] = useState<string | null>(null);
   const [imgError, setImgError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Run Q, UI2: the confirmation beside the button, not only in a toast
+  const [justMarked, setJustMarked] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   /** "correct" = the typed text replaces the value AND accepts it (one
    *  request); "edit" = a plain edit of a value that owes nothing. */
@@ -224,6 +227,7 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
     setBusy(true);
     try {
       await reviewApi.mark(jobId, doc.doc_id, { scope: "document" });
+      setJustMarked(true);
       toast.success("Document marked reviewed");
       onChanged();
     } catch (e: any) {
@@ -313,6 +317,12 @@ export default function ReviewPanel({ jobId, doc, result, reasons, onClose, onCh
                   disabled={busy || doc.document_reviewed || openAttention.length > 0}>
             {doc.document_reviewed ? "Document reviewed" : "Mark document reviewed"}
           </button>
+          {inlineConfirmation(doc.document_reviewed, justMarked) && (
+            <span role="status" aria-live="polite"
+                  style={{ fontSize: 12, color: "var(--green)", fontWeight: 600 }}>
+              ✓ {inlineConfirmation(doc.document_reviewed, justMarked)}
+            </span>
+          )}
           <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Close">×</button>
         </div>
 
