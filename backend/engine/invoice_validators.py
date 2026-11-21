@@ -191,3 +191,13 @@ def sum_checks(ctx, *, kind, role_of, mismatch, unreadable):
 
 
 register("invoice", invoice_totals)
+
+
+def po_totals(ctx):
+    """Run Q, Q3: a purchase order's lines against its subtotal, and its
+    subtotal + charges + tax - discount against its total - the invoice sums."""
+    return sum_checks(ctx, kind="purchase_order", role_of=role,
+                      mismatch=TOTALS_MISMATCH, unreadable=TOTALS_UNREADABLE)
+
+
+register("purchase_order", po_totals)

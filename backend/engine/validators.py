@@ -93,6 +93,9 @@ FAMILY_ALIASES = {
     "bank_statement": {"bank_statement", "bank_statements", "account_statement"},
     "payslip": {"payslip", "pay_slip", "payslips", "pay_stub", "paystub",
                 "pay_stubs", "salary_slip"},
+    # Run Q, Q3: a purchase order lists lines, a subtotal and a total like an
+    # invoice; it had no family, so its sums were never checked
+    "purchase_order": {"purchase_order", "purchase_orders", "po", "purchase order"},
     "receipt": {"receipt", "receipts", "till_receipt", "expense_receipt",
                 "sales_receipt", "cash_receipt"},
 }
@@ -210,3 +213,4 @@ def _load():
         import balance_sheet_validators  # noqa: F401  (Run C, C8)
         import total_row_validators  # noqa: F401  (Run C, C4)
         import rules  # noqa: F401  (a template's declared rules, Part 3.1)
+        import arithmetic_validators  # noqa: F401  (Run Q, Q3)
