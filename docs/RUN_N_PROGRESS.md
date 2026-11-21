@@ -9,5 +9,5 @@ A restarted session reads this first and skips every item marked [x] or BLOCKED.
 - [x] N4 — A1: an X equidistant (0.5pt) between two checkbox options is never assigned; the answer is kept, Low, flagged 'ambiguous'; marker off
 - [x] N5 — A6: fragment rows merge only when each was quoted from the keyed row's record (same quote, or a quote printing its key); marker off
 - [x] N6 — A4: a lost page past PAGE_RECOVERY_MAX_CALLS is named in a NEEDS-ATTENTION reason (page, table, row count); marker off
-- [ ] N7 — B3: unmatched filled widget and missed prose value are reported
+- [x] N7 — B3: each filled widget in no cell is named with its value (address lines of a captured party excepted); a word value beside an empty slot's whole caption is reported; markers off
 - [ ] N8 — full suite, harness, scoreboard, frontend; KNOWN_FAILING; report

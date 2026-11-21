@@ -427,6 +427,58 @@ def _counts_as_missed(f, label, numbers, lines_of, form_lane, form_entries) -> b
     return False
 
 
+#: Run N, N7: the label of an address line of a form party.
+_ADDRESS_PART = re.compile(r"\b(street|address|city|town|zip|postal|country|apt)\b", re.I)
+#: ... and a slot holding a party's name.
+_PARTY_NAME = re.compile(r"\bname\b", re.I)
+
+
+def prose_beside_label(label, numbers, lines_of, caption_words=()):
+    """Run N, N7 (review B3): (page, text) when an EMPTY slot's whole label is
+    printed with a WORD value right after it on the same line — `Employee
+    Name Alice Rivera` — or None.
+
+    The label's own words (generic ones too: `Name`) and a colon are stepped
+    over; the value is the next one to four words, read until a word that is
+    part of ANY slot's caption (`caption_words`) or ends in a colon (another
+    caption). It must start with a capital letter and carry no digit (a digit
+    is `_counts_as_missed`'s case) — a sentence continuing in lower case
+    (`Employee name must be printed`) is instruction text, not a value."""
+    own = {w for w in re.findall(r"[a-z]+", str(label or "").lower())}
+    stems = _stems(label)
+    if not stems or not own:
+        return None
+    stop = {w for w in caption_words} | own
+    for n in numbers:
+        lines = lines_of.get(n) or []
+        for li, wi in label_lines(lines, label):
+            ws = _words(lines[li])
+            k, hit = wi, set()
+            while k < len(ws):
+                t = re.sub(r"[^a-z]", "", str(ws[k].get("text", "")).lower())
+                if not t or t not in own:
+                    break
+                hit.update(st for st in stems if _word_matches(st, t))
+                k += 1
+            seq = {re.sub(r"[^a-z]", "", str(w.get("text", "")).lower())
+                   for w in ws[wi:k]}
+            if hit < set(stems) or not own <= seq or k >= len(ws):
+                continue          # the WHOLE caption, every word of it
+            if str(ws[k - 1].get("text", "")).endswith(":") is False and \
+                    str(ws[k].get("text", "")).strip() == ":":
+                k += 1
+            val = []
+            for w in ws[k:k + 4]:
+                t = str(w.get("text", "")).strip()
+                low = re.sub(r"[^a-z]", "", t.lower())
+                if not t or re.search(r"\d", t) or low in stop or t.endswith(":"):
+                    break
+                val.append(t)
+            if val and val[0][:1].isupper() and len(" ".join(val)) >= 3:
+                return n, " ".join(val)
+    return None
+
+
 def slot_area_amounts(lines, label) -> list:
     """Amounts that sit where `label`'s value would: the first amount to the
     right of a label word on its own line, else the amount on the NEXT line
@@ -542,6 +594,44 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             f"{len(widget_unplaced)} of {len(widget_all)} filled form field(s) on "
             f"the page are not in any cell (e.g. "
             f"{', '.join(repr(str(v).splitlines()[0][:30]) for _n, v in widget_unplaced[:3])}).")
+    elif widget_unplaced and form_entries:
+        party_named = any(
+            _PARTY_NAME.search(str(f.get("row_label") or ""))
+            and str((extracted_fields or {}).get(f["ref"]) or "").strip()
+            for f in slots.get("fields") or [])
+        # Run N, N7 (review B3): below the batch threshold each filled widget
+        # in no cell is still a value the document holds and the sheet does
+        # not — named, with its value. Blank widgets have no value and are
+        # never here.
+        for n, v in widget_unplaced:
+            first = str(v).splitlines()[0][:60] if str(v).strip() else ""
+            if not first:
+                continue
+            entry = next((e for e in form_entries
+                          if _norm_text(e.get("value")) == _norm_text(v)), None)
+            name = str((entry or {}).get("label") or "").strip()
+            if _ADDRESS_PART.search(name) and party_named:
+                # the address lines of a party whose NAME a slot holds: the
+                # template captures that party and chose not to ask for its
+                # address (irs_1099int_mod3's recipient) — not a lost value
+                continue
+            slot = None
+            if entry is not None:
+                try:
+                    import form_fields as FF
+                    slot = next((f.get("row_label") for f in slots.get("fields") or []
+                                 if FF.match(str(f.get("row_label") or ""),
+                                             form_entries)[0] is entry), None)
+                except Exception:
+                    slot = None
+            reasons.append(
+                f"The filled form field {name!r} on page {n} holds {first!r}, "
+                + (f"which belongs to slot {slot!r} but is not in any cell."
+                   if slot else
+                   "which matches no slot of the template and is not in any cell.")
+                if name else
+                f"A filled form field on page {n} holds {first!r}, which is not "
+                f"in any cell.")
 
     # ── table rows ──
     rows_report = {}
@@ -605,6 +695,8 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
 
     # ── field slots: absent / empty-flagged ──
     fields = slots.get("fields") or []
+    caption_words = {w for f in fields
+                     for w in re.findall(r"[a-z]+", str(f.get("row_label", "")).lower())}
     raw_fields = raw_fields if isinstance(raw_fields, dict) else {}
     empty = [f for f in fields if f["ref"] not in (extracted_fields or {})]
     titles_all = form_titles([ln for n in numbers for ln in (lines_of.get(n) or [])])
@@ -642,6 +734,15 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             why = "the model quoted this label from the page but returned no value"
         elif printed and widgets_missing:
             why = "the label is printed and the form's filled values were not placed"
+        if not why and printed and not form_lane:
+            # Run N, N7: a WORD value printed beside its label, not extracted
+            pb = prose_beside_label(label, numbers, lines_of, caption_words)
+            if pb and not any(_norm_text(pb[1]) in x for x in placed_text):
+                why = (f'"{pb[1]}" is printed beside this label on page {pb[0]} '
+                       f"but is not in any cell")
+                reasons.append(f'"{label}" is printed on page {pb[0]} with '
+                               f'"{pb[1]}" beside it, but that value is not in '
+                               f"any cell.")
         if why:
             flag_slots[f["ref"]] = why
         if printed:

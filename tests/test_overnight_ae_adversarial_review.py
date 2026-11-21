@@ -470,7 +470,6 @@ def test_control_b3_real_fillable_blank_boxes_do_not_create_false_reasons():
     assert len(calls) == 1
 
 
-@B3_WIDGET_GAP
 def test_b3_one_unmatched_filled_widget_is_reported_even_below_the_batch_threshold():
     grid = H.column_grid(["Policy Number"])
     lines = D.words(1, [
@@ -500,7 +499,6 @@ def test_b3_one_unmatched_filled_widget_is_reported_even_below_the_batch_thresho
     assert data["document_state"] != "READY"
 
 
-@B3_TEXT_GAP
 def test_b3_one_missed_text_value_beside_its_label_is_reported():
     grid = H.column_grid(["Employee Name"])
     lines = D.words(1, [
