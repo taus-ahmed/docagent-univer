@@ -431,6 +431,16 @@ def _counts_as_missed(f, label, numbers, lines_of, form_lane, form_entries) -> b
 _ADDRESS_PART = re.compile(r"\b(street|address|city|town|zip|postal|country|apt)\b", re.I)
 #: ... and a slot holding a party's name.
 _PARTY_NAME = re.compile(r"\bname\b", re.I)
+#: Run Q, Q9 (review N7 gap): a widget that describes the FORM, not the
+#: document's business - its revision, version, catalogue/OMB/form number,
+#: page, or a print/reset/submit button. Its value is no lost data, so it
+#: never makes a document NEEDS_ATTENTION. Matched on the widget's own
+#: label only; a business widget ("Client Reference") is still reported.
+_FORM_METADATA = re.compile(
+    r"^\s*(?:pdf\s+|form\s+|doc(?:ument)?\s+)?(?:rev(?:ision)?|version|ver)\b"
+    r"|\b(?:form|omb|cat(?:alog(?:ue)?)?\.?)\s*(?:no\.?|number|id|code)\b"
+    r"|^\s*page(?:\s*(?:no\.?|number))?\s*$"
+    r"|\b(?:print|reset|submit|clear)(?:\s*(?:form|button))?\s*$", re.I)
 
 
 def prose_beside_label(label, numbers, lines_of, caption_words=()):
@@ -610,6 +620,8 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             entry = next((e for e in form_entries
                           if _norm_text(e.get("value")) == _norm_text(v)), None)
             name = str((entry or {}).get("label") or "").strip()
+            if name and _FORM_METADATA.search(name):
+                continue
             if _ADDRESS_PART.search(name) and party_named:
                 # the address lines of a party whose NAME a slot holds: the
                 # template captures that party and chose not to ask for its

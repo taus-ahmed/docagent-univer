@@ -444,7 +444,6 @@ def test_n7_control_extra_address_widget_is_quiet_when_the_party_is_captured():
     assert data["document_state"] == "READY"
 
 
-@N7_METADATA_WIDGET_GAP
 def test_n7_legitimately_unmapped_form_metadata_does_not_create_attention():
     data = _form_with_unmapped_widget("PDF Revision", "Rev C")
 
