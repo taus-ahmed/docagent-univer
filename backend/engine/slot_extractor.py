@@ -2378,9 +2378,19 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # left plainly empty, because the page leaves it blank.
     if all_lines:
         import ownership as OW
-        _rewritten = []
+        _rewritten, _ambiguous = [], []
         _cleared = OW.settle_fields(slots["fields"], extracted_fields, conf_map,
-                                    field_prov, all_lines, notes, _rewritten)
+                                    field_prov, all_lines, notes, _rewritten,
+                                    _ambiguous)
+        # Run N, N4: an X the page leaves between two options — visible, Low.
+        for _ref, _why in _ambiguous:
+            _f = next((x for x in slots["fields"] if x["ref"] == _ref), None)
+            if _f is None:
+                continue
+            conf_map[_ref] = LOW
+            flagged.append(_flag(_f["row_label"], extracted_fields.get(_ref, ""), _why))
+            failed(_ref, CONTENT_CHECK_FAILED)
+            notes.append(f'{_f["row_label"]}: {_why}')
         # A value trimmed to its own box or given back its printed space is
         # graded again from scratch: the flag the longer string earned (more
         # than one piece of information) belonged to the string, not the slot.

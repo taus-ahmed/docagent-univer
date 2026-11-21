@@ -196,9 +196,15 @@ def _segments(line, start_x):
     return out
 
 
+#: Run N, N4: an X whose distance to two options differs by no more than this
+#: (points) sits between them — geometry does not decide.
+TIE_PT = 0.5
+
+
 def checkbox_marks(group, lines):
-    """{slot ref: True|False} for a group of checkbox slots sharing one box,
-    or {} when the page gives no verdict. `group` is [(slot, value)]."""
+    """{slot ref: True|False|None} for a group of checkbox slots sharing one
+    box, or {} when the page gives no verdict. `group` is [(slot, value)].
+    None: an X sits equally between this option and another (Run N, N4)."""
     code = slot_box(group[0][0]["row_label"])
     for ln in lines:
         for c, w in _codes_on(ln):
@@ -221,9 +227,22 @@ def checkbox_marks(group, lines):
             out = {ref: False for ref in spans}
             for m in marks:
                 cx = (_f(m, "x0") + _f(m, "x1")) / 2
-                ref = min(spans, key=lambda r: 0 if spans[r][0] <= cx <= spans[r][1]
-                          else min(abs(cx - spans[r][0]), abs(cx - spans[r][1])))
-                out[ref] = True
+
+                def dist(r):
+                    a, b = spans[r]
+                    return 0.0 if a <= cx <= b else min(abs(cx - a), abs(cx - b))
+                ds = sorted((dist(r), r) for r in spans)
+                # Run N, N4 (review A1): an X no nearer one option than
+                # another (within TIE_PT) has no owner the page can name. It
+                # is never handed to the first option: every tied option gets
+                # None — "the page does not say" — and the caller flags it.
+                tied = [r for d, r in ds if d - ds[0][0] <= TIE_PT]
+                if len(tied) > 1:
+                    for r in tied:
+                        if out.get(r) is not True:
+                            out[r] = None
+                    continue
+                out[ds[0][1]] = True
             return out
     return {}
 
@@ -392,12 +411,17 @@ def printed_spacing(value, label, lines):
     return value
 
 
-def settle_fields(fields, values, conf, provenance, lines, notes, rewritten=None):
+def settle_fields(fields, values, conf, provenance, lines, notes, rewritten=None,
+                  ambiguous=None):
     """Apply rules 0-3 to the field answers in place. Returns the refs cleared;
     refs whose value was rewritten (trimmed to their box, spacing restored) are
-    appended to `rewritten` for the caller to re-grade."""
+    appended to `rewritten` for the caller to re-grade; (ref, reason) for a
+    checkbox the page leaves undecided is appended to `ambiguous` (Run N, N4)
+    for the caller to flag."""
     if rewritten is None:
         rewritten = []
+    if ambiguous is None:
+        ambiguous = []
     if not lines:
         return []
     cleared = []
@@ -459,6 +483,17 @@ def settle_fields(fields, values, conf, provenance, lines, notes, rewritten=None
         verdict = checkbox_marks(vals, lines)
         if not verdict:
             continue
+        tied = [f for f, _v in vals if f["ref"] in verdict and verdict[f["ref"]] is None]
+        if tied:
+            names = " and ".join(repr(f["row_label"]) for f in tied)
+            why = (f"ambiguous: the X on the page sits exactly between {names}, "
+                   f"so the page does not say which box {b} option is checked")
+            for f, v in vals:
+                if f in tied and _is_mark(v):
+                    ambiguous.append((f["ref"], why))
+            if not any(f in tied and _is_mark(v) for f, v in vals):
+                # the answer chose no tied option: still say the page is unclear
+                ambiguous.append((tied[0]["ref"], why))
         for f, v in vals:
             want = verdict.get(f["ref"])
             if want is False and _is_mark(v):

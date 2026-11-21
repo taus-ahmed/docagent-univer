@@ -172,7 +172,6 @@ def test_control_a1_a2_real_w2_keeps_legitimate_repeats_and_box12_rows():
     assert "box 14 has a second entry 52.00 x that has no slot" in H.flag_text(data)
 
 
-@A1_CHECKBOX_GAP
 def test_a1_equidistant_checkbox_x_is_not_silently_moved_to_the_first_option():
     grid = H.column_grid(["Box 13 Alpha", "Box 13 Beta"])
     # The X centre is 41: exactly one point from Alpha's right edge and Beta's
