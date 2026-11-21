@@ -247,15 +247,27 @@ _PLACEHOLDER_VALUE = (
                r"message|street|title|website|fax|logo)\b[\w ,.]*$", re.I),
     re.compile(r"^\s*city\s*,?\s*state\s*,?\s*(?:and\s+)?zip(?:\s*code)?\s*$", re.I),
     re.compile(r"^\s*designation\s*\(if\s+any\)\s*$", re.I),
-    re.compile(r"^[X*#]{3,}(?:[-\s][X*#]{2,})*$", re.I),              # XXXX, XXX-XX-XXXX
     re.compile(r"^\s*(?:_\s*){3,}$"),                                 # _ _ _ _
 )
+#: an identifier that is ALL mask (XXXX, XXX-XX-XXXX) is a placeholder only
+#: on a document that says it is a sample: on a real form it is the masked
+#: value the form holds (irs_1099nec_ellis's Recipient TIN is XXX-XX-XXXX)
+_ALL_MASK = re.compile(r"^[X*#]{3,}(?:[-\s][X*#]{2,})*$", re.I)
+_SAMPLE_DOC = re.compile(r"\b(?:SAMPLE|SPECIMEN|EXAMPLE)\b")
 
 
-def placeholder_value(value) -> bool:
+def sample_document(page_texts) -> bool:
+    """The document calls itself a sample / specimen / example (in capitals,
+    as a stamp or a title prints it)."""
+    return any(_SAMPLE_DOC.search(str(t or "")) for t in page_texts or [])
+
+
+def placeholder_value(value, sample=False) -> bool:
     v = str(value or "").strip()
     if not v:
         return False
+    if sample and _ALL_MASK.match(v):
+        return True
     return any(p.match(v) for p in _PLACEHOLDER_VALUE)
 
 

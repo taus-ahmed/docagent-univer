@@ -2125,6 +2125,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     from validators import family_of as _family_of
     _family = _family_of(default_doc_type)
     _specimen = RD.specimen_document(pages)
+    _sample = _specimen or RD.sample_document(pages)
     refused = []                         # [(slot, value, why)]
     offered = 0                          # non-empty answers the model gave
     answers = parsed.get("fields") or {}
@@ -2143,7 +2144,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # Run Q, Q6: dummy text (XX,XXX.00, 00/00/00, YOUR CITY, <Name>,
             # a printed label used as a value) is not a value. EMPTY, with a
             # note and NO flag: the document shows nothing was filled there.
-            if RD.placeholder_value(value) or RD.printed_label_as_value(value, pages):
+            if RD.placeholder_value(value, _sample) or RD.printed_label_as_value(value, pages):
                 notes.append(f'{slot["row_label"]}: {str(value)[:40]!r} is placeholder '
                              f"text, not a value - left empty")
                 continue
@@ -3115,7 +3116,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     for tname, rows in tables_out.items():
         for r in rows:
             for k in [k for k in r if not str(k).startswith("_")]:
-                if RD.placeholder_value(r.get(k)):
+                if RD.placeholder_value(r.get(k), _sample):
                     notes.append(f"{tname}: {str(r[k])[:40]!r} under {k!r} is "
                                  f"placeholder text, not a value - left empty")
                     r[k] = ""
@@ -3244,6 +3245,22 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     for ref, why in cov["flag_slots"].items():
         flagged.append(_flag(label_of.get(ref, ref), "", f"{EMPTY_FLAGGED}: {why}"))
     attention = list(cov["reasons"])
+    # Run Q, Q5: A BLANK FORM IS DONE, NOT A PROBLEM. Every slot empty, no
+    # row, no completeness reason at all (each is evidence: an amount or a
+    # word beside a label, a filled widget left out, a value-like token after
+    # a printed caption) and no amount anywhere on the page left unplaced. It
+    # finishes READY with one plain note, never NEEDS_ATTENTION.
+    blank_form = (bool(slots["fields"]) and not extracted_fields
+                  and not any(tables_out.values()) and not cov["flag_slots"]
+                  # an amount anywhere on the page, placed nowhere, is a
+                  # figure the form may hold: never call that form blank
+                  and not cov.get("unplaced_amount_count")
+                  and not no_data_text and not page_failed
+                  and not attention
+                  and any(str(p or "").strip() for p in pages))
+    if blank_form:
+        notes.append("This form is blank: every slot is empty and the page "
+                     "prints only its labels.")
     if no_data_text:
         attention.insert(0, no_data_text)
     for n, why in sorted(page_failed.items()):
@@ -3270,7 +3287,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             f"the limit of page recovery requests (PAGE_RECOVERY_MAX_CALLS) was "
             f"reached before page {n}. Its rows are missing.")
     for fl in contract_after:
-        if fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE) and not (
+        if fl["kind"] in (C.MISSING_TABLE, C.EMPTY_TABLE) and not blank_form and not (
                 form_says_empty and cov.get("form_confirms_empty")) and any(
                 x not in unbacked_tables for x in fl["tables"]):
             names = ", ".join(repr(x) for x in fl["tables"] if x not in unbacked_tables)
@@ -3393,6 +3410,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         },
         "validation_notes": notes,
         "needs_review": needs_review,
+        # Run Q, Q5: every slot empty and nothing printed to fill them
+        **({"blank_form": True,
+            "blank_form_note": "This form is blank: every slot is empty and the "
+                               "page prints only its labels."} if blank_form else {}),
         "template_type": "slot",
         "template_regions": {"primary_mode": "slot"},
         # Phase 3 — when the template was inferred rather than chosen, the grid

@@ -319,12 +319,24 @@ class TestInventory:
         assert cov["reasons"] == [] and cov["flag_slots"] == {}   # GL Account: no noise
 
     def test_a_label_quoted_with_no_value_is_empty_flagged(self):
+        # Run Q, Q5: the quote carries a value beside the label. A quote of the
+        # label ALONE is the box shown empty (tests/test_q5_blank_forms.py).
+        slots = {"fields": [{"slot_id": "F1", "ref": "B1", "row_label": "Payer TIN"}],
+                 "tables": []}
+        lines = [_lines(1, ["PAYER'S TIN 10-0000002 RECIPIENT'S TIN"])]
+        cov = SI.coverage(SI.build(lines, [1]), slots, {}, {},
+                          {"F1": {"value": "", "source": "PAYER'S TIN 10-0000002"}}, lines, [1])
+        assert "B1" in cov["flag_slots"]
+
+    def test_a_label_quoted_alone_over_a_blank_box_is_not_flagged(self):
+        # Run Q, Q5 changed this case's expectation (was: flagged "quoted this
+        # label"). The page prints only captions; the quote is the label alone.
         slots = {"fields": [{"slot_id": "F1", "ref": "B1", "row_label": "Payer TIN"}],
                  "tables": []}
         lines = [_lines(1, ["PAYER'S TIN RECIPIENT'S TIN"])]
         cov = SI.coverage(SI.build(lines, [1]), slots, {}, {},
                           {"F1": {"value": "", "source": "PAYER'S TIN"}}, lines, [1])
-        assert "quoted this label" in cov["flag_slots"]["B1"]
+        assert "B1" not in cov["flag_slots"]
 
     def test_unread_scan_pages_are_reasons(self):
         inv = SI.build([_lines(1, ["x 1.00"]), []], [1, 2], origins={1: "native", 2: "ocr"},

@@ -443,6 +443,68 @@ _FORM_METADATA = re.compile(
     r"|\b(?:print|reset|submit|clear)(?:\s*(?:form|button))?\s*$", re.I)
 
 
+def _quote_beyond_label(source, label, caption_words=()) -> bool:
+    """Run Q, Q5: does the model's quote for an EMPTY answer hold anything
+    besides captions? A quote that is only the label - with its colon, a
+    fill-in line, dummy text, a box number or the NEXT box's caption printed
+    on the same line - is the model showing the box is empty. The same blank
+    W-2 gave 21 grey flags alone (job 81) and none in a combined job (83)
+    only because the two answers differed in whether they quoted the labels.
+    Caption words match by prefix, so an abbreviation ("other comp.") is a
+    caption too."""
+    caps = {w for w in re.findall(r"[a-z]+", str(label or "").casefold())} |         {str(w) for w in caption_words}
+    caps = {w for w in caps if len(w) >= 2}
+
+    def is_caption(tok):
+        t = re.sub(r"[^a-z0-9]", "", tok.casefold())
+        if not t or re.fullmatch(r"\d{1,2}[a-z]?|[a-z]", t):
+            return True                       # a box code: 1, 12a, e
+        return t in caps or (len(t) >= 3 and any(c.startswith(t) or t.startswith(c)
+                                                 for c in caps if len(c) >= 3))
+    rest = [w for w in re.findall(r"[A-Za-z0-9$.,/()'-]+", str(source or ""))
+            if re.search(r"[A-Za-z0-9]", w) and not is_caption(w)]
+    left = " ".join(rest).strip()
+    # what is left must look like a VALUE - a figure, or two words - and not
+    # one stray caption word of the form's own ("Last" of "Last name")
+    if not left or _placeholder(left):
+        return False
+    return bool(re.search(r"\d", left)) or len(rest) >= 2
+
+
+def _quoted_line_holds_unplaced_amount(source, numbers, lines_of, placed) -> bool:
+    """Run Q, Q5: the quote is only captions, but on the PAGE LINE it was
+    read from, the first thing after the quote's caption words is an amount
+    no cell holds ("1 Wages, tips, other comp. 23500.00" quoted as "1 Wages,
+    tips, other comp."). That is a missed value, whatever the quote left out:
+    a caption-only quote never calls a box empty when its own line says
+    otherwise. By POSITION, so the figure is never charged to the next box's
+    caption printed later on the same line."""
+    def norm(t):
+        return re.sub(r"[^a-z0-9]", "", str(t or "").casefold())
+    qt = [norm(t) for t in str(source or "").split()]
+    qt = [t for t in qt if t]
+    if len(qt) < 2:
+        return False
+    head = qt[:3]
+    for n in numbers:
+        for ln in lines_of.get(n) or []:
+            ws = _words(ln)
+            toks = [norm(w.get("text", "")) for w in ws]
+            for i in range(len(toks) - len(head) + 1):
+                if toks[i:i + len(head)] != head:
+                    continue
+                k = i + len(head)
+                while k < len(toks) and toks[k] and (toks[k] in qt or any(
+                        len(toks[k]) >= 3 and q.startswith(toks[k]) for q in qt)):
+                    k += 1
+                if k < len(ws):
+                    txt = ws[k].get("text", "")
+                    v = amount_of(txt)
+                    if v is not None and v not in placed and not _placeholder(txt):
+                        return True
+    return False
+
+
 def _placeholder(text) -> bool:
     """Run Q, Q5/Q6: dummy text printed on a sample form (9999.99, XX,XXX.00,
     YOUR CITY, ...) - evidence a box is empty, never a missed value."""
@@ -742,7 +804,10 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
                                       _context(lines[li], _words(lines[li]).index(w))))
         ans = raw_fields.get(f.get("slot_id")) if f.get("slot_id") else None
         quoted = isinstance(ans, dict) and str(ans.get("source") or "").strip() \
-            and not str(ans.get("value") or "").strip()
+            and not str(ans.get("value") or "").strip() \
+            and (_quote_beyond_label(ans.get("source"), label, caption_words)
+                 or _quoted_line_holds_unplaced_amount(ans.get("source"), numbers,
+                                                       lines_of, placed))
         why = None
         if area_vals:
             n, val, ctx = area_vals[0]

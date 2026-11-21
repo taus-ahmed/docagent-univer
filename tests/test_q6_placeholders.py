@@ -81,3 +81,13 @@ def test_a_word_printed_once_as_a_label_and_once_as_a_value_is_kept(tmp_path):
     assert RD.printed_label_as_value("Business Unit", ["Business Unit: 400"])
     assert not RD.placeholder_value("X")                 # a tick
     assert not RD.placeholder_value("XXX-XX-1234")       # a real masked SSN
+
+
+def test_an_all_mask_id_is_a_placeholder_only_on_a_sample():
+    """irs_1099nec_ellis (a real form) holds XXX-XX-XXXX as its Recipient
+    TIN and keeps it; on a document that calls itself a SAMPLE it is dummy."""
+    import real_data as RD
+    assert not RD.placeholder_value("XXX-XX-XXXX")
+    assert RD.placeholder_value("XXX-XX-XXXX", sample=True)
+    assert not RD.placeholder_value("XXX-XX-1234", sample=True)
+    assert RD.sample_document(["SAMPLE FORM 1099-R"]) and not RD.sample_document(["Form 1099-NEC"])

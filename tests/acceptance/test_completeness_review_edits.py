@@ -57,7 +57,10 @@ def test_fillable_widget_values_reach_their_cells_through_the_form_lane(replayed
 @pytest.mark.parametrize(
     "slot,page_text,raw_field,expected_fragment",
     [
-        ("Payer Name", ["Payer Name"], {"value": "", "source": "Payer Name"},
+        # Run Q, Q5: the quote carries a value-like remainder beside the label
+        # ("Payer Name" alone is the box shown EMPTY - see the test below)
+        ("Payer Name", ["Payer Name ACME HOLDINGS"],
+         {"value": "", "source": "Payer Name ACME HOLDINGS"},
          "quoted this label"),
         ("Total Withdrawals", ["Total Withdrawals $10,309.62"],
          {"value": "", "source": ""}, "10,309.62"),
@@ -76,6 +79,21 @@ def test_evidence_behind_an_empty_slot_is_flagged(
     )
     assert expected_fragment in coverage[names.FLAG_SLOTS_FIELD]["B1"]
     assert coverage[names.REASONS_FIELD] or "quoted this label" in expected_fragment
+
+
+def test_a_quote_of_only_the_label_on_a_blank_box_is_not_flagged():
+    """Run Q, Q5: a blank box quoted by its label alone is evidence the box
+    is EMPTY (job 81's blank W-2: 21 grey flags alone, 0 in job 83, the only
+    difference being whether the answer quoted the labels)."""
+    import source_inventory as inventory
+
+    lines = [words(1, ["Payer Name"])]
+    slots = {"fields": [{"slot_id": "F1", "ref": "B1", "row_label": "Payer Name"}],
+             "tables": []}
+    coverage = inventory.coverage(
+        inventory.build(lines, [1]), slots, {}, {},
+        {"F1": {"value": "", "source": "Payer Name"}}, lines, [1])
+    assert "B1" not in coverage[names.FLAG_SLOTS_FIELD]
 
 
 @pytest.mark.parametrize("slot", ["GL Account", "PO Number"])
