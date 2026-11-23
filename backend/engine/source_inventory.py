@@ -46,6 +46,19 @@ def _clean(tok: str) -> str:
     return t
 
 
+def total_figure(tok, label) -> Optional[Decimal]:
+    """Run Q, Q9: `amount_of`, and for a TOTAL or summary label also a
+    whole figure written with thousands commas ("13,060", "(1,300)") - how
+    a financial statement prints its totals. Never a bare integer."""
+    v = amount_of(tok)
+    if v is not None or not _TOTALISH.search(str(label or "")):
+        return v
+    t = _clean(tok)
+    if re.fullmatch(r"\(?\d{1,3}(?:,\d{3})+\)?", t or ""):
+        return Decimal(re.sub(r"[^\d]", "", t))
+    return None
+
+
 def amount_of(tok: str) -> Optional[Decimal]:
     """The value of a currency-like token, or None.
 
@@ -580,8 +593,15 @@ def slot_area_amounts(lines, label) -> list:
         # nothing but the label's own words, `$` or a colon before it. "Payer
         # made direct sales totaling $5,000" is a sentence, not a value.
         right = None
-        for k, w in enumerate(ws[wi + 1:wi + 5]):
-            if amount_of(w["text"]) is not None:
+        # Run Q, Q9: step over the label's OWN words first, so a long caption
+        # ("Total liabilities and owners' equity 13,060") still reaches its
+        # figure; then the same short window as before
+        own = {re.sub(r"[^a-z]", "", t) for t in str(label or "").casefold().split()} - {""}
+        k0 = wi + 1
+        while k0 < len(ws) and re.sub(r"[^a-z]", "", str(ws[k0].get("text", "")).casefold()) in own:
+            k0 += 1
+        for k, w in enumerate(ws[k0:k0 + 4] if k0 > wi + 1 else ws[wi + 1:wi + 5]):
+            if total_figure(w["text"], label) is not None:
                 right = w
                 break
         if right is not None:
@@ -797,9 +817,18 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             lines = lines_of.get(n) or []
             if label_lines(lines, label):
                 printed = True
+            own_lines = {l for l, _w in label_lines(lines, label)}
             for li, w in slot_area_amounts(lines, label):
-                v = amount_of(w["text"])
-                if v is not None and v not in placed and not _placeholder(w["text"]):
+                v = total_figure(w["text"], label)
+                # Run Q, Q9: a TOTAL or summary label's own line printing a
+                # figure is evidence for THIS slot even when an equal figure
+                # sits in another cell - a balance sheet prints "Total
+                # assets 13,060" and "Total liabilities and owners' equity
+                # 13,060" (job 58), and the second stayed empty, silently,
+                # because 13,060 was "placed" already
+                own_total = li in own_lines and _TOTALISH.search(str(label or ""))
+                if v is not None and (v not in placed or own_total) \
+                        and not _placeholder(w["text"]):
                     area_vals.append((n, _clean(w["text"]),
                                       _context(lines[li], _words(lines[li]).index(w))))
         ans = raw_fields.get(f.get("slot_id")) if f.get("slot_id") else None
@@ -969,6 +998,9 @@ def stacked_entries(lines, label, value) -> list:
 
 
 _TOTAL_WORD = re.compile(r"\b(?:sub-?total|totals?|sum)\b", re.I)
+#: Run Q, Q9: a label in a total or summary position
+_TOTALISH = re.compile(r"\b(?:sub-?total|totals?|net\s+(?:pay|income|loss|benefits)"
+                       r"|grand|balance|year[-\s]?to[-\s]?date|ytd|average)\b", re.I)
 _RUNNING = re.compile(r"\bbalance\b", re.I)
 
 
