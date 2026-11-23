@@ -670,6 +670,13 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
         for k, n in enumerate(nums):
             lines = page_lines[k] if k < len(page_lines) else []
             cand = (inventory["pages"].get(n) or {}).get(f"{kind}_rows", 0)
+            # Run Q, Q2: a line of k side-by-side groups is k printed records
+            import column_groups as CG
+            grouped = sum(len(g["records"]) for g in CG.find_groups(lines)
+                          if not CG.is_balance_block(g))
+            if grouped > cand:
+                cand = grouped
+                inventory["pages"].setdefault(n, {})[f"{kind}_rows"] = cand
             here = SI.page_has_band(lines, t)
             if cand >= 2 and (here or prev) and got.get(n, 0) * 2 < cand:
                 want.setdefault(k, []).append(t)
@@ -694,7 +701,8 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
             f"\n\nRECOVERY REQUEST. Your previous answer left out the rows printed "
             f"on page {n} of {len(nums)}. This is page {n} sent on its own. "
             f"Return every row printed on THIS page; a heading row reprinted at "
-            f"the top of the page is not a row.")
+            f"the top of the page is not a row."
+            + CG.prompt_hint([page_lines[k]] if k < len(page_lines) else []))
         img = [page_images[k]] if k < len(page_images) and page_images[k] else []
         exp = {t["name"]: (inventory["pages"].get(n) or {}).get(
             f"{SI.band_kind(t)}_rows", 0) for t in want[k]}
@@ -1867,6 +1875,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     extra += AL.prompt_block(wording)
     extra += cheque_bottom_line_hint(default_doc_type, slots, page_origins, file_type)
     extra += column_copy_hint(slots)
+    # Run Q, Q2: a table printed in side-by-side column groups is named in
+    # the prompt (empty, so the prompt is unchanged, when no page has one)
+    import column_groups as CG
+    if slots["tables"] and page_lines:
+        extra += CG.prompt_hint(page_lines)
     prompt = build_prompt(slots, pages, default_doc_type, extra)
 
     # ── SOURCE INVENTORY + RESPONSE CONTRACT (Run A, A2/A3) ──
@@ -3142,6 +3155,55 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         for rows in tables_out.values():
             for r in rows:
                 r["_confidence"] = origin_floor(r["_confidence"])
+
+    # Run Q, Q2: side-by-side column groups. (a) A DAILY BALANCE block's
+    # lines are running balances, not transactions: left out of a
+    # transaction table with a note. (b) A grouped record no row carries is
+    # named in a flag with the page's own count. (c) A row read from below a
+    # DIFFERENT printed account number is flagged, never filed silently.
+    import column_groups as CG
+    if page_lines and tables_out:
+        _tx = {t["name"] for t in slots["tables"] if re.search(
+            r"withdraw|debit|deposit|credit|description|check", " ".join(
+                str(h) for h in table_headers(t)), re.I)}
+        _missing, _bal = CG.reconcile(page_lines, tables_out, _tx)
+        for tname, hit in _bal.items():
+            ids = {id(r) for r in hit}
+            tables_out[tname] = [r for r in tables_out[tname] if id(r) not in ids]
+            notes.append(f"{tname}: left out {len(hit)} daily-balance line(s) - a "
+                         f"DAILY BALANCE SUMMARY is a running balance per date, "
+                         f"not a transaction")
+        _tgt = next((t["name"] for t in slots["tables"] if t["name"] in _tx),
+                    next(iter(tables_out), None))
+        for pi, heading, k, total, lost in _missing:
+            n = nums[pi] if pi < len(nums) else pi + 1
+            flagged.append(_flag(
+                f"{_tgt}[side-by-side]", "; ".join(lost)[:200],
+                f"page {n} prints {total} records in {k} side-by-side column "
+                f"groups ({heading!r}); {len(lost)} of them are not in the "
+                f"sheet: {'; '.join(lost)[:160]}"))
+        _other = CG.other_account_lines(page_lines)
+        if _other:
+            _at = {}
+            for (pi, li), acct in _other.items():
+                _at.setdefault(pi, []).append((_flat(_line_str(page_lines[pi][li])), acct))
+            for tname, rows in tables_out.items():
+                for r in rows:
+                    src = _flat(r.get("_source"))
+                    if not src:
+                        continue
+                    pg = r.get("_page")
+                    pis = [i for i, nn in enumerate(nums) if nn == pg] or list(_at)
+                    acct = next((a for pi in pis for l, a in _at.get(pi, [])
+                                 if src in l or (l and l in src)), None)
+                    if acct:
+                        r["_confidence"] = "low"
+                        shown = " | ".join(f"{k}={v}" for k, v in r.items()
+                                           if not str(k).startswith("_") and str(v).strip())
+                        flagged.append(_flag(
+                            f"{tname}[other account]", shown[:200],
+                            f"read from the section of account {acct}, not this "
+                            f"statement's account - check it belongs in this table"))
 
     # Run Q, Q6: a table cell holding placeholder text is emptied too - the
     # same rule as a field, with a note and no flag.
