@@ -1786,11 +1786,31 @@ def column_bands(lines, headers):
     if not want:
         return {}
     best, best_hits = {}, 0
+    # Run Q, Q4: a heading of several words ("INV DATE", "CHECK #") is matched
+    # as a run of consecutive words first; its words are then not matched
+    # again as one-word headings
+    multi = sorted((h for h in headers if len(str(h or "").split()) > 1 and _flat(h)),
+                   key=lambda h: -len(str(h).split()))
     for ln in lines:
-        hits = {}
-        for w in ln:
+        hits, used = {}, set()
+        for h in multi:
+            n = len(str(h).split())
+            for i in range(len(ln) - n + 1):
+                if used & set(range(i, i + n)):
+                    continue
+                if "".join(_flat(w["text"]) for w in ln[i:i + n]) == _flat(h).replace(" ", ""):
+                    hits.setdefault(h, (float(ln[i]["x0"]), float(ln[i + n - 1]["x1"])))
+                    used |= set(range(i, i + n))
+                    break
+        for i, w in enumerate(ln):
             key = _flat(w["text"])
-            if key in want:
+            if i not in used and key in want:
+                hits.setdefault(want[key], (float(w["x0"]), float(w["x1"])))
+        # a one-word heading printed only inside a longer one (`Unit` in
+        # `UNIT PRICE`) still gets that word, as it did before
+        for i, w in enumerate(ln):
+            key = _flat(w["text"])
+            if i in used and key in want:
                 hits.setdefault(want[key], (float(w["x0"]), float(w["x1"])))
         # a heading line for a multi-column band names at least two of them
         if len(hits) > best_hits and len(hits) >= 2:
@@ -1930,6 +1950,13 @@ def check_placement(row, columns, line, bands):
         if fits:
             cursor = alt[0]
             continue
+        # Run Q, Q4 (job 72): a heading narrower than its values - `P.O.`
+        # at 95-112 over values at 125-158. A value lying wholly between the
+        # neighbouring columns' headings is under its own column, even when
+        # it sits closer to the next heading. Every heading the line prints bounds
+        # it, so a value reaching into the next column still fails.
+        if _between_neighbours(span, band, bands):
+            continue
         near = _nearest(span, bands)
         why = (f"value sits under the {near!r} column, not {col.get('header')!r}"
                if near and near != col.get("header")
@@ -1958,6 +1985,21 @@ def _inside_another_cell(value, key, row, keys) -> bool:
         if len(other) > len(v) and pat.search(other):
             return True
     return False
+
+
+def _between_neighbours(span, band, bands):
+    for b in bands.values():
+        if b == band:
+            continue
+        if abs(span[1] - b[1]) <= COLUMN_TOL or (span[0] < b[1] and b[0] < span[1]):
+            return False          # it sits under (or flush with) another column
+    left = [b for b in bands.values() if b[1] <= band[0]]
+    right = [b for b in bands.values() if b[0] >= band[1]]
+    lo = max((b[1] for b in left), default=None)
+    hi = min((b[0] for b in right), default=None)
+    if lo is None or hi is None:
+        return False
+    return span[0] > lo + COLUMN_TOL and span[1] < hi - COLUMN_TOL
 
 
 def _nearest(span, bands):
@@ -2000,3 +2042,22 @@ def widget_census(path):
             except Exception:
                 continue
     return total, filled
+
+
+def outlined_pages(file_path, min_glyphs=300):
+    """Run Q, Q4: file pages (1-based) that draw their text as OUTLINES -
+    glyph-sized vector paths (2-14 pt square), at least `min_glyphs` of them
+    and more than the page has text characters. Measured over the 253 pages
+    of the local corpus: the ADP W-2 reads 1.58 paths per character, the
+    next page 0.46, every other page under 0.07."""
+    out = set()
+    try:
+        import pdfplumber
+        with pdfplumber.open(str(file_path)) as pdf:
+            for n, p in enumerate(pdf.pages, 1):
+                g = sum(1 for c in p.curves if 2 <= c["height"] <= 14 and c["width"] <= 14)
+                if g >= min_glyphs and g > len(p.chars):
+                    out.add(n)
+    except Exception:
+        return set()
+    return out

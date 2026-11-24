@@ -126,6 +126,10 @@ REASONS: dict[str, tuple[str, str]] = {
     "receipt_unreadable": (
         "Receipt totals could not be checked",
         "A value the receipt check needs is not a plain amount."),
+    "outlined_text": (
+        "Text drawn as outlines, please verify",
+        "This page draws its text as vector outlines, so there is no text "
+        "layer to check the value against. Compare it with the page."),
     "thin_text_layer": (
         "Page text may be incomplete",
         "An image covers this page and its text layer could not be compared "

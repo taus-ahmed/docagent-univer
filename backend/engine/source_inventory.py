@@ -826,7 +826,9 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
                 # assets 13,060" and "Total liabilities and owners' equity
                 # 13,060" (job 58), and the second stayed empty, silently,
                 # because 13,060 was "placed" already
-                own_total = li in own_lines and _TOTALISH.search(str(label or ""))
+                # ...and the line itself prints the total word: "Purchases
+                # $2,146.88" is not the line of "Total Purchases Listed"
+                own_total = li in own_lines and _TOTALISH.search(str(label or ""))                     and _TOTALISH.search(" ".join(str(w.get("text", "")) for w in lines[li]))
                 if v is not None and (v not in placed or own_total) \
                         and not _placeholder(w["text"]):
                     area_vals.append((n, _clean(w["text"]),

@@ -49,6 +49,7 @@ from log_safety import doc_ref
 from micr import field_role, find_micr_line, parse_micr
 from validators import FAIL, UNREADABLE, CheckContext, run_checks
 from total_row_validators import split_duplicate_totals
+from text_layer import outlined_pages
 from text_layer import (canonical_value, check_placement, column_bands,
                         set_column_anchors,
                         find_line, flatten_pages, line_page, matches_loosely,
@@ -1075,6 +1076,15 @@ def in_line_order(text, page_texts, page=None, max_lines=8) -> bool:
     return False
 
 
+def _spaced_match(bare, text):
+    """The printed run (with its own spaces) whose characters, spaces
+    removed, are `bare` - or None."""
+    pat = (r"(?<![0-9a-z])" + r"\s*".join(re.escape(ch) for ch in bare)
+           + r"(?![0-9a-z])")
+    m = re.search(pat, _flat(text))
+    return m.group(0) if m else None
+
+
 def verify_span(value, source, page, page_texts, record=""):
     """(grounded, reason). An empty answer needs no grounding.
 
@@ -1101,7 +1111,16 @@ def verify_span(value, source, page, page_texts, record=""):
     ordered = ([haystacks[pi]] if 0 <= pi < len(haystacks) else []) + haystacks
     if not any(src in h for h in ordered if h) and not in_line_order(
             source, page_texts, page):
-        return False, "source span not found in document"
+        # Run Q, Q4 (job 57): a quote that dropped the PRINTED spaces
+        # ("Purch.Doc.22356099" for "Purch. Doc. 22356099") is the same run
+        # of characters. Matched with every space removed on both sides, and
+        # only for a quote of 8+ characters, so a short fragment cannot hit
+        # by accident.
+        bare = src.replace(" ", "")
+        m = next((m for m in (_spaced_match(bare, t) for t in page_texts) if m), None)             if len(bare) >= 8 else None
+        if not m:
+            return False, "source span not found in document"
+        source = m
 
     # the value must sit inside the span it claims to come from — or, failing
     # that, inside the record that span belongs to.
@@ -1457,6 +1476,7 @@ PLACEMENT_FAILED = "placement_failed"          # under another column, or across
 CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / prose in a scalar
 POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one cheque?
 THIN_TEXT_LAYER = "thin_text_layer"            # Gate 2c: image-covered page, OCR could not check it
+OUTLINED_TEXT = "outlined_text"                # Run Q, Q4: the page draws its text as outlines
 #: Run A, A4.2 — the prefix of a flag on an EMPTY slot the page shows a value
 #: for (an unplaced amount beside its label, a form's filled values not
 #: placed, a label the model quoted with no value). The flag is what turns the
@@ -1930,7 +1950,11 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             from text_layer import widget_census
             n_w, n_filled = widget_census(file_path)
             if n_w >= 10 and n_filled == 0 and not inventory["totals"].get("amounts") \
-                    and not inventory["totals"].get("dated_rows"):
+                    and not inventory["totals"].get("dated_rows") \
+                    and not outlined_pages(file_path):
+                # Run Q, Q4: a page DRAWING its text as outlines (the ADP
+                # W-2, job 82) prints its values where the text layer cannot
+                # see them - never "blank" on the text layer's word alone
                 blank_widgets = n_w
         except Exception as e:                       # a shortcut, never fatal
             _log("SLOT", f"widget census unreadable: {type(e).__name__}")
@@ -2764,6 +2788,17 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 if line_no is not None and all_lines:
                     nxt = next((i for i in later if i > line_no), None)
                     record = record_span(all_lines, line_no, nxt)
+                    # Run Q, Q4 (job 72): a group line printed ABOVE the row
+                    # ("300055 ANDERSON DULANEY" over its invoice lines)
+                    # belongs to the record too - up to 3 lines back, on the
+                    # same page, and never reaching a line another row was
+                    # read from, so it cannot borrow a neighbour's value.
+                    prv = max((i for i in later if i < line_no), default=-1)
+                    pg0 = line_page(all_lines[line_no])
+                    above = [i for i in range(max(prv + 1, line_no - 3), line_no)
+                             if line_page(all_lines[i]) == pg0]
+                    if above:
+                        record = record_span(all_lines, above[0], above[-1] + 1) + chr(10) + record
                 if duplicate:
                     # VISIBLY. A dropped row appeared only in validation_notes:
                     # not flagged, not in needs_review, not in the confidence
@@ -3278,6 +3313,36 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         no_data_text = ("No data found: the document holds no filled values for "
                         "this template — every answer offered was refused ("
                         + "; ".join(kinds) + "), so nothing was extracted.")
+
+    # Run Q, Q4 (job 82, ADP W-2): a page that DRAWS its text as outlines
+    # (glyph-sized vector paths, more of them than text characters) has no
+    # text layer under its values, so a span not found there was never
+    # checked - it is UNVERIFIED with its own reason, not Low. Only a value
+    # whose sole failure is grounding moves; any other failed check stands.
+    _outl = outlined_pages(file_path) if str(file_path).lower().endswith(".pdf") else set()
+    if _outl:
+        _lab = {f["ref"]: f["row_label"] for f in slots["fields"]}
+        moved = 0
+        for ref, lv in list(conf_map.items()):
+            pg = (field_prov.get(ref) or {}).get("page")
+            if lv == LOW and field_fail.get(ref) == [GROUNDING_FAILED] and pg in _outl:
+                conf_map[ref] = UNVERIFIED
+                field_fail[ref] = [OUTLINED_TEXT]
+                moved += 1
+                for f in flagged:
+                    if isinstance(f, dict) and f.get("ref") == _lab.get(ref):
+                        f["reason"] = ("this page draws its text as outlines, so there "
+                                       "is no text layer to check the value against - "
+                                       "compare it with the page")
+        for k, (r, why) in enumerate(row_fail):
+            if r.get("_confidence") == LOW and list(why) == [GROUNDING_FAILED]                     and r.get("_page") in _outl:
+                r["_confidence"] = UNVERIFIED
+                row_fail[k] = (r, [OUTLINED_TEXT])
+                moved += 1
+        if moved:
+            notes.append(f"page {', '.join(map(str, sorted(_outl)))}: text drawn as "
+                         f"outlines - {moved} value(s) could not be checked against a "
+                         f"text layer and are unverified, not low")
 
     # PER-VALUE ORIGIN AND REVIEW (Gate 2). On EVERY value, native or not, so
     # a reader never has to guess what an absent key means. The only reasons

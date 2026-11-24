@@ -22,7 +22,7 @@ amount; nothing runs when an operand is missing.
 from __future__ import annotations
 
 import re
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from validators import ANY, FAIL, PASS, CheckResult, register
 
@@ -113,7 +113,12 @@ def line_product(ctx):
             vq, vu, va = (_money(r.get(k)) for k in (q, u, a))
             if None in (vq, vu, va) or vq == 0:
                 continue
-            want = (vq * vu).quantize(CENT)
+            if not all(v.is_finite() for v in (vq, vu, va)):
+                continue
+            try:
+                want = (vq * vu).quantize(CENT)
+            except InvalidOperation:
+                continue        # a product no cent can express is not a line item
             if abs(want - va) <= CENT:
                 continue
             ref = f'{t["name"]}_rows[{i}]'
