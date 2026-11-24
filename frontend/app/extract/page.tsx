@@ -605,6 +605,7 @@ export default function ExtractPage() {
 
   function reset() {
     setPending([]); setResults([]); setActiveJobId(null);
+    setSelectedTemplate(null); setTemplateSearch("");
     prevStatus.current = ""; setIsExtracting(false);
   }
 
@@ -717,8 +718,74 @@ export default function ExtractPage() {
           <h1 className="page-title">Extract</h1>
           <p className="page-sub">Select a template · upload documents · extract</p>
         </div>
-        {hasResults && (
-          <button className="btn btn-secondary btn-sm" onClick={reset}>New extraction</button>
+        {/* Run Q Phase 3, UI1: the top action bar. New extraction sits beside
+            the downloads, where the finished job is read, and opens a fresh
+            extract page; the finished job is never re-run or altered.
+            N1: download available for ANY completed job, with or without a
+            template (no-template jobs export via the flat-table writer). */}
+        {(hasResults || (isDone && !isFailed && activeJobId)) && (
+          <div className="export-row" style={{ justifyContent: "flex-end", marginTop: 0 }}>
+            <NewExtractionButton onNew={reset}/>
+            {isDone && !isFailed && activeJobId && (
+              <>
+                  <button className="btn btn-primary btn-sm" onClick={async () => {
+                    if (!(await confirmExport(activeJobId))) return;
+                    try {
+                      const blob = await exportApi.templateExport(activeJobId, false);
+                      exportApi.downloadBlob(blob, `job_${activeJobId}_results.xlsx`);
+                      toast.success("Downloaded");
+                    } catch { toast.error("Export failed"); }
+                  }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download Excel
+                  </button>
+                  {files.length > 1 && (
+                    <button className="btn btn-secondary btn-sm" onClick={async () => {
+                      if (!(await confirmExport(activeJobId))) return;
+                      try {
+                        const blob = await exportApi.zipExport(activeJobId, false);
+                        exportApi.downloadBlob(blob, `job_${activeJobId}_documents.zip`);
+                        toast.success("Downloaded");
+                      } catch { toast.error("Export failed"); }
+                    }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                        <line x1="8" y1="11" x2="16" y2="11"/>
+                      </svg>
+                      Download ZIP
+                    </button>
+                  )}
+                  {/* Run Q, UI3: the clean file is the default download; the
+                      audit version (Source and Review status columns) is a
+                      secondary choice, never a checkbox that silently changes
+                      what the primary button does */}
+                  <button className="btn btn-secondary btn-sm"
+                    title="The same workbook with the Source and Review status columns"
+                    onClick={async () => {
+                      if (!(await confirmExport(activeJobId))) return;
+                      try {
+                        const blob = await exportApi.templateExport(activeJobId, true);
+                        exportApi.downloadBlob(blob, `job_${activeJobId}_results_audit.xlsx`);
+                        toast.success("Downloaded");
+                      } catch { toast.error("Export failed"); }
+                    }}>
+                    Download with audit columns
+                  </button>
+                  {jobModels(results) && (
+                    <span style={{ fontSize: 11, color: "var(--text3)" }}
+                          title="The model that produced these values, as the API named it">
+                      Extracted by {jobModels(results)}
+                    </span>
+                  )}
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -996,76 +1063,6 @@ export default function ExtractPage() {
                 <p style={{ fontSize: 11, color: isPartial ? "var(--amber)" : "var(--red)", marginTop: 8 }}>
                   {jobErrorText(jobStatus.error_message, isDemo)}
                 </p>
-              )}
-              {/* N1: download available for ANY completed job — with or without a template
-                  (no-template jobs export via the backend's flat-table writer) */}
-              {isDone && !isFailed && activeJobId && (
-                <div className="export-row">
-                  <button className="btn btn-primary btn-sm" onClick={async () => {
-                    if (!(await confirmExport(activeJobId))) return;
-                    try {
-                      const blob = await exportApi.templateExport(activeJobId, false);
-                      exportApi.downloadBlob(blob, `job_${activeJobId}_results.xlsx`);
-                      toast.success("Downloaded");
-                    } catch { toast.error("Export failed"); }
-                  }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    Download Excel
-                  </button>
-                  {files.length > 1 && (
-                    <button className="btn btn-secondary btn-sm" onClick={async () => {
-                      if (!(await confirmExport(activeJobId))) return;
-                      try {
-                        const blob = await exportApi.zipExport(activeJobId, false);
-                        exportApi.downloadBlob(blob, `job_${activeJobId}_documents.zip`);
-                        toast.success("Downloaded");
-                      } catch { toast.error("Export failed"); }
-                    }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                        <line x1="8" y1="11" x2="16" y2="11"/>
-                      </svg>
-                      Download ZIP
-                    </button>
-                  )}
-                  <NewExtractionButton jobId={activeJobId} templates={templates}
-                    onStarted={(newId) => {
-                      // the finished job is left exactly as it is (History keeps it);
-                      // this page follows the new one
-                      prevStatus.current = "";
-                      setResults([]);
-                      setIsExtracting(true);
-                      setActiveJobId(newId);
-                    }}/>
-                  {/* Run Q, UI3: the clean file is the default download; the
-                      audit version (Source and Review status columns) is a
-                      secondary choice, never a checkbox that silently changes
-                      what the primary button does */}
-                  <button className="btn btn-secondary btn-sm"
-                    title="The same workbook with the Source and Review status columns"
-                    onClick={async () => {
-                      if (!(await confirmExport(activeJobId))) return;
-                      try {
-                        const blob = await exportApi.templateExport(activeJobId, true);
-                        exportApi.downloadBlob(blob, `job_${activeJobId}_results_audit.xlsx`);
-                        toast.success("Downloaded");
-                      } catch { toast.error("Export failed"); }
-                    }}>
-                    Download with audit columns
-                  </button>
-                  {jobModels(results) && (
-                    <span style={{ fontSize: 11, color: "var(--text3)" }}
-                          title="The model that produced these values, as the API named it">
-                      Extracted by {jobModels(results)}
-                    </span>
-                  )}
-                </div>
               )}
             </div>
           )}

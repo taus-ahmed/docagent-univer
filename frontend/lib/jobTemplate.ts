@@ -20,8 +20,3 @@ export function templateOfJob<T extends HasId>(job: HasSchemaId | null | undefin
   if (!Number.isFinite(n)) return null;
   return templates.find(t => t.id === n) ?? null;
 }
-
-/** The body of a re-run request: a template id, or null for "no template". */
-export function rerunBody(templateId: number | null): { template_id: number | null } {
-  return { template_id: templateId ?? null };
-}

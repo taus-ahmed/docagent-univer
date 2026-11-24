@@ -25,8 +25,9 @@ test("the model name and the failure reason are shown on the results page", () =
   assert.match(page, /jobErrorText\(jobStatus\.error_message/);
 });
 
-test("Download, ZIP, audit and New extraction share one export row", () => {
+test("Download, ZIP, audit and New extraction share one export row, at the top", () => {
   const row = page.indexOf('className="export-row"');
+  assert.ok(row < page.indexOf('className="ex-layout"'), "the export row is the top action bar");
   const end = page.indexOf("</div>", page.indexOf("Extracted by", row));
   const block = page.slice(row, end);
   for (const t of ["Download Excel", "Download ZIP", "NewExtractionButton", "Download with audit columns"])

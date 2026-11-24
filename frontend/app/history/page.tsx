@@ -317,10 +317,6 @@ export default function HistoryPage() {
   const selectedJob    = jobs.find(j => j.id === selectedJobId);
   const user = useAuthStore(s => s.user);
   const qc = useQueryClient();
-  // Run Q, UI1: the templates a New extraction may use
-  const { data: allTemplates = [] } = useQuery<ColumnTemplate[]>({
-    queryKey: ["templates"], queryFn: () => templatesApi.list(),
-  });
   const running = (s?: string) => s === "pending" || s === "processing";
 
   const handleDelete = async (jobId: number) => {
@@ -610,11 +606,7 @@ export default function HistoryPage() {
                           Download ZIP
                         </button>
                       )}
-                      <NewExtractionButton jobId={selectedJob.id} templates={allTemplates}
-                        onStarted={(newId) => {
-                          qc.invalidateQueries({ queryKey: ["jobs"] });
-                          setSelectedJobId(newId);
-                        }}/>
+                      <NewExtractionButton/>
                     </>
                   )}
                   {selectedJob.status === "partial" && (
