@@ -1,4 +1,7 @@
-PHASE 1 DONE
+PHASE 2 DONE
+
+Phase 2 (replay of real answers, jobs 40-84): see docs/RUN_Q_PHASE2_FINDINGS.md. Fixed causes 1, 2, 4 (f40e025, 0f5e7cf, 5e78732); replay Low 1062 -> 422.
+
 
 # Run Q progress — fix/review-fixes
 

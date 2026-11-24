@@ -119,4 +119,44 @@ than cause 4, but it is the OCR reader's quality (Q8: psm 6 reads 312 words
 of the same page against psm 3's 106, and still misses the table). Changing
 the reader is outside this phase's scope, which allows no other items.
 
-(Results are recorded below.)
+## Results
+
+| cause | commit | change |
+|---|---|---|
+| 1 long identifier read as a phone | f40e025 | `_PHONE` needs a non-digit on each side. `Robert Chen 8005445555` in a name cell still fails (tested). |
+| 2 repeated value / unbanded neighbour | 0f5e7cf | `check_placement` gives a value's later copies the between-neighbours test. `column_bands` also keeps the heading line's printed words, and `_between_neighbours` uses them **only for a side that has no banded neighbour at all**. A value really under its neighbour still fails (tested). |
+| 4 a value read from a picture on a native page | 5e78732 | `text_layer.image_only_pages`: a native page whose image covers at least 0.2 of it with at most 2 text-layer words inside. A value there whose **only** failure is grounding becomes `unverified` with reason `image_only` ("Read from a picture on the page, please verify"). Any other failed check stands: job 66's payslip arithmetic still makes its 3 values Low. It shares one helper with the Q4 outlined-text rule. That helper now moves a row's columns to `_unchecked` instead of `_ungrounded`, because every reader paints an `_ungrounded` cell Low. Job 82/83's outlined rows had stayed red for that reason. |
+
+Every test was written first and failed before its fix
+(`tests/test_q_phase2_fixes.py`): unit tests use the real values and
+coordinates, and the `_real` tests replay the stored answer.
+
+### The same replay before and after the three fixes
+
+| job | low | amber | grey |
+|---|---|---|---|
+| 66 | 97→3 | 0→94 | 0→0 |
+| 72 | 193→37 | 0→0 | 0→0 |
+| 73 | 390→12 | 0→0 | 1→1 |
+| 82 | 6→0 | 13→19 | 0→0 |
+| 83 | 6→0 | 13→19 | 4→4 |
+| **all 42 replayed jobs** | **1062→422** | **248→354** | **81→81** |
+
+No other job changed. Amber went up because cause 4's and the outlined
+rows' cells now say "not checked, please verify" instead of "failed".
+
+### Still open, by count (after)
+
+1. OCR reading too thin on a scan (jobs 60, 71): 182 Low. This is Q8.
+2. Partly outlined page (virtus, jobs 59 and 64): 65 Low.
+3. Fidelity: a background panel read as a redaction bar (72 cells), plus a
+   two-column summary flagged for placement (37).
+4. Job 72 still has 37 grounding Lows (not traced in this phase).
+
+### Final checks
+
+| check | result |
+|---|---|
+| backend suite (once) | 5426 passed, 19 xfailed, 0 failed. The run started before the last part of 5e78732 (`_unchecked`) was written, so that part is covered by its own tests: `test_q_phase2_fixes.py` + `test_q4_false_low.py`, 27 passed |
+| harness templated / no-template | 98.7% / 98.2%, structure 17/17 both, invented 0, misfiled 0, defect rate 0.0%. Unchanged |
+| scoreboard (`tools/score_runs.py local_docs/job_records`) | scores the frozen staging job records, so the code does not move it: approve-only 1/4, purchase order 6/6 correct |
