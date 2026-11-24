@@ -1814,8 +1814,20 @@ def column_bands(lines, headers):
                 hits.setdefault(want[key], (float(w["x0"]), float(w["x1"])))
         # a heading line for a multi-column band names at least two of them
         if len(hits) > best_hits and len(hits) >= 2:
-            best, best_hits = hits, len(hits)
-    return best
+            best, best_hits, best_line = hits, len(hits), ln
+    if not best:
+        return best
+    out = Bands(best)
+    # Run Q Phase 2 (job 72): every word the heading line prints, so a column
+    # whose neighbour heading is not a template column is still bounded by it.
+    out.printed = [(float(w["x0"]), float(w["x1"])) for w in best_line]
+    return out
+
+
+class Bands(dict):
+    """{header: (x0, x1)}, plus `printed`: the (x0, x1) of every word on the
+    document's heading line the bands were read from."""
+    printed = ()
 
 
 def locate(value, line, after_x=None):
@@ -1946,6 +1958,12 @@ def check_placement(row, columns, line, bands):
             if abs(alt[1] - band[1]) <= COLUMN_TOL or (alt[0] < band[1] and band[0] < alt[1]):
                 fits = True
                 break
+            # Run Q Phase 2 (jobs 72, 73): a later copy lying between its
+            # neighbours' headings is under its own column (the Q4 rule), as
+            # the first copy would be - `0.00` printed under three columns.
+            if _between_neighbours(alt, band, bands):
+                fits = True
+                break
             alt = locate(value, line, after_x=alt[1] + 0.5)
         if fits:
             cursor = alt[0]
@@ -1997,6 +2015,15 @@ def _between_neighbours(span, band, bands):
     right = [b for b in bands.values() if b[0] >= band[1]]
     lo = max((b[1] for b in left), default=None)
     hi = min((b[0] for b in right), default=None)
+    # Run Q Phase 2 (job 72): a side with no banded neighbour is bounded by
+    # the nearest word the heading line itself prints there (`INVOICE`, when
+    # the template calls that column 'Invoice Number'). Only a missing bound
+    # is filled, so this can only add a pass where there was no bound at all.
+    printed = getattr(bands, "printed", ()) or ()
+    if lo is None:
+        lo = max((x1 for _x0, x1 in printed if x1 <= band[0]), default=None)
+    if hi is None:
+        hi = min((x0 for x0, _x1 in printed if x0 >= band[1]), default=None)
     if lo is None or hi is None:
         return False
     return span[0] > lo + COLUMN_TOL and span[1] < hi - COLUMN_TOL
