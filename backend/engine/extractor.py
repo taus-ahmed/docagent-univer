@@ -378,6 +378,19 @@ _SLOT_DOC_TYPES = None
 
 def run_extraction(orchestrator, file_path, template_data, selected_pages=None,
                    batch_schemas=None):
+    """The extraction (`_run_extraction`), then Run Q Phase 3 (Q11): whether
+    the TEMPLATE fits the document is said on every result - a form the
+    document prints that the template does not cover is named in a visible
+    note, and a template of a type the page does not read as raises "This
+    does not look like a <type>". Both only say; no value is changed."""
+    results = _run_extraction(orchestrator, file_path, template_data,
+                              selected_pages=selected_pages, batch_schemas=batch_schemas)
+    import template_fit
+    return template_fit.apply(results, file_path, template_data)
+
+
+def _run_extraction(orchestrator, file_path, template_data, selected_pages=None,
+                    batch_schemas=None):
     """
     Single entry point. Returns list[DocumentExtractionResult].
 
