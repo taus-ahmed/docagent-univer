@@ -767,7 +767,10 @@ def output_cap(slots, expected_rows) -> int:
 # ══════════════════════════════════════════════════════════════════════════════
 
 _EMAIL = re.compile(r"[^\s@]+@[^\s@]+\.[A-Za-z]{2,}")
-_PHONE = re.compile(r"\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}")
+# Run Q Phase 2 (jobs 72, 73): bounded by non-digits. Unbounded, every run of
+# 10+ digits "contained" a phone - batch 702000000803, invoice 08632520260515 -
+# and ~322 cells of two real jobs were Low as "more than one piece".
+_PHONE = re.compile(r"(?<!\d)\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}(?!\d)")
 
 
 def _single_datum(value, label):
