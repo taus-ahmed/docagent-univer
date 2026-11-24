@@ -130,6 +130,11 @@ REASONS: dict[str, tuple[str, str]] = {
         "Text drawn as outlines, please verify",
         "This page draws its text as vector outlines, so there is no text "
         "layer to check the value against. Compare it with the page."),
+    "row_mismatch": (
+        "Does not match the printed record",
+        "This row disagrees with the record printed in the same position: a "
+        "value where the page prints nothing, a printed value left empty, or a "
+        "check box answered differently from the box on the page."),
     "image_only": (
         "Read from a picture on the page, please verify",
         "This value was read from a picture printed on the page. The picture "

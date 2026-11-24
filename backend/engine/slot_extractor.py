@@ -1509,6 +1509,7 @@ POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one c
 THIN_TEXT_LAYER = "thin_text_layer"            # Gate 2c: image-covered page, OCR could not check it
 OUTLINED_TEXT = "outlined_text"                # Run Q, Q4: the page draws its text as outlines
 IMAGE_ONLY = "image_only"                      # Run Q Phase 2: read from a picture with no text layer
+ROW_MISMATCH = "row_mismatch"                  # Run Q Phase 3 (Q7): a row disagrees with its printed record
 #: Run A, A4.2 — the prefix of a flag on an EMPTY slot the page shows a value
 #: for (an unplaced amount beside its label, a form's filled values not
 #: placed, a label the model quoted with no value). The flag is what turns the
@@ -3364,6 +3365,35 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # whose sole failure is grounding moves; any other failed check stands.
     _is_pdf = str(file_path).lower().endswith(".pdf")
     _outl = outlined_pages(file_path) if _is_pdf else set()
+    # Run Q Phase 3 (Q7, virtus 1099-B): a table drawn as outlines on a page
+    # that ALSO has a text layer. Nothing can ground its values, so each row
+    # is compared with the page's geometry instead - the printed record in
+    # the same position, its check boxes, and where it prints anything at
+    # all (outline_check). A row that disagrees is Low (`row_mismatch`),
+    # never moved to "not checked"; a row that agrees joins the outlined
+    # rule below. No records, or a row count that differs: no verdict.
+    if _is_pdf:
+        import outline_check as _OC
+        _ol = _OC.outline_pages(file_path)
+        for _t in slots["tables"] if _ol else ():
+            _name, _keys = _t["name"], table_headers(_t)
+            _rows = tables_out.get(_name) or []
+            for _pg in sorted(_ol):
+                _here = [r for r in _rows if isinstance(r, dict) and r.get("_page") == _pg]
+                _verdict = _OC.check_rows(file_path, _pg, _keys, _here)
+                for _r, _probs in zip(_here, _verdict or ()):
+                    if not _probs:
+                        continue
+                    _r["_confidence"] = LOW
+                    _i = _rows.index(_r)
+                    for _k, _why in _probs:
+                        flagged.append(_flag(f"{_name}[{_i}].{_k}", _r.get(_k, ""), _why))
+                    _k2 = next((k for k, (rr, _w) in enumerate(row_fail) if rr is _r), None)
+                    if _k2 is None:
+                        row_fail.append((_r, [ROW_MISMATCH]))
+                    else:
+                        row_fail[_k2] = (_r, list(row_fail[_k2][1]) + [ROW_MISMATCH])
+        _outl = _outl | _ol
     # Run Q Phase 2 (job 66, OU check stub): a NATIVE page printing a picture
     # that has no text layer over it - the stub is an image on a page of
     # explanatory text. A value not found in the text layer was read off the
@@ -3392,8 +3422,17 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                                       field_prov, flagged, row_fail)
                 if not _moved:
                     continue
+                _moved_refs = {f"{_t['name']}[{_i}]."
+                               for _t in slots["tables"]
+                               for _i, _r in enumerate(tables_out.get(_t["name"]) or [])
+                               if isinstance(_r, dict) and _r.get("_page") == _pg
+                               and _r.get("_confidence") == UNVERIFIED
+                               and "_unchecked" in _r}
                 flagged[:] = [f for f in flagged
-                              if not (isinstance(f, dict) and f.get("reason") == _say)]
+                              if not (isinstance(f, dict) and (
+                                  f.get("reason") == _say
+                                  or (str(f.get("ref", "")).startswith(tuple(_moved_refs))
+                                      and "could not be grounded" in str(f.get("reason"))))) ]
                 _item = (f"verify this page against the image - page {_pg} draws "
                          f"its text as outlines, so there is no text layer to check "
                          f"its {_moved} value(s) against")
