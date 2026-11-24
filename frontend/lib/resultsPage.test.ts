@@ -33,3 +33,26 @@ test("Download, ZIP, audit and New extraction share one export row, at the top",
   for (const t of ["Download Excel", "Download ZIP", "NewExtractionButton", "Download with audit columns"])
     assert.ok(block.includes(t), t);
 });
+
+// Run Q Phase 3, UI3 (docs/UI_BACKLOG.md, results page)
+test("the job's status is said in plain words, as History says it", () => {
+  assert.match(page, /import \{[^}]*plainStatus[^}]*\} from "@\/lib\/jobModel"/);
+  assert.match(page, /plainStatus\(jobStatus/);
+});
+
+test("Download ZIP follows the job's documents, not the emptied upload list", () => {
+  assert.doesNotMatch(page, /\{files\.length > 1 && \(\s*<button[^>]*>\s*[^]*?Download ZIP/);
+  assert.match(page, /jobDocCount > 1/);
+});
+
+test("a shown job replaces the template picker with the template it used", () => {
+  const picker = page.indexOf("{/* Template picker */}");
+  assert.ok(picker > 0);
+  assert.match(page.slice(picker, picker + 400), /!activeJobId \?/);
+  assert.match(page, /Template used/);
+});
+
+test("the empty state previews the job's template, not the picker's, once a job is open", () => {
+  assert.match(page, /const previewTemplate = activeJobId \? jobTemplate : selectedTemplate/);
+  assert.match(page, /<TemplatePreview template=\{previewTemplate\} \/>/);
+});

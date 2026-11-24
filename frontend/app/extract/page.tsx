@@ -8,7 +8,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
 import NewExtractionButton from "@/components/extract/NewExtractionButton";
 import { templateOfJob } from "@/lib/jobTemplate";
-import { jobModels } from "@/lib/jobModel";
+import { jobModels, plainStatus } from "@/lib/jobModel";
 import { confirmExport } from "@/lib/confirm-export";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
@@ -628,6 +628,12 @@ export default function ExtractPage() {
   // Run Q, UI1: the results are shown with the template the JOB ran with.
   // The picker chooses the template for the NEXT extraction only.
   const jobTemplate = templateOfJob(jobStatus, templates);
+  // Run Q Phase 3, UI3: the empty state previews the template of the job on
+  // screen; the picker's choice is only for the NEXT extraction.
+  const previewTemplate = activeJobId ? jobTemplate : selectedTemplate;
+  // the job's own document count: `files` is the upload list, emptied after
+  // upload and empty for a job reopened from History
+  const jobDocCount = Math.max(jobStatus?.total_docs ?? 0, results.length, files.length);
 
   const filteredTemplates = templateSearch.trim()
     ? templates.filter(t =>
@@ -743,7 +749,7 @@ export default function ExtractPage() {
                     </svg>
                     Download Excel
                   </button>
-                  {files.length > 1 && (
+                  {jobDocCount > 1 && (
                     <button className="btn btn-secondary btn-sm" onClick={async () => {
                       if (!(await confirmExport(activeJobId))) return;
                       try {
@@ -794,6 +800,7 @@ export default function ExtractPage() {
         <div className="ex-left">
 
           {/* Template picker */}
+          {!activeJobId ? (
           <div className="card" style={{ padding: 14 }}>
             <div className="tpl-picker-header">
               <span className="label">Template</span>
@@ -859,6 +866,19 @@ export default function ExtractPage() {
               </div>
             )}
           </div>
+          ) : (
+            // Run Q Phase 3, UI3: a job on screen was extracted with ITS
+            // template; the picker would only suggest it can be changed here.
+            <div className="card" style={{ padding: 14 }}>
+              <span className="label" style={{ display: "block", marginBottom: 6 }}>Template used</span>
+              <div style={{ fontSize: 13, color: "var(--text1)", fontWeight: 500 }}>
+                {jobTemplate ? jobTemplate.name : (jobStatus?.schema_id ? "A template no longer in your list" : "No template - the layout was inferred from the document")}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>
+                To use another template, start a New extraction.
+              </div>
+            </div>
+          )}
 
           {/* Additional options — always visible, not dependent on template */}
           {!hasResults && (
@@ -1023,7 +1043,7 @@ export default function ExtractPage() {
                 <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text1)" }}>
                   {isRunning ? "Extracting…"
                     : isPartial ? `${jobStatus?.failed} of ${jobStatus?.total_docs} documents failed`
-                    : isDone ? "Extraction complete"
+                    : isDone ? `Extraction complete · ${plainStatus(jobStatus ?? {})}`
                     : isCancelled ? "Extraction cancelled"
                     : "Extraction failed"}
                 </span>
@@ -1150,7 +1170,7 @@ export default function ExtractPage() {
                     </button>
                   </div>
                 </div>
-              ) : selectedTemplate ? (
+              ) : previewTemplate ? (
                 /* Template selected — show preview */
                 <div style={{ padding: 28 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 14, paddingBottom: 20, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
@@ -1158,15 +1178,15 @@ export default function ExtractPage() {
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                     </div>
                     <div>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text1)", marginBottom: 3 }}>{selectedTemplate.name}</p>
-                      <p style={{ fontSize: 12, color: "var(--text3)" }}>{selectedTemplate.document_type} · {selectedTemplate.columns.length} columns</p>
-                      {(selectedTemplate as any).description && <span style={{ fontSize: 10, color: "var(--green)" }}>Layout saved</span>}
+                      <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text1)", marginBottom: 3 }}>{previewTemplate.name}</p>
+                      <p style={{ fontSize: 12, color: "var(--text3)" }}>{previewTemplate.document_type} · {previewTemplate.columns.length} columns</p>
+                      {(previewTemplate as any).description && <span style={{ fontSize: 10, color: "var(--green)" }}>Layout saved</span>}
                     </div>
                   </div>
 
                   <div style={{ marginBottom: selectedOptions.length ? 20 : 12 }}>
                     <p style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text3)", marginBottom: 8 }}>Template layout</p>
-                    <TemplatePreview template={selectedTemplate} />
+                    <TemplatePreview template={previewTemplate} />
                   </div>
 
                   {selectedOptions.length > 0 && (

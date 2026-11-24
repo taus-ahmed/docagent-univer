@@ -5,18 +5,11 @@ along the way and left alone on purpose.
 
 ## Results page (`app/extract/page.tsx`)
 
-- The template picker stays on the left panel after a result is shown. Since
-  UI1 it no longer changes the shown results, but a reader may still think it
-  does. Consider collapsing it into the "New extraction" flow once a job has
-  finished.
-- "Download ZIP" is offered only when `files.length > 1`. `files` is the
-  pending upload list, which is emptied after upload, so a job reopened from
-  History (`/extract?job=…`) never offers it. History does offer it.
+- Done in Run Q Phase 3 (UI3): the template picker is replaced by "Template
+  used" while a job is open; Download ZIP follows the job's own document
+  count (a job reopened from History offers it); the empty state previews the
+  job's template; the status line uses `plainStatus`.
 - The ZIP export has no audit variant. UI3 made it always clean.
-- A finished job opened from History shows the picker's template preview in
-  the empty state, not the job's own template.
-- Status words on this page ("completed", "partial") are still raw. History
-  uses `plainStatus` since UI3; the extract page could do the same.
 
 ## History (`app/history/page.tsx`)
 
