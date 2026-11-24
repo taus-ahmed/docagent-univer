@@ -160,3 +160,123 @@ rows' cells now say "not checked, please verify" instead of "failed".
 | backend suite (once) | 5426 passed, 19 xfailed, 0 failed. The run started before the last part of 5e78732 (`_unchecked`) was written, so that part is covered by its own tests: `test_q_phase2_fixes.py` + `test_q4_false_low.py`, 27 passed |
 | harness templated / no-template | 98.7% / 98.2%, structure 17/17 both, invented 0, misfiled 0, defect rate 0.0%. Unchanged |
 | scoreboard (`tools/score_runs.py local_docs/job_records`) | scores the frozen staging job records, so the code does not move it: approve-only 1/4, purchase order 6/6 correct |
+
+# Phase 3
+
+Same rules as Run Q: one commit per item, tests first, no live model call, no
+key, `.env` never read. Every engine fix was measured on the replay of the
+stored real answers (jobs 40-84) with the answer key of item 8.
+
+## The answer key (item 8, `tools/replay_key.py`, 8106306)
+
+Built first, so each fix could be measured. Ground truth is only what a
+PERSON did, read from `local_docs/raw/<job>/docs/*.json`:
+
+* a value edited in review (`confidence: edited`, a row's `_edited` cells);
+* every value a person left standing in a document they marked reviewed
+  (`review.document_reviewed`, 20 documents);
+* `local_docs/answers_extra.csv` (13 values read off the documents by hand),
+  matched the way `tools/score_runs.py` matches them.
+
+24 documents, 1,055 keyed values (was 13). `replay_key.py --save/--compare`
+reports right / wrong / missing / extra per document.
+
+**Read it with care.** "Reviewed" means a person accepted the document, not
+that every value is right: job 64 (virtus 1099-B) was accepted with rows the
+page contradicts (item 3). 229 of the 233 missing are carson_bank rows read
+by page-recovery calls whose answers were never stored. Replay cannot
+produce them, and they count as missing in every run alike.
+
+## Before and after each fix
+
+`low` / `page_check` count the review status of every value in all 42
+replayed jobs (`app.core.review.document_values`). That is not the
+workbook-cell count of the Phase 2 table above.
+
+| item | commit | answer key right / wrong / missing / extra | replay |
+|---|---|---|---|
+| baseline (60eff8e) | | 819 / 3 / 233 / 0 | |
+| 2 Q8 OCR quality | 535be92 | 819 / 3 / 233 / 0 | low 413, page_check 38: jobs 82/83 one page item each, 38 cells amber -> page_check |
+| 3 Q7 rows vs records | 02284e9 | 819 / 3 / 233 / 0 | 16 row_mismatch flags, all job 64 |
+| 4 Q11 template fit | 1478c54 | 819 / 3 / 233 / 0 | low 397. Ignored forms named in jobs 53, 54, 76, 78; "does not look like a Purchase Order" in job 59 only |
+| 5 Q10 spacing/money | bc7b903 | 819 / 3 / 233 / 0 | glued words 0 (jobs 56, 78); money stored as text 9 -> 0 (job 58) |
+| 6 Q4 (e)-(g) | e0ba07e | 819 / 3 / 233 / **1** | low 397 -> 381; same-value clears 9 -> 5 |
+
+The key's values never moved because items 2-6 change flags and levels,
+not the values the model gave. The one new "extra" is tcnj's "Total
+liabilities and owners' equity" = $13,060, which the engine used to clear
+as a copy of "Total assets". The page prints both totals as 13,060 (the
+document's own attention text says so), so the kept value is right and
+the key's empty slot was the old engine's clear.
+
+The 3 wrong: job 44 Recipient Address (street plus city line, where the key
+has the street alone); job 50 mcguire Employee Name (`Kim` where the
+accepted value is `Kim McGuire`, so the replay truncates); job 56 carson
+Bank Name, which a person edited to `Carson Bank Of So and so` (the replay
+has `Carson Bank`). The Memo a person corrected to `13.17` on job 56 matches.
+
+## What each item did
+
+1. **UI1 rework** (60eff8e). New extraction sits in the top action bar
+   beside Download Excel. It opens the same fresh page as the top-right
+   button: no files, no result, template picker reset. The inline template
+   choice and the re-run call are gone from the frontend (`extractApi.rerun`
+   removed). The backend route `POST /api/jobs/{id}/rerun` still exists, and
+   no UI calls it.
+2. **Q8 / cause 3** (535be92).
+   (a) A money or number slot whose figure holds letters or symbols among its
+   digits is Low, flagged with the OCR-confusable reading (`1O,5S0.00`:
+   reading `10,550.00`). It is never rewritten. It fires on no stored answer.
+   (b) An embedded OCR layer was already grounded against. That is now pinned
+   on the real utah_paystub_2.
+   (c) An outlined page (ADP W-2) raises ONE "verify this page against the
+   image" item. Its values keep level `unverified`, read as `page_check`
+   (no fill, a note), with no per-cell flag. The OCR seam was not changed:
+   Tesseract reads that outlined text as noise.
+3. **Q7** (02284e9). `engine/outline_check.py`: virtus 1099-B draws its
+   records as outlines, and OCR reads them as noise even at 600 dpi. So rows
+   are checked against the page's geometry:
+   - the records (rows of check boxes, marked or not; checkbox columns by x);
+   - where each record prints anything, aligned to the template's columns by
+     their heading words.
+
+   A value where the record prints nothing is Low (`row_mismatch`), named as
+   computed when it equals arithmetic of the row. So is a printed value left
+   empty, or a box answered differently. The stored answer gets 16 such
+   flags; a correct answer gets none (tested).
+4. **Q11** (1478c54). `engine/template_fit.py`:
+   - forms the document prints that the template does not cover are named in
+     a visible note and flag;
+   - a template whose type the page does not read as gets one attention
+     item: "This does not look like a Purchase Order".
+5. **Q10** (bc7b903). Started from `wip/run-q-q10` (ab52506), merged and
+   finished, with real replay tests added.
+6. **Q4 (e)-(g)** (e0ba07e). (e) a form box's value printed below its label;
+   (f) a lone `$` at a money box's edge is not a gutter; (g) an OCR date
+   missing a separator. Found on the way: the same-value rule then cleared a
+   W-2's boxes 1 and 3 ($28,000, also box 5's). A figure printed once per
+   slot, each slot quoting its own text, is no longer cleared. Job 79 box 4
+   (a quote interleaving two boxes' labels) stays Low as a strict xfail.
+7. **UI3** (276843b). While a job is open, "Template used" replaces the
+   picker. The empty state previews the job's template. Download ZIP follows
+   the job's document count. The status line uses plain words.
+
+## Still open
+
+- Q8: a scan's thin OCR reading (jobs 60, 71). The reader was not changed.
+- Q7: rows drawn as outlines are only checked where each record carries
+  check boxes; a plain outlined table gets no verdict.
+- Q4: job 79 box 4 (strict xfail); job 62 utah_paystub_2's interleaved
+  two-column fields (Position/Title, Employee Address).
+- The no-template harness RAW reads 59.4% where CLAUDE.md records 70.1%
+  (Run A). Phase 2's end commit (f74b86d) reads the same 59.4%, so Phase 3
+  did not move it. The cause was not traced.
+
+## Final checks (once)
+
+| check | result |
+|---|---|
+| backend suite (once, at 276843b) | 5481 passed, 3 failed, 20 xfailed. The 3 (test_cheque_cross_check) were one regression from item 2: "Amount in Words" read `00/100` as a symbol inside a figure. Fixed in 162452f (an amount written in words is not a figure); the cheque and Q8 files re-run, 32 passed. The full suite was not run a second time |
+| harness templated / no-template | 98.7% / 98.2%, structure 17/17 both, invented 0, misfiled 0. Unchanged. RAW 48.0% / 59.4% |
+| frontend | tests 97 pass, type-check clean, build clean (UI3); UI1 the same at its commit |
+| scoreboard (`tools/score_runs.py local_docs/job_records`) | frozen staging records, unchanged: approve-only 1/4, purchase order 6/6 |
