@@ -470,6 +470,12 @@ def _walk(flat, target, cross_gutters, gutter):
             gutter_here = False
             if lo is not None and li == prev_line and prev_x1 is not None:
                 gutter_here = (x0 - prev_x1) > gutter
+                # Run Q Phase 3, Q4 (f): a money box prints `$` at its left
+                # edge and the amount at its right ("$ 21,000"). The gap after
+                # a LONE currency symbol is the box's width, not a gutter.
+                if gutter_here and taken and re.fullmatch(r"[$€£¥]", str(taken[-1]["text"]).strip()) \
+                        and re.match(r"[\d(]", str(w["text"])):
+                    gutter_here = False
                 if gutter_here and not cross_gutters:
                     continue
             acc += re.sub(r"\s+", "", str(w["text"])).casefold()

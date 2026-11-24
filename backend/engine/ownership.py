@@ -292,6 +292,25 @@ def witnessed(label, value, source, lines) -> bool:
     return any(w in near for w in words)
 
 
+def _printed_figure_count(value, lines) -> int:
+    """How many times the page prints `value` as a whole word, when it is a
+    figure (digits, with money notation); 0 for anything else."""
+    v = re.sub(r"[\s$€£,]", "", str(value or ""))
+    if not re.fullmatch(r"\(?-?\d+(?:\.\d+)?\)?", v):
+        return 0
+    return sum(1 for ln in lines or [] for w in ln
+               if re.sub(r"[\s$€£,]", "", str(w.get("text", ""))) == v)
+
+
+def _names_label(label, row_text) -> bool:
+    """Run Q Phase 3, Q4 (e): the line a re-anchored quote named (a form
+    box's label line above its value) prints a word of the slot's label."""
+    if not row_text:
+        return False
+    near = _letters(str(row_text))
+    return any(w in near for w in _label_words(label))
+
+
 def _in_quote(value, source) -> bool:
     k = _key(value)
     if k.startswith("#"):
@@ -320,15 +339,30 @@ def unwitnessed_duplicates(fields, values, provenance, lines):
     by_val = {}
     for f in fields:
         v = values.get(f["ref"])
-        if not str(v or "").strip() or _is_mark(v)                 or (provenance.get(f["ref"]) or {}).get("machine_read"):
+        if not str(v or "").strip() or _is_mark(v)                 or (provenance.get(f["ref"]) or {}).get("machine_read") \
+                or (provenance.get(f["ref"]) or {}).get("ocr_separators"):
+            # Run Q Phase 3, Q4 (g): grounded on an OCR line printing it
+            # differently (`0831/2018`) - not the other slot's printed copy
             continue
         by_val.setdefault(_key(v), []).append(f)
     out = []
     for group in by_val.values():
         if len(group) < 2:
             continue
+        if _printed_figure_count(values[group[0]["ref"]], lines) >= len(group):
+            # Run Q Phase 3: a FIGURE the page prints at least once per slot
+            # claiming it (a W-2's $28,000 in boxes 1, 3 and 5), each slot
+            # quoting its OWN printed line, is each slot's own copy - not one
+            # value two slots fight over. Two slots quoting one line still are.
+            own = [re.sub(r"\s+", " ", str((provenance.get(f["ref"]) or {}).get("source")
+                                           or "")).strip().casefold() for f in group]
+            if all(_in_quote(values[f["ref"]], s) for f, s in zip(group, own)) \
+                    and len(set(own)) == len(group):
+                continue
         wit = {f["ref"]: witnessed(f["row_label"], values[f["ref"]],
                                    (provenance.get(f["ref"]) or {}).get("source"), lines)
+                         or _names_label(f["row_label"],
+                                         (provenance.get(f["ref"]) or {}).get("quoted_row"))
                for f in group}
         keepers = [f for f in group if wit[f["ref"]]]
         if not keepers:

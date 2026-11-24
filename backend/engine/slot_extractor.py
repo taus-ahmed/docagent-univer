@@ -1309,6 +1309,73 @@ def _words_of(text) -> list:
     return [w for w in re.split(r"[^0-9a-z]+", str(text or "").casefold()) if w]
 
 
+def _box_below(i, value, rest, all_lines, reach=5, slack=20.0):
+    """Lines up to `reach` below line `i`, on its page, whose first word of
+    `value` starts within the x-span of line i's label words (± `slack`)."""
+    lab = [w for w in all_lines[i] if set(_words_of(w.get("text"))) & set(rest)]
+    vw = _words_of(value)
+    if not lab or not vw:
+        return []
+    # the value's longest printed token, separators dropped ("1,000" -> 1000)
+    key = max(("".join(_words_of(t)) for t in str(value).split()), key=len)
+    if not key:
+        return []
+    x0 = min(float(w["x0"]) for w in lab)
+    x1 = max(float(w["x1"]) for w in lab)
+    # the box ends where the label's line prints its next word (the next
+    # box's label): a money box right-aligns its amount well past the label
+    right = min((float(w["x0"]) for w in all_lines[i]
+                 if float(w["x0"]) > x1 and w not in lab), default=float("inf"))
+    hi = max(x1 + slack, right)
+    # a FORM BOX: its label's line prints no figure inside the box (a table
+    # row prints its own amount beside its label: "Opening Balance 100.00")
+    if any(re.search(r"\d", str(w.get("text"))) and w not in lab
+           and x1 <= float(w["x0"]) < hi for w in all_lines[i]):
+        return []
+    allowed = set(vw)
+    out = []
+    for j in range(i + 1, min(i + 1 + reach, len(all_lines))):
+        ln = all_lines[j]
+        if not ln or line_page(ln) != line_page(all_lines[i]):
+            break
+        in_box = [w for w in ln if x0 - slack <= float(w["x0"]) < hi]
+        if not in_box:
+            continue          # a line printing only in other columns
+        hit = next((w for w in sorted(in_box, key=lambda w: float(w["x0"]))
+                    if key in "".join(_words_of(w.get("text")))), None)
+        if hit is not None:
+            # the box prints the value with nothing of its own before it - not
+            # a row with its own label ("Closing Balance 170.00"); what lies to
+            # its right is the next column
+            if all(set(_words_of(w.get("text"))) <= allowed for w in in_box
+                   if float(w["x0"]) < float(hit["x0"])):
+                out.append(j)
+            break
+        if _BOX_LABEL.match(" ".join(str(w.get("text")) for w in in_box)):
+            break             # the next box's own label: this box has ended
+    return out
+
+
+#: a form box's own label: its number, then words ("2 Payer made", "4 Federal")
+_BOX_LABEL = re.compile(r"^\d{1,2}[a-z]?\s+[A-Za-z]")
+
+
+_DATE_SHAPE = re.compile(r"^\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}$")
+
+
+def ocr_separator_match(value, line_text):
+    """Run Q Phase 3, Q4 (g): a DATE value whose digits equal a token of a
+    machine-read line, differing only in separators (the OCR layer of job 62
+    reads `0831/2018` for 08/31/2018). Dates only: `1,000` and `10.00` share
+    their digits and are different amounts."""
+    v = str(value or "").strip()
+    if not _DATE_SHAPE.match(v):
+        return False
+    digits = re.sub(r"\D", "", v)
+    return any(re.sub(r"\D", "", t) == digits and re.search(r"\d", t)
+               for t in re.findall(r"[\d/.\-]{6,}", str(line_text or "")))
+
+
 def quote_row_lines(value, source, all_lines):
     """Run N, N2 (review B1): the lines the QUOTE's own words identify, or
     None when the quote names no row.
@@ -1329,7 +1396,13 @@ def quote_row_lines(value, source, all_lines):
     rows = [i for i, ln in enumerate(all_lines) if ln
             and set(rest) <= set(_words_of(_line_str(ln)))]
     if rows:
-        return rows
+        # Run Q Phase 3, Q4 (e): a FORM BOX prints its label on one line and
+        # its value on the line below, inside the label's box ("PAYER'S name"
+        # / "Livewell Inc.", job 79). The quote joins the two, so the line it
+        # names does not print the value; the line directly below does, at
+        # the label's own x. A value under another box's label is not one.
+        return sorted(set(rows) | {j for i in rows
+                                   for j in _box_below(i, value, rest, all_lines)})
     # Run Q, Q4 (review N2 gap): the ROW LABEL itself may wrap - "Opening" /
     # "Balance 100.00". Up to three consecutive lines name the row when
     # together they hold every word and EACH holds at least one of them, so
@@ -2431,6 +2504,12 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         field_prov[slot["ref"]].update(
                             source=source, reanchored=True,
                             page=page_of(source, 0, all_lines, page_lines, pick))
+                        if rows is not None and pick not in rows[:1]:
+                            # Run Q Phase 3, Q4 (e): the row the QUOTE named
+                            # (a form box's label line), kept as the witness
+                            # that the value belongs to this slot
+                            field_prov[slot["ref"]]["quoted_row"] = " ".join(
+                                _line_str(all_lines[r]) for r in rows if r != pick)[:300]
             if not ok and all_lines and why == "source span not found in document" \
                     and (in_line_order(value, pages, page) or canonical_value(value, all_lines)):
                 # B1 (overnight): the QUOTE is not on the page but the VALUE is,
@@ -2464,6 +2543,18 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                             reanchored=True,
                             page=page_of(_line_str(all_lines[below]), 0, all_lines,
                                          page_lines, below))
+            if not ok and all_lines and any(
+                    o in ("ocr", "pre_ocr") for o in (page_origins or {}).values()):
+                # Run Q Phase 3, Q4 (g): a machine-read layer that dropped a
+                # date's separator (`0831/2018`). Grounded against that line;
+                # the page's own floor keeps the value unverified.
+                _hit = next((i for i, ln in enumerate(all_lines) if ln
+                             and (page_origins or {}).get(line_page(ln)) in ("ocr", "pre_ocr")
+                             and ocr_separator_match(value, _line_str(ln))), None)
+                if _hit is not None:
+                    ok, why = True, ""
+                    field_prov[slot["ref"]].update(source=_line_str(all_lines[_hit]),
+                                                   ocr_separators=True)
             if not ok and all_lines and address_parts_printed(value, all_lines):
                 # Run F review, E12: a complete address the model put in a
                 # different order — every comma part a whole printed line of
