@@ -2071,6 +2071,45 @@ def widget_census(path):
     return total, filled
 
 
+def image_only_pages(file_path, min_cover=0.2, max_words=2):
+    """Run Q Phase 2: file pages (1-based) printing a PICTURE with no text
+    layer over it - one image covering at least `min_cover` of the page with
+    at most `max_words` text-layer words centred inside it. Measured over the
+    local corpus: the OU check stub's stub image (0.40 of page 1, 0 of the
+    page's 131 words inside) and the receipt images embedded in digital
+    pages; a scan's own page image under its OCR layer (utah_paystub_1: 190
+    words inside) is not one. Pages with no text layer at all are OCR pages
+    and are the caller's to exclude by origin."""
+    out = set()
+    try:
+        import pdfplumber
+        with pdfplumber.open(str(file_path)) as pdf:
+            for n, p in enumerate(pdf.pages, 1):
+                if not p.images:
+                    continue
+                area = float(p.width * p.height) or 1.0
+                words = None
+                for im in p.images:
+                    x0, t = max(0.0, float(im["x0"])), max(0.0, float(im["top"]))
+                    x1 = min(float(p.width), float(im["x1"]))
+                    b = min(float(p.height), float(im["bottom"]))
+                    if max(0.0, x1 - x0) * max(0.0, b - t) / area < min_cover:
+                        continue
+                    if words is None:
+                        words = p.extract_words()
+                    if not words:
+                        break
+                    inside = sum(1 for w in words
+                                 if x0 <= (w["x0"] + w["x1"]) / 2 <= x1
+                                 and t <= (w["top"] + w["bottom"]) / 2 <= b)
+                    if inside <= max_words:
+                        out.add(n)
+                        break
+    except Exception:
+        return set()
+    return out
+
+
 def outlined_pages(file_path, min_glyphs=300):
     """Run Q, Q4: file pages (1-based) that draw their text as OUTLINES -
     glyph-sized vector paths (2-14 pt square), at least `min_glyphs` of them

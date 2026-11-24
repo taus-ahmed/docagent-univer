@@ -174,7 +174,7 @@ whose `review_required` is True is shown as needing review whatever its level.
 
 Column keys hold values; underscore keys are metadata:
 `_confidence` (level), `_source` (str), `_page` (int or null),
-`_ungrounded` ([column key], optional), `_origin`, `_review_required` (bool),
+`_ungrounded` ([column key], optional; read as Low), `_unchecked` ([column key], optional: on a page with no text layer under its values, outlines or a picture, the columns that could not be checked; the row is `unverified`), `_origin`, `_review_required` (bool),
 `_review_reasons` ([code]). A family validator that addresses a row (invoice
 totals: `totals_*`; bank running balance: `balance_*`; payslip deductions:
 `payslip_*`) sets `_confidence` and

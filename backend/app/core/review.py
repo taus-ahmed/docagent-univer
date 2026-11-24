@@ -130,6 +130,10 @@ REASONS: dict[str, tuple[str, str]] = {
         "Text drawn as outlines, please verify",
         "This page draws its text as vector outlines, so there is no text "
         "layer to check the value against. Compare it with the page."),
+    "image_only": (
+        "Read from a picture on the page, please verify",
+        "This value was read from a picture printed on the page. The picture "
+        "has no text layer to check the value against. Compare it with the page."),
     "thin_text_layer": (
         "Page text may be incomplete",
         "An image covers this page and its text layer could not be compared "

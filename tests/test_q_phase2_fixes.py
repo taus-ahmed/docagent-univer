@@ -123,3 +123,56 @@ class TestRepeatedValuePlacement:
         bad = [r for r in _reasons(rep)
                if ("'P.O.'" in r[2] and job == 72) or ("not 'Fees'" in r[2] and job == 73)]
         assert bad == []
+
+
+# ── cause 4: a value read from a picture on a native page ───────────────────
+
+SRC = ROOT / "local_docs" / "DocAgent_testdocs"
+
+
+def _src(rel):
+    p = SRC / rel
+    if not p.exists():
+        pytest.skip(f"{rel} not in local_docs")
+    return p
+
+
+class TestPictureOnANativePage:
+    def test_ou_stub_page_1_is_a_picture_with_no_text_layer(self):
+        from text_layer import image_only_pages
+        assert image_only_pages(_src("payslip/ou_check_stub.pdf")) == {1}
+
+    @pytest.mark.parametrize("rel", ["bank_statement/carson_bank_6pg.pdf",
+                                     "payslip/utah_paystub_1.pdf"])
+    def test_a_page_whose_image_carries_its_text_layer_is_not(self, rel):
+        """utah_paystub_1: an image covers the page and the text layer lies
+        over it (190 words inside) - not a picture without text."""
+        from text_layer import image_only_pages
+        assert image_only_pages(_src(rel)) == set()
+
+    def test_real_job_66_values_are_unverified_not_low(self):
+        rep = _replay(66)
+        ((_m, ed, _x),) = rep["docs"]
+        prov = ed["field_provenance"]
+        page1 = [r for r, p in prov.items() if p.get("page") == 1]
+        assert page1
+        cm = ed["validation"]["confidence_map"]
+        low_grounding_only = [r for r in page1 if cm.get(r) == "low"
+                              and prov[r].get("review_reasons") == ["grounding_failed"]]
+        assert low_grounding_only == []
+        assert any("image_only" in (prov[r].get("review_reasons") or []) for r in page1)
+        # the payslip arithmetic check still makes its values Low
+        assert any(cm.get(r) == "low" for r in page1)
+
+    def test_real_job_66_row_cells_are_not_painted_low(self):
+        """A row moved to unverified keeps no `_ungrounded` list: every reader
+        (review screen, export) turns an `_ungrounded` cell Low."""
+        from app.core.review import row_cell_status
+        rep = _replay(66)
+        ((_m, ed, _x),) = rep["docs"]
+        rows = [r for k, v in ed.items() if k.endswith("_rows") and isinstance(v, list)
+                for r in v if isinstance(r, dict) and "image_only" in (r.get("_review_reasons") or [])]
+        assert rows
+        statuses = {row_cell_status(ed, r, c)["status"] for r in rows
+                    for c in r if not str(c).startswith("_") and str(r[c]).strip()}
+        assert statuses and "low" not in statuses

@@ -49,7 +49,7 @@ from log_safety import doc_ref
 from micr import field_role, find_micr_line, parse_micr
 from validators import FAIL, UNREADABLE, CheckContext, run_checks
 from total_row_validators import split_duplicate_totals
-from text_layer import outlined_pages
+from text_layer import outlined_pages, image_only_pages
 from text_layer import (canonical_value, check_placement, column_bands,
                         set_column_anchors,
                         find_line, flatten_pages, line_page, matches_loosely,
@@ -1440,6 +1440,34 @@ def page_of(source, page, all_lines, page_lines, line_no=None):
     return mapped
 
 
+
+def _not_checked(pages, code, say, slots, conf_map, field_fail, field_prov,
+                 flagged, row_fail):
+    """Run Q (Q4, Phase 2): on `pages` there is no text layer under the
+    values, so a span not found there was never checked. A value whose sole
+    failure is grounding becomes UNVERIFIED with reason `code`; any other
+    failed check stands. Returns how many values moved."""
+    lab = {f["ref"]: f["row_label"] for f in slots["fields"]}
+    moved = 0
+    for ref, lv in list(conf_map.items()):
+        pg = (field_prov.get(ref) or {}).get("page")
+        if lv == LOW and field_fail.get(ref) == [GROUNDING_FAILED] and pg in pages:
+            conf_map[ref] = UNVERIFIED
+            field_fail[ref] = [code]
+            moved += 1
+            for f in flagged:
+                if isinstance(f, dict) and f.get("ref") == lab.get(ref):
+                    f["reason"] = say
+    for k, (r, why) in enumerate(row_fail):
+        if r.get("_confidence") == LOW and list(why) == [GROUNDING_FAILED]                 and r.get("_page") in pages:
+            r["_confidence"] = UNVERIFIED
+            # its columns were never checked, not checked and failed: every
+            # reader turns an `_ungrounded` cell Low (review.py, the export)
+            r["_unchecked"] = r.pop("_ungrounded", None) or []
+            row_fail[k] = (r, [code])
+            moved += 1
+    return moved
+
 def page_value_page(prov, page_origins, all_lines):
     """The file page a graded value belongs to, for its origin and its page
     gate: the page its provenance records, else the one page its quote can be
@@ -1480,6 +1508,7 @@ CONTENT_CHECK_FAILED = "content_check_failed"  # grounded, but not one datum / p
 POSSIBLE_MULTIPLE = "possible_multiple_documents"  # one record, more than one cheque?
 THIN_TEXT_LAYER = "thin_text_layer"            # Gate 2c: image-covered page, OCR could not check it
 OUTLINED_TEXT = "outlined_text"                # Run Q, Q4: the page draws its text as outlines
+IMAGE_ONLY = "image_only"                      # Run Q Phase 2: read from a picture with no text layer
 #: Run A, A4.2 — the prefix of a flag on an EMPTY slot the page shows a value
 #: for (an unplaced amount beside its label, a form's filled values not
 #: placed, a label the model quoted with no value). The flag is what turns the
@@ -3322,30 +3351,31 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # text layer under its values, so a span not found there was never
     # checked - it is UNVERIFIED with its own reason, not Low. Only a value
     # whose sole failure is grounding moves; any other failed check stands.
-    _outl = outlined_pages(file_path) if str(file_path).lower().endswith(".pdf") else set()
-    if _outl:
-        _lab = {f["ref"]: f["row_label"] for f in slots["fields"]}
-        moved = 0
-        for ref, lv in list(conf_map.items()):
-            pg = (field_prov.get(ref) or {}).get("page")
-            if lv == LOW and field_fail.get(ref) == [GROUNDING_FAILED] and pg in _outl:
-                conf_map[ref] = UNVERIFIED
-                field_fail[ref] = [OUTLINED_TEXT]
-                moved += 1
-                for f in flagged:
-                    if isinstance(f, dict) and f.get("ref") == _lab.get(ref):
-                        f["reason"] = ("this page draws its text as outlines, so there "
-                                       "is no text layer to check the value against - "
-                                       "compare it with the page")
-        for k, (r, why) in enumerate(row_fail):
-            if r.get("_confidence") == LOW and list(why) == [GROUNDING_FAILED]                     and r.get("_page") in _outl:
-                r["_confidence"] = UNVERIFIED
-                row_fail[k] = (r, [OUTLINED_TEXT])
-                moved += 1
-        if moved:
-            notes.append(f"page {', '.join(map(str, sorted(_outl)))}: text drawn as "
-                         f"outlines - {moved} value(s) could not be checked against a "
-                         f"text layer and are unverified, not low")
+    _is_pdf = str(file_path).lower().endswith(".pdf")
+    _outl = outlined_pages(file_path) if _is_pdf else set()
+    # Run Q Phase 2 (job 66, OU check stub): a NATIVE page printing a picture
+    # that has no text layer over it - the stub is an image on a page of
+    # explanatory text. A value not found in the text layer was read off the
+    # picture and never checked: unverified with its own reason, not Low.
+    # Same rule as outlines: only a value whose SOLE failure is grounding.
+    _pics = {p for p in (image_only_pages(file_path) if _is_pdf else set())
+             if (page_origins or {}).get(p, "native") == "native"} - _outl
+    for _pages, _code, _say, _note in (
+            (_outl, OUTLINED_TEXT,
+             "this page draws its text as outlines, so there is no text layer to "
+             "check the value against - compare it with the page",
+             "text drawn as outlines"),
+            (_pics, IMAGE_ONLY,
+             "this value was read from a picture on the page, which has no text "
+             "layer to check it against - compare it with the page",
+             "a picture with no text layer")):
+        if _pages:
+            _moved = _not_checked(_pages, _code, _say, slots, conf_map, field_fail,
+                                  field_prov, flagged, row_fail)
+            if _moved:
+                notes.append(f"page {', '.join(map(str, sorted(_pages)))}: {_note} - "
+                             f"{_moved} value(s) could not be checked against a "
+                             f"text layer and are unverified, not low")
 
     # PER-VALUE ORIGIN AND REVIEW (Gate 2). On EVERY value, native or not, so
     # a reader never has to guess what an absent key means. The only reasons
