@@ -194,7 +194,11 @@ def figure_misread(value):
     amount parser's fallback used to find `1` in it and pass. The reading is
     the OCR-confusable one (`10,550.00`), given in the flag and never written
     — the page decides, not the substitution table. A word set apart by a
-    space (`100.00 EUR`, `1,234.56 CR`) is not part of the figure."""
+    space (`100.00 EUR`, `1,234.56 CR`) is not part of the figure, and an
+    amount WRITTEN IN WORDS ("... and 00/100") is not a figure at all."""
+    words = [t for t in str(value or "").split() if re.fullmatch(r"[A-Za-z]{2,}[.,]?", t)]
+    if any(not re.fullmatch(r"(?:[A-Z]{3}|CR|DR|cr|dr)[.,]?", t) for t in words):
+        return None
     for tok in _FIG_TOKEN.findall(str(value or "")):
         body = _FIG_AFFIX.match(tok).group("f") or tok
         bad = [c for c in body if c not in _FIGURE_CHARS]

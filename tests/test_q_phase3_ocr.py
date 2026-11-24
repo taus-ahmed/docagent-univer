@@ -186,3 +186,15 @@ def test_outlined_page_real_has_one_page_item():
     flags = r.extracted_data["validation"]["flagged_fields"]
     assert sum("verify this page against the image" in x["reason"].lower() for x in flags) == 1
     assert not [x for x in flags if x.get("ref") == "Wages Tips Other Compensation"]
+
+
+def test_an_amount_written_in_words_is_not_a_figure():
+    """Found by the full suite (test_cheque_cross_check): `Amount in Words`
+    is a money slot, and its `00/100` is a fraction, not a misread figure."""
+    FR = _fr()
+    assert FR.figure_misread("One Thousand Two Hundred and 00/100") is None
+    # (the older "not an amount" flag-only answer is unchanged; the figure
+    # rule, which makes a value Low, must not fire)
+    assert "inside its figure" not in FR.check_type(
+        "One Thousand Two Hundred and 00/100 Dollars", "Amount in Words")[2]
+    assert FR.figure_misread("1O,5S0.00 USD") is not None
