@@ -1427,7 +1427,15 @@ class PdfplumberSource(PageSource):
 
     def words(self, size_aware=True):
         if size_aware and self._probe_size_aware():
-            return self._page.extract_words(extra_attrs=_WORD_ATTRS)
+            try:
+                ws = self._page.extract_words(extra_attrs=_WORD_ATTRS, return_chars=True)
+            except TypeError:
+                return self._page.extract_words(extra_attrs=_WORD_ATTRS)
+            for w in ws:
+                sp = spaced_reading(w.pop("chars", None) or [])
+                if sp and sp != w.get("text"):
+                    w["spaced"] = sp
+            return ws
         return self._page.extract_words()
 
     def chars(self):
@@ -2127,3 +2135,57 @@ def outlined_pages(file_path, min_glyphs=300):
     except Exception:
         return set()
     return out
+# ── Run Q, Q10: the printed spacing of a glued word ─────────────────────────
+#
+# Some PDFs print a space as GEOMETRY, not as a character: `FAST EATS` is
+# F-A-S-T, a 2.17 pt gap at 8 pt, E-A-T-S, with no space glyph. extract_words
+# merges anything within its x tolerance, so the word, the prompt and the
+# model's answer all read `FASTEATS` (job 78: also `MARTAGARCIA`,
+# `123LILACAVENUE`; job 56 `ACHDEBIT` on 16 rows). The page TEXT is left
+# exactly as it was (it is part of the prompt and of every cached answer);
+# the gap is kept on the word as `spaced`, and `respace_value` restores it in
+# a VALUE afterwards. Only between two touching alphanumerics of which at
+# least one is a letter, so a number is never split.
+SPACE_GAP_EM = 0.2
+
+
+def spaced_reading(chars):
+    """The word with a space wherever the page leaves a word-sized gap
+    between two otherwise touching characters; None when there is none."""
+    if len(chars) < 2:
+        return None
+    out, changed = [str(chars[0].get("text", ""))], False
+    for a, b in zip(chars, chars[1:]):
+        ta, tb = str(a.get("text", "")), str(b.get("text", ""))
+        try:
+            gap = float(b["x0"]) - float(a["x1"])
+            size = max(float(a.get("size") or 0), float(b.get("size") or 0))
+        except (KeyError, TypeError, ValueError):
+            return None
+        if size > 0 and gap >= SPACE_GAP_EM * size and ta[-1:].isalnum() \
+                and tb[:1].isalnum() and (ta[-1:].isalpha() or tb[:1].isalpha()):
+            out.append(" ")
+            changed = True
+        out.append(tb)
+    return "".join(out) if changed else None
+
+
+def respace_value(value, lines):
+    """`value` with each token that is a glued word of the page replaced by
+    the page's spaced reading of it, or None when nothing changes. A token
+    matches a word only whole (case-insensitive); nothing else is touched."""
+    v = str(value or "")
+    if not v.strip():
+        return None
+    spaced = {}
+    for ln in lines or []:
+        for w in ln or []:
+            sp = w.get("spaced")
+            if sp:
+                spaced.setdefault(str(w.get("text", "")).casefold(), sp)
+    if not spaced:
+        return None
+    toks = v.split(" ")
+    out = [spaced.get(t.casefold(), t) if t else t for t in toks]
+    res = " ".join(out)
+    return res if res != v else None

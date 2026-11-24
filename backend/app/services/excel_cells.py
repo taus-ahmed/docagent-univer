@@ -439,7 +439,7 @@ def put_extracted(cell, value, label="", ed=None, numeric=True):
         return None
     if numeric and put_date(cell, value, label, ed):
         return None
-    hint = money_hint(label, document_hint_of(ed), us_money_document(ed))
+    hint = money_hint(label, document_hint_of(ed), us_money_document(ed), value)
     out = coerce_cell_value(value, label, hint) if numeric else None
     if isinstance(out, float):
         cell.value = out
@@ -493,13 +493,29 @@ def us_money_document(ed) -> bool:
     return document_hint(texts) == "."
 
 
-def money_hint(label, hint, us_money) -> str | None:
+#: Run Q, Q10: a value WRITTEN as money - a currency sign, accounting
+#: parentheses, or comma groups of exactly three digits ("$2,750",
+#: "( 4,125)", "12,000"). On a US-money document that notation is US.
+_MONEY_NOTATION = re.compile(
+    r"^\(?\s*-?\s*[$]\s*-?\s*\d"                                  # $2,750
+    r"|^\(\s*[$]?\s*\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?\s*\)$"        # (1,300)
+    r"|^-?\s*\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$")                  # 12,000
+
+
+def money_hint(label, hint, us_money, value=None) -> str | None:
     """The decimal hint for one cell: the document's own when it has one; for
     a MONEY-labelled cell of a US-money document, "." — so `15,250` in Box 1
-    is fifteen thousand two hundred and fifty, never a European 15.25."""
+    is fifteen thousand two hundred and fifty, never a European 15.25.
+
+    Run Q, Q10: also for a cell whose VALUE is written as money on a US-money
+    document, whatever its label says (a balance sheet's "Cash  $2,750",
+    "Treasury stock  ( 4,125)") - unless the label names an identifier."""
     if hint:
         return hint
     if us_money and MONEY_LABEL.search(str(label or "")):
+        return "."
+    if us_money and value is not None and not labels_an_identifier(label) \
+            and _MONEY_NOTATION.search(str(value).strip()):
         return "."
     return None
 

@@ -166,3 +166,24 @@ def run(path, tpl, answer_fn, later=None):
 
     return extractor.run_extraction(SimpleNamespace(llm=SimpleNamespace(extract=extract)),
                                     Path(path), copy.deepcopy(tpl) if tpl else None)
+
+
+def make_raw_pdf(path, pages_ops, w=612.0, h=792.0):
+    """A one-font PDF from raw content-stream operators per page (for text a
+    generator cannot express - a TJ kerning gap with no space glyph)."""
+    from pypdf import PdfWriter
+    from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+    writer = PdfWriter()
+    font = writer._add_object(DictionaryObject({
+        NameObject("/Type"): NameObject("/Font"), NameObject("/Subtype"): NameObject("/Type1"),
+        NameObject("/BaseFont"): NameObject("/Helvetica")}))
+    for ops in pages_ops:
+        page = writer.add_blank_page(w, h)
+        page[NameObject("/Resources")] = DictionaryObject({
+            NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})})
+        s = DecodedStreamObject()
+        s.set_data("\n".join(ops).encode("latin-1"))
+        page[NameObject("/Contents")] = writer._add_object(s)
+    with open(path, "wb") as fh:
+        writer.write(fh)
+    return Path(path)

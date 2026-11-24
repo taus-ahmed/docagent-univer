@@ -55,6 +55,7 @@ from text_layer import (canonical_value, check_placement, column_bands,
                         find_line, flatten_pages, line_page, matches_loosely,
                         overprinted_value, page_for_prompt_page, record_span,
                         source_occurrences, unprinted_headers)
+from text_layer import respace_value as _respace
 
 
 # ── text normalisation (grounding) ───────────────────────────────────────────
@@ -2246,7 +2247,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # Run Q, Q6: dummy text (XX,XXX.00, 00/00/00, YOUR CITY, <Name>,
             # a printed label used as a value) is not a value. EMPTY, with a
             # note and NO flag: the document shows nothing was filled there.
-            if RD.placeholder_value(value, _sample) or RD.printed_label_as_value(value, pages):
+            _spaced = _respace(value, all_lines) or value
+            if RD.placeholder_value(_spaced, _sample) or RD.printed_label_as_value(value, pages):
                 notes.append(f'{slot["row_label"]}: {str(value)[:40]!r} is placeholder '
                              f"text, not a value - left empty")
                 continue
@@ -3283,6 +3285,22 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                             f"{tname}[other account]", shown[:200],
                             f"read from the section of account {acct}, not this "
                             f"statement's account - check it belongs in this table"))
+    # Run Q, Q10: restore the PRINTED spacing of a glued word ("FASTEATS" ->
+    # "FAST EATS") in the final values - after grounding and confidence, so
+    # neither is affected; a note says which values were re-spaced.
+    _label_of_ref = {f["ref"]: f["row_label"] for f in slots["fields"]}
+    for ref in list(extracted_fields):
+        sp = _respace(extracted_fields[ref], all_lines)
+        if sp:
+            notes.append(f"{_label_of_ref.get(ref, ref)}: printed spacing restored "
+                         f"({str(extracted_fields[ref])[:30]!r} -> {sp[:30]!r})")
+            extracted_fields[ref] = sp
+    for tname, rows in tables_out.items():
+        for r in rows:
+            for k in [k for k in r if not str(k).startswith("_")]:
+                sp = _respace(r.get(k), all_lines)
+                if sp:
+                    r[k] = sp
 
     # Run Q, Q6: a table cell holding placeholder text is emptied too - the
     # same rule as a field, with a note and no flag.

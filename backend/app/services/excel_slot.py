@@ -432,7 +432,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             cell.value = str(value).strip()
             date_note(cell, note)
             return cell
-        hint = money_hint(label, doc_hint[0], doc_us[0])
+        hint = money_hint(label, doc_hint[0], doc_us[0], value)
         out = coerce_cell_value(value, label, hint)
         if out is not None:
             cell.value = out
