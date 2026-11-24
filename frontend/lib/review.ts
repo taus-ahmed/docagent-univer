@@ -8,7 +8,9 @@
 
 export type ReviewStatus =
   | "verified" | "grounded" | "unverified" | "low" | "edited"
-  | "empty_flagged" | "empty" | "unknown";
+  | "empty_flagged" | "empty" | "unknown"
+  // Run Q Phase 3: on a page with no text layer; one page-level item carries the look
+  | "page_check";
 
 export interface ReviewValue {
   kind: "field" | "cell";
@@ -113,6 +115,7 @@ export const BADGES: Record<ReviewStatus, { text: string; fg: string; bg: string
   empty_flagged: { text: "Empty, flagged", fg: "#374151", bg: "#e5e7eb" },
   empty:         { text: "Empty",          fg: "#4b5563", bg: "#f3f4f6" },
   unknown:       { text: "Unknown",        fg: "#78350f", bg: "#fef3c7" },
+  page_check:    { text: "Verify page",    fg: "#374151", bg: "#ffffff" },
 };
 
 /** The badge for a value: a confident level that still owes a look says so. */

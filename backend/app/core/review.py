@@ -243,12 +243,17 @@ STATUSES: dict[str, tuple[str, str]] = {
     "verified": ("Verified", "Found on the page as quoted, under a label you wrote."),
     "grounded": ("Grounded", "Found on the page as quoted; the label was named by the model."),
     "unverified": ("Unverified", "Machine-read (a scan or an image); compare with the page."),
+    "page_check": ("Verify the page", "On a page with no text layer (text drawn as "
+                   "outlines): verify the whole page against its image, once."),
     "low": ("Low", "A check failed; this value is probably wrong."),
     "edited": ("Edited", "Typed by a person."),
     "empty_flagged": ("Empty, flagged", "Nothing was extracted, and something says a value was expected."),
     "empty": ("Empty", "Nothing was extracted."),
     "unknown": ("Unknown", "The value carries no recognised confidence level."),
 }
+
+#: the one reason a value's review is carried by its page (Run Q Phase 3)
+PAGE_CHECK_REASON = "outlined_text"
 
 _LEVEL_STATUS = {HIGH: "verified", GROUNDED: "grounded", UNVERIFIED: "unverified",
                  LOW: "low", EDITED: "edited"}
@@ -291,6 +296,14 @@ def value_status(value: Any, level: Optional[str], *, review_required: bool = Fa
         status = "empty_flagged" if (flagged or review_required or reasons) else "empty"
     else:
         status = _LEVEL_STATUS.get(str(level or ""), "unknown")
+    if status == "unverified" and PAGE_CHECK_REASON in reasons and set(reasons) <= {
+            PAGE_CHECK_REASON, "ocr_origin"}:
+        # Run Q Phase 3 (Q8): on a page with no text layer at all, every value
+        # owes the same look, and ONE page-level item ("verify this page
+        # against the image") carries it - not an amber flag per cell. Only
+        # when that is the value's sole reason (with the OCR origin an
+        # outlined page read by OCR implies); any other reason stands.
+        status, review_required = "page_check", False
     owes = status in _NEEDS_PERSON or bool(review_required)
     resolved = status == "edited" or bool(reviewed) or bool(disposition) or not owes
     return {"status": status, "reasons": reasons, "review_required": bool(review_required),
@@ -650,6 +663,11 @@ def export_mark(st: dict) -> Optional[tuple[str, str, Optional[str]]]:
     if status == "edited":
         return ("Edited", EXPORT_FILLS["edited"], "EDITED BY HAND — typed by a person, "
                 "not extracted.")
+    if status == "page_check" and not st.get("reviewed"):
+        # no fill: the page-level item carries the look, the note says so
+        return ("Verify page", None, "VERIFY THE PAGE — this value is on a page "
+                "with no text layer (its text is drawn as outlines), so it was not "
+                "checked; compare the page with its image once.")
     if st["resolved"]:
         if st.get("reviewed") and (status in _NEEDS_PERSON or st.get("review_required")):
             return ("Reviewed", EXPORT_FILLS["reviewed"],

@@ -171,6 +171,43 @@ _BARE_FIGURE = re.compile(r"^[$£€]?\s*-?\(?\d[\d,]*(?:\.\d+)?\)?-?$")
 _ID_WORDS = re.compile(r"\b(?:id|no|number|tin|ein|ssn|code|account|acct|locality|#)\b", re.I)
 
 
+#: Run Q Phase 3 (Q8): a slot counting something holds a bare number.
+_NUMBER_LABEL = re.compile(r"\b(?:qty|quantity|units|hours|hrs|count)\b", re.I)
+#: what a figure may be written with: digits, currency, separators, sign,
+#: accounting parentheses, percent, a Swiss apostrophe, a time's colon
+_FIGURE_CHARS = set("0123456789$€£¥,.()-+%−'’:")
+#: the letters an OCR reader puts where a digit is printed
+_CONFUSABLE = str.maketrans({"O": "0", "o": "0", "D": "0", "Q": "0", "I": "1",
+                             "l": "1", "i": "1", "|": "1", "!": "1", "S": "5",
+                             "s": "5", "B": "8", "Z": "2", "z": "2", "G": "6",
+                             "b": "6", "g": "9", "q": "9"})
+_FIG_TOKEN = re.compile(r"\S*\d\S*")
+#: glued to a figure but not a misread digit: CR/DR, a currency code
+_FIG_AFFIX = re.compile(r"^(?:[A-Z]{3})?(?P<f>.*?)(?:CR|DR|cr|dr|[A-Z]{3})?$")
+
+
+def figure_misread(value):
+    """Run Q Phase 3 (Q8): the first figure of `value` that keeps letters or
+    symbols among its digits, as (token, reading or None, kind), else None.
+
+    A figure an OCR reader returned as `1O,5S0.00` is not an amount, and the
+    amount parser's fallback used to find `1` in it and pass. The reading is
+    the OCR-confusable one (`10,550.00`), given in the flag and never written
+    — the page decides, not the substitution table. A word set apart by a
+    space (`100.00 EUR`, `1,234.56 CR`) is not part of the figure."""
+    for tok in _FIG_TOKEN.findall(str(value or "")):
+        body = _FIG_AFFIX.match(tok).group("f") or tok
+        bad = [c for c in body if c not in _FIGURE_CHARS]
+        if not bad:
+            continue
+        if all(c.isalpha() or c in "|!" for c in bad):
+            fixed = body.translate(_CONFUSABLE)
+            ok = all(c in _FIGURE_CHARS for c in fixed)
+            return body, (fixed if ok else None), "letters"
+        return body, None, "symbol"
+    return None
+
+
 def slot_type(label) -> str:
     """'money', 'date' or '' (no claim). Conservative on purpose: a label
     that names an identifier, a period, a rate or a count is not money even
@@ -195,6 +232,18 @@ def check_type(value, label):
     if v and words and _PARTY_NAME.fullmatch(words[-1]) and _BARE_FIGURE.match(v) \
             and not _ID_WORDS.search(str(label or "")):
         return False, None, "a name field holds a figure, not a name"
+    if v and (kind == "money" or (not kind and _NUMBER_LABEL.search(str(label or "")))):
+        mis = figure_misread(v)
+        if mis:
+            tok, reading, what = mis
+            field = "a money field" if kind == "money" else "a number field"
+            if what == "symbol":
+                return False, None, (f"{field} holds a symbol inside its figure "
+                                     f"({tok!r}) - compare it with the page")
+            return False, None, (f"{field} holds letters inside its figure ({tok!r})"
+                                 + (f"; the OCR-confusable reading is {reading!r}"
+                                    if reading else "")
+                                 + " - compare it with the page")
     if not v or not kind:
         return True, None, ""
     if kind == "money":

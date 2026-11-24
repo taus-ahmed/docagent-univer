@@ -2481,7 +2481,18 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             t_ok, t_norm, t_why = FR.check_type(value, slot["row_label"])
             if t_norm is not None:
                 field_prov[slot["ref"]]["normalised"] = t_norm
-            if not t_ok and lvl in CONFIDENT_LEVELS:
+            if not t_ok and FR.figure_misread(value) and (
+                    FR.slot_type(slot["row_label"]) == "money"
+                    or FR._NUMBER_LABEL.search(str(slot["row_label"] or ""))):
+                # Run Q Phase 3 (Q8): letters or symbols INSIDE a figure are
+                # a misreading, not the page's notation - a failed check
+                # (Low) at any level, flagged with the confusable reading.
+                # The value is kept as read, never rewritten.
+                if lvl in CONFIDENT_LEVELS or lvl == UNVERIFIED:
+                    conf_map[slot["ref"]] = LOW
+                    failed(slot["ref"], CONTENT_CHECK_FAILED)
+                flagged.append(_flag(slot["row_label"], value, t_why))
+            elif not t_ok and lvl in CONFIDENT_LEVELS:
                 # Like an UNREADABLE check: said out loud, level not moved -
                 # the string may be exactly what the page prints ("n/a").
                 flagged.append(_flag(slot["row_label"], value, t_why))
@@ -3369,7 +3380,26 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
              "this value was read from a picture on the page, which has no text "
              "layer to check it against - compare it with the page",
              "a picture with no text layer")):
-        if _pages:
+        if _pages and _code == OUTLINED_TEXT:
+            # Run Q Phase 3 (Q8): the WHOLE page has no text layer, so every
+            # value on it owes the same look. ONE page-level item says so -
+            # "verify this page against the image" - instead of the same
+            # amber flag on every cell. Each value keeps its honest level
+            # (unverified, reason outlined_text); review.py reads that reason
+            # alone as `page_check`, carried by this one item.
+            for _pg in sorted(_pages):
+                _moved = _not_checked({_pg}, _code, _say, slots, conf_map, field_fail,
+                                      field_prov, flagged, row_fail)
+                if not _moved:
+                    continue
+                flagged[:] = [f for f in flagged
+                              if not (isinstance(f, dict) and f.get("reason") == _say)]
+                _item = (f"verify this page against the image - page {_pg} draws "
+                         f"its text as outlines, so there is no text layer to check "
+                         f"its {_moved} value(s) against")
+                flagged.append(_flag(f"page {_pg}", "", _item))
+                notes.append(f"page {_pg}: {_item}")
+        elif _pages:
             _moved = _not_checked(_pages, _code, _say, slots, conf_map, field_fail,
                                   field_prov, flagged, row_fail)
             if _moved:

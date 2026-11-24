@@ -67,7 +67,8 @@ class SheetMarks:
         self.cells[key] = (bool(st["resolved"]), m[0] if m else "OK")
         if m is None:
             return
-        cell.fill = PatternFill(fill_type="solid", fgColor=m[1])
+        if m[1]:
+            cell.fill = PatternFill(fill_type="solid", fgColor=m[1])
         if m[2] is None:
             return                # a final value: coloured, no warning note
         text = m[2] + (f"\n\n{cell.comment.text}" if cell.comment else "")
