@@ -15,7 +15,7 @@ worker calls — with a model stand-in that answers:
 
 Everything after the model — grounding, confidence, completeness, the
 writers — is the code on disk. The workbook goes to
-local_docs/replay_out/job_<id>_replay.xlsx. No network, no key, no .env.
+local_docs/replay_out/<id>/job_<id>_replay.xlsx. No network, no key, no .env.
 """
 from __future__ import annotations
 
@@ -192,8 +192,8 @@ def main(argv=None) -> int:
             if missing:
                 print(f"job {jid}: {meta.get('original_filename')}: {len(missing)} call(s) had no "
                       f"stored answer ({sorted(set(missing))})")
-        p = write_workbook(jid, rep, OUT / f"job_{jid}_replay.xlsx")
-        print(f"job {jid}: {len(rep['docs'])} document(s) -> {p.relative_to(ROOT)}")
+        p = write_workbook(jid, rep, OUT / str(jid) / f"job_{jid}_replay.xlsx")
+        print(f"job {jid}: {len(rep['docs'])} document(s) -> {p}")
     return 0
 
 

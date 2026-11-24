@@ -135,3 +135,23 @@ def test_live_corpus_is_offline_by_default_and_caps_calls(capsys):
     Router.n = 0
     [capped2.extract() for _ in range(5)]
     assert Router.n == 2
+
+
+def test_main_writes_per_job_folder_and_names_a_missing_answer(tmp_path, monkeypatch, capsys):
+    """Phase 2: the workbook lands in replay_out/<job_id>/, and a document
+    with no stored answer is named as such (job 68-70 shape)."""
+    import replay_raw
+    raw_root, src = tmp_path / "raw", tmp_path / "src"
+    (raw_root / "9003" / "docs").mkdir(parents=True)
+    src.mkdir()
+    (src / PDF.name).write_bytes(PDF.read_bytes())
+    (raw_root / "9003" / "template.json").write_text("null", encoding="utf-8")
+    (raw_root / "9003" / "docs" / "1.json").write_text(json.dumps(
+        {"id": 1, "original_filename": PDF.name, "raw_llm_response": None}), encoding="utf-8")
+    monkeypatch.setattr(replay_raw, "RAW", raw_root)
+    monkeypatch.setattr(replay_raw, "SOURCES", src)
+    monkeypatch.setattr(replay_raw, "OUT", tmp_path / "out")
+    assert replay_raw.main(["9003"]) == 0
+    out = capsys.readouterr().out
+    assert "no raw answer stored" in out
+    assert (tmp_path / "out" / "9003" / "job_9003_replay.xlsx").exists()
