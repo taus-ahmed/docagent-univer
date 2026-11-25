@@ -120,6 +120,10 @@ class JobStatus(BaseModel):
     pages_processed: Optional[int] = None
     pages_total: Optional[int] = None
     pages_failed: list = []
+    #: Run R, R5: the template the job ran with (its id, as stored), or None.
+    #: Undeclared, the API dropped it and the results page said "No
+    #: template" for every templated job.
+    schema_id: Optional[str] = None
 
 class JobListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -138,6 +142,8 @@ class JobListItem(BaseModel):
     #: it - the documents' own reasons or the error class, never their content.
     error_message: Optional[str] = None
     user_id: Optional[int] = None
+    #: Run R, R5: History names the template each job ran with
+    schema_id: Optional[str] = None
     #: Set after a hard delete (`DELETE /api/jobs/{id}/data`): the record stays
     #: so history adds up, its files and results are gone.
     deleted_at: Optional[str] = None
