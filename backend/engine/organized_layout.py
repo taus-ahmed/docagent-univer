@@ -215,10 +215,18 @@ def page_cells(page):
     gaps = [b["x0"] - a["x1"] for ln in lines for a, b in zip(ln, ln[1:]) if b["x0"] > a["x1"]]
     gutter = max(6.0, 4 * statistics.median(gaps)) if gaps else 12.0
     rows = []                                    # [(top, [seg])]
+    para = None                     # (x0, bottom, height) of the last prose run
     for ln in lines:
         segs = []
         for s in _segments(ln, gutter):
-            if _prose(s):
+            h = max(w["bottom"] - w["top"] for w in s)
+            # a paragraph's wrapped lines are prose too, however short: the
+            # line directly under a prose line, starting at its left edge,
+            # with no label in it ("then shredded.")
+            tail = (para is not None and 0 <= s[0]["top"] - para[1] <= 1.0 * para[2]
+                    and abs(s[0]["x0"] - para[0]) <= 12 and ":" not in _text(s))
+            if _prose(s) or tail:
+                para = (s[0]["x0"], max(w["bottom"] for w in s), h)
                 continue
             segs.extend(_split_pairs(_seg(s)))
         if segs:

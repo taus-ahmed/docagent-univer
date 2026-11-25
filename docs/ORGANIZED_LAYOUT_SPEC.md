@@ -97,6 +97,19 @@ is the page's own text (no model call); the extraction is not consulted.
    printed `Payment Period (From)`, `Employee Address` for the second
    `Address:`); v1 keeps the printed text, per rule 4.
 
-## Before / after
+## Before / after (v1, `local_docs/organized_out/`)
 
-(Filled in after v1 is built: see the end of this file.)
+Made by `tools/organized_export.py`; the same code serves
+`?layout=organized`.
+
+| document | before (today's no-template export) | after (organized v1) |
+|---|---|---|
+| **utah_paystub_2** | one label/value column pair (A/B) down the sheet; the three dates stacked as three pairs; an invented `Description` heading over the earnings table; review fills on every value | the page's layout: title `Pay Stub` bold and centred in D1, file name F1 (as the partner's sheet); two pairs per row (Employer Name / ABC Company / Address / …); the three date headings side by side over their dates; `Rate / Hours / Current Total / YTD (Year to Date)` bold and centred, no `Description`; money and dates typed; no fills. **Every label the partner's sheet shares with the page is in the same column, in the same order** (tested). Differences left: the partner adds blank rows the page's white space does not show (rows 4, 6, 11–12, 18, 27), and renames two labels |
+| **utah_paystub_1** | template-shaped fields | placed by position, but the OCR layer itself is garbled (`University ofGeorgia`, `osvi±@.`, a reviewer's notes OCR'd into the values in black): v1 lays out what the layer says, and that is not usable. Needs a better reading, not a better layout |
+| **saltlake_paycheck** | template-shaped fields | page 1's text layer is the explanation printed around the stub (the stub is a picture); paragraphs are dropped, leaving a few fragments. Page 2 is a scan: listed on the `Not organized` sheet ("no text layer on this page") |
+| **ou_check_stub** | template-shaped fields | the stub is a picture on page 1; the text layer is the numbered explanation, whose short list items survive the paragraph rule. Not useful |
+
+So v1 does what the spec says on a document whose **text layer is the
+form** (utah_paystub_2), and has nothing good to work with on the other three:
+two print the stub as an image and one has a garbled OCR layer. Laying out an
+image-only stub needs the OCR reader's word boxes (see "Scans" above).

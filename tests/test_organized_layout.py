@@ -98,6 +98,14 @@ class TestSynthetic:
         c = _cells(make_pdf(tmp_path / "s.pdf", [STUB]))
         assert not any("safe place" in x["text"] for x in c.values())
 
+    def test_a_paragraphs_wrapped_tail_is_not_copied(self, tmp_path):
+        page = STUB + [(72, 466, "kept for at least seven years by the employee,"),
+                       (72, 452, "then shredded."),
+                       (72, 420, "Net Pay:"), (180, 420, "$5,731.00")]
+        c = _cells(make_pdf(tmp_path / "s.pdf", [page]))
+        assert not any("shredded" in x["text"] or "seven years" in x["text"] for x in c.values())
+        assert _find(c, "Net Pay")["kind"] == "label"
+
     def test_red_markup_is_not_copied(self, tmp_path):
         gen = _gen()
         body = gen._text_ops([(x, y, 10, t) for x, y, t in STUB], 0)
