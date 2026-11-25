@@ -873,6 +873,29 @@ def _add_review_legend(wb, doc_results, demo=False):
                                  s["unverified"], s["empty_flagged"],
                                  s["attention"], s["accepted_after_low"]), 1):
             lg.cell(row=r, column=col, value=v)
+    # Run R, R2/R3: what each document prints that this file does not hold,
+    # and every completeness reason still open, in words - the counts above
+    # say how many, never which
+    missing = []
+    for i, (d, _s, _f) in enumerate(per_doc, 1):
+        ed = d.get_extracted_data()
+        if not isinstance(ed, dict):
+            continue
+        name = f"document {i}" if demo else (d.filename or f"document {i}")
+        says = list(ed.get("not_captured") or [])
+        for a in _review.attention_open(ed):
+            t = a.get("text") if isinstance(a, dict) else str(a)
+            if t and t not in says:
+                says.append(t)
+        missing += [(name, t) for t in says]
+    if missing:
+        r += 2
+        lg.cell(row=r, column=1,
+                value="Printed in the document but not in this file").font = Font(bold=True)
+        for name, t in missing:
+            r += 1
+            lg.cell(row=r, column=1, value=name)
+            lg.cell(row=r, column=2, value=t)
     # Run G, G4: rows a person ADDED are written into their band like any
     # other row (marked edited there); this list says which they are, with
     # the values exactly as typed, who and when — the file must not pass a

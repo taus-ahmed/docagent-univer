@@ -1787,6 +1787,45 @@ def record_span(lines, start, stop=None):
                      for ln in lines[start:end])
 
 
+def _place_norm(t) -> str:
+    return re.sub(r"[\s$,]", "", str(t or "")).casefold()
+
+
+def place_values(line, values, used=(), strict=False):
+    """The word indices of `line` that `values` sit on, taking for each value
+    the first run of words spelling it that no earlier row took (`used`) -
+    Run R, R2: one printed line can hold several side-by-side records.
+
+    Lenient (`strict=False`, the first row on a line): whatever can be placed
+    is returned. Strict (a later row on an already-claimed line): every value
+    printed on the line must find a FREE run, and at least two values (or
+    the only one) must be placed - otherwise None, and the row is a copy."""
+    words = [_place_norm(w.get("text", "")) for w in (line or [])]
+    taken = set(used or ())
+    placed, tried = 0, 0
+    for v in values:
+        toks = [_place_norm(t) for t in str(v or "").split()]
+        toks = [t for t in toks if t]
+        if not toks:
+            continue
+        tried += 1
+        n = len(toks)
+        starts = [i for i in range(len(words) - n + 1) if words[i:i + n] == toks]
+        if not starts:
+            continue                       # not printed here: no evidence
+        free = next((i for i in starts
+                     if not any(j in taken for j in range(i, i + n))), None)
+        if free is None:
+            if strict:
+                return None                # its only copies are another row's
+            continue
+        taken.update(range(free, free + n))
+        placed += 1
+    if strict and (placed == 0 or placed < min(2, tried)):
+        return None
+    return taken - set(used or ())
+
+
 def column_bands(lines, headers):
     """{header: (x0, x1)} for the headers this document actually prints.
 

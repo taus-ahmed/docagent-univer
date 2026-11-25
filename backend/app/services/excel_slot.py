@@ -855,7 +855,19 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         _dress_block(ws, doc_offset, block_height, max_c, ed, filename,
                      doc_index, show_filename, slot_map, _thick,
                      spare_col=max_c + 1 + int(show_source) + int(show_status))
-        doc_offset += block_height + GAP_BETWEEN_DOCS
+        # Run R, R3: what the document prints and this file does not hold is
+        # said under the document's own block, in the sheet a client works
+        # in - a note in the Legend alone was never seen (job 115's 1099-K)
+        extra = 0
+        for k, say in enumerate(ed.get("not_captured") or []):
+            nc = ws.cell(row=doc_offset + block_height + 1 + k, column=1)
+            if isinstance(nc, MergedCell) or nc.value is not None:
+                continue
+            nc.value = f"Not in this file: {say}"
+            from openpyxl.styles import Font as _Font
+            nc.font = _Font(italic=True, color="FFC00000")
+            extra = k + 1
+        doc_offset += block_height + GAP_BETWEEN_DOCS + extra
 
     # 5. the Review status column: a header counting what needs review, and
     #    one word per row that received a value

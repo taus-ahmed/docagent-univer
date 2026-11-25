@@ -899,6 +899,31 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
                                  "context": a["context"],
                                  "on_candidate_row": bool(a.get("row_kind"))})
 
+    # ── a whole page of amounts in no cell (Run R, R2) ──
+    # Job 95's page 4 (a line-of-credit summary under a checking statement)
+    # printed 27 amounts, none in any cell, and nothing said so: the table
+    # checks above only look at pages that print the table. A page of 5+
+    # amounts of which at most one in four reached a cell is named, with its
+    # figures, as a completeness reason.
+    not_captured = []
+    for n, p in sorted(pages.items()):
+        amts = p.get("amounts") or []
+        if len(amts) < 5 or p.get("unreadable"):
+            continue
+        un = [a for a in amts if Decimal(a["norm"]) not in placed]
+        if len(un) < 5 or len(un) * 4 < len(amts) * 3:
+            continue            # 3 in 4: an equal figure elsewhere (0.00,
+                                # a credit limit equal to a balance) is not
+                                # evidence this page was read
+        shown = "; ".join(str(a["context"]).strip()[:48] for a in un[:8])
+        more = f" and {len(un) - 8} more" if len(un) > 8 else ""
+        say = (f"Page {n} prints {len(amts)} amounts and "
+               + ("none of them is" if len(un) == len(amts)
+                  else f"only {len(amts) - len(un)} of them is")
+               + f" in any cell: {shown}{more}.")
+        reasons.append(say)
+        not_captured.append(say)
+
     # ── row sum against the printed total (Run B, B6) ──
     row_sums = row_sum_checks(slots, tables_out, page_lines, numbers)
     for m in row_sums:
@@ -917,6 +942,7 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
             f"{m['table']!r} were extracted.")
 
     return {"reasons": reasons, "flag_slots": flag_slots, "absent": absent,
+            "not_captured": not_captured,
             "row_sums": row_sums, "row_counts": row_counts,
             "form_confirms_empty": form_amounts_placed,
             "empty_bands": sorted(empty_band),

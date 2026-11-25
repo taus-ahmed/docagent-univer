@@ -53,8 +53,8 @@ from text_layer import outlined_pages, image_only_pages
 from text_layer import (canonical_value, check_placement, column_bands,
                         set_column_anchors,
                         find_line, flatten_pages, line_page, matches_loosely,
-                        overprinted_value, page_for_prompt_page, record_span,
-                        source_occurrences, unprinted_headers)
+                        overprinted_value, page_for_prompt_page, place_values,
+                        record_span, source_occurrences, unprinted_headers)
 from text_layer import respace_value as _respace
 
 
@@ -2765,6 +2765,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     row_groups_found = RG.detect(all_lines) if all_lines else None
     group_noun = RG.group_noun(all_lines) if row_groups_found else None
     subtotals_out = {}
+    # Run R, R2/R3: what the document prints and this result does not hold,
+    # in plain sentences - written into the export's Results sheet and Legend
+    not_captured = []
     resp_tables = parsed.get("tables") or {}
     if isinstance(resp_tables, dict):
         for t in slots["tables"]:
@@ -2911,14 +2914,34 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         "than the one this table was bound to"))
 
             claims = []
+            used_words = {}          # line index -> word indices rows took
             for cells, source, page, key, occurrences in located:
                 free = None
                 if occurrences:
                     free = next((i for i in occurrences
                                  if i not in claimed_lines), None)
-                    duplicate = free is None
+                    vals = [cells.get(h, "") for h in headers]
                     if free is not None:
                         claimed_lines.add(free)
+                        took = place_values(all_lines[free], vals,
+                                            used_words.get(free, set()))
+                        used_words.setdefault(free, set()).update(took or ())
+                    else:
+                        # Run R, R2 (job 95): a line printing SEVERAL records
+                        # side by side ("4416 07/08/19 $100.00 4419* 07/08/19
+                        # $266.00 4420 ...") is claimed once per record. A
+                        # row whose every value sits on words of the line no
+                        # earlier row took is another record, not a copy; a
+                        # row needing a word already taken is the duplicate
+                        for i in occurrences:
+                            took = place_values(all_lines[i], vals,
+                                                used_words.get(i, set()),
+                                                strict=True)
+                            if took:
+                                free = i
+                                used_words.setdefault(i, set()).update(took)
+                                break
+                    duplicate = free is None
                 else:
                     ident = (key, tuple(sorted(
                         (h, str(cells.get(h, "") or "")) for h in headers)))
@@ -3365,6 +3388,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             notes.append(f"{tname}: left out {len(hit)} daily-balance line(s) - a "
                          f"DAILY BALANCE SUMMARY is a running balance per date, "
                          f"not a transaction")
+            import source_inventory as SI
+            _figs = [str(r.get(k) or "") for r in hit for k in r
+                     if not str(k).startswith("_") and SI.amount_of(str(r.get(k) or "")) is not None
+                     and not re.search(r"\d{1,2}/\d{1,2}", str(r.get(k) or ""))]
+            not_captured.append(
+                f"{len(hit)} daily balance line(s) are left out of table {tname!r}: "
+                f"a daily balance summary is a running balance per date, not a "
+                f"transaction ({', '.join(_figs[:8])}"
+                + (f" and {len(_figs) - 8} more" if len(_figs) > 8 else "") + ").")
         _tgt = next((t["name"] for t in slots["tables"] if t["name"] in _tx),
                     next(iter(tables_out), None))
         for pi, heading, k, total, lost in _missing:
@@ -3374,6 +3406,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 f"page {n} prints {total} records in {k} side-by-side column "
                 f"groups ({heading!r}); {len(lost)} of them are not in the "
                 f"sheet: {'; '.join(lost)[:160]}"))
+            not_captured.append(
+                f"Page {n} prints {total} records side by side ({heading!r}); "
+                f"{len(lost)} of them are not in the sheet: {'; '.join(lost)[:200]}.")
         _other = CG.other_account_lines(page_lines)
         if _other:
             _at = {}
@@ -3636,6 +3671,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     for ref, why in cov["flag_slots"].items():
         flagged.append(_flag(label_of.get(ref, ref), "", f"{EMPTY_FLAGGED}: {why}"))
     attention = list(cov["reasons"])
+    not_captured.extend(cov.get("not_captured") or [])
     # Run Q, Q5: A BLANK FORM IS DONE, NOT A PROBLEM. Every slot empty, no
     # row, no completeness reason at all (each is evidence: an amount or a
     # word beside a label, a filled widget left out, a value-like token after
@@ -3824,6 +3860,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     }
     for name, rows in tables_out.items():
         ed[f"{name}_rows"] = rows
+    if not_captured:
+        ed["not_captured"] = not_captured
     for name, (gk, subs) in subtotals_out.items():
         ed[f"{name}_group_key"] = gk
         ed[f"{name}_subtotals"] = subs

@@ -96,6 +96,29 @@ def ignored_forms(text, template):
     return [f for f in printed_forms(text) if f not in named and f.split("-")[0] in fams]
 
 
+_AMT = re.compile(r"(?<![\d.,])\(?-?\$?\s?(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}\)?(?![\d,])")
+
+
+def form_amounts(text, form):
+    """Run R, R3: the amounts printed in `form`'s part of the document - from
+    the first line naming it to the first line naming another printed form
+    after it. The template covers no value of that form by definition, so
+    every one of them is a figure the export does not hold."""
+    text = str(text or "")
+    starts = []
+    for f in printed_forms(text):
+        m = re.search(rf"(?m)^.*\b{re.escape(f)}\b", text)
+        if m:
+            starts.append((m.start(), f))
+    starts.sort()
+    mine = next((i for i, (_p, f) in enumerate(starts) if f == form), None)
+    if mine is None:
+        return []
+    a = starts[mine][0]
+    b = starts[mine + 1][0] if mine + 1 < len(starts) else len(text)
+    return [re.sub(r"[\s$()]", "", m.group(0)) for m in _AMT.finditer(text[a:b])]
+
+
 def _scores(text):
     from app.services.prompt_registry import PROMPT_REGISTRY, _hint_in
     low = str(text or "")[:5000].lower()
@@ -155,7 +178,15 @@ def apply(results, file_path, template_data):
                    f"template does not cover: no value of "
                    f"{'that form' if len(ignored) == 1 else 'those forms'} was "
                    f"extracted.")
+            for f in ignored:
+                figs = form_amounts(text, f)
+                if figs:
+                    say += (f" Form {f} prints {len(figs)} amount"
+                            f"{'' if len(figs) == 1 else 's'}: {', '.join(figs[:14])}"
+                            + (f" and {len(figs) - 14} more" if len(figs) > 14 else "")
+                            + ".")
             notes.append(say)
+            ed.setdefault("not_captured", []).append(say)
             ed.setdefault("validation", {}).setdefault("flagged_fields", []).append(
                 {"ref": "document", "value": "", "reason": say})
             if ed.get("document_state") == "READY":
