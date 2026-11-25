@@ -75,6 +75,23 @@ def _dark(color):
     return bool(vals) and all(v <= 0.2 for v in vals)
 
 
+def _painted_over(r, later) -> bool:
+    """Run R, R4 (job 129): a dark rectangle that a LATER light rectangle
+    covers to 90% or more is a drop shadow or a frame - fidelity_brokerage
+    draws every statement picture as a black box with a white one 4 pt
+    smaller painted over it, then its text on top. Nothing it covers is
+    hidden, so it is not a redaction bar."""
+    area = max(1e-6, (r["x1"] - r["x0"]) * (r["bottom"] - r["top"]))
+    for o in later:
+        if not o.get("fill") or _dark(o.get("non_stroking_color")):
+            continue
+        w = min(r["x1"], o["x1"]) - max(r["x0"], o["x0"])
+        h = min(r["bottom"], o["bottom"]) - max(r["top"], o["top"])
+        if w > 0 and h > 0 and w * h >= 0.9 * area:
+            return True
+    return False
+
+
 def native_bars(pdf_path, page_numbers=None):
     """{file page: {"bars": [bbox], "hidden": [word]}} for native pages
     carrying dark filled rectangles; `hidden` are the text-layer words whose
@@ -87,11 +104,14 @@ def native_bars(pdf_path, page_numbers=None):
             if not 1 <= n <= len(pdf.pages):
                 continue
             page = pdf.pages[n - 1]
-            bars = [(r["x0"], r["top"], r["x1"], r["bottom"]) for r in page.rects
+            rects = list(page.rects)
+            bars = [(r["x0"], r["top"], r["x1"], r["bottom"])
+                    for i, r in enumerate(rects)
                     if r.get("fill") and _dark(r.get("non_stroking_color"))
                     and r["x1"] - r["x0"] >= _MIN_W and r["bottom"] - r["top"] >= _MIN_H
                     and (r["x1"] - r["x0"]) * (r["bottom"] - r["top"])
-                    < 0.5 * float(page.width) * float(page.height)]
+                    < 0.5 * float(page.width) * float(page.height)
+                    and not _painted_over(r, rects[i + 1:])]
             if not bars:
                 continue
             hidden = []

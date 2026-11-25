@@ -3691,7 +3691,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             f'{", ".join(m["printed"][:3])} - a row may be missing or wrong'))
     for ref, why in cov["flag_slots"].items():
         flagged.append(_flag(label_of.get(ref, ref), "", f"{EMPTY_FLAGGED}: {why}"))
-    attention = list(cov["reasons"])
+    # Run R, R4 (job 129): one reason once - two bands of one name (an
+    # inferred template naming two tables "Income Summary") said each twice
+    attention = list(dict.fromkeys(cov["reasons"]))
     not_captured.extend(cov.get("not_captured") or [])
     # Run Q, Q5: A BLANK FORM IS DONE, NOT A PROBLEM. Every slot empty, no
     # row, no completeness reason at all (each is evidence: an amount or a
