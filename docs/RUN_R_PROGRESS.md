@@ -1,3 +1,5 @@
+RUN R DONE
+
 # Run R progress — fix/review-fixes
 
 Read this first on a restart; skip items marked done.
@@ -16,7 +18,7 @@ Read this first on a restart; skip items marked done.
 - [x] (c) local_docs/organized_out/ (4 files) + before/after note in the spec
 
 ## Finish
-- [ ] full backend suite, frontend tests/build, harness, scoreboard (once)
-- [ ] tests/KNOWN_FAILING.md
-- [ ] docs/RUN_R_REPORT.md
-- [ ] push fix/review-fixes, RUN R DONE
+- [x] full backend suite 5533 passed / 0 failed / 20 xfailed; frontend 97 pass + build; harness 98.7% / 98.2% unchanged; scoreboard unchanged
+- [x] tests/KNOWN_FAILING.md
+- [x] docs/RUN_R_REPORT.md
+- [x] push fix/review-fixes, RUN R DONE

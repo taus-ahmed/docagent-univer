@@ -8,6 +8,14 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 | --- | --- | --- | --- |
 | Batch1 item 9: Legend counts in the FROZEN staging exports | `test_09_each_real_legend_count_equals_cells_actually_marked` | BLOCKED (overnight run): the test reads the 16 real staging exports in `local_docs/batch1_exports`, written by the OLD writer, which marked only slots holding a value. No code change can alter those files; re-exporting needs the jobs' stored `extraction_json`, which is not in the repo. The writer was fixed in overnight B4 (every slot is visited; an empty-and-flagged slot is the grey cell with a comment) and is proven on current output by `tests/test_overnight_b4.py` and `tests/legend_check.py`. | Jobs 46, 48 and 51 report 3, 12 and 2 empty-flagged values and paint no grey cell. Remove this marker after re-exporting those three jobs from staging with the current code. |
 
+Run R (2026-11-25): no marker came off and none was added. Batch1 item 9
+now SKIPS when `local_docs/batch1_exports` is absent (CI): before, its strict
+xfail swallowed the missing-file AssertionError as its expected failure. Full
+suite here: 20 xfailed = the 19 shared with CI + job 79 box 4
+(`test_q_phase3_q4efg`, real data, skipped on CI). CI shows 22: the same 19
++ three xfails conditional on Tesseract 5.3 (`test_multi_cheque`, two in
+`test_ocr_line_geometry`) that pass on this machine's Tesseract.
+
 Run Q (2026-11-21): the 7 strict xfails of the Run N adversarial review
 (`tests/test_run_n_adversarial_review.py`, merged from origin/review/run-n)
 came off: N2 x2 (a wrapped row label names its row; a continuation line with
