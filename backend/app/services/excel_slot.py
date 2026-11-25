@@ -25,7 +25,22 @@ from app.services.excel_cells import provenance_note
 from app.services.excel_cells import provenance_note_size
 import re
 from template_shape import cells_text_of, placeholder_at
+from row_groups import rows_with_subtotals
 # --imports-end--
+
+
+def _with_subtotals(ed):
+    """Run R, R1: the document as the writer sees it - each grouped band's
+    rows with its printed subtotals interleaved. The stored rows are never
+    changed: every check, count and sum reads `<band>_rows` without them."""
+    if not isinstance(ed, dict) or not any(k.endswith("_subtotals") for k in ed):
+        return ed
+    out = dict(ed)
+    for k in ed:
+        if k.endswith("_subtotals"):
+            name = k[: -len("_subtotals")]
+            out[f"{name}_rows"] = rows_with_subtotals(ed, name)
+    return out
 
 
 #: Blank rows between two documents' blocks on one sheet (Run C, C1.3). The
@@ -374,7 +389,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         except (ValueError, AttributeError, TypeError):
             continue
     for doc in doc_results:
-        ed = doc.get_extracted_data()
+        ed = _with_subtotals(doc.get_extracted_data())
         if not isinstance(ed, dict):
             continue
         sm = ed.get("slot_map") or {}
@@ -448,7 +463,7 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         return None
 
     for doc in doc_results:
-        ed = doc.get_extracted_data()
+        ed = _with_subtotals(doc.get_extracted_data())
         doc_hint[0] = _document_hint_of(ed)
         doc_us[0] = us_money_document(ed)
         doc_order[0] = date_order_of(ed)
@@ -779,6 +794,11 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                             disposition=_review._mark_disposition(_review.cell_mark(row, key)))
                     if cell is not None:
                         mark(cell, r, col["col"], st)
+                    if cell is not None and row.get("_subtotal"):
+                        from copy import copy as _copy
+                        _f = _copy(cell.font)
+                        _f.bold = True
+                        cell.font = _f
 
         # 3b. one Source cell per row that received a value with provenance
         for out_r, pages in (source_rows.items() if show_source else ()):

@@ -2759,6 +2759,12 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
 
     # ── table slots ──
     tables_out, row_counts, incomplete = {}, {}, set()
+    # Run R, R1: group lines above rows and subtotals below them, read off
+    # the text layer once; used only by a band that has the group's column
+    import row_groups as RG
+    row_groups_found = RG.detect(all_lines) if all_lines else None
+    group_noun = RG.group_noun(all_lines) if row_groups_found else None
+    subtotals_out = {}
     resp_tables = parsed.get("tables") or {}
     if isinstance(resp_tables, dict):
         for t in slots["tables"]:
@@ -2846,6 +2852,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # Run N, N5: the quote the MODEL gave each row, before re-anchoring
             # rewrites it — what the fragment merge asks "same record?" of.
             quote_of_cells, quote_of_row = {}, {}
+            line_of_row = {}
             for r in raw:
                 if not isinstance(r, dict):
                     continue
@@ -3053,6 +3060,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 if row_why:
                     row_fail.append((row, row_why))
                 quote_of_row[id(row)] = quote_of_cells.get(id(cells), source)
+                if line_no is not None:
+                    line_of_row[id(row)] = line_no
                 rows_out.append(row)
             rows_out, totals = split_total_rows(rows_out, table_headers(t))
             for row in totals:
@@ -3118,6 +3127,17 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             if _merged:
                 notes.append(f'{t["name"]}: {_merged} fragment row(s) merged into '
                              f"the one entity row they complete")
+            if row_groups_found is not None and t.get("orientation") != "columns":
+                gk = next((h for h in headers
+                           if str(h).casefold() == group_noun.casefold()), None)
+                if gk:
+                    subs, gflags, gnotes = RG.apply(
+                        rows_out, line_of_row, row_groups_found, gk, headers,
+                        confident, LOW)
+                    for ref, val, why in gflags:
+                        flagged.append(_flag(f'{t["name"]}.{ref}', val, why))
+                    notes.extend(f'{t["name"]}: {n}' for n in gnotes)
+                    subtotals_out[t["name"]] = (gk, subs)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
             if len(rows_out) + len(totals) + len(dup_totals) < len(raw):
@@ -3804,6 +3824,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     }
     for name, rows in tables_out.items():
         ed[f"{name}_rows"] = rows
+    for name, (gk, subs) in subtotals_out.items():
+        ed[f"{name}_group_key"] = gk
+        ed[f"{name}_subtotals"] = subs
 
     # ── STATE AND DIAGNOSTICS (Run A, A0/A4/A8) ──
     # READY: nothing outstanding. NEEDS_REVIEW: values to confirm.

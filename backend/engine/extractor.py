@@ -279,6 +279,13 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images,
                               column_pages=column_pages or None)
     if not inferred:
         return None
+    # Run R, R1: a grouped table (a vendor line above its invoice rows, a
+    # subtotal below) gets a column for the group, so the export says whose
+    # each row is. Decided by arithmetic on the text layer, never by the model.
+    from row_groups import add_group_column
+    group_col = add_group_column(inferred, page_lines)
+    if group_col:
+        _log("INFER", f"{doc_ref(file_path)}: grouped rows - column {group_col!r} added")
     grid = build_grid(inferred)
     shape = compute_shape(grid, log=lambda m: _log("INFER", m))
     if not is_usable(shape):
