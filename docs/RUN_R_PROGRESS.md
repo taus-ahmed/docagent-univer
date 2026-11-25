@@ -7,8 +7,8 @@ Read this first on a restart; skip items marked done.
 - [x] R2 job 95: side-by-side checks no longer dropped as duplicates (place_values); page-of-amounts reason (page 4); daily balances in not_captured (deaaa4a)
 - [x] R3 job 115: 1099-K amounts named; not_captured shown under each block in Results + Legend section (deaaa4a)
 - [x] R4 job 133: 400 schema refusal then two 120 s timeouts -> page-at-a-time fallback + failure_reason (25c860d); job 129: drop-shadow panels read as redaction bars, fixed (1a96eda); duplicate table names in inferred template NOT fixed (reported)
-- [ ] R5 UI "Template used: No template" for a templated job
-- [ ] R6 CI: local_docs skip guards audit; OCR test machine-independent; xfail count 22 vs 20
+- [x] R5 JobStatus/JobListItem lacked schema_id -> API dropped it (db0256b)
+- [x] R6 guards (q7, batch1 item 9), OCR reading pinned at the seam (4b9fdc4). 22 vs 20: CI +3 Tesseract-5.3 conditional xfails; local +1 job-79 strict xfail (skips on CI); batch1 item 9 xfailed on CI for the wrong reason (now skips)
 
 ## Part 2: Organized layout (option, default OFF)
 - [ ] (a) docs/ORGANIZED_LAYOUT_SPEC.md
