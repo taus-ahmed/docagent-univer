@@ -660,7 +660,11 @@ def test_09_each_real_legend_count_equals_cells_actually_marked():
     mismatches = {}
     for job in range(40, 56):
         path = EXPORT_ROOT / f"job_{job}_results.xlsx"
-        assert path.is_file(), f"required real staging export is missing: {path}"
+        # Run R, R6: on CI (no local_docs) this assert used to be caught by
+        # the strict xfail and counted as the expected failure - an xfail
+        # for the wrong reason. Absent real data is a skip, said as one.
+        if not path.is_file():
+            pytest.skip(f"real staging export not present (git-ignored local_docs): {path}")
         workbook = openpyxl.load_workbook(path, data_only=False)
         legend = _legend_counts(workbook)
         marked = _marked_counts(workbook)

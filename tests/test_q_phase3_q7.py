@@ -135,6 +135,10 @@ def test_real_answer_value_where_the_page_prints_nothing_is_low(stored_run):
 def test_a_correct_answer_on_the_same_page_raises_none_of_it():
     import replay_raw
     from types import SimpleNamespace
+    # Run R, R6: CI has no local_docs; this read had no guard and failed there
+    if not replay_raw.has_raw(64):
+        pytest.skip("local_docs/raw/64 not present (git-ignored real data)")
+    src = Q.need_source(VIRTUS)
     replay_raw._setup()
     from extractor import run_extraction
     doc = replay_raw.load_job(64)["docs"][0]

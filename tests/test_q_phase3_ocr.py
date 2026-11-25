@@ -66,7 +66,31 @@ def test_a_letter_word_beside_the_figure_is_not_ocr_noise():
     assert _fr().check_type("100.00 EUR", "Amount")[0]
 
 
-def test_the_flag_reaches_the_value_on_a_scan(tmp_path):
+def _pinned_ocr(monkeypatch, words):
+    """Run R, R6: the OCR READING as a fixture. This test is about what the
+    engine does with a misread figure, not about how a given Tesseract reads
+    a rendered page - CI's 5.3 read this page differently from 5.4 here, the
+    value came back assembled from non-adjacent words, and the test failed on
+    CI only. The page is still rendered and still goes through the OCR seam;
+    only the reader's answer is fixed. words: [(text, left, top, w, h)] px."""
+    import ocr_source
+    from PIL import Image
+
+    data = {k: [] for k in ("level", "text", "left", "top", "width", "height",
+                            "conf", "block_num", "par_num", "line_num")}
+    for text, left, top, w, h in words:
+        for k, v in (("level", 5), ("text", text), ("left", left), ("top", top),
+                     ("width", w), ("height", h), ("conf", 96.0), ("block_num", 1),
+                     ("par_num", 1), ("line_num", 1)):
+            data[k].append(v)
+    monkeypatch.setattr(ocr_source, "available", lambda: (True, "pinned"))
+    monkeypatch.setattr(ocr_source, "render_pdf_page",
+                        lambda *a, dpi=300, **k: Image.new("RGB", (2550, 3300), "white"))
+    monkeypatch.setattr(ocr_source.OcrPageSource, "_read", lambda self: data)
+
+
+def test_the_flag_reaches_the_value_on_a_scan(tmp_path, monkeypatch):
+    _pinned_ocr(monkeypatch, [("Total", 300, 380, 120, 40), ("12S.00", 440, 380, 140, 40)])
     f = Q.make_pdf(tmp_path / "r.pdf", [[(72, 700, "Total 12S.00")]])
     tpl = Q.template(fields=["Total Amount"])
 
