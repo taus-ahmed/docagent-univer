@@ -11,9 +11,9 @@ Read this first on a restart; skip items marked done.
 - [x] R6 guards (q7, batch1 item 9), OCR reading pinned at the seam (4b9fdc4). 22 vs 20: CI +3 Tesseract-5.3 conditional xfails; local +1 job-79 strict xfail (skips on CI); batch1 item 9 xfailed on CI for the wrong reason (now skips)
 
 ## Part 2: Organized layout (option, default OFF)
-- [ ] (a) docs/ORGANIZED_LAYOUT_SPEC.md
-- [ ] (b) v1 for text-layer pay stubs + tests vs syed sheet (utah_paystub_2)
-- [ ] (c) outputs in local_docs/organized_out/ + before/after note
+- [x] (a) docs/ORGANIZED_LAYOUT_SPEC.md (81f82ed)
+- [x] (b) v1 engine/organized_layout.py + excel_organized.py + ?layout=organized (off by default) + tests vs syed sheet (3db33e9, 29475dc)
+- [x] (c) local_docs/organized_out/ (4 files) + before/after note in the spec
 
 ## Finish
 - [ ] full backend suite, frontend tests/build, harness, scoreboard (once)
