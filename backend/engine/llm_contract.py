@@ -268,6 +268,47 @@ def note_contract(rec_list, requested_slots, returned_slots,
     rec["tables_returned"] = returned_tables
 
 
+def failure_story(attempts, timeout_s=None) -> str:
+    """Run R, R4: why a document's extraction call failed, in words, from its
+    own attempts - status, kind and latency only, never content. Job 133
+    reads: "the model service refused this template's answer format (HTTP
+    400); asked again without it, the call timed out after 120 s, twice"."""
+    if timeout_s is None:
+        try:
+            timeout_s = float(setting("LLM_CALL_TIMEOUT_S", 120.0))
+        except Exception:
+            timeout_s = 120.0
+    steps = []
+    for a in attempts or []:
+        if not isinstance(a, dict) or not a.get("error_kind"):
+            continue
+        kind, st = a.get("error_kind"), a.get("http_status")
+        lat = (a.get("latency_ms") or 0) / 1000.0
+        if kind == INVALID_REQUEST and a.get("structured_output"):
+            s = f"the model service refused this template's answer format (HTTP {st or 400})"
+        elif kind == INVALID_REQUEST:
+            s = f"the model service refused the request (HTTP {st or 400})"
+        elif kind == TRANSIENT and st is None and timeout_s and lat >= 0.9 * timeout_s:
+            s = f"the call timed out after {int(round(timeout_s))} s"
+        elif kind == TRANSIENT:
+            s = f"the model service did not answer (HTTP {st})" if st else \
+                "the connection failed"
+        elif kind == QUOTA:
+            s = "the model service's quota was exhausted"
+        else:
+            s = f"the call failed ({kind})"
+        if a.get("retry_reason") == "schema_rejected":
+            s = "asked again without it, " + s
+        bare = lambda x: x.replace("asked again without it, ", "")  # noqa: E731
+        if steps and bare(steps[-1][0]) == bare(s):
+            steps[-1][1] += 1
+            continue
+        steps.append([s, 1])
+    words = {2: "twice", 3: "three times"}
+    out = [s + ("" if n == 1 else f", {words.get(n, f'{n} times')}") for s, n in steps]
+    return "; ".join(out)
+
+
 def summarise(attempts) -> dict:
     """Totals over a document's attempts. Counters stay None when no attempt
     reported them."""

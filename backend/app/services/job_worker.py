@@ -54,6 +54,12 @@ def failure_reason_text(result) -> str:
     resp = getattr(result, "extraction_response", None)
     kind = kind or str(getattr(resp, "error_kind", "") or "").strip()
     why = _FAILURE_KIND_TEXT.get(kind.lower(), "")
+    # Run R, R4: the engine's account of its own attempts says more than the
+    # kind ("refused this template's answer format (HTTP 400); ... timed out
+    # after 120 s, twice") and, like the kind, holds no document content
+    story = str(ed.get("failure_reason") or "").strip()
+    if story:
+        why = story
     if not why and kind:
         why = f"failure kind {kind!r}"
     return ("Extraction failed: " + (why or "no reason was returned by the engine")

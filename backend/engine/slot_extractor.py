@@ -2044,6 +2044,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     chunked = bool(min_pages and len(pages) >= min_pages and slots["tables"]
                    and page_lines)
     page_failed = {}
+    fallback_notes = []          # Run R, R4: said once `notes` exists
     # Run Q, Q12: A BLANK FILLABLE FORM NEEDS NO MODEL CALL. smartsheet_mileage
     # (two 1885 x 1457 pt pages, 268 AcroForm widgets, none filled) failed
     # twice on staging after ~42 s with no reason. Every widget is empty and
@@ -2079,6 +2080,24 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             default_doc_type)
     else:
         parsed, resp = ask(prompt, slots, "fields+tables")
+        # Run R, R4 (job 133): a whole-document call that failed TRANSIENTLY
+        # - fiserv's 5 pages timed out at 120 s, twice, under the 6-page
+        # threshold for page calls - is asked again a page at a time, each
+        # call a fifth of the answer. A refused request (400) is ours to fix
+        # and is not retried smaller.
+        if (not isinstance(parsed, dict) and slots["tables"] and page_lines
+                and len(pages) >= 2
+                and getattr(resp, "error_kind", None) in C.RETRYABLE_TRANSPORT):
+            _log("SLOT", "whole-document call failed "
+                         f"({getattr(resp, 'error_kind', None)}) - asking a page at a time")
+            parsed, resp, page_failed = page_at_a_time(
+                ask, slots, pages, page_lines, page_images or [], nums, inventory,
+                default_doc_type)
+            if isinstance(parsed, dict):
+                chunked = True
+                fallback_notes.append("the whole-document call failed (" + (
+                    C.failure_story(attempts) or "a transient error")
+                    + "); the document was asked a page at a time instead")
     if not isinstance(parsed, dict):
         _log("SLOT", "no parseable response — failing the document")
         from app.api.routes.extract import _fail
@@ -2090,6 +2109,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         failed_r = _fail(file_path.name, why)
         failed_r.extracted_data = {
             "document_state": "FAILED", "failure_kind": kind or C.INVALID_JSON,
+            "failure_reason": C.failure_story(attempts) or why,
             "diagnostics": {"attempts": attempts,
                             "usage": C.summarise(attempts),
                             "inventory": inventory["totals"],
@@ -2226,6 +2246,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # set aside for a different reason, which its flag names).
     field_prov = {}
     extracted_fields, conf_map, flagged, notes = {}, {}, [], list(recovered_notes)
+    notes.extend(fallback_notes)
     if blank_widgets:
         notes.append(f"blank fillable form: {blank_widgets} form fields, none "
                      f"filled, and no amount printed - the model was not asked")

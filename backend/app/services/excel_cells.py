@@ -867,8 +867,14 @@ def _add_review_legend(wb, doc_results, demo=False):
     for i, (d, s, failed) in enumerate(per_doc, 1):
         r += 1
         name = (f"document {i}" if demo else (d.filename or f"document {i}"))
-        if failed:
+        ed_i = d.get_extracted_data()
+        if failed or (isinstance(ed_i, dict) and ed_i.get("document_state") == "FAILED"):
             name += " — FAILED, no values extracted"
+            # Run R, R4: and why, from the engine's own attempts
+            why = str((ed_i or {}).get("failure_reason") or "").strip() \
+                if isinstance(ed_i, dict) else ""
+            if why:
+                name += f" ({why})"
         for col, v in enumerate((name, s["values"], s["needs_review"], s["low"],
                                  s["unverified"], s["empty_flagged"],
                                  s["attention"], s["accepted_after_low"]), 1):
