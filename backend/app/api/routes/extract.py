@@ -629,8 +629,10 @@ def export_job_excel(
     job_id: int,
     provenance: bool = True,
     include_audit: bool = False,
+    layout: str = "template",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    storage=Depends(get_storage),
 ):
     """The template-shaped workbook.
 
@@ -664,6 +666,13 @@ def export_job_excel(
     )
     if not doc_results:
         raise HTTPException(status_code=404, detail="No results found.")
+
+    # Run R, Part 2: the ORGANIZED LAYOUT, off by default - only on
+    # `layout=organized`, and only for a job extracted without a template
+    if layout == "organized":
+        return _organized_export(job, doc_results, storage, current_user)
+    if layout != "template":
+        raise HTTPException(status_code=400, detail="layout is 'template' or 'organized'.")
 
     # FIX 4: single source of truth — prefer the region analysis saved at
     # extraction time so export cannot diverge from extraction.
@@ -716,6 +725,39 @@ def export_job_excel(
     draft = "_DRAFT" if _is_draft(doc_results) else ""
     return StreamingResponse(buf, headers={
         "Content-Disposition": f'attachment; filename="job_{job_id}_results{draft}.xlsx"',
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    })
+
+
+def _organized_export(job, doc_results, storage, current_user):
+    """Run R, Part 2 (v1): each document's pages laid out as printed
+    (docs/ORGANIZED_LAYOUT_SPEC.md). Read from the stored source files; a
+    document whose file is gone or has no text layer is listed, not lost."""
+    if job.schema_id:
+        raise HTTPException(status_code=400, detail=(
+            "The organized layout is for jobs extracted without a template; "
+            "this job used one. Download the template export instead."))
+    from app.services.excel_organized import organized_workbook
+    from app.services.excel_cells import _add_review_legend
+    demo = is_demo_user(current_user)
+    paths, sources = [], []
+    try:
+        for i, d in enumerate(doc_results, 1):
+            name = f"document {i}.pdf" if demo else (d.original_filename or d.filename or f"document {i}")
+            path = storage.get_local_path(d.s3_key) if d.s3_key else None
+            if path is not None:
+                paths.append(path)
+            sources.append((name, path))
+        wb = organized_workbook(sources)
+    finally:
+        for p in paths:
+            storage.release(p)
+    _add_review_legend(wb, doc_results, demo=demo)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(buf, headers={
+        "Content-Disposition": f'attachment; filename="job_{job.id}_organized.xlsx"',
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     })
 
