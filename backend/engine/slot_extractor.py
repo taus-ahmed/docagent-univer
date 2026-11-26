@@ -1467,6 +1467,10 @@ def quote_row_lines(value, source, all_lines):
             ws = [set(_words_of(_line_str(ln))) & need for ln in win]
             if all(ws) and set().union(*ws) == need:
                 out.extend(range(i, i + span))
+                # Run S, 3d (job 79 box 4): a FORM BOX whose label wraps over
+                # the window prints its value in the box below the window's
+                # last line, as Q4 (e) does for a one-line label
+                out.extend(_box_below(i + span - 1, value, rest, all_lines))
                 break
     return sorted(set(out)) or None
 

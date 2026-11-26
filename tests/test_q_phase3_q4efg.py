@@ -66,10 +66,11 @@ def test_f_real_currency_symbol_at_the_box_edge_is_not_a_gutter(j79):
     assert not any("column gutter" in r for r in reasons), reasons
 
 
-@pytest.mark.known_bug
-@pytest.mark.xfail(strict=True, reason="the quote interleaves the labels of boxes 3 AND 4 "
-                                       "over three lines; no single line names the row")
 def test_f_real_box4_quote_interleaving_two_boxes(j79):
+    # Run S, 3d: was a strict xfail ("the quote interleaves the labels of
+    # boxes 3 AND 4 over three lines; no single line names the row"). A label
+    # wrapping over a window of lines now also owns the box below its last
+    # line (quote_row_lines), as a one-line label already did (Q4 e).
     assert _conf(j79, "4 Federal income tax withheld") != "low"
 
 
