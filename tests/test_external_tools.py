@@ -17,6 +17,8 @@ import textwrap
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -55,8 +57,11 @@ def alive(pid: int) -> bool:
         os.kill(pid, 0)
     except OSError:
         return False
-    with open(f"/proc/{pid}/stat") as fh:
-        return fh.read().split()[2] != "Z"
+    try:
+        with open(f"/proc/{pid}/stat") as fh:
+            return fh.read().split()[2] != "Z"
+    except (FileNotFoundError, ProcessLookupError):
+        return False
 
 
 def pids(path: Path) -> list:
@@ -105,6 +110,29 @@ def test_run_kills_the_program_and_its_children(slow):
     started = pids(slow)
     assert len(started) == 2
     assert wait_dead(started) == []
+
+
+def test_run_names_tesseract_when_the_process_exits_before_kill(monkeypatch):
+    cmd = ["tesseract", "--version"]
+    proc = Mock()
+    proc.communicate.side_effect = [subprocess.TimeoutExpired(cmd, 15), (b"", b"")]
+    proc.kill.side_effect = ProcessLookupError(3, "No such process")
+    monkeypatch.setattr(external_tools, "_popen", lambda *args, **kwargs: proc)
+
+    with pytest.raises(external_tools.ToolTimeout, match=r"^tesseract .*OCR_PROBE_TIMEOUT_S"):
+        external_tools.run(cmd)
+    proc.kill.assert_called_once_with()
+    assert proc.communicate.call_count == 2
+
+
+@pytest.mark.parametrize("error", [FileNotFoundError, ProcessLookupError])
+def test_alive_handles_a_pid_disappearing_after_the_signal_check(monkeypatch, error):
+    signal_check = Mock()
+    monkeypatch.setitem(globals(), "os", SimpleNamespace(name="posix", kill=signal_check))
+    monkeypatch.setitem(globals(), "open", Mock(side_effect=error))
+
+    assert not alive(123)
+    signal_check.assert_called_once_with(123, 0)
 
 
 def test_a_hung_version_probe_is_a_named_failure_not_a_hang(slow, tmp_path):

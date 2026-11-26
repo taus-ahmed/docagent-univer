@@ -206,7 +206,10 @@ def run(cmd, kind: str = "probe", **kwargs) -> subprocess.CompletedProcess:
     try:
         out, err = proc.communicate(timeout=limit)
     except subprocess.TimeoutExpired:
-        proc.kill()
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
         try:
             proc.communicate(timeout=10)
         except Exception:
