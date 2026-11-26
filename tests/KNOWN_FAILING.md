@@ -8,6 +8,16 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 | --- | --- | --- | --- |
 | Batch1 item 9: Legend counts in the FROZEN staging exports | `test_09_each_real_legend_count_equals_cells_actually_marked` | BLOCKED (overnight run): the test reads the 16 real staging exports in `local_docs/batch1_exports`, written by the OLD writer, which marked only slots holding a value. No code change can alter those files; re-exporting needs the jobs' stored `extraction_json`, which is not in the repo. The writer was fixed in overnight B4 (every slot is visited; an empty-and-flagged slot is the grey cell with a comment) and is proven on current output by `tests/test_overnight_b4.py` and `tests/legend_check.py`. | Jobs 46, 48 and 51 report 3, 12 and 2 empty-flagged values and paint no grey cell. Remove this marker after re-exporting those three jobs from staging with the current code. |
 
+Run S Stage 3 (2026-11-25): ONE marker came off: job 79 box 4
+(`test_q_phase3_q4efg::test_f_real_box4_quote_interleaving_two_boxes`)
+passed as XPASS after 9d7fd58 (a label wrapping over lines owns the box
+below its last line) and the marker was removed. Full suite once at
+1850276: 5663 passed, 19 xfailed (was 20), 3 failed - the 3 are Stage 4
+tests written before their code (tests/test_s4_micr_and_cleanup.py, not
+committed at that point). The ENGIE customer-email strict xfail
+(test_round2_I1) stays: the value is now Low and flagged (3a) but still
+written, and the test asks for it EMPTY. Batch1 item 9 stays (frozen files).
+
 Run S Stage 1 (2026-11-25): no marker came off and none was added. Full
 suite once at c6d2888: 5580 passed, 4 failed, 20 xfailed. The 4 were Run S
 regressions, fixed in 8a7a6b0 (conservation named a templated W-2's

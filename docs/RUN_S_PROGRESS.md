@@ -34,7 +34,7 @@ one commit per item; push after each stage; UI untouched.
 - [x] 3e no-template RAW 59.4% vs 70.1%: bisect and explain
 - [x] 3f Legend counts vs marked cells (jobs 46, 48, 51)
 - [x] 3g job 130 smartsheet_mileage finished with no values
-- [ ] Stage 3 finish: suite + harness + scoreboard, KNOWN_FAILING, push
+- [x] Stage 3 finish: suite + harness + scoreboard, KNOWN_FAILING, push
 
 ## Stage 4 — image / OCR word-box path, watermarks
 - [x] 4-gen tools/make_synthetic_checks.py (≥40 checks, PDF + image, ground truth JSON) → local_docs/synthetic_checks/
@@ -116,3 +116,8 @@ one commit per item; push after each stage; UI untouched.
   stage4_4d.patch / slot_extractor_with_4d.py and must be re-applied after). Then:
   tools/wrapped_value_census.py s1 s3 for the owner's 3c questions; Stage 3 finish (suite, harness,
   scoreboard, KNOWN_FAILING: box-4 marker came off), push. Stage 4: apply scratchpad p_ocr.py.
+- STAGE 3 FINISHED: suite 5663 passed / 19 xfailed / 3 failed (Stage 4 tests ahead of code), harness
+  98.7 / 98.2, 17/17. 3a follow-up 1850276 (customer-service labels). Report sections 0-3 written.
+- NEXT: Stage 4. Apply scratchpad stage4_4d.patch (git apply; do NOT copy the saved full file - HEAD moved),
+  then scratchpad p_ocr.py (ocr_source integration), set image_cleanup.DEFAULT = "otsu", run
+  tests/test_s4_*, then eval --tag after --variants engine --micr-band.
