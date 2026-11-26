@@ -1,4 +1,6 @@
-# RUN S progress (engine overhaul) — IN PROGRESS
+RUN S DONE
+
+# RUN S progress (engine overhaul)
 
 Branch `fix/review-fixes`. Resume from the first unchecked item.
 Rules: test first; no test deleted/weakened/skipped; no live Gemini; never read .env;
@@ -38,17 +40,17 @@ one commit per item; push after each stage; UI untouched.
 
 ## Stage 4 — image / OCR word-box path, watermarks
 - [x] 4-gen tools/make_synthetic_checks.py (≥40 checks, PDF + image, ground truth JSON) → local_docs/synthetic_checks/
-- [ ] 4-before per-field accuracy baseline by watermark strength
-- [ ] 4a one OCR word-box path into the same placement/verification engine
-- [ ] 4b watermark/background suppression chosen by measured accuracy
-- [ ] 4c MICR line reading as its own check
-- [ ] 4d OCR vs model disagreement flagged; amount figures vs words reconciled
-- [ ] 4e after report by watermark strength; checks_specimens if present; ou_check_stub, saltlake_paycheck, receipt photos retried
-- [ ] Stage 4 finish: suite + harness + scoreboard, KNOWN_FAILING, push
+- [x] 4-before per-field accuracy baseline by watermark strength
+- [x] 4a one OCR word-box path into the same placement/verification engine
+- [x] 4b watermark/background suppression chosen by measured accuracy
+- [x] 4c MICR line reading as its own check
+- [x] 4d OCR vs model disagreement flagged; amount figures vs words reconciled
+- [x] 4e after report by watermark strength; checks_specimens if present; ou_check_stub, saltlake_paycheck, receipt photos retried
+- [x] Stage 4 finish: suite + harness + scoreboard, KNOWN_FAILING, push
 
 ## Finish
-- [ ] docs/RUN_S_REPORT.md (per item cause/change/tests/not fixed; both corpus halves before/after; not verified)
-- [ ] "RUN S DONE" on line 1
+- [x] docs/RUN_S_REPORT.md (per item cause/change/tests/not fixed; both corpus halves before/after; not verified)
+- [x] "RUN S DONE" on line 1
 
 ## Log
 
@@ -121,3 +123,6 @@ one commit per item; push after each stage; UI untouched.
 - NEXT: Stage 4. Apply scratchpad stage4_4d.patch (git apply; do NOT copy the saved full file - HEAD moved),
   then scratchpad p_ocr.py (ocr_source integration), set image_cleanup.DEFAULT = "otsu", run
   tests/test_s4_*, then eval --tag after --variants engine --micr-band.
+- STAGE 4 FINISHED: ce39913 4b+4c, 52582dc 4a+4d, 796220c 4e. Synthetic checks 67.0% -> 84.9% (heavy
+  43.1 -> 79.9). Default cleanup `auto` (otsu everywhere broke 5 real-scan tests). checks_specimens absent.
+  Suite 5669 passed / 0 failed / 19 xfailed; harness 98.7 / 98.2, 17/17. RUN S DONE.

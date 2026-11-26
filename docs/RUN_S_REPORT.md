@@ -200,4 +200,140 @@ Suite once (at 1850276): 5663 passed, 19 xfailed (box 4's marker came off),
 3 failed — Stage 4 tests written before their code. Harness 98.7% / 98.2%,
 17/17 both, invented 0, misfiled 0, RAW 48.0 / 59.4. Scoreboard unchanged.
 
-_(Stage 4 and the final summary follow.)_
+## Stage 4 — the image and OCR word-box path, with watermarks
+
+### The synthetic checks · 11a92e7, `tools/make_synthetic_checks.py`
+48 US checks (personal, business, payroll; 4 of each kind at each watermark
+strength), made-up data only (invented names, a fictional bank, routing
+numbers built to pass the ABA checksum), each as a JPEG and as an image PDF,
+ground truth in `local_docs/synthetic_checks/ground_truth.json`. Watermark
+strength none / light (tiled text) / medium (+ diagonal security text, a
+guilloche pattern) / heavy (+ a VOID or SAMPLE overprint); capture flat scan /
+noisy blurred scan / phone photo (rotation, perspective, a shadow) /
+low-quality JPEG. The MICR band is printed with ASCII stand-ins in a
+monospace face: no E-13B face is available here.
+
+### What was measured
+`tools/eval_synthetic_checks.py`: each image read by the engine's own OCR
+reader; a field is READ when its words appear in order on one OCR line (the
+precondition for grounding it); MICR fields through the engine's MICR parser;
+`amounts_agree` through the engine's figures-vs-words reconciliation. No
+model call: this is the perception layer's accuracy, not end-to-end
+extraction accuracy.
+
+| watermark | before | after |
+|---|---:|---:|
+| none | 76.4% | 84.7% |
+| light | 77.1% | 88.9% |
+| medium | 71.5% | 86.1% |
+| heavy | 43.1% | 79.9% |
+| **all 48** | **67.0%** | **84.9%** |
+
+Per field, all 48 (before → after): payer 98 → 98, bank 94 → 96, cheque
+number 92 → 94, date 81 → 90, payee 81 → 77, amount in figures 62 → 69,
+amount in words 77 → 94, memo 90 → 94, MICR routing 27 → 88, MICR account
+25 → 83, MICR serial 25 → 69, figures and words agree 52 → 69. Weakest
+after: noisy scans (75.0%) and phone photos (80.6%); payee and the amount in
+figures stay the hardest (a value inside a drawn box, or on a rule line).
+
+### 4b — cleanup, chosen by measurement · ce39913
+Seven candidates (`engine/image_cleanup.py`), each read in full:
+
+| variant | idea | all | heavy |
+|---|---|---:|---:|
+| none | the page as given | 80.2% | 59.7% |
+| otsu | threshold on a background-flattened page | 83.7% | 84.0% |
+| unboxed | otsu + rules and box borders erased | 83.0% | 81.2% |
+| multipass (lines) | none/otsu/unboxed, most confident line kept | 81.1% | 84.0% |
+| ink (colour; corrected) | dark, low-chroma pixels only | 73.4% | 67.4% |
+| multipass (words) | most confident word per place | 70.1% | 54.9% |
+| ink_x15 (scale) | ink at 1.5× | 59.4% | 47.2% |
+| median (frequency) | ink + 3×3 median | 43.1% | 40.3% |
+
+(band reader on for all; `ink` was first measured with an HSV bug that threw
+away near-black ink - 60.8%; corrected, 73.4%.)
+
+otsu read most, but applied to every page it cost the REAL rendered scans of
+the test suite strokes: 5 tests failed (a cheque's bottom line read 11 words
+where 16+ are printed; the ten-cheque page; the invalid-checksum cheque). The
+synthetic set alone could not see that. The reader's default is therefore
+**`auto`**: read the page as given; only when that reading is unsure
+(character-weighted confidence under 85) read the otsu page too and keep the
+more confident reading; a page with no words keeps its own measured retry.
+On the synthetic set `auto` (with the band reader) reads 84.9%, above otsu
+everywhere; the 23 OCR, scan and cheque test files pass (473).
+
+### 4c — the MICR band as its own check · ce39913
+`engine/micr_reader.py` and `OcrPageSource._repair_micr_band`: the band is
+located by shape (the lowest mostly-digit line), kept as read when it parses
+with a checksum-valid routing number, else its confusables are repaired in
+place (`@` → 0, a letter between digits → its digit; boxes kept), else the
+strip is re-read alone (psm 7, the band's alphabet). Only a reading that
+passes the ABA checksum is ever kept. MICR routing 27% → 88%.
+
+### 4a/4d — one path, disagreements said · 52582dc
+An image goes through `extractor.run_extraction` like a PDF: the OCR words
+are the page's words, so grounding, the MICR band, the cheque validators and
+conservation all run on them (`tests/test_s4_ocr_path_end_to_end.py`, a
+generated check). New: a value that did not ground, where the OCR reading
+holds a near-identical figure (≤ 2 edits), is Low with BOTH readings named;
+an answered routing / account / cheque number the band contradicts is Low
+with both. Amount in figures vs in words: the existing cheque reconciliation
+(a bare "Amount" label names neither, by design).
+
+### 4e — the image-based documents retried · 796220c
+`tools/retry_image_docs.py`: the stored answers' values found in the OCR
+reading, before (no cleanup) → after (`auto`):
+
+| document | values | read before | read after |
+|---|---:|---:|---:|
+| ou_check_stub (job 66; the stub is a picture on a native page) | 97 | 2 | 25 |
+| saltlake_paycheck (job 60 / 121; page 2 is a scan) | 152 / 156 | 37 / 31 | 37 / 31 |
+| calif_restaurant photo (71, 122) | 59 | 54 | 54 |
+| shell_mastercard photo (71 / 124) | 11 | 8 / 5 | 8 / 5 |
+| circuit_city photo (71) | 16 | 3 | 3 |
+| circle_k photo (71) | 10 | 0 | 0 |
+
+`auto` kept the plain reading on the saltlake scan and the photos (they read
+confidently, or the cleanup did not help) and transformed the stub picture.
+**Not integrated:** a picture on a page that ALSO has a text layer is still
+not OCR'd by the pipeline (selective OCR needs an image covering the page),
+so job 66's values stay `unverified` ("read from a picture") on replay; the
+reading above shows the stub is now readable. Making it part of the page
+needs a per-value machine-read floor on a mixed page - not done.
+
+**`local_docs/checks_specimens` does not exist**: no real specimen checks
+were supplied, so none were run.
+
+### Stage 4 checks
+Corpus s4 (both halves): unchanged from s3 except one Low fewer (job 73,
+the 3a follow-up) - the corpus's own scans and photos read the same under
+`auto`. Suite once (at 796220c): **5669 passed, 0 failed, 19 xfailed**.
+Harness 98.7% / 98.2%, 17/17 both, invented 0, misfiled 0, defect rate 0.0%,
+RAW 48.0 / 59.4. Scoreboard unchanged (frozen staging records: approve-only
+1/4, purchase order 6/6).
+
+## What is NOT verified
+
+* **No live model run.** Everything is replayed stored answers, cached gold
+  answers, or the perception layer alone. Recovery calls (1c), the model's
+  answer to the new Vendor ID / Vendor Name columns (1b), and any prompt-level
+  effect of the cleaned OCR text are unmeasured.
+* **No real checks and no real phone photos of checks.** The 48 checks are
+  synthetic; the MICR band is a monospace stand-in, not E-13B, which
+  Tesseract has no model for.
+* **Job 138** is reconstructed (its export + job 131's rows), not replayed.
+* The organized layout is not approved or switched on; scans are not laid out.
+* The report half holds only 4 no-template documents, so its no-template
+  numbers rest on few files.
+
+
+## Final checks
+
+| check | result |
+|---|---|
+| backend suite, once per stage | S1 5580 passed / 4 failed (fixed, re-run) · S2 5609 passed / 11 env-only · S3 5663 passed / 3 (Stage 4 tests ahead of code) · **S4 5669 passed, 0 failed, 19 xfailed** |
+| harness templated / no-template | 98.7% / 98.2% at every stage; 17/17 tables both; invented 0; misfiled 0; defect rate 0.0% |
+| strict xfails | 20 → 19: job 79 box 4 came off (3d) |
+| scoreboard | unchanged (frozen staging records) |
+| frontend | not touched |
