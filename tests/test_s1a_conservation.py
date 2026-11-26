@@ -266,3 +266,19 @@ def test_a_value_less_label_with_nothing_beside_it_adds_nothing():
     pages = [_page(["Deductions Current YTD", "Federal Tax $12 $96", "Notes:"])]
     out = _check(pages, ["$12", "$96"])
     assert out["missing"] == []
+
+
+def test_templated_a_captured_rows_other_columns_are_the_templates_choice():
+    """A W-2 template asking boxes 1, 2, 5, 6 (tests/fixtures/scenarios,
+    wrapped_values): boxes 3 and 4 printed on the same record's lines are
+    columns the template left out - said as a note, never a missing row.
+    A row line with nothing held is still a missing row."""
+    pages = [_page(["Employee SSN Box1 Box2 Box3 Box4",
+                    "Marcus 4821 $87,500.00 $14,210.00 $87,500.00 $5,425.00",
+                    "Janet 3317 $144,583.00 $38,880.00 $144,583.00 $8,964.15",
+                    "Priya 6092 $55,274.00 $7,440.00 $55,274.00 $3,426.99"])]
+    held = ["$87,500.00", "$14,210.00", "$144,583.00", "$38,880.00", "4821", "3317"]
+    out = _check(pages, held, templated=True, band_pages={1})
+    assert len(out["attention"]) == 1
+    assert "$55,274.00" in out["attention"][0] and "$5,425.00" not in out["attention"][0]
+    assert any("$5,425.00" in n for n in out["not_captured"])

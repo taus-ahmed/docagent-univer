@@ -389,10 +389,16 @@ def check(page_lines, page_numbers, values, said=(), *, templated=False,
     attention, notes = [], []
     by_page = {}
     excluded = []
+    # a row line any figure of which is held is a record the template DID
+    # capture: its other figures are columns the template left out (a W-2
+    # template asking boxes 1, 2, 5, 6 of a record printing 1-6)
+    captured_lines = {(t.page, t.line) for t in toks
+                      if t.role == "row" and holder.holds(t)}
     for t in missing:
         if templated:
             on_table = t.role in ("row", "group", "total") and (
-                band_pages is None or t.page in band_pages)
+                band_pages is None or t.page in band_pages) and not (
+                t.role == "row" and (t.page, t.line) in captured_lines)
             if not on_table and t.kind != "amount":
                 # a template is the user's own choice of what to copy: an
                 # identifier or a date it does not ask for is deliberately
