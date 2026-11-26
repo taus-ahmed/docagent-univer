@@ -716,9 +716,11 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
             here = SI.page_has_band(lines, t)
             if cand >= 2 and (here or prev) and got.get(n, 0) * 2 < cand:
                 want.setdefault(k, []).append(t)
-            elif here or prev:
-                # Run S, 1c: a dense page read in part - two or more row
-                # lines none of whose figures is in the answer
+            elif (here or prev) and got.get(n, 0) < cand:
+                # Run S, 1c: a dense page read in part - the page prints more
+                # rows of this band's kind than the answer holds for it, and
+                # two or more row lines have under half their figures in the
+                # answer (a form's box lines are not this band's rows)
                 if k not in lost_lines:
                     lost_lines[k] = lost_row_lines(lines, n, answer_values)
                 if len(lost_lines[k]) >= 2:
