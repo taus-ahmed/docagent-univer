@@ -16,7 +16,7 @@ one commit per item; push after each stage; UI untouched.
 - [x] 1c dense / multi-form pages: targeted recovery before flagging
 - [x] 1d synthetic PDFs in several vocabularies/layouts (group headers: vendor/customer code/employee/no-id; more with 1a)
 - [x] 1e job 138 amber reasons ranked; false ones fixed
-- [ ] Stage 1 finish: suite + harness + scoreboard, KNOWN_FAILING, push
+- [x] Stage 1 finish: suite + harness + scoreboard, KNOWN_FAILING, push
 
 ## Stage 2 — organized layout for all text-layer PDFs
 - [ ] 2a spec extension in ORGANIZED_LAYOUT_SPEC.md
@@ -76,3 +76,28 @@ one commit per item; push after each stage; UI untouched.
 - 3b finding: jobs 61/65 (utah_paystub_1 under a PO template) get no wrong-template warning: hint scores
   payslip 1, tax_form 1, purchase_order 0; type_mismatch needs >=2 hits for another type. Plan: template's own
   labels printed fraction as a second signal.
+- 3g finding: smartsheet_mileage.pdf IS a blank fillable form (268 widgets, none filled, no figure on either
+  page); job 130 correctly READY with blank_form_note, but no writer shows that note (grep: blank_form unused
+  in app/services), so the export looks like a failure. Plan: write the note in the block and on the Legend.
+- 3c finding (job 62, utah_paystub_2): Position/Title 'Marketing Operations Specialist' -> verify_span says
+  'value not found inside its own source span'; canonical_value finds it in-column (not crossed). The D9
+  fallback only runs for 'source span not found'. Employee Address: verify_span alone passes -> its Low comes
+  from a later check; trace in a replay.
+- c6d2888: real-case tests (127/95/115/129/131) pass; fix = a value-less label takes the figures beside it.
+- Corpus s1 (local_docs/corpus_metrics/s1.md; s1a discarded as stale), before -> after:
+  printed-but-never-mentioned (tokens_silent): dev 458 -> 309, report 782 -> 465, all 1240 -> 774.
+  structural coverage unchanged 66.5% (conservation names, it does not extract; recovery calls have no
+  stored answer on replay). missing printed amounts 689 unchanged (same reason). silent blanks 20 unchanged.
+  false Lows 370 -> 346 (report 112 -> 88: 1e). key wrong 5 -> 14 and wrong-at-high 2 -> 11: all 9 are job 72
+  Vendor Name, the key = a reviewer's acceptance of the model's 'StewartHodge' (a name glued into the
+  INVOICE text); the page's group line says FLEET FEET MOBILE; 1b writes the page's and flags the model's.
+- Stage 4 measured (local_docs/synthetic_checks/eval_*.md, 48 checks, read accuracy of 12 fields):
+  before (reader as is, no band reader) 67.0% all; by watermark none 76.4 / light 77.1 / medium 71.5 / heavy 43.1.
+  band reader alone (variant none) 80.2%. Sweep: otsu 83.7 (heavy 84.0), unboxed 83.0, multipass-lines 81.1
+  (payee 25%: caption lines win the place), multipass-words 70.1, ink 60.8, ink_x15 59.4, median 43.1.
+  Chosen DEFAULT = otsu. Files written, not yet committed: engine/image_cleanup.py, engine/micr_reader.py,
+  engine/party_fit.py, tools/eval_synthetic_checks.py, tools/template_label_fit.py, tests/test_s4_*,
+  tests/test_s3a_*, tests/test_s3bc_*, tests/test_s3g_*, tests/test_s2_organized_v2.py; patches staged in
+  scratchpad p_ol.py (Stage 2), p_3a4d.py, p_3b.py (apply after the suite finishes).
+- STAGE 1 FINISHED: suite once 5580 passed / 4 failed (fixed 8a7a6b0, df8de7f; affected files re-run 116 passed),
+  harness 98.7% / 98.2%, 17/17 both, invented 0, misfiled 0; RAW 48.0 / 59.4; scoreboard unchanged (frozen records).

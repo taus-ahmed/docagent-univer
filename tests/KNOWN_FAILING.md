@@ -8,6 +8,17 @@ makes one pass will fail as XPASS until its marker and this row are removed.
 | --- | --- | --- | --- |
 | Batch1 item 9: Legend counts in the FROZEN staging exports | `test_09_each_real_legend_count_equals_cells_actually_marked` | BLOCKED (overnight run): the test reads the 16 real staging exports in `local_docs/batch1_exports`, written by the OLD writer, which marked only slots holding a value. No code change can alter those files; re-exporting needs the jobs' stored `extraction_json`, which is not in the repo. The writer was fixed in overnight B4 (every slot is visited; an empty-and-flagged slot is the grey cell with a comment) and is proven on current output by `tests/test_overnight_b4.py` and `tests/legend_check.py`. | Jobs 46, 48 and 51 report 3, 12 and 2 empty-flagged values and paint no grey cell. Remove this marker after re-exporting those three jobs from staging with the current code. |
 
+Run S Stage 1 (2026-11-25): no marker came off and none was added. Full
+suite once at c6d2888: 5580 passed, 4 failed, 20 xfailed. The 4 were Run S
+regressions, fixed in 8a7a6b0 (conservation named a templated W-2's
+unasked boxes as missing rows: test_scenarios wrapped values) and df8de7f
+(the dense-page recovery trigger fired on a W-2's box lines and duplicated
+the state band: test_overnight_a6 x2, the ae control a6); those files and
+every Run S test were re-run (116 passed, 1 xfailed), not the whole suite
+again. Batch1 item 9 stays: tests/test_s3f_legend_counts_reexport.py shows
+jobs 40-55 re-exported from their stored results have Legend counts equal
+to the painted cells; the frozen files the marker reads cannot change.
+
 Run R (2026-11-25): no marker came off and none was added. Batch1 item 9
 now SKIPS when `local_docs/batch1_exports` is absent (CI): before, its strict
 xfail swallowed the missing-file AssertionError as its expected failure. Full
