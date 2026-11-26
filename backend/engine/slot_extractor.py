@@ -2760,6 +2760,21 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         if parts:
             _log("MICR", f"{doc_ref(file_path)}: band decomposed into "
                          f"{len(parts)} field(s)")
+    # ── WHOSE VALUE IS IT (Run S, 3a; engine/party_fit.py) ──
+    # Grounding proves a string is printed, not whose it is: the issuer's own
+    # contact (printed on several pages, or spelling the letterhead) in a
+    # slot that asks for the customer's is Low and flagged, never blanked.
+    import party_fit as PF
+    for slot in slots["fields"]:
+        ref = slot["ref"]
+        v = extracted_fields.get(ref)
+        if not str(v or "").strip() or conf_map.get(ref) == LOW:
+            continue
+        why = PF.misowned(slot["row_label"], v, pages)
+        if why:
+            conf_map[ref] = LOW
+            failed(ref, CONTENT_CHECK_FAILED)
+            flagged.append(_flag(slot["row_label"], v, why))
 
     # ── WHICH SLOT A VALUE BELONGS TO (overnight A1, engine/ownership.py) ──
     # A box value printed in another box, an X under another option of the
