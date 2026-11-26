@@ -129,6 +129,51 @@ def _scores(text):
     return out
 
 
+_STOP = {"the", "and", "for", "of", "to", "in", "on", "at", "no", "number", "date",
+         "amount", "total", "name", "address", "box", "line", "per", "a", "an", "or"}
+
+
+def slot_labels(slot_map) -> list:
+    """The template's own words: field labels and table column headings."""
+    out = [f.get("row_label") for f in (slot_map or {}).get("fields") or []]
+    for t in (slot_map or {}).get("tables") or []:
+        out += [c.get("header") for c in t.get("columns") or []]
+    return [str(x) for x in out if str(x or "").strip()]
+
+
+def _sig(label):
+    return [w for w in re.findall(r"[a-z]{3,}", str(label).casefold()) if w not in _STOP]
+
+
+def label_fraction(text, labels):
+    """(fraction, labels with words, labels printed): a label is PRINTED when
+    at least half of its significant words appear in the text as whole words.
+    Labels with no significant word ("No.", "Box 1") are not counted."""
+    words = set(re.findall(r"[a-z]{3,}", str(text or "").casefold()))
+    counted = [_sig(x) for x in labels]
+    counted = [c for c in counted if c]
+    hit = sum(1 for c in counted if sum(w in words for w in c) * 2 >= len(c))
+    return ((hit / len(counted)) if counted else 1.0), len(counted), hit
+
+
+#: Run S, 3b: a template whose own labels the document barely prints. Chosen
+#: on the corpus (tools/template_label_fit.py): every right template prints
+#: well over this share of its labels; the wrong-template jobs print under it.
+LABEL_FIT_MIN = 0.25
+LABEL_FIT_MIN_LABELS = 6
+
+
+def label_mismatch(text, labels, template_name=None):
+    """'Most of this template's labels are not on the page' or None."""
+    frac, n, hit = label_fraction(text, labels)
+    if n < LABEL_FIT_MIN_LABELS or frac >= LABEL_FIT_MIN:
+        return None
+    name = f" {template_name!r}" if template_name else ""
+    return (f"This document prints only {hit} of the {n} labels of the template{name} "
+            f"({round(100 * frac)}%): it may be the wrong template for this "
+            f"document. Check that the right template was chosen.")
+
+
 def type_mismatch(text, template_type):
     """'This does not look like a <type> ...' or None."""
     from app.services.prompt_registry import PROMPT_REGISTRY, _display
@@ -160,6 +205,25 @@ def apply(results, file_path, template_data):
         return results
     tpl = {"name": template_data.get("name"), "cells_text": template_cells_text(template_data)}
     wrong = type_mismatch(text, template_data.get("doc_type"))
+    if not wrong:
+        # Run S, 3b: the hint vocabulary can tie or stay silent on a garbled
+        # page (jobs 61/65: a pay stub under a purchase-order template scored
+        # 1 hint each for two other types); the template's OWN labels can't
+        sm = None
+        for r in results:
+            ed = getattr(r, "extracted_data", None)
+            if isinstance(ed, dict) and ed.get("slot_map"):
+                sm = ed["slot_map"]
+                break
+        # a page that draws its text as outlines has no labels in its text
+        # layer to count (ADP W-2, jobs 82/83/113: 2 of 30, right template)
+        try:
+            from text_layer import outlined_pages
+            outlined = bool(outlined_pages(file_path))
+        except Exception:
+            outlined = True               # cannot tell: say nothing
+        if sm and not outlined:
+            wrong = label_mismatch(text, slot_labels(sm), template_data.get("name"))
     ignored = ignored_forms(text, tpl)
     if not (wrong or ignored):
         return results
