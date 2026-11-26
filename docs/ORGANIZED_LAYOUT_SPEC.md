@@ -113,3 +113,48 @@ So v1 does what the spec says on a document whose **text layer is the
 form** (utah_paystub_2), and has nothing good to work with on the other three:
 two print the stub as an image and one has a garbled OCR layer. Laying out an
 image-only stub needs the OCR reader's word boxes (see "Scans" above).
+
+# v2 — every text-layer PDF (Run S, Stage 2)
+
+v1 was built on pay stubs. v2 extends the same rules to every document
+with a text layer (bank statements, invoices, purchase orders, W-2s, 1099s,
+1098s, receipts, pay stubs) and changes nothing about how a cell is placed:
+**row from y, column from x, never from extraction order.** Still behind
+`?layout=organized`, off by default, until the owner approves.
+
+## Rules added or changed
+
+11. **One header row per table.** A multi-page document reprints its column
+    headings (and its title block) on every page. A line printed on an
+    earlier page is not written again on a later one: a table's header row
+    appears once, above its first rows. A heading line with nothing under
+    it on its page (a stray header: the page ends, or the next line is
+    another heading) is kept only on the page where rows follow it.
+12. **Page furniture.** "Page n of m", "Page n" and a line printed on every
+    page (a footer) are not copied.
+13. **Underline** is read from the page's drawing, not the font: a
+    horizontal line or a rectangle at most 1.5 pt tall lying within 3 pt
+    under a segment and covering at least 80% of its width underlines that
+    cell.
+14. **Thick lines.** A horizontal rule at least 1.5 pt thick (a line's
+    width, or a filled rectangle's height) spanning at least 30% of the
+    page, and not an underline, gives the row written directly above it a
+    thick bottom border across the written columns.
+15. **Centred** is copied for any line that is one segment centred on the
+    page (within 3% of its width), not only the title.
+16. **One date format.** Every date in any printed notation (`08/01/2020`,
+    `8/1/20`, `2020-08-01`, `Aug 1, 2020`, `1 August 2020`) is a real date
+    shown as `mm/dd/yyyy`. Day/month order comes from the document's own
+    unambiguous dates (`dates.document_order`); a date whose order nothing
+    settles stays text as printed rather than be guessed.
+17. **Nothing printed in a field or table region is left out.** Every
+    figure on a line that is not prose, markup or furniture lands in a
+    cell (tested over every text-layer PDF in the corpus).
+
+## Jumbled and irregular layouts
+
+A PDF's content stream may draw text in any order (a form filled field by
+field, a statement written column by column). Placement reads positions
+only, so the same page drawn in a shuffled order lays out identically
+(tested). Still not handled: rotated text, columns that drift more than
+the column cut, and two values stacked in one box (two rows).
