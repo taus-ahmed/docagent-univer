@@ -257,16 +257,20 @@ class Holder:
             s = str(v if v is not None else "")
             if not s.strip():
                 continue
-            for t in re.findall(r"\(?-?[$€£¥]?\d[\d,]*(?:\.\d+)?\)?", s):
+            # a number is a WHOLE token of the value ("1,250.00", "$1250",
+            # "(75.00)"), never digits inside a word ("REF016" is not 16)
+            for t in s.split():
+                t = _clean(t)
                 a = amount_value(t)
                 if a is not None:
                     self.amounts.add(abs(a))
-                raw = re.sub(r"[^\d.]", "", t)
-                try:
-                    if raw and raw != ".":
+                    continue
+                if re.fullmatch(r"\(?-?[$€£¥]?\d[\d,]*(?:\.\d+)?\)?-?", t):
+                    raw = re.sub(r"[^\d.]", "", t)
+                    try:
                         self.amounts.add(abs(Decimal(raw)))
-                except InvalidOperation:
-                    pass
+                    except InvalidOperation:
+                        pass
             d = _digits(s)
             if d:
                 self.digits.append(d)

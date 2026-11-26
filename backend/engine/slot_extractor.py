@@ -631,6 +631,38 @@ def _row_file_page(r, all_lines, page_lines, nums):
     return nums[k - 1] if 1 <= k <= len(nums) else None
 
 
+def _answer_values(parsed) -> list:
+    """Every value string of a raw model answer (fields and table cells)."""
+    out = []
+    for v in ((parsed or {}).get("fields") or {}).values():
+        out.append(v.get("value") if isinstance(v, dict) else v)
+    tabs = (parsed or {}).get("tables") or {}
+    for rows in (tabs.values() if isinstance(tabs, dict) else []):
+        for r in rows or ():
+            if not isinstance(r, dict):
+                continue
+            cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
+            out += [v for k, v in cells.items()
+                    if k not in ("source", "page", "cells") and not str(k).startswith("_")]
+    return [v for v in out if v is not None and str(v).strip()]
+
+
+def lost_row_lines(lines, page_no, values) -> list:
+    """Run S, 1c: the ROW LINES of one page none of whose figures is held by
+    `values` - conservation's reading of what an answer left out, used to
+    ask for exactly those rows before any reason is raised."""
+    import conservation as CV
+    holder = CV.Holder(values)
+    by_line = {}
+    for t in CV.structural_tokens([lines], [page_no]):
+        if t.role == "row":
+            by_line.setdefault(t.line, []).append(holder.holds(t))
+    # lost: fewer than half of the line's figures are anywhere in the answer
+    # (one coincidence - a 0.00, an amount another row also has - does not
+    # make a line read)
+    return [ln for ln, held in by_line.items() if held and sum(held) * 2 < len(held)]
+
+
 def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
                        inventory, doc_type, notes, not_recovered=None):
     """Overnight A4: ask each page whose rows the answer lost, on its own.
@@ -655,6 +687,8 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
     all_lines = flatten_pages(page_lines)
     want = {}                                   # page index -> [band]
     current = {}
+    answer_values = _answer_values(parsed)
+    lost_lines = {}                             # page index -> [line text]
     for t in slots["tables"]:
         kind = SI.band_kind(t)
         rows = _table_rows_of(parsed, t, slots)
@@ -682,6 +716,13 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
             here = SI.page_has_band(lines, t)
             if cand >= 2 and (here or prev) and got.get(n, 0) * 2 < cand:
                 want.setdefault(k, []).append(t)
+            elif here or prev:
+                # Run S, 1c: a dense page read in part - two or more row
+                # lines none of whose figures is in the answer
+                if k not in lost_lines:
+                    lost_lines[k] = lost_row_lines(lines, n, answer_values)
+                if len(lost_lines[k]) >= 2:
+                    want.setdefault(k, []).append(t)
             prev = here or (prev and cand > 0)
     if not want:
         return parsed
@@ -704,6 +745,10 @@ def recover_lost_pages(ask, parsed, slots, pages, page_lines, page_images, nums,
             f"on page {n} of {len(nums)}. This is page {n} sent on its own. "
             f"Return every row printed on THIS page; a heading row reprinted at "
             f"the top of the page is not a row."
+            + (("\nThese lines of the page were not in your answer: "
+                + "; ".join(repr(x) for x in lost_lines[k][:15])
+                + (f" (and {len(lost_lines[k]) - 15} more)" if len(lost_lines[k]) > 15
+                   else "") + ".") if lost_lines.get(k) else "")
             + CG.prompt_hint([page_lines[k]] if k < len(page_lines) else []))
         img = [page_images[k]] if k < len(page_images) and page_images[k] else []
         exp = {t["name"]: (inventory["pages"].get(n) or {}).get(
