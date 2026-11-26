@@ -59,25 +59,35 @@ def organized_workbook(sources):
     """sources: [(display name, pdf path or None)]. One sheet per document
     the layout can read; the rest are listed on a 'Not organized' sheet with
     the reason (a scan, a missing file), never silently dropped."""
+    return organized_result(sources)[0]
+
+
+# Why a document was not laid out, as a code the UI can name in words.
+SOURCE_MISSING, NO_TEXT_LAYER, UNREADABLE = "source_missing", "no_text_layer", "unreadable"
+
+
+def organized_result(sources):
+    """`organized_workbook`, plus what the route needs to answer honestly:
+    (workbook, documents laid out, [(name, code, reason)] not laid out)."""
     import openpyxl
     from organized_layout import layout
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
-    missed = []
+    missed, laid_out = [], 0
     for name, path in sources:
         if path is None:
-            missed.append((name, "the source file is no longer stored"))
+            missed.append((name, SOURCE_MISSING, "the source file is no longer stored"))
             continue
         if not str(path).lower().endswith(".pdf"):
-            missed.append((name, "not a PDF: an image has no text layer to lay out"))
+            missed.append((name, NO_TEXT_LAYER, "not a PDF: an image has no text layer to lay out"))
             continue
         try:
             lay = layout(path)
         except Exception as e:                    # one document, never the file
-            missed.append((name, f"could not be read ({type(e).__name__})"))
+            missed.append((name, UNREADABLE, f"could not be read ({type(e).__name__})"))
             continue
         if not lay["pages"]:
-            missed.append((name, "; ".join(lay["skipped"]) or "no text layer"))
+            missed.append((name, NO_TEXT_LAYER, "; ".join(lay["skipped"]) or "no text layer"))
             continue
         title = (str(name).rsplit(".", 1)[0] or "Document")[:31]
         base, k = title, 2
@@ -86,15 +96,15 @@ def organized_workbook(sources):
             k += 1
         ws = wb.create_sheet(title)
         write_layout(ws, lay, filename=name)
+        laid_out += 1
         for why in lay["skipped"]:
-            missed.append((name, why))
+            missed.append((name, NO_TEXT_LAYER, why))
     if missed:
         ws = wb.create_sheet("Not organized")
-        ws.cell(row=1, column=1, value="Not laid out from the page").font = \
-            __import__("openpyxl").styles.Font(bold=True)
-        for i, (name, why) in enumerate(missed, 2):
+        ws.cell(row=1, column=1, value="Not laid out from the page").font =             openpyxl.styles.Font(bold=True)
+        for i, (name, _code, why) in enumerate(missed, 2):
             ws.cell(row=i, column=1, value=name)
             ws.cell(row=i, column=2, value=why)
     if not wb.sheetnames:
         wb.create_sheet("Not organized")
-    return wb
+    return wb, laid_out, missed

@@ -55,3 +55,19 @@ export async function organizedWorkbookAvailable(blob: Blob, disposition?: strin
     return false;
   }
 }
+
+/** Why "Download Organized" produced no file, in the words the server gave.
+ *  `status` is the HTTP status (undefined: no reply), `body` the error reply. */
+export async function organizedFailureMessage(status?: number, body?: unknown): Promise<string> {
+  let detail: unknown;
+  try {
+    const text = body instanceof Blob ? await body.text() : typeof body === "string" ? body : JSON.stringify(body ?? null);
+    detail = (JSON.parse(text) as { detail?: unknown })?.detail;
+  } catch { detail = undefined; }
+  const code = typeof detail === "object" && detail ? (detail as { code?: unknown }).code : undefined;
+  if (status === 422 && code === "no_text_layer") return "This document has no text layer (a scan or image), so it can't be laid out. Use Download Excel.";
+  if (status === 422 && code === "source_missing") return "The uploaded file is no longer stored on the server, so it can't be laid out. Upload it again, or use Download Excel.";
+  if (status === 422 && code === "unreadable") return "The uploaded file could not be read, so it can't be laid out. Use Download Excel.";
+  if (typeof detail === "string" && status && status < 500) return detail;
+  return "The server could not build the organized layout. Try again, or use Download Excel.";
+}

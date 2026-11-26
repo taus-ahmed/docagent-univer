@@ -23,13 +23,13 @@ interface Props {
 
 export default function JobResultsLayout({ job, template, templateLoading, documentCount, canDownload = true, onNew, children }: Props) {
   const [busy, setBusy] = useState<DownloadKind | null>(null);
-  const [organizedUnavailable, setOrganizedUnavailable] = useState(false);
+  const [organizedUnavailable, setOrganizedUnavailable] = useState<string | null>(null);
   const partial = job.status === "partial";
   const status = plainStatus(job);
 
   async function download(kind: DownloadKind) {
     setBusy(kind);
-    if (kind === "organized") setOrganizedUnavailable(false);
+    if (kind === "organized") setOrganizedUnavailable(null);
     try {
       if (!await confirmExport(job.id)) return;
       let blob: Blob;
@@ -46,8 +46,8 @@ export default function JobResultsLayout({ job, template, templateLoading, docum
       }
       exportApi.downloadBlob(blob, `job_${job.id}_${suffix}`);
       toast.success("Downloaded");
-    } catch {
-      if (kind === "organized") setOrganizedUnavailable(true);
+    } catch (e) {
+      if (kind === "organized") setOrganizedUnavailable(e instanceof Error && e.message ? e.message : "Organized layout isn't available. Use Download Excel.");
       else toast.error("Export failed");
     } finally {
       setBusy(null);
@@ -84,7 +84,7 @@ export default function JobResultsLayout({ job, template, templateLoading, docum
             <div className="card job-result-action">
               {downloadButton("organized", "Download Organized")}
               {organizedUnavailable && <p className="job-result-error" role="alert">
-                Organized layout isn&apos;t available for this document yet. Use Download Excel.
+                {organizedUnavailable}
               </p>}
             </div>
             <div className="card job-result-action">{downloadButton("regular", "Download Excel")}</div>

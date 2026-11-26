@@ -58,3 +58,14 @@ test("regular replies, empty replies and truncated archives never download as or
   assert.equal(await organizedWorkbookAvailable(new Blob([], { type }), organized), false);
   assert.equal(await organizedWorkbookAvailable(blob.slice(0, blob.size - 22, type), organized), false);
 });
+
+test("a failed organized download says why", async () => {
+  const { organizedFailureMessage } = await import("./organizedExport.ts");
+  const reply = (detail: unknown) => new Blob([JSON.stringify({ detail })], { type: "application/json" });
+  assert.match(await organizedFailureMessage(422, reply({ code: "no_text_layer" })), /no text layer/);
+  assert.match(await organizedFailureMessage(422, reply({ code: "source_missing" })), /no longer stored/);
+  assert.match(await organizedFailureMessage(422, reply({ code: "unreadable" })), /could not be read/);
+  assert.match(await organizedFailureMessage(400, reply("layout is 'template' or 'organized'.")), /layout is/);
+  assert.match(await organizedFailureMessage(500, reply("boom")), /server could not/);
+  assert.match(await organizedFailureMessage(undefined, undefined), /server could not/);
+});

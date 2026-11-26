@@ -668,7 +668,8 @@ def export_job_excel(
         raise HTTPException(status_code=404, detail="No results found.")
 
     # Run R, Part 2: the ORGANIZED LAYOUT, off by default - only on
-    # `layout=organized`, and only for a job extracted without a template
+    # `layout=organized`. It reads the page, not the extraction, so a
+    # templated job is laid out exactly like a no-template one.
     if layout == "organized":
         return _organized_export(job, doc_results, storage, current_user)
     if layout != "template":
@@ -732,12 +733,14 @@ def export_job_excel(
 def _organized_export(job, doc_results, storage, current_user):
     """Run R, Part 2 (v1): each document's pages laid out as printed
     (docs/ORGANIZED_LAYOUT_SPEC.md). Read from the stored source files; a
-    document whose file is gone or has no text layer is listed, not lost."""
-    if job.schema_id:
-        raise HTTPException(status_code=400, detail=(
-            "The organized layout is for jobs extracted without a template; "
-            "this job used one. Download the template export instead."))
-    from app.services.excel_organized import organized_workbook
+    document whose file is gone or has no text layer is listed, not lost.
+
+    It reads the page, never the extraction, so a template is no reason to
+    refuse it: refusing templated jobs (v1's scope) answered 400 for every
+    templated job on staging (job 141). When NOT ONE document can be laid
+    out there is no workbook worth downloading, and the answer is a 422
+    naming why, per document, as a code the UI turns into words."""
+    from app.services.excel_organized import SOURCE_MISSING, organized_result
     from app.services.excel_cells import _add_review_legend
     demo = is_demo_user(current_user)
     paths, sources = [], []
@@ -748,10 +751,21 @@ def _organized_export(job, doc_results, storage, current_user):
             if path is not None:
                 paths.append(path)
             sources.append((name, path))
-        wb = organized_workbook(sources)
+        wb, laid_out, missed = organized_result(sources)
     finally:
         for p in paths:
             storage.release(p)
+    if laid_out == 0:
+        codes = {code for _n, code, _w in missed}
+        code = codes.pop() if len(codes) == 1 else ("source_missing" if SOURCE_MISSING in codes
+                                                     else "no_text_layer")
+        print(f"[EXPORT] organized: job {job.id}: nothing laid out ({sorted({c for _n, c, _w in missed})})",
+              flush=True)
+        raise HTTPException(status_code=422, detail={
+            "code": code,
+            "message": "No document in this job could be laid out from its pages.",
+            "documents": [{"name": n, "code": c, "reason": w} for n, c, w in missed],
+        })
     _add_review_legend(wb, doc_results, demo=demo)
     buf = io.BytesIO()
     wb.save(buf)

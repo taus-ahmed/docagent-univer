@@ -3,7 +3,7 @@ import type { ChartsResponse } from "./charts";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import type { JobReview, ReasonMap, ReviewSummary, ReviewValue } from "./review";
 import type { HistoryEvent, ValueEntry } from "./reviewActions";
-import { organizedWorkbookAvailable } from "./organizedExport";
+import { organizedFailureMessage, organizedWorkbookAvailable } from "./organizedExport";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -665,13 +665,19 @@ export const exportApi = {
   organizedExport: async (jobId: number): Promise<Blob> => {
     // The same-origin proxy retains Content-Disposition, which the direct
     // cross-origin API does not expose to browser JavaScript.
-    const res = await api.get<Blob>(`/api/proxy/jobs/${jobId}/export`, {
-      baseURL: "",
-      responseType: "blob",
-      params: { layout: "organized" },
-    });
+    let res;
+    try {
+      res = await api.get<Blob>(`/api/proxy/jobs/${jobId}/export`, {
+        baseURL: "",
+        responseType: "blob",
+        params: { layout: "organized" },
+      });
+    } catch (e) {
+      const r = (e as { response?: { status?: number; data?: unknown } }).response;
+      throw new Error(await organizedFailureMessage(r?.status, r?.data));
+    }
     if (!await organizedWorkbookAvailable(res.data, res.headers["content-disposition"])) {
-      throw new Error("Organized layout unavailable");
+      throw new Error(await organizedFailureMessage(res.status));
     }
     return res.data;
   },
