@@ -68,3 +68,12 @@ def test_no_other_engie_value_is_demoted_by_the_rule(engie):
     hits = [f for f in engie["validation"]["flagged_fields"]
             if "issuer's own contact" in str(f.get("reason"))]
     assert len(hits) == 1
+
+
+@pytest.mark.parametrize("label", ["Customer Service Website", "Customer Care Email",
+                                   "Client Services Phone", "Customer Support URL"])
+def test_the_issuers_own_customer_service_contact_is_not_misowned(label):
+    """Corpus, job 73 (a merchant statement): `Customer Service Website`
+    holding the issuer's site is right - a customer-SERVICE label names the
+    issuer's own department, not the customer."""
+    assert PF.misowned(label, "care@acmepower.com", PAGES) is None

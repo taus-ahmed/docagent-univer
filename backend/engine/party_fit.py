@@ -81,9 +81,20 @@ def issuer_contact(value, page_texts) -> bool:
     return False
 
 
+#: "Customer Service", "Client Services", "Customer Care": the ISSUER's own
+#: department named after the people it serves - its contact is the issuer's
+#: by definition (corpus job 73, a merchant statement's service website)
+_ISSUER_DEPT = re.compile(
+    r"\b(?:customer|client|member|patient|student)s?\s+"
+    r"(?:service|services|care|support|relations|portal|center|centre|hotline|help)\b",
+    re.I)
+
+
 def misowned(label, value, page_texts):
     """A reason string when `value` is the issuer's own contact answering a
     counterparty's slot, else None."""
+    if _ISSUER_DEPT.search(str(label or "")):
+        return None
     m = COUNTERPARTY.search(str(label or ""))
     if not m or not issuer_contact(value, page_texts):
         return None

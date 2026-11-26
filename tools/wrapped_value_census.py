@@ -44,7 +44,7 @@ def _line_str(ln):
     return " ".join(str(w.get("text", "")) for w in ln)
 
 
-def is_wrapped_beside_label(value, lines) -> bool:
+def is_wrapped_beside_label(value, lines, label=None) -> bool:
     from text_layer import canonical_value
     v = str(value or "").strip()
     if len(v.split()) < 2:
@@ -57,7 +57,12 @@ def is_wrapped_beside_label(value, lines) -> bool:
     if any(flat in re.sub(r"\s+", " ", t).casefold() for t in texts):
         return False                       # printed whole on one line
     head = " ".join(v.split()[:2]).casefold()
-    return any(re.search(r":\s*" + re.escape(head), t.casefold()) for t in texts)
+    if any(re.search(r":\s*" + re.escape(head), t.casefold()) for t in texts):
+        return True
+    # or right after the slot's own label words, colon or not (the rule's
+    # own anchor, slot_extractor.starts_at_label)
+    from slot_extractor import starts_at_label
+    return bool(label) and any(starts_at_label(v, label, t) for t in texts)
 
 
 def main(argv=None) -> int:
@@ -90,9 +95,9 @@ def main(argv=None) -> int:
         keyed = K.key_from_doc(doc, extra.get(Path(meta["file"]).name.casefold())) if doc else None
         kf = (keyed or {}).get("fields") or {}
         for ref, v in (ed.get("extracted_fields") or {}).items():
-            if not is_wrapped_beside_label(v, lines):
-                continue
             label = lab.get(ref, ref)
+            if not is_wrapped_beside_label(v, lines, label):
+                continue
             lv_a = ((ed.get("validation") or {}).get("confidence_map") or {}).get(ref)
             lv_b = ((bed.get("validation") or {}).get("confidence_map") or {}).get(ref)
             v_b = (bed.get("extracted_fields") or {}).get(ref)
