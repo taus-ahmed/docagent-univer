@@ -1475,6 +1475,27 @@ def quote_row_lines(value, source, all_lines):
     return sorted(set(out)) or None
 
 
+def starts_at_label(value, label, line_text) -> bool:
+    """Run S, 3c: the value's first two words are printed DIRECTLY after the
+    slot label's last word on this line ("Address: 12 Example Road"), not
+    merely somewhere on it - a two-column row also prints the other column's
+    label and value. The label's last word is the anchor, or its last two
+    when the last is short ("Remit To" -> "remit to"); a template label
+    whose last words the page does not print right before the value never
+    anchors."""
+    words = re.findall(r"[a-z0-9]+", str(label or "").casefold())
+    head = str(value or "").split()[:2]
+    if not words or not head:
+        return False
+    # a short last word ("to") is shared by other labels ("Ship To"): the
+    # anchor is then the label's last two words ("remit to")
+    anchor = (re.escape(words[-2]) + r"\W+" + re.escape(words[-1])
+              if len(words[-1]) < 3 and len(words) >= 2 else re.escape(words[-1]))
+    pat = (anchor + r"\s*:?\s+" +
+           r"\s+".join(re.escape(h.casefold()) for h in head))
+    return re.search(pat, str(line_text or "").casefold()) is not None
+
+
 def value_off_its_row(value, source, all_lines) -> bool:
     """True when the quote names a row and the value, as a whole token, is on
     none of the lines of that row — a value read from a DIFFERENT row (a
@@ -2548,6 +2569,18 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                                            for ln in all_lines if ln))
                        and value_off_its_row(value, source, all_lines))
             if off_row:
+                # Run S, 3c (job 62): a value that STARTS on a row its quote
+                # names and continues down its own column (D9, no gutter
+                # crossed) is on its row - "Address: 12 Example Road" /
+                # "Sampletown, ST 00000" / "Country", printed beside another
+                # column that also has an "Address:" label
+                _rows = quote_row_lines(value, source, all_lines) or []
+                _canon = canonical_value(value, all_lines)
+                if _canon and not _canon[1] and any(
+                        starts_at_label(value, slot["row_label"], _line_str(all_lines[r]))
+                        for r in _rows):
+                    off_row = False
+            if off_row:
                 ok = False
                 # Run N, N2: the quote names its row and that row does not
                 # print the value — the figure was taken from another row.
@@ -2632,6 +2665,20 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 # different order — every comma part a whole printed line of
                 # one block on one page.
                 ok, why = True, ""
+            if not ok and all_lines and why == "value not found inside its own source span":
+                # Run S, 3c (job 62): two columns of fields side by side, each
+                # value wrapping inside its OWN column ("Title: Senior
+                # Example" / "Analyst"). The quote is the
+                # flattened line, which interleaves the other column, so the
+                # value is not contiguous in it; the in-column reading (D9)
+                # spells it exactly, without crossing a gutter, and its first
+                # words follow the slot's own label in the quote.
+                _canon = canonical_value(value, all_lines)
+                _words = str(value).split()
+                if _canon and not _canon[1] and len(_words) >= 2 \
+                        and starts_at_label(value, slot["row_label"], source):
+                    ok, why = True, ""
+                    field_prov[slot["ref"]]["in_column"] = True
             field_prov[slot["ref"]]["grounded"] = ok
             lvl, reason = confidence_for(value, source, slot["row_label"], ok,
                                          inferred=inferred)
