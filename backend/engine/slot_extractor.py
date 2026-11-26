@@ -3040,6 +3040,20 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 row, row_conf = {}, confident
                 unverified_cols = []
                 row_why = []
+                # Run S, 1e (job 138): a GROUP column's value is printed on the
+                # group line above the row, not on the row's own line, so it
+                # is checked against that line. Every other column is still
+                # checked against the row's own record only.
+                group_text, group_keys_t = None, set()
+                if row_groups_found is not None and line_no is not None:
+                    _g = row_groups_found.of_line(line_no)
+                    if _g is not None:
+                        group_text = _line_str(all_lines[_g.line])
+                        _names = {str(group_noun or "").casefold()} | {
+                            c["name"].casefold() for c in (group_cols["ident"],
+                                                           group_cols["name"]) if c}
+                        group_keys_t = {h for h in headers
+                                        if str(h).casefold() in _names}
                 for h in headers:
                     v = cells.get(h, "")
                     if v is None:
@@ -3048,6 +3062,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         row[h] = ""
                         continue
                     ok, why = verify_span(v, source, page, pages, record)
+                    if not ok and group_text and h in group_keys_t:
+                        ok, why = verify_span(v, group_text, page, pages, group_text)
                     lvl, reason = confidence_for(v, source, h, ok,
                                                  inferred=inferred)
                     row[h] = v

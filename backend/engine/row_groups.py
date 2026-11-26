@@ -214,7 +214,7 @@ class Groups:
         the next group line, and not past its own subtotal. None otherwise."""
         best = None
         for g in self.groups:
-            if g.line < i:
+            if g.line <= i:
                 best = g
             else:
                 break
