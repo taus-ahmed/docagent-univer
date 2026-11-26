@@ -557,7 +557,7 @@ OVERPRINT_FRAC = 0.5
 # characters interleave with the first's all the way along.
 OVERPRINT_MIN_RUN = 3
 # Two characters printed over one another sit on the SAME BASELINE, give or
-# take the two texts' own offset — SampleBill's two account numbers are 0.267pt
+# take the two texts' own offset — the round-2 bill's two account numbers are 0.267pt
 # apart. Two characters a whole printed line apart are not over one another
 # however the char clustering grouped them; the audit letters' spurious span was
 # tops 81.556 and 83.656. 1.0pt is comfortably above the first and below the
@@ -568,15 +568,15 @@ OVERPRINT_TOP_TOL = 1.0
 def overprinted_spans(page):
     """[(x0, x1, top)] for every region where two texts are printed over each other.
 
-    THE DEFECT. `SampleBill.pdf` page 4 prints its account number twice, in two
+    THE DEFECT. A round-2 utility bill's page 4 prints its account number twice, in two
     font sizes, at the same place:
 
-        size 11.00, top 100.183   0 0 0 0 1 2 3 4 5 6   ->  0000123456
-        size 10.21, top  99.916   0 0 0 0 1 5 8 6 5 9   ->  0000158659
+        size 11.00, top 100.183   0 0 0 0 4 4 1 1 2 2   ->  0000441122
+        size 10.21, top  99.916   0 0 0 0 3 3 7 7 8 8   ->  0000337788
 
     The two runs overlap in x by about 2.7pt per character. Every reader that
     orders characters left to right — pdfplumber's `extract_text` AND its
-    `extract_words` — interleaves them into `00000000112538645596`, and
+    `extract_words` — interleaves them (in this invented example, into `00000000434317172828`), and
     `extract_words` returns that as ONE word. So the contamination is in the
     word box itself, below everything built on top of it: the flattened text,
     `canonical_value`'s re-derivation, and `verify_span`'s grounding all agree
@@ -623,12 +623,12 @@ def overprinted_spans_from_chars(raw_chars):
         # ⚠ WITHIN ONE FONT SIZE (I10). Two characters that overlap but are set
         # at DIFFERENT SIZES are two separable texts, not an interleaving: the
         # size-aware grouping in `read_page` now pulls them apart and recovers
-        # both. On this page's own example it recovers `0000123456` AND
-        # `0000158659`, so the docstring above — "which of the two was wanted is
+        # both. On this page's own example it recovers both account
+        # numbers, so the docstring above — "which of the two was wanted is
         # not recoverable" — is true of the size-BLIND reading and false now.
         #
         # Comparing across sizes made the detector fire on the repaired values:
-        # 910 words on `round2/HTR-043235.pdf` and 13 on `SampleBill.pdf`,
+        # 910 words on `round2/HTR-043235.pdf` and 13 on the round-2 utility bill,
         # including both correct account numbers, every one of them demoted to
         # `low` and flagged. A detector that condemns the value the fix just
         # rescued is worse than no detector.
@@ -1590,7 +1590,7 @@ def read_page(page, widgets=(), stats=None):
     #
     # The test is the RATIO, not a comparison of the two texts. Comparing them
     # was tried: flattened for whitespace it still fired on 36 of 114 pages,
-    # including SampleBill and feb2225, which differ from the size-aware reading
+    # including the utility bill and a bank statement, which differ from the size-aware reading
     # by four and one token respectively — rewriting a whole page, and every
     # cached answer for it, over one word.
     # `shard is None` means the ratio could not be MEASURED, not that it came
@@ -1613,12 +1613,12 @@ def _recovered_words_missing(raw, lines) -> bool:
 
     The shard ratio catches a page that is shredded wholesale. It does not catch
     a page with ONE overprinted region, because four words out of four hundred
-    do not move a ratio: `SampleBill.pdf` page 4 sits at 1.00 and prints its
+    do not move a ratio: the utility bill's page 4 sits at 1.00 and prints its
     account number twice, at 11.0pt and 10.2pt, in the same place.
 
     Leaving it there made the prompt and the geometry disagree — the word boxes
-    held `0000123456` and `0000158659` while `extract_text()`, which is still
-    size-blind, still held `00000000112538645596`. The model would still be
+    held both account numbers while `extract_text()`, which is still
+    size-blind, still held their interleaving. The model would still be
     offered the interleaving, `verify_span` would still ground it against the
     same text, and the overprint flag that used to catch it is correctly gone,
     because at the word level there is no longer anything wrong. Recovering a

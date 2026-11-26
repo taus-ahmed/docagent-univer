@@ -41,7 +41,7 @@ requisitioner retail reuse revisions river salesperson seller shipped shipping
 single software spaces specification spring starting stores streaming string
 submission subscription suffix tangible tickets treatment typed validate verify
 wholesale coffee copper harvest maple metro depot kettle bistro parks prime
-airfare restaurant cafe cents february mastercard misc specialist echo
+airfare restaurant cafe cents february mastercard misc specialist echo release
 """.split())
 
 

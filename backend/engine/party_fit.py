@@ -1,8 +1,8 @@
 """A grounded value whose OWNER is not the party its slot asks about
 (Run S, Stage 3a).
 
-Grounding proves a string is printed; it cannot say whose it is. The ENGIE
-bill answered `Customer Email Address` with `care@engieresources.com`: a
+Grounding proves a string is printed; it cannot say whose it is. A round-2
+utility bill answered `Customer Email Address` with `care@exampleutility.com`: a
 real, printed address, and the bill's ISSUER's own customer-care line. The
 customer's email is not on the bill at all.
 

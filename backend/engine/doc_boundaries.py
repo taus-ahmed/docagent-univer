@@ -44,7 +44,7 @@ two-page statements whose page 2 opens with a different line entirely.
     type change      a page classifying as a different document type from the
                      last page that classified as anything (`classify_by_hints`,
                      keyword pre-screening, no model call). This used to DECIDE
-                     on its own, and it cut the round-2 ENGIE bill in two at a
+                     on its own, and it cut the round-2 utility bill in two at a
                      glossary page reading as `tax_form`. It is a candidate
                      now. The price: an invoice and the cheque paying it share
                      the PO number both quote, and stay one document.
@@ -62,7 +62,7 @@ two-page statements whose page 2 opens with a different line entirely.
                      its page 4 reads as a bank statement and its page 6 as a
                      tax form, and only the page count keeps them together.
                      A bare "Page 4" on the run's fourth page vetoes the same
-                     way — the ENGIE bill's page 4 carries a reference (the
+                     way — the round-2 utility bill's page 4 carries a reference (the
                      overprinted account number) sharing nothing with pages
                      1-3, so without it the split was corroborated.
 
@@ -319,7 +319,7 @@ def find_starts(page_texts, family=None, report=None):
         # CORROBORATION, for EVERY candidate — a type change included.
         #
         # A type change used to split on its own, and that was wrong on a real
-        # document. The ENGIE utility bill's page 4 is a meter summary and a
+        # document. The round-2 utility bill's page 4 is a meter summary and a
         # glossary; `classify_by_hints` reads it as `tax_form`, and the bill
         # was cut in two. The second "document" was then asked for the whole
         # template: the glossary filled the charges table, the meter block

@@ -25,7 +25,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = [ROOT / "local_docs" / "DocAgent_testdocs"]
+SRC = [ROOT / "local_docs" / "DocAgent_testdocs",
+       ROOT / "tests" / "test_pdfs" / "round2"]   # the real round-2 documents
 OUT = ROOT / "tests" / "fixtures" / "forbidden_literals.json"
 
 _GENERIC = set("""

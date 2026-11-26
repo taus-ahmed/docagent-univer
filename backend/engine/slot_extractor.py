@@ -108,7 +108,7 @@ def _flat(s) -> str:
 #
 # A number grounds only as a WHOLE printed token (see verify_span). That needs
 # the tokens, and the text layer does not always hand them over whole: on the
-# Berkshire earnings release pdfplumber splits `19,694` into the words `19,6`
+# round-2 earnings release pdfplumber splits `19,694` into the words `19,6`
 # and `94`, and `9.13` into `9`, `.`, `13`. The word boxes touch (gap within
 # 0.1pt), but the flattened text puts a space between them like any other
 # words, so from the text alone a split number and two columns look the same.
@@ -1210,7 +1210,7 @@ def verify_span(value, source, page, page_texts, record=""):
 # A band describes a SHAPE, and nothing ever chose WHICH region of the document
 # carrying that shape it was bound to. The prompt asks for "one object per row
 # present in the document" over every page, and every row that came back was
-# kept. So Berkshire's earnings table (page 1) and its operating-earnings table
+# kept. So the round-2 earnings release's table (page 1) and its operating-earnings table
 # (page 2) — same columns, same headings — were written into one band as one
 # table (round 2, I1, runs 1-3). The same-page cases that came out right (runs
 # 7, 8) were right because of how the model read those pages, not because of
@@ -1225,7 +1225,7 @@ def verify_span(value, source, page, page_texts, record=""):
 # continues onto the next page loses its continuation, visibly — a short table
 # can be seen; a merged lookalike cannot. A rule letting a continuation through
 # when the next page repeats the column headings was considered and rejected:
-# Berkshire's two tables carry IDENTICAL headings, so it would merge the exact
+# That release's two tables carry IDENTICAL headings, so it would merge the exact
 # case it exists to separate.
 #
 # WHICH REGION: the page the model's answer BEGINS on. Page order is not
@@ -1797,7 +1797,7 @@ def continued_pages(kept_page, all_lines, headers):
     """Pages after `kept_page` that the DOCUMENT says continue its table
     (Part 3.5): each is numbered as the next page of the same run ("Page 2 of
     5" after "Page 1 of 5") AND reprints the band's own heading line. Both,
-    because a heading alone is what two different tables share (Berkshire's
+    because a heading alone is what two different tables share (the earnings release's
     two earnings tables, round 2 I1), and numbering alone says nothing about
     which table a page holds. Anything less stays a different region."""
     heads = [str(h or "").strip().casefold() for h in headers or [] if str(h or "").strip()]
@@ -1854,7 +1854,7 @@ def _reprints_block(page, nxt, located, pages_by_row, all_lines) -> bool:
     """Does page `nxt` print again the heading block the band has on `page`
     — the (up to two) lines without an amount directly above the band's
     first row there? The DOCUMENT's own headings, whatever the template calls
-    its columns: Berkshire prints "Fourth Quarter  Full Year" over
+    its columns: the earnings release prints "Fourth Quarter  Full Year" over
     "2024 2023 2024 2023" above both of its tables."""
     import source_inventory as SI
     first = None
@@ -1881,7 +1881,7 @@ def _reprints_block(page, nxt, located, pages_by_row, all_lines) -> bool:
     # on the next page is a running header — the same table, continued
     # (a two-page statement's page 2 opens with "Date Description Debit Credit
     # Balance"). A heading block printed further down the page, under a
-    # title or prose of its own, is still a new table (Berkshire).
+    # title or prose of its own, is still a new table (the earnings release).
     if len(block) == 1 and block[0] in nxt_lines[:2]:
         return False
     return any(b in set(nxt_lines) for b in block)
@@ -1927,7 +1927,7 @@ def select_region(located, all_lines, page_lines, headers=None):
     # payslip's `Life Insurance` deduction and three equity lines of a
     # balance sheet were dropped. A table whose rows on its last page do not
     # end in its own total line has not ended: the NEXT page's rows are its
-    # continuation. A table that did end there (Berkshire's first earnings
+    # continuation. A table that did end there (the earnings release's first earnings
     # table, closed by its own total before the second one starts) keeps the
     # strict rule, and anything left out is still flagged.
     if headers:
@@ -1940,14 +1940,14 @@ def select_region(located, all_lines, page_lines, headers=None):
                     str((on_last[-1] or {}).get(label) or "")):
                 break
             # A page that prints the band's heading line again opens a NEW
-            # table of the same shape (Berkshire page 2: the operating
+            # table of the same shape (the release's page 2: the operating
             # earnings table under the same five headings). A numbered
             # continuation that reprints it is `continued_pages`' case.
             if _heading_on(last + 1, all_lines, headers) or _reprints_block(
                     last, last + 1, located, pages_by_row, all_lines):
                 break
             # ...and its rows must LOOK like the band's rows: an amount in a
-            # column where the rows before the break carry amounts. ENGIE's
+            # column where the rows before the break carry amounts. The utility bill's
             # page-4 glossary ("Meter Constant", no amount) is not the charges
             # table carrying on.
             import source_inventory as SI
