@@ -894,6 +894,22 @@ def _add_review_legend(wb, doc_results, demo=False):
             if t and t not in says:
                 says.append(t)
         missing += [(name, t) for t in says]
+    # Run S, 3g (job 130): a blank form finishes with no values by design;
+    # the Legend says so, by document, so an empty sheet is not read as a
+    # failed extraction
+    blank = []
+    for i, (d, _s, _f) in enumerate(per_doc, 1):
+        ed = d.get_extracted_data()
+        if isinstance(ed, dict) and ed.get("blank_form") and ed.get("blank_form_note"):
+            blank.append((f"document {i}" if demo else (d.filename or f"document {i}"),
+                          str(ed["blank_form_note"])))
+    if blank:
+        r += 2
+        lg.cell(row=r, column=1, value="Blank forms").font = Font(bold=True)
+        for name, t in blank:
+            r += 1
+            lg.cell(row=r, column=1, value=name)
+            lg.cell(row=r, column=2, value=t)
     if missing:
         r += 2
         lg.cell(row=r, column=1,

@@ -873,7 +873,20 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         # said under the document's own block, in the sheet a client works
         # in - a note in the Legend alone was never seen (job 115's 1099-K)
         extra = 0
-        for k, say in enumerate(ed.get("not_captured") or []):
+        # Run S, 3g (job 130): a blank form's verdict is said where the empty
+        # sheet is - an empty block with nothing marked reads as a failure
+        says = list(ed.get("not_captured") or [])
+        if ed.get("blank_form") and ed.get("blank_form_note"):
+            says.insert(0, None)
+        for k, say in enumerate(says):
+            if say is None:
+                bc = ws.cell(row=doc_offset + block_height + 1 + k, column=1)
+                if not isinstance(bc, MergedCell) and bc.value is None:
+                    from openpyxl.styles import Font as _Font
+                    bc.value = str(ed["blank_form_note"])
+                    bc.font = _Font(italic=True, color="FF595959")
+                    extra = k + 1
+                continue
             nc = ws.cell(row=doc_offset + block_height + 1 + k, column=1)
             if isinstance(nc, MergedCell) or nc.value is not None:
                 continue
