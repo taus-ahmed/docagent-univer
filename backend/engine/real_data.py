@@ -251,7 +251,7 @@ _PLACEHOLDER_VALUE = (
 )
 #: an identifier that is ALL mask (XXXX, XXX-XX-XXXX) is a placeholder only
 #: on a document that says it is a sample: on a real form it is the masked
-#: value the form holds (irs_1099nec_ellis's Recipient TIN is XXX-XX-XXXX)
+#: value the form holds (a sample 1099-NEC's Recipient TIN is XXX-XX-XXXX)
 _ALL_MASK = re.compile(r"^[X*#]{3,}(?:[-\s][X*#]{2,})*$", re.I)
 _SAMPLE_DOC = re.compile(r"\b(?:SAMPLE|SPECIMEN|EXAMPLE)\b")
 

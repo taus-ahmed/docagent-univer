@@ -3,7 +3,7 @@
 1. LAST 4. A slot named "Last 4" (or "... ending") holds exactly four digits,
    and they must be the last four of an account / card number the page
    actually prints. Job 15 answered `58842` for an account printed
-   `7301558842` - a collapsed repeated digit - and grounding could not catch
+   `5106628841` - a collapsed repeated digit - and grounding could not catch
    it, because every digit of it is on the page. The page is the authority:
    a value that is not such a suffix is replaced by the one suffix the page
    offers (machine-corrected), or flagged when it offers several.
@@ -13,7 +13,7 @@
    dropped, never coerced. A value that does gets its normalised form
    recorded beside it (money as a plain decimal, a date as ISO) while the
    cell keeps the document's own notation, so grounding and the export are
-   unchanged. Identifiers, ZIP codes and masked tax ids (`36-8XXXXXXX`) are
+   unchanged. Identifiers, ZIP codes and masked tax ids (`12-3` and masked digits) are
    text and are left exactly as printed; zero is a value.
 """
 from __future__ import annotations
@@ -61,11 +61,11 @@ def _aba_valid(d: str) -> bool:
 
 def _candidates(all_lines) -> list[tuple[str, str, str]]:
     """[(digits, line text, kind)] for each account/card number printed right
-    after a cue word (`Account 7301558842`, `Card ending 7421`, `Account:
+    after a cue word (`Account 5106628841`, `Card ending 7421`, `Account:
     XXXX-0000`). The token must carry at least four digits; masks are allowed.
 
     Run D, D2: a ROUTING number is never a candidate — one named so
-    (`Routing Number 071000505`, `ABA`, `RTN`, `Transit`), or nine digits that
+    (`Routing Number 012345678`, `ABA`, `RTN`, `Transit`), or nine digits that
     pass the ABA checksum behind a cue that names no kind (`Number 0710…`).
     The generic word `Number` otherwise made `Routing Number` an account
     number and blocked the one unique correction."""
@@ -167,7 +167,7 @@ _PARTY_NAME = re.compile(
     r"|bank|company|merchant|holder)\b", re.I)
 _BARE_FIGURE = re.compile(r"^[$£€]?\s*-?\(?\d[\d,]*(?:\.\d+)?\)?-?$")
 #: ...unless the label also names an identifier — or a W-2 LOCALITY, whose
-#: "name" is printed as a number (pitt_sample_w2: Locality Name 700102)
+#: "name" is printed as a number (a W-2 printing Locality Name 400118)
 _ID_WORDS = re.compile(r"\b(?:id|no|number|tin|ein|ssn|code|account|acct|locality|#)\b", re.I)
 
 

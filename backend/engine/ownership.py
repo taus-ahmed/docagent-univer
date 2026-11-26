@@ -5,7 +5,7 @@ THIS slot. Three shapes of that failure were found in the real staging
 exports, and each has a geometric answer:
 
 1. A FORM BOX (``Box 11 …``) answered with a value printed in a different box.
-   Job 51 (pitt_sample_w2): Box 11 Nonqualified Plans took ``4107.00``, which
+   Job 51 (a W-2): Box 11 Nonqualified Plans took ``4107.00``, which
    is printed under ``12a See instructions for box 12``; Box 11 is blank.
    A box's value sits right of or below its own printed box code, so the
    OWNER of a printed word is the nearest box code above-or-left of it
@@ -407,7 +407,7 @@ def _run_on_line(value, lines):
 
 def own_box_part(value, label, lines):
     """A3: the words of a box value printed inside its OWN box. Job 48 read
-    `0000005712UUQ CKR5 16260` for Box d, the line under `d Control number |
+    `0000004410ABC XYZ1 10010` for Box d, the line under `d Control number |
     Dept. | Corp. | Employer use only`. The box ends where its caption line
     prints a heading that is not a word of the slot's own label."""
     own = slot_box(label)

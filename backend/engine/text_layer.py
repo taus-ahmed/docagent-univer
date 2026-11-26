@@ -733,7 +733,7 @@ def unprinted_headers(lines, headers):
 
     A heading counts as printed when EVERY significant word of it appears
     somewhere on the page. Neither a per-line match nor a reading-order match
-    survives contact with a real column heading: the CFPB Closing Disclosure
+    survives contact with a real column heading: a Closing Disclosure
     sets `Paid by Others` stacked in a narrow column, and prints `Paid by` on
     one line with `Others` at the far END of the next, after `Before Closing`.
     Both stricter rules called it missing.
@@ -845,7 +845,7 @@ def acroform_field_values(path):
     page text. pdfplumber's `extract_text()` does not return them, so the
     text the model was asked to quote from carried every label and no value:
     `irs_w2_mod11.pdf` gave 21 of 22 slots back empty and
-    `irs_1099nec_ellis.pdf` quoted `PAYER'S TIN` as the source of an empty
+    a sample 1099-NEC's answer quoted `PAYER'S TIN` as the source of an empty
     answer. The values are in the file the whole time — pypdf reads `/V` —
     and in the rendered page image. Writing them into the text where the
     widget sits makes the model, `verify_span` and the source inventory all
@@ -965,7 +965,7 @@ def inject_markers(lines, widgets):
                     # The widget's box shares its band of y with printed
                     # words over the same x (a label printed INSIDE the box,
                     # as on every IRS form). Merging would interleave them —
-                    # "Nancy RECIPIENT'S Ellis name" — so the value becomes
+                    # "Pat RECIPIENT'S Example name" — so the value becomes
                     # its own line, just below the line it overlaps.
                     shift = max(float(x.get("bottom", x["top"] + 10))
                                 for x in target) + 0.5 - float(vline[0]["top"])
@@ -1038,7 +1038,7 @@ _WORD_ATTRS = ["size"]
 #:     HTR-043235 p3   2.513      the shredded page
 #:     HTR-043235 p2   1.140      the same damage, milder
 #:     ---------------------      every other page in the corpus is below here
-#:     CFPB H25B  p1   1.013      the highest clean page
+#:     disclosure p1   1.013      the highest clean page
 #:
 #: 1.05 sits in that gap. It is not tuned to a document: it says "the two
 #: readings disagree about more than one word in twenty", and one in twenty is
@@ -1469,8 +1469,8 @@ def mark_printed_spaces(lines, chars):
     """Overnight A3: a word the reader glued across a printed gap.
 
     pdfplumber joins characters closer than its x-tolerance (3 pt), so a page
-    that positions `0000005712` and `UUQ` 1.9 pt apart — a space with no
-    space glyph — yields ONE word, `0000005712UUQ`. Where a gap inside a word
+    that positions `0000004410` and `ABC` 1.9 pt apart — a space with no
+    space glyph — yields ONE word, `0000004410ABC`. Where a gap inside a word
     is at least 40% of the word's median character width (and 1 pt), the
     word gets `spaced`: its text with a space at each such gap. Geometry
     only — `text` is unchanged, so prompts and cached answers are too."""
@@ -1911,7 +1911,7 @@ def locate(value, line, after_x=None):
 
 def set_column_anchors(bands, raw_rows, columns, all_lines):
     """B2 (overnight): a column's left and right edges as its OWN values sit
-    in this table. mammoth_2pg centres `Description` over x 212-278 while
+    in this table. a two-page statement centres `Description` over x 212-278 while
     every description starts at x 100, so a short one (`ATM WITHDRAWAL`,
     ending at 209) overlapped no heading and 28 correct cells went red. An
     edge counts when at least 3 of the column's values that DO overlap their
@@ -2130,7 +2130,7 @@ def image_only_pages(file_path, min_cover=0.2, max_words=2):
     at most `max_words` text-layer words centred inside it. Measured over the
     local corpus: the OU check stub's stub image (0.40 of page 1, 0 of the
     page's 131 words inside) and the receipt images embedded in digital
-    pages; a scan's own page image under its OCR layer (utah_paystub_1: 190
+    pages; a scan's own page image under its OCR layer (a pay stub's scan: 190
     words inside) is not one. Pages with no text layer at all are OCR pages
     and are the caller's to exclude by origin."""
     out = set()
@@ -2182,11 +2182,11 @@ def outlined_pages(file_path, min_glyphs=300):
     return out
 # ── Run Q, Q10: the printed spacing of a glued word ─────────────────────────
 #
-# Some PDFs print a space as GEOMETRY, not as a character: `FAST EATS` is
-# F-A-S-T, a 2.17 pt gap at 8 pt, E-A-T-S, with no space glyph. extract_words
+# Some PDFs print a space as GEOMETRY, not as a character: `QUICK BITE` is
+# Q-U-I-C-K, a 2.17 pt gap at 8 pt, B-I-T-E, with no space glyph. extract_words
 # merges anything within its x tolerance, so the word, the prompt and the
-# model's answer all read `FASTEATS` (job 78: also `MARTAGARCIA`,
-# `123LILACAVENUE`; job 56 `ACHDEBIT` on 16 rows). The page TEXT is left
+# model's answer all read `QUICKBITE` (job 78: also a glued name and a glued
+# street address; job 56 a glued bank code on 16 rows). The page TEXT is left
 # exactly as it was (it is part of the prompt and of every cached answer);
 # the gap is kept on the word as `spaced`, and `respace_value` restores it in
 # a VALUE afterwards. Only between two touching alphanumerics of which at

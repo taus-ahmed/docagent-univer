@@ -1,7 +1,7 @@
 """Run Q Phase 3 (Q7): check a table's rows against the page's GEOMETRY where
 its text is drawn as outlines.
 
-virtus_1099b prints its 1099-B records as vector outlines: the text layer
+A sample 1099-B prints its records as vector outlines: the text layer
 holds none of their values, and OCR reads them as noise ("SOOO of SSC.C000")
 even at 600 dpi, so no span can be grounded. The stored model answer shifted
 the withholding columns down a record, dropped a record, invented an
@@ -45,7 +45,7 @@ def outline_pages(file_path, min_glyphs=300, ratio=0.25):
     """File pages (1-based) drawing a substantial part of their text as
     outlines: at least `min_glyphs` glyph-sized paths and at least `ratio` of
     a path per text character. text_layer.outlined_pages (whole page drawn
-    as outlines, ADP W-2 at 1.58) is the stricter case; virtus_1099b reads
+    as outlines, ADP W-2 at 1.58) is the stricter case; the sample 1099-B reads
     0.44, and every other page of the corpus under 0.07."""
     out = set()
     try:

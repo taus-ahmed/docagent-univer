@@ -169,7 +169,7 @@ _OCR_CENTS = re.compile(r"^\d{2}\)?$")
 def ocr_amount_repair(line) -> tuple[list, int]:
     """(line, repairs): amounts an OCR reading split in two, rejoined.
 
-    Run B, B7. On the scanned Carson Bank pages Tesseract drops the decimal
+    Run B, B7. On a small bank's scanned pages Tesseract drops the decimal
     point and reads the cents as a word of their own - `$9,428` `99`,
     `$2,688` `81` - or reads the thousands comma as a point - `$6.428` `29`.
     Neither half is an amount (`amount_of` wants two decimals or a symbol and
@@ -408,7 +408,7 @@ def _counts_as_missed(f, label, numbers, lines_of, form_lane, form_entries) -> b
     box is the document confirming the slot is empty (job 52, irs_1099int_mod3).
     On a text layer, only when the label's whole caption is printed with a
     value-like token (a digit) within the next three words, and that token is
-    not the start of another caption (mammoth_2pg: "Account Type" is not
+    not the start of another caption (a two-page statement: "Account Type" is not
     printed — "Account:" is the account number's label)."""
     if form_lane:
         if not form_entries:
@@ -780,7 +780,7 @@ def coverage(inventory, slots, extracted_fields, tables_out, raw_fields=None,
                            f"were extracted (table {', '.join(repr(x) for x in k['names'])}).")
     # Run G review (batch 1, item 5): a whole PAGE lost. The document-level
     # shortfall above tolerates a quarter missing, which is exactly one page
-    # of a two-page statement (mammoth_2pg: 37 of 48). A page that prints
+    # of a two-page statement (one in the corpus: 37 of 48). A page that prints
     # the band with 2+ candidate rows and not one extracted row is a reason
     # of its own. Judged only where rows say which page they were read from.
     for t in slots.get("tables") or []:

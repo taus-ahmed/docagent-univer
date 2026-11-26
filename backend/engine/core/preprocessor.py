@@ -109,7 +109,7 @@ class ProcessedDocument:
     #:              a scanner or MFP that ran its own OCR writes
     #: Decided per page, so one scan in a file says nothing about its other
     #: pages. Only strong, explainable signals decide (`page_origin`); image
-    #: coverage on its own never does — the CFPB forms carry an 86% image on
+    #: coverage on its own never does — the disclosure forms carry an 86% image on
     #: page 1 and are native. Gate 2c adds one: a page one image covers whose
     #: visible text layer holds under half the words OCR reads is "ocr"
     #: (`_selective_ocr`); the cover only decides which pages are compared.
@@ -150,7 +150,7 @@ MIN_TEXT_LENGTH = 50
 #: the page with a few words laid over it. Measured on every image-bearing page
 #: in tests/test_pdfs (2026-10-23): bank-statement-sample is one image covering
 #: 1.00 of the page and its layer holds 108 words against OCR's 485 (0.22); the
-#: CFPB forms' largest image covers 0.86, everything else <= 0.05, and every
+#: disclosure forms' largest image covers 0.86, everything else <= 0.05, and every
 #: native/OCR word ratio there is >= 0.94. BOTH conditions are required: the
 #: cover decides which pages pay for an OCR pass (1 of 114 corpus pages), the
 #: ratio decides the reading. An image alone never decides — a full-page form
@@ -301,7 +301,7 @@ def page_origin(plumber_page, pypdf_page, needed_ocr: bool) -> str:
 
     An image is required as CORROBORATION and is never sufficient: an image
     without hidden text is a digital page with a logo, a seal or a form
-    background (the three CFPB controls: 86% image cover, 0 hidden shows).
+    background (the three disclosure-form controls: 86% image cover, 0 hidden shows).
     A page whose text layer is VISIBLE but thin over a full-page image — the
     Photoshop-built bank-statement-sample — is not decided here; telling it
     apart needs an OCR-versus-text-layer comparison (Gate 2c).

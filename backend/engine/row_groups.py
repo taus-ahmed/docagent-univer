@@ -2,10 +2,10 @@
 
 A vendor invoice list prints
 
-    300055 ANDERSON DULANEY                 <- the group line
-    0025 06/22/2026 H062426 ... 75.00 ...   <- the group's rows
+    410022 HOLLOWAY PARTS                   <- the group line
+    0031 03/14/2026 R031426 ... 75.00 ...   <- the group's rows
     CHECK DATE: 06/24/2026                  <- a per-row note (furniture)
-    299694 B&B LAWN/LANDSCAPING
+    388211 NORTHFIELD SUPPLY
     2937 ... 2,480.00 ...
     2938 ... 2,400.00 ...
     4,880.00                                <- the group's subtotal
@@ -88,7 +88,7 @@ def _kind(line) -> str:
 
 # ── a group line's parts (Run S, Stage 1b) ───────────────────────────────────
 #
-# A group line is an identifier and a name ("300055 ANDERSON DULANEY",
+# A group line is an identifier and a name ("410022 HOLLOWAY PARTS",
 # "Customer Code: KX-77 Harbor Foods", "EMP0042 Jane Q. Doe"). The two are
 # separate facts and the sheet gives each its own column. Everything below is
 # shape, never vocabulary: an identifier is a token holding a digit; a printed

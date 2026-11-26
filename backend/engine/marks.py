@@ -77,7 +77,7 @@ def _dark(color):
 
 def _painted_over(r, later) -> bool:
     """Run R, R4 (job 129): a dark rectangle that a LATER light rectangle
-    covers to 90% or more is a drop shadow or a frame - fidelity_brokerage
+    covers to 90% or more is a drop shadow or a frame - a brokerage statement in the corpus
     draws every statement picture as a black box with a white one 4 pt
     smaller painted over it, then its text on top. Nothing it covers is
     hidden, so it is not a redaction bar."""

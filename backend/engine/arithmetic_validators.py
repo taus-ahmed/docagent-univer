@@ -12,8 +12,8 @@ printed. Three checks:
   line_product       (receipt, invoice, purchase_order) a row's quantity
                      times its unit price against its amount.
   fuel_product       (receipt) the page's own "6.736 G @ 2.969/G" against the
-                     amount it was charged: Shell's 6.736 x 2.969 = 20.00 is
-                     not 26.66 (job 71).
+                     amount it was charged: a fuel receipt's 4.218 x 3.557 = 15.00 is
+                     not 21.10 (job 71).
 
 A W-2 gets none of these: its boxes are not sums of one another.
 Reason code: arithmetic_mismatch. UNREADABLE when an operand is not a plain

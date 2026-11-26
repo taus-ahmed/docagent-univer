@@ -816,7 +816,7 @@ def output_cap(slots, expected_rows) -> int:
 
 _EMAIL = re.compile(r"[^\s@]+@[^\s@]+\.[A-Za-z]{2,}")
 # Run Q Phase 2 (jobs 72, 73): bounded by non-digits. Unbounded, every run of
-# 10+ digits "contained" a phone - batch 702000000803, invoice 08632520260515 -
+# 10+ digits "contained" a phone - batch 600000000412, invoice 01112520260301 -
 # and ~322 cells of two real jobs were Low as "more than one piece".
 _PHONE = re.compile(r"(?<!\d)\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}(?!\d)")
 
@@ -838,7 +838,7 @@ def _single_datum(value, label):
         return False
     if _PHONE.search(v) and not any(w in lab for w in ("phone", "tel", "mobile",
                                                        "fax", "contact no")):
-        # A3: an IDENTIFIER slot (`Box d Control Number` = 0000005712 UUQ)
+        # A3: an IDENTIFIER slot (`Box d Control Number` = 0000004410 ABC)
         # holds a long digit run by definition; it is not a phone number.
         if not (_ID_LABEL_HEAD.search(lab) and not _EMAIL.search(v)):
             return False
@@ -1163,7 +1163,7 @@ def verify_span(value, source, page, page_texts, record=""):
     if not any(src in h for h in ordered if h) and not in_line_order(
             source, page_texts, page):
         # Run Q, Q4 (job 57): a quote that dropped the PRINTED spaces
-        # ("Purch.Doc.22356099" for "Purch. Doc. 22356099") is the same run
+        # ("Purch.Doc.40118822" for "Purch. Doc. 40118822") is the same run
         # of characters. Matched with every space removed on both sides, and
         # only for a quote of 8+ characters, so a short fragment cannot hit
         # by accident.
@@ -1240,7 +1240,7 @@ def verify_span(value, source, page, page_texts, record=""):
 # `verify_span` checks the QUOTE the model gave and then the value inside it.
 # A quote is the model's own rendering of a line, and it is wrong in ways the
 # value is not: on the FlowParse card the model quoted lines with the SAMPLE
-# watermark's letters in them ("SKYLARK AIR TICKETS ETravel $412.00"), and once
+# watermark's letters in them ("EXAMPLE AIR TICKETS ETravel $412.00"), and once
 # the watermark is removed from the text those quotes match nothing - while
 # every value in them is printed, plainly, on one line. What has to be on the
 # page is the VALUE. So when the quote fails, the line is found from the
@@ -1509,7 +1509,7 @@ def value_off_its_row(value, source, all_lines) -> bool:
     is_number = _number_key(value) is not None
     for i in rows:
         # the quote may wrap, below its label or above it (EXP-2024-0081
-        # prints `... Pacific Steel, Los` over `Purpose: Angeles`): a
+        # prints `... Example Steel, North` over `Purpose: Sampletown`): a
         # neighbouring line is part of the row only when EVERY word on it is
         # the quote's own, never a line carrying another row's label
         # (`Closing Balance 170.00`)
@@ -1879,7 +1879,7 @@ def _reprints_block(page, nxt, located, pages_by_row, all_lines) -> bool:
     nxt_lines = [_line_text(ln) for ln in all_lines if line_page(ln) == nxt]
     # Overnight A4: a single column-header line reprinted as the FIRST thing
     # on the next page is a running header — the same table, continued
-    # (mammoth_2pg page 2 opens with "Date Description Debit Credit
+    # (a two-page statement's page 2 opens with "Date Description Debit Credit
     # Balance"). A heading block printed further down the page, under a
     # title or prose of its own, is still a new table (Berkshire).
     if len(block) == 1 and block[0] in nxt_lines[:2]:
@@ -2117,7 +2117,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                    and page_lines)
     page_failed = {}
     fallback_notes = []          # Run R, R4: said once `notes` exists
-    # Run Q, Q12: A BLANK FILLABLE FORM NEEDS NO MODEL CALL. smartsheet_mileage
+    # Run Q, Q12: A BLANK FILLABLE FORM NEEDS NO MODEL CALL. An expense template
     # (two 1885 x 1457 pt pages, 268 AcroForm widgets, none filled) failed
     # twice on staging after ~42 s with no reason. Every widget is empty and
     # the text layer prints no amount and no dated row - there is nothing to
@@ -2153,7 +2153,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     else:
         parsed, resp = ask(prompt, slots, "fields+tables")
         # Run R, R4 (job 133): a whole-document call that failed TRANSIENTLY
-        # - fiserv's 5 pages timed out at 120 s, twice, under the 6-page
+        # - a 5-page merchant statement timed out at 120 s, twice, under the 6-page
         # threshold for page calls - is asked again a page at a time, each
         # call a fifth of the answer. A refused request (400) is ours to fix
         # and is not retried smaller.
@@ -3094,7 +3094,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     nxt = next((i for i in later if i > line_no), None)
                     record = record_span(all_lines, line_no, nxt)
                     # Run Q, Q4 (job 72): a group line printed ABOVE the row
-                    # ("300055 ANDERSON DULANEY" over its invoice lines)
+                    # ("410022 HOLLOWAY PARTS" over its invoice lines)
                     # belongs to the record too - up to 3 lines back, on the
                     # same page, and never reaching a line another row was
                     # read from, so it cannot borrow a neighbour's value.
@@ -3294,7 +3294,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 notes.append(f'{t["name"]}: cleared column {col!r} — every value '
                              f'was a copy of the same row\'s {src!r} ({n} rows)')
             # A6 (overnight): ONE entity answered as fragments. Job 48 split
-            # pitt's single state/local line over three rows - PA, state ID
+            # a W-2's single state/local line over three rows - PA, state ID
             # and wages; state tax and local wages; local tax and locality.
             # Rows after the band's one keyed row, with no key and columns
             # disjoint from everything before them, are that row's parts.
@@ -3602,8 +3602,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                             f"{tname}[other account]", shown[:200],
                             f"read from the section of account {acct}, not this "
                             f"statement's account - check it belongs in this table"))
-    # Run Q, Q10: restore the PRINTED spacing of a glued word ("FASTEATS" ->
-    # "FAST EATS") in the final values - after grounding and confidence, so
+    # Run Q, Q10: restore the PRINTED spacing of a glued word ("QUICKBITE" ->
+    # "QUICK BITE") in the final values - after grounding and confidence, so
     # neither is affected; a note says which values were re-spaced.
     _label_of_ref = {f["ref"]: f["row_label"] for f in slots["fields"]}
     for ref in list(extracted_fields):
@@ -3700,7 +3700,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     # whose sole failure is grounding moves; any other failed check stands.
     _is_pdf = str(file_path).lower().endswith(".pdf")
     _outl = outlined_pages(file_path) if _is_pdf else set()
-    # Run Q Phase 3 (Q7, virtus 1099-B): a table drawn as outlines on a page
+    # Run Q Phase 3 (Q7, a sample 1099-B): a table drawn as outlines on a page
     # that ALSO has a text layer. Nothing can ground its values, so each row
     # is compared with the page's geometry instead - the printed record in
     # the same position, its check boxes, and where it prints anything at
