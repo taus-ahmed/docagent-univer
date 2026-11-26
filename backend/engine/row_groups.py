@@ -362,13 +362,46 @@ def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low,
     id_key, name_key = split_keys or (None, None)
     gkeys = [k for k in (group_key, id_key, name_key) if k]
 
-    def put(r, key, val, g):
+    def keep_elsewhere(r, key, cur, ln):
+        """The replaced model value `cur` is not lost when another cell's
+        PRINTED text contains it: a cell whose value is part of a run of the
+        row's words that also prints `cur` ('71000001' read from
+        '71000001JaneRoe') gets that run - the page's own text. Returns the
+        column it went to, or None (then the caller flags it)."""
+        toks = _toks(groups.lines[ln]) if ln is not None else []
+        want = _norm(cur).casefold()
+        for h in headers:
+            if h in gkeys or h == key:
+                continue
+            v = _norm(r.get(h)).casefold()
+            if not v:
+                continue
+            # the cell's printed text: the SHORTEST runs of words holding
+            # its value (a value printed alone is its own text, so a word
+            # beside it is never pulled in)
+            for n in range(1, len(toks) + 1):
+                runs = [" ".join(toks[i:i + n]) for i in range(len(toks) - n + 1)]
+                runs = [x for x in runs if v in _norm(x).casefold()]
+                if not runs:
+                    continue
+                hit = next((x for x in runs if want in _norm(x).casefold()
+                            and _norm(x).casefold() != v), None)
+                if hit:
+                    notes.append(f"{key}: the model's {cur!r} is printed in "
+                                 f"{hit!r}, so {h} holds the page's {hit!r} "
+                                 f"(it had {r.get(h)!r})")
+                    r[h] = hit
+                    return h
+                break
+        return None
+
+    def put(r, key, val, g, ln=None):
         nonlocal filled
         if not key or not val:
             return
         cur = str(r.get(key, "") or "").strip()
         same = _norm(cur).casefold() == _norm(val).casefold()
-        if cur and not same and _norm(cur).casefold() not in _norm(g.label).casefold():
+        if cur and not same and _norm(cur).casefold() not in _norm(g.label).casefold()                 and keep_elsewhere(r, key, cur, ln) is None:
             flags.append((f"{key}[{g.label}]", cur,
                           f"the model read {cur!r} for {key}, but the group line "
                           f"printed above the row says {g.label!r}; the page's "
@@ -387,10 +420,10 @@ def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low,
         members.setdefault(id(g), []).append(r)
         if split_keys:
             sp = split_group_label(g.label)
-            put(r, id_key, sp["ident"], g)
-            put(r, name_key, sp["name"] if id_key else (sp["name"] or g.label), g)
+            put(r, id_key, sp["ident"], g, ln)
+            put(r, name_key, sp["name"] if id_key else (sp["name"] or g.label), g, ln)
         else:
-            put(r, group_key, g.label, g)
+            put(r, group_key, g.label, g, ln)
     # which band column the reconciling money position is: the column whose
     # value equals that position's printed figure on every member row
     col_votes = {}

@@ -196,7 +196,9 @@ class TestJob131Real:
         ws = openpyxl.load_workbook(p).worksheets[0]
         cells = [[c.value for c in r] for r in ws.iter_rows()]
         flat = [str(v) for r in cells for v in r if v is not None]
-        assert "300055" in flat and "ANDERSON DULANEY" in flat
+        # number and name on the SAME row of the workbook
+        assert any("300055" in [str(v) for v in r]
+                   and "ANDERSON DULANEY" in [str(v) for v in r] for r in cells)
         assert sum(1 for v in flat if v == "Subtotal") == 14
         i = next(k for k, r in enumerate(cells) if "4,880.00" in [str(v) for v in r]
                  or 4880.0 in r)
