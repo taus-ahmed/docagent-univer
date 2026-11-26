@@ -268,7 +268,8 @@ class OcrPageSource(PageSource):
     #: degrees into fragments the text does not have (text_layer.group_lines).
     reader_lines = True
 
-    def __init__(self, image, page_number=None, dpi=OCR_DPI, straighten_page=True):
+    def __init__(self, image, page_number=None, dpi=OCR_DPI, straighten_page=True,
+                 cleanup=None):
         self._image = image
         self._page_number = page_number
         self._dpi = float(dpi)
@@ -277,6 +278,17 @@ class OcrPageSource(PageSource):
             self._image, self.applied = straighten(self._image)
         #: "none" | "crop_psm6" — which reading the words came from (B2).
         self.applied["retry"] = "none"
+        # Run S, 4b: watermark and background suppression before the reading.
+        # `auto` (image_cleanup.DEFAULT) reads the page as given and, only when
+        # that reading is UNSURE (character-weighted confidence under
+        # image_cleanup.AUTO_MIN), also reads the cleaned page and keeps the
+        # more confident of the two: a clean scan reads exactly as before, a
+        # watermarked one gets the cleanup. A fixed variant may be passed
+        # instead (`cleanup=`), as the evaluation does. Only same-scale
+        # cleanups are applied, so every word box stays in THIS page's space.
+        import image_cleanup as IC
+        self._cleanup = cleanup if cleanup is not None else IC.DEFAULT
+        self.applied["cleanup"] = "none"
         self._data = None
 
     @property
@@ -293,15 +305,107 @@ class OcrPageSource(PageSource):
                                height=float(self._image.height),
                                width=float(self._image.width))
 
+    def _cleaned(self, variant):
+        import image_cleanup as IC
+        try:
+            img, factor = IC.apply(self._image, variant)
+        except Exception:                  # a cleanup failing never costs the page
+            return None
+        return img if factor == 1.0 else None
+
     def _read(self):
         if self._data is None:
+            import image_cleanup as IC
             pytesseract = _configure()
-            self._data = external_tools.tesseract(
-                pytesseract.image_to_data,
-                self._image, output_type=pytesseract.Output.DICT)
+
+            def read(img):
+                return external_tools.tesseract(
+                    pytesseract.image_to_data, img, output_type=pytesseract.Output.DICT)
+
+            variant = self._cleanup
+            if variant == "auto":
+                self._data = read(self._image)
+                score = IC.reading_score(self._data)
+                # a reading with NO words has its own measured path (the
+                # crop-and-psm-6 retry below); auto acts on an unsure one
+                if 0 < score < IC.AUTO_MIN:
+                    img = self._cleaned(IC.AUTO_VARIANT)
+                    if img is not None:
+                        other = read(img)
+                        if IC.reading_score(other) > score:
+                            self._data = other
+                            self.applied["cleanup"] = f"auto:{IC.AUTO_VARIANT}"
+                self.applied.setdefault("cleanup", "none")
+            elif variant != "none" and self._cleaned(variant) is not None:
+                self._data = read(self._cleaned(variant))
+                self.applied["cleanup"] = variant
+                if not any((t or "").strip() for t in self._data["text"]):
+                    # a cleanup that left nothing readable: the page as given
+                    self._data = read(self._image)
+                    self.applied["cleanup"] = "none"
+            else:
+                self._data = read(self._image)
             if not any((t or "").strip() for t in self._data["text"]):
                 self._retry(pytesseract)
+            self._repair_micr_band()
         return self._data
+
+    def _repair_micr_band(self):
+        """Run S, 4c: the MICR band read as its own check. The lowest line of
+        the reading that is mostly digits (9+) is the band; it is kept as
+        read when it already parses with a checksum-valid routing number,
+        else repaired word by word (micr_reader.demangle: `@` -> 0, a letter
+        between two digits -> its digit; boxes unchanged), else replaced by
+        the band reader's own re-reading of that strip. Only a repair that
+        makes the band parse with a valid routing number is kept."""
+        try:
+            import micr
+            import micr_reader as MR
+        except Exception:
+            return
+        d = self._data
+        lines = {}
+        for i, level in enumerate(d["level"]):
+            if level == 5 and (d["text"][i] or "").strip():
+                lines.setdefault(self._line_key(d, i), []).append(i)
+        h = float(self._image.height or 1)
+        band = None
+        for key, idxs in lines.items():
+            text = " ".join(d["text"][i] for i in idxs)
+            top = min(float(d["top"][i]) for i in idxs)
+            if sum(ch.isdigit() for ch in text) >= 9 and top > 0.5 * h \
+                    and MR._digit_share(MR.demangle(text)) >= 0.6:
+                if band is None or top > band[0]:
+                    band = (top, idxs, text)
+        if band is None:
+            return
+        _top, idxs, text = band
+        if micr.parse_micr(text).get("routing_number"):
+            self.applied["micr_band"] = "as_read"
+            return
+        fixed = [MR.demangle(d["text"][i]) for i in idxs]
+        if micr.parse_micr(" ".join(fixed)).get("routing_number"):
+            for i, t in zip(idxs, fixed):
+                d["text"][i] = t
+            self.applied["micr_band"] = "repaired"
+            return
+        words = [{"text": d["text"][i], "top": float(d["top"][i]),
+                  "bottom": float(d["top"][i]) + float(d["height"][i]),
+                  "line_id": 0} for i in idxs]
+        try:
+            again = MR.read_band(self._image, words)
+        except Exception:
+            return
+        if again and micr.parse_micr(again).get("routing_number"):
+            # the whole band in the line's first word, spanning the line
+            left = min(float(d["left"][i]) for i in idxs)
+            right = max(float(d["left"][i]) + float(d["width"][i]) for i in idxs)
+            d["text"][idxs[0]] = again
+            d["left"][idxs[0]] = int(left)
+            d["width"][idxs[0]] = int(right - left)
+            for i in idxs[1:]:
+                d["text"][i] = ""
+            self.applied["micr_band"] = "reread"
 
     def _retry(self, pytesseract):
         """Fix B2: a zero-word psm 3 reading, read again cropped to ink, psm 6.
