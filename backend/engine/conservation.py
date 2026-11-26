@@ -201,6 +201,15 @@ def structural_tokens(page_lines, page_numbers=None) -> list:
                 out.append(Token(n, ident, kind_of(ident) or "id", "group", text))
                 prev_row = False
                 continue
+            if text.rstrip().endswith(":") and not any(kind_of(t) for t in texts):
+                # a label printed with its value off its own line
+                role = "total" if _TOTAL_WORD.search(text) else "field"
+                for t in _beside(ln, lines):
+                    kd = kind_of(t) or ("number" if re.search(r"\d", t) else None)
+                    if kd:
+                        out.append(Token(n, _clean(t), kd, role, text))
+                prev_row = False
+                continue
             is_row = _row_line(texts)
             # a summary line: a count, then the amount it sums
             # ("Checks/withdrawals 54 $14,365.21")
@@ -241,6 +250,45 @@ def structural_tokens(page_lines, page_numbers=None) -> list:
                 for t in reversed(tail):
                     out.append(Token(n, _clean(t), "amount", "field", text))
             prev_row = False
+    return out
+
+
+def _beside(label_line, lines):
+    """The figures printed to the RIGHT of a value-less label (`Total
+    Deduction:` alone on its line) inside the label's own band of height, on
+    whatever line the reader clustered them into. A glyph and digits printed
+    against each other are one figure. Returns their texts, left to right."""
+    lw = [w for w in label_line if isinstance(w, dict)]
+    if not lw:
+        return []
+    top = min(float(w.get("top", 0) or 0) for w in lw)
+    bot = max(float(w.get("bottom", 0) or 0) for w in lw)
+    right = max(float(w.get("x1", 0) or 0) for w in lw)
+    pad = max(4.0, bot - top)
+    cand = []
+    for ln in lines:
+        if ln is label_line:
+            continue
+        for w in ln:
+            if not isinstance(w, dict):
+                continue
+            t = str(w.get("text", ""))
+            if not (re.search(r"\d", t) or UNREADABLE in t):
+                continue
+            wt, wb = float(w.get("top", 0) or 0), float(w.get("bottom", 0) or 0)
+            mid = (wt + wb) / 2
+            if float(w.get("x0", 0) or 0) > right and top - pad <= mid <= bot + pad:
+                cand.append(w)
+    cand.sort(key=lambda w: float(w.get("x0", 0) or 0))
+    out, last = [], None
+    for w in cand:
+        t = str(w.get("text", ""))
+        if last is not None and out and float(w.get("x0", 0) or 0) - float(
+                last.get("x1", 0) or 0) < 2.0:
+            out[-1] += t
+        else:
+            out.append(t)
+        last = w
     return out
 
 

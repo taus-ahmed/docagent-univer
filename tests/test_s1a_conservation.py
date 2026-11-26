@@ -241,3 +241,28 @@ def test_a_figure_glued_to_an_unreadable_glyph_is_named_the_total_deduction():
     out = _check(pages, ["$12", "$96"])
     assert out["attention"], out
     assert "�12" in out["attention"][0] and "total" in out["attention"][0]
+
+
+def test_a_value_less_label_takes_the_figures_beside_it_from_neighbouring_lines():
+    """utah_paystub_2 as the engine groups it: the glyph alone on a line at
+    y=702, the `12` clustered into a reviewer's annotation line at y=710, and
+    `Total Deduction:` alone at y=713. A label ending in a colon with nothing
+    after it takes as its value the figures printed to its right inside its
+    own band of height; a glyph and digits printed against each other are
+    one figure."""
+    glyph = [{"text": "\ufffd", "x0": 526.0, "x1": 532.0, "top": 702.0, "bottom": 725.0,
+              "page": 1}]
+    note = _line("proven via state income tax deductions", 1, 710.0, x=141.0)
+    note.append({"text": "12", "x0": 529.0, "x1": 540.0, "top": 709.0, "bottom": 723.0,
+                 "page": 1})
+    label = _line("Total Deduction:", 1, 713.0, x=49.0)
+    pages = [_page(["Deductions Current YTD", "Federal Tax $12 $96"]) + [glyph, note, label]]
+    out = _check(pages, ["$12", "$96"])
+    assert out["attention"], out
+    assert "\ufffd12" in out["attention"][0] and "total" in out["attention"][0]
+
+
+def test_a_value_less_label_with_nothing_beside_it_adds_nothing():
+    pages = [_page(["Deductions Current YTD", "Federal Tax $12 $96", "Notes:"])]
+    out = _check(pages, ["$12", "$96"])
+    assert out["missing"] == []
