@@ -19,25 +19,25 @@ one commit per item; push after each stage; UI untouched.
 - [x] Stage 1 finish: suite + harness + scoreboard, KNOWN_FAILING, push
 
 ## Stage 2 — organized layout for all text-layer PDFs
-- [ ] 2a spec extension in ORGANIZED_LAYOUT_SPEC.md
-- [ ] 2b position placement (x/y), jumbled-layout tests
-- [ ] 2c headers (one per table, no invented "Description"), colon strip, no stray headers
-- [ ] 2d formatting from page, blank rows by spacing, no paragraphs/fills, one date format
-- [ ] 2e family tests (bank, invoice, PO, W-2, 1099, 1098, receipt, pay stub; utah_paystub_2 vs syed sample)
-- [ ] Stage 2 finish: suite + harness + scoreboard, KNOWN_FAILING, push
+- [x] 2a spec extension in ORGANIZED_LAYOUT_SPEC.md
+- [x] 2b position placement (x/y), jumbled-layout tests
+- [x] 2c headers (one per table, no invented "Description"), colon strip, no stray headers
+- [x] 2d formatting from page, blank rows by spacing, no paragraphs/fills, one date format
+- [x] 2e family tests (bank, invoice, PO, W-2, 1099, 1098, receipt, pay stub; utah_paystub_2 vs syed sample)
+- [x] Stage 2 finish: suite + harness + scoreboard, KNOWN_FAILING, push
 
 ## Stage 3 — known defects (general rules)
-- [ ] 3a grounded value whose meaning mismatches the label (ENGIE Customer Email)
-- [ ] 3b wrong-template warning, jobs 61 and 65
-- [ ] 3c job 62 two-column fields
-- [ ] 3d job 79 Box 4
-- [ ] 3e no-template RAW 59.4% vs 70.1%: bisect and explain
-- [ ] 3f Legend counts vs marked cells (jobs 46, 48, 51)
-- [ ] 3g job 130 smartsheet_mileage finished with no values
+- [x] 3a grounded value whose meaning mismatches the label (ENGIE Customer Email)
+- [x] 3b wrong-template warning, jobs 61 and 65
+- [x] 3c job 62 two-column fields
+- [x] 3d job 79 Box 4
+- [x] 3e no-template RAW 59.4% vs 70.1%: bisect and explain
+- [x] 3f Legend counts vs marked cells (jobs 46, 48, 51)
+- [x] 3g job 130 smartsheet_mileage finished with no values
 - [ ] Stage 3 finish: suite + harness + scoreboard, KNOWN_FAILING, push
 
 ## Stage 4 — image / OCR word-box path, watermarks
-- [ ] 4-gen tools/make_synthetic_checks.py (≥40 checks, PDF + image, ground truth JSON) → local_docs/synthetic_checks/
+- [x] 4-gen tools/make_synthetic_checks.py (≥40 checks, PDF + image, ground truth JSON) → local_docs/synthetic_checks/
 - [ ] 4-before per-field accuracy baseline by watermark strength
 - [ ] 4a one OCR word-box path into the same placement/verification engine
 - [ ] 4b watermark/background suppression chosen by measured accuracy
@@ -101,3 +101,18 @@ one commit per item; push after each stage; UI untouched.
   scratchpad p_ol.py (Stage 2), p_3a4d.py, p_3b.py (apply after the suite finishes).
 - STAGE 1 FINISHED: suite once 5580 passed / 4 failed (fixed 8a7a6b0, df8de7f; affected files re-run 116 passed),
   harness 98.7% / 98.2%, 17/17 both, invented 0, misfiled 0; RAW 48.0 / 59.4; scoreboard unchanged (frozen records).
+- Stage 2 suite (once, at 09d37ce, run in a scratch worktree): 5609 passed, 11 failed, 20 xfailed. The 11
+  (test_batch2_failure_classes x10, test_run_f_fixes f1) are the worktree's environment: they read source
+  PDFs from a sibling folder (../docagent-testdocs) that exists only beside the main checkout; re-run in the
+  main tree: 18 passed. Stage 2 audit: 0 figures lost on all 60 text-layer PDFs.
+- Stage 2 done: fd3f47c spec, 09d37ce implementation (one commit, one function). Pushed with Stage 3.
+- Stage 3 commits: daf6f36 3f (test only: re-exports equal), 9d7fd58 3d (xfail marker removed),
+  1de54b5 3c, 71a039e 3b, ae4169a 3a, b6f434a 3g. 3e: explanation only (no code).
+- Owner review (mid-Stage 3): 351a6f2 + 9e618b5 engine comments/docstrings use invented examples; the
+  literal scan covers comments+docstrings, address words, and the round-2 documents. 3c tightened
+  (starts_at_label) after an invented negative case passed wrongly; synthetic tests for address /
+  remit-to / description / notes with negative twins (tests/test_s3c_wrapped_columns.py).
+- IN FLIGHT: corpus tag s3 (Stage 3 code only; the Stage 4 4d hunk is set aside in scratchpad
+  stage4_4d.patch / slot_extractor_with_4d.py and must be re-applied after). Then:
+  tools/wrapped_value_census.py s1 s3 for the owner's 3c questions; Stage 3 finish (suite, harness,
+  scoreboard, KNOWN_FAILING: box-4 marker came off), push. Stage 4: apply scratchpad p_ocr.py.
