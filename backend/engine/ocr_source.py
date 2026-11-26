@@ -384,6 +384,10 @@ class OcrPageSource(PageSource):
             self.applied["micr_band"] = "as_read"
             return
         fixed = [MR.demangle(d["text"][i]) for i in idxs]
+        if not micr.parse_micr(" ".join(fixed)).get("routing_number"):
+            # one unknown glyph in the transit field, decided by the checksum
+            # (a 5.3 reader reads a 6 at the field's edge as G; 5.4 does not)
+            fixed = [MR.repair_transit(t) for t in fixed]
         if micr.parse_micr(" ".join(fixed)).get("routing_number"):
             for i, t in zip(idxs, fixed):
                 d["text"][i] = t

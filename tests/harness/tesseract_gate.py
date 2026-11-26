@@ -17,6 +17,15 @@ so the zero-word retry (crop, psm 6) never runs; and page 8's MICR band reads
 band-change boundary is found. That merge fails CLOSED: the record carries
 `possible_multiple_documents` and `needs_review`.
 
+Run S, after Stage 4 (2026-11-26): the batch's ten records now come back on
+5.3 too - CI reported the unexpected pass (XPASS strict) at 45bdbdc, and the
+marker came off `test_ten_cheques_give_ten_records_with_their_own_values`.
+The MICR band is repaired as its own check, and a single edge glyph in the
+transit field ('AG06474687A') is resolved by the ABA checksum
+(micr_reader.repair_transit, tests/test_s4_reader_version_band.py), so the
+band's reading no longer depends on the build. The two hard-scan tests stay
+marked: there psm 3 still finds words on 5.3 and the retry never runs.
+
 `BELOW_5_4` marks exactly those outcome tests xfail(strict=True) on an older
 reader: on 5.4+ they run unchanged, and the day an older reader passes them
 the unexpected pass FAILS and the marker has to go. The fail-closed outcome

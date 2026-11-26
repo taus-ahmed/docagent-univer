@@ -73,6 +73,40 @@ def demangle(text) -> str:
     return t
 
 
+#: the digits a glyph can be, read by a general OCR model in a MICR band.
+#: Wider than `_MAP` on purpose: here the ABA checksum, not the glyph, decides
+_LOOK = {"G": "609", "b": "6", "g": "9", "q": "9", "O": "0", "o": "0", "Q": "0",
+         "D": "0", "U": "0", "l": "1", "I": "1", "|": "1", "i": "1", "S": "5",
+         "s": "5", "Z": "2", "z": "2", "B": "8", "?": "7"}
+_SENTINELS = "AT" + "t:⑆"
+_FIELD = re.compile(rf"(?<=[{_SENTINELS}])([^\s{_SENTINELS}]{{9}})(?=[{_SENTINELS}])")
+
+
+def repair_transit(text) -> str:
+    """One unknown glyph in the TRANSIT field, decided by the ABA checksum.
+
+    The transit field is nine characters between two transit sentinels. A
+    letter at its edge ('AG06474687A', Tesseract 5.3 reading a 6) is not
+    "between two digits", so `demangle` cannot touch it, and whether the band
+    parses then depends on which OCR build read it. When exactly ONE of the
+    nine is a non-digit with digit look-alikes (`_LOOK`), each look-alike is
+    tried and kept only if it is the single one the checksum accepts. Two
+    unknowns, a glyph like no digit, or no passing candidate: unchanged."""
+    import micr
+    t = str(text or "")
+
+    def fix(m):
+        f = m.group(1)
+        bad = [i for i, ch in enumerate(f) if not ch.isdigit()]
+        if len(bad) != 1 or f[bad[0]] not in _LOOK:
+            return f
+        i = bad[0]
+        ok = [d for d in _LOOK[f[i]] if micr.aba_is_valid(f[:i] + d + f[i + 1:])]
+        return f[:i] + ok[0] + f[i + 1:] if len(ok) == 1 else f
+
+    return _FIELD.sub(fix, t)
+
+
 def _ocr(image, config=""):
     from ocr_source import _configure
     import external_tools
@@ -98,7 +132,7 @@ def readings(image, words=None):
     strip = strip.resize((strip.width * 2, max(1, strip.height * 2)))
     out.append(_ocr(strip, "--psm 7"))
     out.append(_ocr(strip, CONFIG))
-    return [demangle(t) for t in out if t]
+    return [repair_transit(demangle(t)) for t in out if t]
 
 
 def read_band(image, words=None):

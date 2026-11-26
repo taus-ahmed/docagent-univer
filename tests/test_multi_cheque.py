@@ -51,7 +51,6 @@ except Exception:  # pragma: no cover - environment dependent
     HAS_TESSERACT = False
 needs_tesseract = pytest.mark.skipif(not HAS_TESSERACT, reason="no tesseract binary")
 
-from tests.harness.tesseract_gate import BELOW_5_4, REASON  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -130,7 +129,9 @@ def _pages(r, n_pages):
 @needs_tesseract
 class TestOneChequePerPage:
 
-    @pytest.mark.xfail(BELOW_5_4, strict=True, reason=REASON)
+    # Run S, after Stage 4: the strict xfail on Tesseract < 5.4 came off - CI's
+    # 5.3 reads ten records since the MICR band is repaired as its own check
+    # (micr_reader.repair_transit; tests/test_s4_reader_version_band.py)
     def test_ten_cheques_give_ten_records_with_their_own_values(self, variants):
         entry = variants[1]["scan_batch_10pages"]
         results = _records(variants, "scan_batch_10pages")
