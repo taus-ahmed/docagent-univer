@@ -98,9 +98,12 @@ class TestDetect:
 
 class TestInferredColumn:
     def test_the_widest_table_gets_the_group_column_first(self):
+        # Run S, 1b: the group line's identifier and name are two columns
+        # (was one `Vendor` column holding the whole line)
         inf = {"tables": [{"name": "Invoice List", "columns": ["INVOICE", "INVOICE NET"]}]}
-        assert RG.add_group_column(inf, [PAGE1, PAGE2]) == "Vendor"
-        assert inf["tables"][0]["columns"] == ["Vendor", "INVOICE", "INVOICE NET"]
+        assert RG.add_group_column(inf, [PAGE1, PAGE2]) == ["Vendor ID", "Vendor Name"]
+        assert inf["tables"][0]["columns"] == ["Vendor ID", "Vendor Name", "INVOICE",
+                                               "INVOICE NET"]
 
     def test_an_ungrouped_document_is_unchanged(self):
         inf = {"tables": [{"name": "T", "columns": ["A", "B"]}]}
@@ -177,10 +180,12 @@ class TestJob131Real:
         name = next(t["name"] for t in ed["slot_map"]["tables"])
         rows = ed[f"{name}_rows"]
         assert len(rows) == 90
-        assert ed.get(f"{name}_group_key") == "Vendor"
-        vendors = {r["Vendor"] for r in rows}
+        # Run S, 1b: identifier and name in two columns, both on every row
+        assert ed.get(f"{name}_group_key") == "Vendor ID"
+        vendors = {(r["Vendor ID"], r["Vendor Name"]) for r in rows}
         assert len(vendors) == 31
-        assert all(r["Vendor"] for r in rows)
+        assert all(r["Vendor ID"] and r["Vendor Name"] for r in rows)
+        assert ("300055", "ANDERSON DULANEY") in vendors
         subs = ed[f"{name}_subtotals"]
         assert len(subs) == 14
         assert all(s["_confidence"] != "low" for s in subs)
@@ -191,9 +196,10 @@ class TestJob131Real:
         ws = openpyxl.load_workbook(p).worksheets[0]
         cells = [[c.value for c in r] for r in ws.iter_rows()]
         flat = [str(v) for r in cells for v in r if v is not None]
-        assert "300055 ANDERSON DULANEY" in flat
+        assert "300055" in flat and "ANDERSON DULANEY" in flat
         assert sum(1 for v in flat if v == "Subtotal") == 14
         i = next(k for k, r in enumerate(cells) if "4,880.00" in [str(v) for v in r]
                  or 4880.0 in r)
         assert "Subtotal" in [str(v) for v in cells[i]]
-        assert "299694 B&B LAWN/LANDSCAPING" in [str(v) for v in cells[i]]
+        assert "B&B LAWN/LANDSCAPING" in [str(v) for v in cells[i]]
+        assert "299694" in [str(v) for v in cells[i]]

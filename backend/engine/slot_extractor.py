@@ -2785,6 +2785,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     import row_groups as RG
     row_groups_found = RG.detect(all_lines) if all_lines else None
     group_noun = RG.group_noun(all_lines) if row_groups_found else None
+    # Run S, 1b: the group line's identifier and name, each with its column
+    group_cols = (RG.group_columns(row_groups_found, all_lines)
+                  if row_groups_found else None)
+    inferred_headers = {}
     subtotals_out = {}
     # Run R, R2/R3: what the document prints and this result does not hold,
     # in plain sentences - written into the export's Results sheet and Legend
@@ -3172,12 +3176,29 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 notes.append(f'{t["name"]}: {_merged} fragment row(s) merged into '
                              f"the one entity row they complete")
             if row_groups_found is not None and t.get("orientation") != "columns":
-                gk = next((h for h in headers
-                           if str(h).casefold() == group_noun.casefold()), None)
-                if gk:
+                by_name = {str(h).casefold(): h for h in headers}
+                id_col, name_col = group_cols["ident"], group_cols["name"]
+                id_key = by_name.get(id_col["name"].casefold()) if id_col else None
+                name_key = by_name.get(name_col["name"].casefold())
+                gk = None
+                if id_key or name_key:
+                    gk = id_key or name_key
                     subs, gflags, gnotes = RG.apply(
-                        rows_out, line_of_row, row_groups_found, gk, headers,
-                        confident, LOW)
+                        rows_out, line_of_row, row_groups_found, None, headers,
+                        confident, LOW, split_keys=(id_key, name_key))
+                    if (template_data or {}).get("inferred"):
+                        for key, col in ((id_key, id_col), (name_key, name_col)):
+                            if key and col and col["inferred"]:
+                                inferred_headers.setdefault(
+                                    t["name"], {})[key] = RG.INFERRED_NAME
+                else:
+                    gk = next((h for h in headers
+                               if str(h).casefold() == group_noun.casefold()), None)
+                    if gk:
+                        subs, gflags, gnotes = RG.apply(
+                            rows_out, line_of_row, row_groups_found, gk, headers,
+                            confident, LOW)
+                if gk:
                     for ref, val, why in gflags:
                         flagged.append(_flag(f'{t["name"]}.{ref}', val, why))
                     notes.extend(f'{t["name"]}: {n}' for n in gnotes)
@@ -3885,6 +3906,10 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         ed[f"{name}_rows"] = rows
     if not_captured:
         ed["not_captured"] = not_captured
+    if inferred_headers:
+        # Run S, 1b: column names the engine chose (the page prints none);
+        # the export marks the header cell, never the values under it
+        ed["inferred_headers"] = inferred_headers
     for name, (gk, subs) in subtotals_out.items():
         ed[f"{name}_group_key"] = gk
         ed[f"{name}_subtotals"] = subs

@@ -79,10 +79,116 @@ def _kind(line) -> str:
         return "amount"
     if money and len(toks) >= 4:
         return "row"
-    if not money and ":" not in _text(line) and len(toks) >= 2 \
-            and any(re.search(r"[A-Za-z]{2}", t) for t in toks):
+    if not money and len(toks) >= 2 \
+            and any(re.search(r"[A-Za-z]{2}", t) for t in toks) \
+            and (":" not in _text(line) or _labelled_group_line(_text(line))):
         return "label"
     return "other"
+
+
+# ── a group line's parts (Run S, Stage 1b) ───────────────────────────────────
+#
+# A group line is an identifier and a name ("300055 ANDERSON DULANEY",
+# "Customer Code: KX-77 Harbor Foods", "EMP0042 Jane Q. Doe"). The two are
+# separate facts and the sheet gives each its own column. Everything below is
+# shape, never vocabulary: an identifier is a token holding a digit; a printed
+# label is the words before a colon.
+
+INFERRED_NAME = ("the page prints no label for this column; the engine named it "
+                 "from the page's context - please check the name")
+
+_IDENT = re.compile(r"^(?=\S*\d)[A-Za-z0-9][A-Za-z0-9\-/.#]*$")
+_LABEL_COLON = re.compile(r"^([A-Za-z][A-Za-z .#/&'-]{0,30}?)\s*:\s*(\S.*)$")
+_TITLE_WORD = re.compile(r"^[A-Z][a-z]+$")
+
+
+def _is_ident(tok) -> bool:
+    t = str(tok or "")
+    return bool(_IDENT.match(t)) and amount(t) is None and not re.fullmatch(
+        r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", t)
+
+
+def _labelled_group_line(text) -> bool:
+    """`Label: <identifier and/or name>`: a group line carrying its own
+    label, not a `CHECK DATE: 06/24/2026` note (whose value holds no word)."""
+    m = _LABEL_COLON.match(str(text or "").strip())
+    if not m:
+        return False
+    rest = m.group(2).split()
+    # a group line names an entity: a date, a time or a figure after the
+    # colon makes it a note or a footer ("Report generated: 06/24/2026 14:36")
+    if any(re.fullmatch(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{1,2}:\d{2}(:\d{2})?", t)
+           or amount(t) is not None for t in rest):
+        return False
+    return any(re.search(r"[A-Za-z]{2}", t) and not _is_ident(t) for t in rest)
+
+
+def split_group_label(text) -> dict:
+    """{"label", "ident", "name", "name_label"} of one group line; a part the
+    line does not print is None."""
+    t = re.sub(r"\s+", " ", str(text or "").strip())
+    label = name_label = None
+    m = _LABEL_COLON.match(t)
+    rest = t
+    if m:
+        label, rest = m.group(1).strip(), m.group(2).strip()
+    toks = rest.split()
+    ident = None
+    if toks and _is_ident(toks[0]):
+        ident = toks.pop(0)
+    elif label is None and len(toks) >= 3:
+        # "Account 4411-2290 RIVERSIDE HOLDINGS": one or two Title-case words
+        # printed before the identifier are its label
+        for k in (1, 2):
+            if len(toks) > k + 1 and _is_ident(toks[k]) and all(
+                    _TITLE_WORD.match(w) for w in toks[:k]):
+                label, ident = " ".join(toks[:k]), toks[k]
+                toks = toks[k + 1:]
+                break
+    if ident is None and len(toks) >= 2 and _is_ident(toks[-1]) \
+            and not _is_ident(toks[0]):
+        ident = toks.pop()
+    name = " ".join(toks).strip() or None
+    if name:
+        m2 = _LABEL_COLON.match(name)
+        if m2:
+            name_label, name = m2.group(1).strip(), m2.group(2).strip() or None
+    return {"label": label, "ident": ident, "name": name, "name_label": name_label}
+
+
+def _majority(values):
+    vals = [v for v in values if v]
+    if not vals:
+        return None
+    best = max(set(vals), key=vals.count)
+    return best if vals.count(best) * 2 > len(values) else None
+
+
+def group_columns(groups, all_lines) -> dict:
+    """The sheet columns a grouped document's group lines go in:
+    {"ident": {"name", "inferred"} or None, "name": {"name", "inferred"}}.
+
+    Named by the page's own label when the group lines print one (the colon
+    stripped), else by a neutral name from context (`group_noun`), recorded
+    as inferred so the export marks the NAME (never the values) for a look."""
+    splits = [split_group_label(g.label) for g in groups.groups]
+    n = len(splits)
+    has_id = sum(1 for s in splits if s["ident"]) * 2 > n
+    label = _majority([s["label"] for s in splits])
+    name_label = _majority([s["name_label"] for s in splits])
+    if label:
+        if has_id:
+            ident = {"name": label, "inferred": False}
+            name = ({"name": name_label, "inferred": False} if name_label else
+                    {"name": f"{label.split()[0]} Name", "inferred": True})
+        else:
+            ident, name = None, {"name": label, "inferred": False}
+        return {"ident": ident, "name": name}
+    noun = group_noun(all_lines)
+    if has_id:
+        return {"ident": {"name": f"{noun} ID", "inferred": True},
+                "name": {"name": f"{noun} Name", "inferred": True}}
+    return {"ident": None, "name": {"name": noun, "inferred": True}}
 
 
 @dataclass
@@ -209,36 +315,68 @@ def group_noun(all_lines) -> str:
     return "Group"
 
 
-def add_group_column(inferred, page_lines) -> Optional[str]:
-    """No template: draw the group column as the first column of the widest
-    inferred table when the document is grouped. Returns the column's name."""
+def add_group_column(inferred, page_lines) -> Optional[list]:
+    """No template: draw the group's columns (identifier, name) as the first
+    columns of the widest inferred table when the document is grouped.
+    Returns their names; the engine-chosen ones are listed on the table as
+    `inferred_columns`."""
     from text_layer import flatten_pages
     tables = (inferred or {}).get("tables") or []
     if not tables or not page_lines:
         return None
     lines = flatten_pages(page_lines)
-    if detect(lines) is None:
+    groups = detect(lines)
+    if groups is None:
         return None
-    noun = group_noun(lines)
+    gc = group_columns(groups, lines)
+    want = [c for c in (gc["ident"], gc["name"]) if c]
     t = max(tables, key=lambda t: len(t.get("columns") or []))
-    cols = t.get("columns") or []
-    if any(str(c).casefold() == noun.casefold() for c in cols):
-        return noun
-    t["columns"] = [noun] + list(cols)
-    return noun
+    cols = list(t.get("columns") or [])
+    have = {str(c).casefold() for c in cols}
+    add = [c["name"] for c in want if c["name"].casefold() not in have]
+    t["columns"] = add + cols
+    inf = [c["name"] for c in want if c["inferred"]]
+    if inf:
+        t["inferred_columns"] = list(dict.fromkeys(list(t.get("inferred_columns") or []) + inf))
+    return [c["name"] for c in want]
 
 
 def _norm(v) -> str:
     return re.sub(r"[\s$,]", "", str(v or ""))
 
 
-def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low):
-    """Fill `group_key` on each row from the group its line sits in; build the
-    subtotal rows. Returns (subtotal_rows, flags, notes); flags are
-    (ref, value, reason) tuples."""
+def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low,
+          split_keys=None):
+    """Fill the group's column(s) on each row from the group line its row sits
+    under; build the subtotal rows. Returns (subtotal_rows, flags, notes);
+    flags are (ref, value, reason) tuples.
+
+    `split_keys` = (identifier key, name key): the line's two parts go in two
+    columns (Run S, 1b). Otherwise `group_key` holds the whole line. Either
+    way the PAGE's text is written: a model value that is a part of the line
+    (the name alone, job 138) is replaced by it, and a model value the line
+    does not print is flagged with both readings, never dropped silently."""
     flags, notes = [], []
     filled = 0
     members = {}
+    id_key, name_key = split_keys or (None, None)
+    gkeys = [k for k in (group_key, id_key, name_key) if k]
+
+    def put(r, key, val, g):
+        nonlocal filled
+        if not key or not val:
+            return
+        cur = str(r.get(key, "") or "").strip()
+        same = _norm(cur).casefold() == _norm(val).casefold()
+        if cur and not same and _norm(cur).casefold() not in _norm(g.label).casefold():
+            flags.append((f"{key}[{g.label}]", cur,
+                          f"the model read {cur!r} for {key}, but the group line "
+                          f"printed above the row says {g.label!r}; the page's "
+                          f"{val!r} was written"))
+        if not same:
+            filled += 1
+        r[key] = val
+
     for r in rows:
         ln = line_of_row.get(id(r))
         if ln is None:
@@ -247,9 +385,12 @@ def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low):
         if g is None:
             continue
         members.setdefault(id(g), []).append(r)
-        if not str(r.get(group_key, "") or "").strip():
-            r[group_key] = g.label
-            filled += 1
+        if split_keys:
+            sp = split_group_label(g.label)
+            put(r, id_key, sp["ident"], g)
+            put(r, name_key, sp["name"] if id_key else (sp["name"] or g.label), g)
+        else:
+            put(r, group_key, g.label, g)
     # which band column the reconciling money position is: the column whose
     # value equals that position's printed figure on every member row
     col_votes = {}
@@ -262,11 +403,11 @@ def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low):
             if g.position >= len(figs):
                 continue
             for h in headers:
-                if h != group_key and _norm(r.get(h)) == _norm(figs[g.position]) \
+                if h not in gkeys and _norm(r.get(h)) == _norm(figs[g.position]) \
                         and _norm(r.get(h)):
                     col_votes[h] = col_votes.get(h, 0) + 1
     money_key = max(col_votes, key=col_votes.get) if col_votes else None
-    label_key = next((h for h in headers if h != group_key and h != money_key), None)
+    label_key = next((h for h in headers if h not in gkeys and h != money_key), None)
     subtotals = []
     reconciled = mism = 0
     for g in groups.groups:
@@ -280,7 +421,14 @@ def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low):
                   Decimal(0))
         ok = got == s
         row = {h: "" for h in headers}
-        row[group_key] = g.label
+        if split_keys:
+            sp = split_group_label(g.label)
+            if id_key:
+                row[id_key] = sp["ident"] or ""
+            if name_key:
+                row[name_key] = (sp["name"] or "") if id_key else (sp["name"] or g.label)
+        else:
+            row[group_key] = g.label
         if label_key:
             row[label_key] = "Subtotal"
         row[money_key] = g.subtotal
@@ -294,10 +442,11 @@ def apply(rows, line_of_row, groups: Groups, group_key, headers, level, low):
         else:
             mism += 1
             row["_ungrounded"] = [money_key]
-            flags.append((f"{group_key}[{g.label}].subtotal", g.subtotal,
+            flags.append((f"{gkeys[0]}[{g.label}].subtotal", g.subtotal,
                           f"the printed subtotal {g.subtotal} for {g.label} does not "
                           f"equal the sum of its {len(mine)} row(s) in {money_key} "
                           f"({got:,.2f})"))
+    group_key = group_key or gkeys[0]
     if filled:
         notes.append(f"{group_key}: filled on {filled} row(s) from the group line "
                      f"printed above them ({len(groups.groups)} groups)")

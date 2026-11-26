@@ -478,6 +478,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             slot_map = _template_slot_map(sheet_data)
         tables = slot_map.get("tables") or []
         fields = ed.get("extracted_fields") or {}
+        inferred_header_names = {
+            str(col): str(why) for cols in (ed.get("inferred_headers") or {}).values()
+            if isinstance(cols, dict) for col, why in cols.items()}
 
         filename = str(getattr(doc, "filename", "") or "")
         field_prov = ed.get("field_provenance") or {}
@@ -615,7 +618,18 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
             # Run D, D11: a placeholder (`[enter name]`, `____`, `TBD`) marks a
             # slot; it is replaced by the value, never copied into the export.
             if text and not placeholder_at(cells_text_of(cells_tpl), tr, tc):
-                put(doc_offset + out_row(tr), tc, text)
+                hcell = put(doc_offset + out_row(tr), tc, text)
+                why = inferred_header_names.get(text)
+                if why and hcell is not None and marks:
+                    # Run S, 1b: a column NAME the engine chose (the page
+                    # prints none) owes a look; the values under it do not
+                    from openpyxl.comments import Comment
+                    from openpyxl.styles import PatternFill
+                    hcell.fill = PatternFill(fill_type="solid",
+                                             fgColor=_review.EXPORT_FILLS["unverified"])
+                    note = f"COLUMN NAME INFERRED — {why}."
+                    w, h = provenance_note_size(note)
+                    hcell.comment = Comment(note, "DocAgent", width=w, height=h)
 
         # 1b. THE LOOK — including inside a band.
         #
