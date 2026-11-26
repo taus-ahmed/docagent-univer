@@ -2760,6 +2760,50 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         if parts:
             _log("MICR", f"{doc_ref(file_path)}: band decomposed into "
                          f"{len(parts)} field(s)")
+        # Run S, 4d: the band is evidence of its own. An ANSWERED routing,
+        # account or cheque number that differs from what the band encodes is
+        # Low and flagged with both readings - neither is silently preferred.
+        if parts:
+            import micr_reader as MR
+            for slot in slots["fields"]:
+                ref = slot["ref"]
+                role = field_role(slot["row_label"])
+                v = extracted_fields.get(ref)
+                if not role or not str(v or "").strip():
+                    continue
+                if str((field_prov.get(ref) or {}).get("source") or "") == micr_line:
+                    continue                      # filled from the band itself
+                for _role, answered, band_v in MR.check_against(
+                        {f"{role}_number": v}, parts):
+                    conf_map[ref] = LOW
+                    failed(ref, CONTENT_CHECK_FAILED)
+                    flagged.append(_flag(
+                        slot["row_label"], v,
+                        f"the MICR band encodes {band_v!r} as the {_role}, but the "
+                        f"answer read {answered!r} - check which the cheque prints"))
+
+    # ── TWO READINGS OF ONE PICTURE (Run S, 4d; engine/reading_agreement.py) ──
+    # On a machine-read page the model reads the image and grounding reads
+    # the OCR words. A value that did not ground, where the OCR reading holds
+    # a near-identical figure in its place, is flagged with BOTH readings -
+    # neither is preferred, nothing is rewritten.
+    if all_lines and any(o in ("ocr", "pre_ocr") for o in (page_origins or {}).values()):
+        import reading_agreement as RA
+        for slot in slots["fields"]:
+            ref = slot["ref"]
+            v = extracted_fields.get(ref)
+            if not str(v or "").strip() or (field_prov.get(ref) or {}).get("grounded"):
+                continue
+            near = RA.near_reading(v, all_lines)
+            if near:
+                if conf_map.get(ref) in CONFIDENT_LEVELS:
+                    conf_map[ref] = LOW
+                failed(ref, GROUNDING_FAILED)
+                flagged.append(_flag(
+                    slot["row_label"], v,
+                    f"the page's OCR reading has {near!r} where the answer reads "
+                    f"{v!r} - the two readings of the image disagree"))
+
     # ── WHOSE VALUE IS IT (Run S, 3a; engine/party_fit.py) ──
     # Grounding proves a string is printed, not whose it is: the issuer's own
     # contact (printed on several pages, or spelling the letterhead) in a
