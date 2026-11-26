@@ -3769,6 +3769,30 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         for n in rr["no_matching_table"]:
             if len(nums) > 1:
                 notes.append(f"no matching table on page {n} (table {name!r})")
+    # ── CONSERVATION (Run S, 1a) ──
+    # Every number printed at a structural position (a table-row cell, a
+    # group header, a total, a labelled field's value) is held by a value of
+    # this result, named by a reason above, or named here. See conservation.py.
+    try:
+        import conservation as CV
+        _said = (list(attention) + list(not_captured) + list(notes)
+                 + [f"{f.get('value', '')} {f.get('reason', '')}" for f in flagged
+                    if isinstance(f, dict)])
+        _band_pages = {n for r in (cov.get("rows") or {}).values()
+                       for n in r.get("matching_pages") or []}
+        _cons = CV.check(page_lines or [], nums,
+                         CV.output_values(extracted_fields, tables_out,
+                                          {k: v[1] for k, v in subtotals_out.items()}),
+                         _said, templated=not (template_data or {}).get("inferred"),
+                         band_pages=_band_pages if slots.get("tables") else set())
+        attention.extend(_cons["attention"])
+        not_captured.extend(_cons["not_captured"])
+        conservation_report = {"tokens": _cons["tokens"],
+                               "missing": len(_cons["missing"]),
+                               "excluded_by_template": _cons["excluded"]}
+    except Exception as e:     # the check never costs the document its result
+        _log("CONSERVE", f"conservation check skipped: {e!r}")
+        conservation_report = {"error": repr(e)}
     values_need_review = (
         bool(ungrounded) or review_gate or bool(dropped) or bool(merged_columns)
         or bool(regions_warned) or bool(empty_rows) or bool(off_schema_keys)
@@ -3841,6 +3865,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         "validation": {
             "flagged_count": len(flagged),
             "flagged_fields": flagged,
+            # Run S, 1a: structural tokens printed / not held by any value
+            "conservation": conservation_report,
             "confidence_map": conf_map,
             "ungrounded_count": ungrounded,
             "misplaced_count": misplaced,
