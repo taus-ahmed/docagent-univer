@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { templateOfJob } from "./jobTemplate.ts";
+import { templateOfJob, templateUsedLabel } from "./jobTemplate.ts";
 
 const T = [{ id: 3, name: "Invoice" }, { id: 7, name: "W-2" }];
 
@@ -24,11 +24,12 @@ test("the results grid is given the job's template, not the picker's", () => {
   assert.match(src, /<ResultsGrid[^>]*template=\{jobTemplate\}/);
 });
 
-test("New extraction is offered next to Download Excel on both pages", () => {
-  for (const p of ["../app/extract/page.tsx", "../app/history/page.tsx"]) {
-    const src = readFileSync(new URL(p, import.meta.url), "utf8");
-    assert.match(src, /NewExtractionButton/, p);
-  }
+test("only a reported null schema_id means no template was used", () => {
+  assert.equal(templateUsedLabel({ schema_id: "7" }, T[1]), "W-2");
+  assert.match(templateUsedLabel({ schema_id: null }, null), /^No template/);
+  assert.equal(templateUsedLabel({ schema_id: "99" }, null), "Template #99 (name unavailable)");
+  assert.equal(templateUsedLabel({ schema_id: "99" }, null, true), "Loading template…");
+  assert.equal(templateUsedLabel({}, null), "Template information unavailable");
 });
 
 // Phase 3 UI1 rework: New extraction is the same action as the top-right
@@ -51,11 +52,12 @@ test("the fresh page has no files, no result and the template picker reset", () 
     assert.ok(body.includes(t), t);
 });
 
-test("New extraction sits next to Download Excel in the TOP action bar", () => {
-  const src = readFileSync(new URL("../app/extract/page.tsx", import.meta.url), "utf8");
-  const top = src.slice(src.indexOf('className="page-title"'), src.indexOf('className="ex-layout"'));
-  assert.ok(top.includes("Download Excel"), "Download Excel in the top bar");
-  assert.ok(top.includes("<NewExtractionButton"), "New extraction in the top bar");
-  assert.equal(src.split("<NewExtractionButton").length - 1, 1, "one New extraction on the page");
-  assert.doesNotMatch(src, />New extraction</);
+test("both pages use the one shared New extraction action", () => {
+  const shared = readFileSync(new URL("../components/extract/JobResultsLayout.tsx", import.meta.url), "utf8");
+  assert.equal(shared.split("<NewExtractionButton").length - 1, 1);
+  for (const p of ["../app/extract/page.tsx", "../app/history/page.tsx"]) {
+    const src = readFileSync(new URL(p, import.meta.url), "utf8");
+    assert.match(src, /<JobResultsLayout\b/, p);
+    assert.doesNotMatch(src, /<NewExtractionButton\b/, p);
+  }
 });

@@ -11,12 +11,22 @@
 export interface HasSchemaId { schema_id?: string | number | null }
 export interface HasId { id: number }
 
-/** The template a job was extracted with, or null (no template / unknown). */
+export function jobTemplateId(job?: HasSchemaId | null): number | null | undefined {
+  if (job?.schema_id === null) return null;
+  const id = Number(job?.schema_id);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+}
+
+/** The template a job was extracted with, if present in this list. */
 export function templateOfJob<T extends HasId>(job: HasSchemaId | null | undefined,
                                                templates: readonly T[]): T | null {
-  const sid = job?.schema_id;
-  if (sid === null || sid === undefined || sid === "") return null;
-  const n = Number(sid);
-  if (!Number.isFinite(n)) return null;
-  return templates.find(t => t.id === n) ?? null;
+  const id = jobTemplateId(job);
+  return templates.find(t => t.id === id) ?? null;
+}
+
+export function templateUsedLabel(job: HasSchemaId | null | undefined, template: { name: string } | null, loading = false): string {
+  const id = jobTemplateId(job);
+  if (id === null) return "No template, layout inferred from the document";
+  if (id === undefined) return "Template information unavailable";
+  return template?.name ?? (loading ? "Loading template…" : `Template #${id} (name unavailable)`);
 }

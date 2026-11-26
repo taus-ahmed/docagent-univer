@@ -6,17 +6,17 @@ import { useDropzone } from "react-dropzone";
 import toast from "react-hot-toast";
 import AppLayout from "@/components/layout/AppLayout";
 import ResultsGrid from "@/components/extract/ResultsGrid";
-import NewExtractionButton from "@/components/extract/NewExtractionButton";
-import { templateOfJob } from "@/lib/jobTemplate";
+import JobResultsLayout from "@/components/extract/JobResultsLayout";
+import { templateUsedLabel } from "@/lib/jobTemplate";
+import { useJobTemplate } from "@/lib/useJobTemplate";
 import { jobModels, plainStatus } from "@/lib/jobModel";
-import { confirmExport } from "@/lib/confirm-export";
 import DriveTab from "@/components/extract/DriveTab";
 import TemplatePreview from "@/components/extract/TemplatePreview";
 import SampleDocsPanel from "@/components/extract/SampleDocsPanel";
 import { bars, emptyReason, reviewBanner, type ChartsResponse } from "@/lib/charts";
 import { OPTION_INFO, loadRemembered, optionState, saveRemembered, toggle, type OptionId as OptionsId } from "@/lib/options";
 import {
-  extractApi, exportApi, templatesApi, schemasApi,
+  extractApi, templatesApi, schemasApi,
   type ColumnTemplate, type JobStatus, type DocumentResult,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -35,7 +35,8 @@ const EXTRA_OPTIONS = [
   {
     id: "categorize",
     label: "Categorization",
-    desc: "Category for each line item, by your rules first",
+    desc: "Sort line items using your rules first.",
+    cost: "AI only for unmatched rows.",
     color: "#6366f1",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -47,7 +48,8 @@ const EXTRA_OPTIONS = [
   {
     id: "graphs",
     label: "Charts & Graphs",
-    desc: "Charts per currency, from the extracted values",
+    desc: "Spend and trends by currency.",
+    cost: "No AI call.",
     color: "#10b981",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -61,7 +63,8 @@ const EXTRA_OPTIONS = [
   {
     id: "summary",
     label: "AI Summary",
-    desc: "Counts, totals and dates, built from the data",
+    desc: "Counts, totals and dates.",
+    cost: "No AI call.",
     color: "#f59e0b",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -75,7 +78,8 @@ const EXTRA_OPTIONS = [
   {
     id: "narrative",
     label: "Written summary (AI)",
-    desc: "AI prose from the summary's facts, checked",
+    desc: "Turn the summary into prose.",
+    cost: "One AI call per document.",
     color: "#d97706",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -86,7 +90,8 @@ const EXTRA_OPTIONS = [
   {
     id: "anomaly",
     label: "Anomaly Detection",
-    desc: "Duplicates, outliers, odd dates, gaps",
+    desc: "Flag duplicates, gaps, and outliers.",
+    cost: "No AI call.",
     color: "#ef4444",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -471,7 +476,7 @@ export default function ExtractPage() {
     queryFn: schemasApi.list,
   });
 
-  const { data: jobStatus } = useQuery<JobStatus>({
+  const { data: jobStatus, isError: jobStatusError } = useQuery<JobStatus>({
     queryKey: ["job", activeJobId],
     queryFn: () => extractApi.getJob(activeJobId!),
     enabled: !!activeJobId,
@@ -606,6 +611,8 @@ export default function ExtractPage() {
   function reset() {
     setPending([]); setResults([]); setActiveJobId(null);
     setSelectedTemplate(null); setTemplateSearch("");
+    setActiveTab("upload"); setFolderPath("");
+    if (window.location.search) window.history.replaceState(null, "", "/extract");
     prevStatus.current = ""; setIsExtracting(false);
   }
 
@@ -627,14 +634,10 @@ export default function ExtractPage() {
   const hasResults = results.length > 0;
   // Run Q, UI1: the results are shown with the template the JOB ran with.
   // The picker chooses the template for the NEXT extraction only.
-  const jobTemplate = templateOfJob(jobStatus, templates);
+  const { template: jobTemplate, templateLoading } = useJobTemplate(jobStatus, templates);
   // Run Q Phase 3, UI3: the empty state previews the template of the job on
   // screen; the picker's choice is only for the NEXT extraction.
   const previewTemplate = activeJobId ? jobTemplate : selectedTemplate;
-  // the job's own document count: `files` is the upload list, emptied after
-  // upload and empty for a job reopened from History
-  const jobDocCount = Math.max(jobStatus?.total_docs ?? 0, results.length, files.length);
-
   const filteredTemplates = templateSearch.trim()
     ? templates.filter(t =>
         t.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
@@ -643,13 +646,30 @@ export default function ExtractPage() {
     : templates;
 
   return (
-    <AppLayout>
+    <AppLayout fitViewport={!activeJobId}>
       <style>{`
-        .ex-layout { display: grid; grid-template-columns: 296px 1fr; gap: 18px; align-items: start; }
-        .ex-left { display: flex; flex-direction: column; gap: 14px; }
+        .extract-heading { margin-bottom: 16px; flex-shrink: 0; }
+        .extract-workspace { flex: 1; min-height: 0; display: grid; grid-template-rows: clamp(310px, 45vh, 366px) minmax(0, 1fr); gap: 16px; }
+        .extract-top, .extract-bottom, .extract-progress { display: grid; gap: 16px; min-height: 0; }
+        .extract-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .extract-bottom, .extract-progress { grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr); }
+        .extract-panel { display: flex; flex-direction: column; padding: 14px; min-width: 0; min-height: 0; }
+        .extract-progress { align-items: start; }
+        .extract-progress-status { display: grid; gap: 8px; }
+        .extract-document-source { flex: 1; min-height: 0; overflow: auto; }
+        .extract-top .btn-lg { margin-top: 10px; flex-shrink: 0; }
+        .extract-preview-name { margin: 4px 0 8px; font-weight: 600; overflow-wrap: anywhere; }
+        .extract-preview-body { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+        .extract-preview-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 110px; padding: 14px; text-align: center; color: var(--text2); }
+        .extract-partial { margin-bottom: 10px; color: var(--amber); }
+        @media (max-width: 840px) {
+          .extract-workspace { grid-template-rows: auto auto; }
+          .extract-top, .extract-bottom, .extract-progress { grid-template-columns: minmax(0, 1fr); }
+          .extract-panel { max-height: 440px; }
+        }
 
         .tpl-picker-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-        .tpl-list { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
+        .tpl-list { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow-y: auto; }
         .tpl-row {
           display: flex; align-items: center; gap: 9px;
           padding: 8px 10px; border-radius: 7px;
@@ -687,10 +707,9 @@ export default function ExtractPage() {
         .job-stats { display: flex; gap: 12px; flex-wrap: wrap; }
         .job-stat { font-size: 11px; color: var(--text3); }
         .job-stat b { font-weight: 600; }
-        .export-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
         /* Options grid */
-        .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .opt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: auto; }
         .opt-card {
           padding: 9px 10px; border-radius: 8px;
           border: 1.5px solid var(--border); background: var(--surface2);
@@ -705,13 +724,7 @@ export default function ExtractPage() {
         .opt-card.on .opt-lbl { color: var(--text1); }
         .opt-chk { width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .opt-card.on .opt-chk { background: var(--accent); border-color: var(--accent); }
-        .opt-desc { font-size: 10.5px; color: var(--text2); line-height: 1.4; padding-left: 27px; }
-
-        /* Right panel welcome */
-        .welcome-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .welcome-stat { padding: 14px; border-radius: 9px; background: var(--surface2); border: 1px solid var(--border); }
-        .welcome-stat-val { font-size: 20px; font-weight: 700; color: var(--text1); }
-        .welcome-stat-lbl { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
+        .opt-desc { font-size: 10.5px; color: var(--text2); line-height: 1.4; }
 
         @keyframes indeterminate {
           0% { transform: translateX(-100%); }
@@ -719,175 +732,126 @@ export default function ExtractPage() {
         }
       `}</style>
 
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
-        <div>
-          <h1 className="page-title">Extract</h1>
-          <p className="page-sub">Select a template · upload documents · extract</p>
-        </div>
-        {/* Run Q Phase 3, UI1: the top action bar. New extraction sits beside
-            the downloads, where the finished job is read, and opens a fresh
-            extract page; the finished job is never re-run or altered.
-            N1: download available for ANY completed job, with or without a
-            template (no-template jobs export via the flat-table writer). */}
-        {(hasResults || (isDone && !isFailed && activeJobId)) && (
-          <div className="export-row" style={{ justifyContent: "flex-end", marginTop: 0 }}>
-            <NewExtractionButton onNew={reset}/>
-            {isDone && !isFailed && activeJobId && (
-              <>
-                  <button className="btn btn-primary btn-sm" onClick={async () => {
-                    if (!(await confirmExport(activeJobId))) return;
-                    try {
-                      const blob = await exportApi.templateExport(activeJobId, false);
-                      exportApi.downloadBlob(blob, `job_${activeJobId}_results.xlsx`);
-                      toast.success("Downloaded");
-                    } catch { toast.error("Export failed"); }
-                  }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    Download Excel
-                  </button>
-                  {jobDocCount > 1 && (
-                    <button className="btn btn-secondary btn-sm" onClick={async () => {
-                      if (!(await confirmExport(activeJobId))) return;
-                      try {
-                        const blob = await exportApi.zipExport(activeJobId, false);
-                        exportApi.downloadBlob(blob, `job_${activeJobId}_documents.zip`);
-                        toast.success("Downloaded");
-                      } catch { toast.error("Export failed"); }
-                    }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                        <line x1="8" y1="11" x2="16" y2="11"/>
-                      </svg>
-                      Download ZIP
-                    </button>
-                  )}
-                  {/* Run Q, UI3: the clean file is the default download; the
-                      audit version (Source and Review status columns) is a
-                      secondary choice, never a checkbox that silently changes
-                      what the primary button does */}
-                  <button className="btn btn-secondary btn-sm"
-                    title="The same workbook with the Source and Review status columns"
-                    onClick={async () => {
-                      if (!(await confirmExport(activeJobId))) return;
-                      try {
-                        const blob = await exportApi.templateExport(activeJobId, true);
-                        exportApi.downloadBlob(blob, `job_${activeJobId}_results_audit.xlsx`);
-                        toast.success("Downloaded");
-                      } catch { toast.error("Export failed"); }
-                    }}>
-                    Download with audit columns
-                  </button>
-                  {jobModels(results) && (
-                    <span style={{ fontSize: 11, color: "var(--text3)" }}
-                          title="The model that produced these values, as the API named it">
-                      Extracted by {jobModels(results)}
-                    </span>
-                  )}
-              </>
-            )}
-          </div>
+      <header className="extract-heading">
+        <h1 className="page-title">{isDone ? "Extraction results" : "Extract"}</h1>
+        {jobModels(results) ? (
+          <p className="page-sub">Extracted by {jobModels(results)}</p>
+        ) : !activeJobId && (
+          <p className="page-sub">Add documents and choose a template to guide extraction.</p>
         )}
-      </div>
+      </header>
 
-      <div className="ex-layout">
-        {/* ── Left column ── */}
-        <div className="ex-left">
+      {!activeJobId ? (
+        <div className="extract-workspace">
+          <div className="extract-top">
+            {/* Documents uploader */}
+            <div className="card extract-panel">
+              <span className="label" style={{ display: "block", marginBottom: 10 }}>Documents</span>
+              <div className="src-tabs">
+                {/* Drive is closed for a demo account in the BACKEND (every
+                    /api/drive route answers 403); the tab is hidden so nobody
+                    clicks into a dead end. */}
+                {(isDemo
+                  ? (["upload","folder"] as SourceTab[])
+                  : (["upload","folder","drive"] as SourceTab[])).map(tab => (
+                  <div key={tab} className={`src-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}
+                    role="tab" tabIndex={0} aria-selected={activeTab === tab}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveTab(tab); } }}>
+                    {tab === "upload" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>}
+                    {tab === "folder" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
+                    {tab === "drive" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>}
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </div>
+                ))}
+              </div>
 
-          {/* Template picker */}
-          {!activeJobId ? (
-          <div className="card" style={{ padding: 14 }}>
-            <div className="tpl-picker-header">
-              <span className="label">Template</span>
-              <Link href="/templates" className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>Manage</Link>
-            </div>
-            {templates.length === 0 ? (
-              <div className="tpl-none">No templates — <Link href="/templates/new" style={{ color: "var(--accent)" }}>create one</Link></div>
-            ) : (
-              <>
-                {templates.length > 4 && (
-                  <div style={{ position: "relative", marginBottom: 8 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
-                      style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <input
-                      type="text"
-                      placeholder="Search templates…"
-                      value={templateSearch}
-                      onChange={e => setTemplateSearch(e.target.value)}
-                      style={{
-                        width: "100%", boxSizing: "border-box",
-                        padding: "6px 26px 6px 26px",
-                        border: "1px solid var(--border)", borderRadius: 6,
-                        background: "var(--surface2)", color: "var(--text1)",
-                        fontSize: 11.5, outline: "none",
-                      }}
-                    />
-                    {templateSearch && (
-                      <button
-                        onClick={() => setTemplateSearch("")}
-                        style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
+              <div className="extract-document-source">
+                {activeTab === "upload" && (
+                  <>
+                    <div {...getRootProps()} className={`dropzone ${isDragActive ? "drag" : ""}`}>
+                      <input {...getInputProps()}/>
+                      <div className="dz-icon">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                      </div>
+                      <p style={{ fontSize: 12.5, fontWeight: 500, color: "var(--text2)", marginBottom: 2 }}>
+                        {isDragActive ? "Drop files here" : "Drop files or click to browse"}
+                      </p>
+                      <p style={{ fontSize: 11, color: "var(--text4)" }}>PDF · PNG · JPG · TIFF · WEBP · HEIC · BMP · GIF — 50MB max</p>
+                    </div>
+                    {isDemo && (
+                      <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 8 }}>
+                        Best results with digital PDFs. Try the sample documents first.
+                      </p>
                     )}
+                    {pending.map(({ id, file: f, password }) => (
+                      <div key={id} className="file-item">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span className="file-name">{f.name}</span>
+                        <span className="file-size">{(f.size / 1024).toFixed(0)} KB</span>
+                        {f.name.toLowerCase().endsWith(".pdf") && (
+                          <input type="password" autoComplete="new-password" placeholder="PDF password"
+                            name={`pdf-password-${id}`} data-lpignore="true" data-1p-ignore="true"
+                            aria-label={`Password for ${f.name} (not saved)`}
+                            title="Only if the PDF is password-protected. Used once to open it; not saved."
+                            value={password}
+                            onChange={e => { const v = e.target.value; setPending(p => setPassword(p, id, v)); }}
+                            style={{ width: 110, fontSize: 11, padding: "2px 6px",
+                                     border: "1px solid var(--border)", borderRadius: 4 }} />
+                        )}
+                        <button aria-label={`Remove ${f.name}`} onClick={() => setPending(p => removeFile(p, id))}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {activeTab === "folder" && (
+                  <div>
+                    <input className="input" placeholder="C:\Documents\invoices"
+                      value={folderPath} onChange={e => setFolderPath(e.target.value)}/>
+                    <p style={{ fontSize: 11, color: "var(--text4)", marginTop: 6 }}>Local folder — all PDFs and images inside will be uploaded</p>
                   </div>
                 )}
-                <div className="tpl-list">
-                  {filteredTemplates.length === 0 ? (
-                    <div style={{ padding: "12px 0", textAlign: "center", fontSize: 11.5, color: "var(--text4)" }}>
-                      No templates match "{templateSearch}"
-                    </div>
-                  ) : filteredTemplates.map(t => (
-                    <div key={t.id} className={`tpl-row ${selectedTemplate?.id === t.id ? "sel" : ""}`}
-                      role="button" tabIndex={0} aria-pressed={selectedTemplate?.id === t.id}
-                      onClick={() => setSelectedTemplate(selectedTemplate?.id === t.id ? null : t)}
-                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedTemplate(selectedTemplate?.id === t.id ? null : t); } }}>
-                      <div className="tpl-dot"/>
-                      <span className="tpl-name">{t.name}</span>
-                      <span className="tpl-type">{t.document_type}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            {selectedTemplate && (
-              <div style={{ marginTop: 10, padding: "7px 10px", background: "var(--surface2)", borderRadius: 6, fontSize: 11, color: "var(--text3)" }}>
-                {selectedTemplate.columns.length} columns · {selectedTemplate.document_type}
-                {(selectedTemplate as any).description && (
-                  <span style={{ marginLeft: 6, color: "var(--green)" }}>· layout saved</span>
-                )}
-              </div>
-            )}
-          </div>
-          ) : (
-            // Run Q Phase 3, UI3: a job on screen was extracted with ITS
-            // template; the picker would only suggest it can be changed here.
-            <div className="card" style={{ padding: 14 }}>
-              <span className="label" style={{ display: "block", marginBottom: 6 }}>Template used</span>
-              <div style={{ fontSize: 13, color: "var(--text1)", fontWeight: 500 }}>
-                {jobTemplate ? jobTemplate.name : (jobStatus?.schema_id ? "A template no longer in your list" : "No template - the layout was inferred from the document")}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>
-                To use another template, start a New extraction.
-              </div>
-            </div>
-          )}
 
-          {/* Additional options — always visible, not dependent on template */}
-          {!hasResults && (
-            <div className="card" style={{ padding: 14 }}>
+                {activeTab === "drive" && (
+                  <DriveTab selectedTemplate={selectedTemplate} clientId={clientId}
+                    onJobStarted={(jobId) => { setActiveJobId(jobId); setIsExtracting(true); }}/>
+                )}
+                <SampleDocsPanel
+                  enabled={isDemo}
+                  busy={isExtracting || isRunning}
+                  onUse={startExtractSample}
+                />
+              </div>
+              {/* Extract button */}
+              {activeTab !== "drive" && (
+                <button className="btn btn-primary btn-full btn-lg" onClick={handleExtract}
+                  disabled={isExtracting || (activeTab === "upload" && !files.length)}>
+                  {isExtracting ? (
+                    <><svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Starting…</>
+                  ) : (
+                    <>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      Extract {files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""}` : "documents"}
+                      {selectedOptions.length > 0 && (
+                        <span style={{ marginLeft: 5, fontSize: 10, padding: "1px 6px", background: "rgba(255,255,255,0.18)", borderRadius: 10 }}>
+                          +{selectedOptions.length}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            {/* Additional options */}
+            <div className="card extract-panel">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span className="label">Additional Options</span>
+                <span className="label">Additional options</span>
                 {selectedOptions.length > 0 && (
                   <button style={{ fontSize: 10, color: "var(--text3)", background: "none", border: "none", cursor: "pointer" }}
-                    onClick={() => setSelectedOptions([])}>Clear</button>
+                    onClick={() => { setSelectedOptions([]); saveRemembered(user?.id, []); }}>Clear</button>
                 )}
               </div>
               <div className="opt-grid" role="group" aria-label="Additional options">
@@ -915,8 +879,8 @@ export default function ExtractPage() {
                     </div>
                     <p className="opt-desc">
                       {opt.desc}
-                      <span style={{ display: "block", color: "var(--text3)" }}>{info.cost}</span>
-                      {st.why && !isDemo && <span style={{ display: "block", color: "var(--amber)" }}>{st.why}</span>}
+                      <span style={{ display: "block", color: "var(--text3)" }}>{opt.cost}</span>
+                      {st.why && !isDemo && <span style={{ display: "block", color: "var(--amber)" }}>Turn on Summary first.</span>}
                     </p>
                     <span className="sr-only" id={`opt-help-${opt.id}`}>{info.help} {info.cost} {st.why}</span>
                   </label>
@@ -924,116 +888,110 @@ export default function ExtractPage() {
                 })}
               </div>
             </div>
-          )}
-
-          {/* Documents uploader */}
-          {!isRunning && !hasResults && (
-            <div className="card" style={{ padding: 14 }}>
-              <span className="label" style={{ display: "block", marginBottom: 10 }}>Documents</span>
-              <div className="src-tabs">
-                {/* Drive is closed for a demo account in the BACKEND (every
-                    /api/drive route answers 403); the tab is hidden so nobody
-                    clicks into a dead end. */}
-                {(isDemo
-                  ? (["upload","folder"] as SourceTab[])
-                  : (["upload","folder","drive"] as SourceTab[])).map(tab => (
-                  <div key={tab} className={`src-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}
-                    role="tab" tabIndex={0} aria-selected={activeTab === tab}
-                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveTab(tab); } }}>
-                    {tab === "upload" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>}
-                    {tab === "folder" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
-                    {tab === "drive" && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>}
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </div>
-                ))}
+          </div>
+          <div className="extract-bottom">
+            {/* Template picker */}
+            <div className="card extract-panel">
+              <div className="tpl-picker-header">
+                <span className="label">Template selector</span>
+                <Link href="/templates" className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}>Manage</Link>
               </div>
-
-              {activeTab === "upload" && (
-                <>
-                  <div {...getRootProps()} className={`dropzone ${isDragActive ? "drag" : ""}`}>
-                    <input {...getInputProps()}/>
-                    <div className="dz-icon">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-                    </div>
-                    <p style={{ fontSize: 12.5, fontWeight: 500, color: "var(--text2)", marginBottom: 2 }}>
-                      {isDragActive ? "Drop files here" : "Drop files or click to browse"}
-                    </p>
-                    <p style={{ fontSize: 11, color: "var(--text4)" }}>PDF · PNG · JPG · TIFF · WEBP · HEIC · BMP · GIF — 50MB max</p>
-                  </div>
-                  {isDemo && (
-                    <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 8 }}>
-                      Best results with digital PDFs. Try the sample documents first.
-                    </p>
-                  )}
-                  {pending.map(({ id, file: f, password }) => (
-                    <div key={id} className="file-item">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                      <span className="file-name">{f.name}</span>
-                      <span className="file-size">{(f.size / 1024).toFixed(0)} KB</span>
-                      {f.name.toLowerCase().endsWith(".pdf") && (
-                        <input type="password" autoComplete="new-password" placeholder="PDF password"
-                          name={`pdf-password-${id}`} data-lpignore="true" data-1p-ignore="true"
-                          aria-label={`Password for ${f.name} (not saved)`}
-                          title="Only if the PDF is password-protected. Used once to open it; not saved."
-                          value={password}
-                          onChange={e => { const v = e.target.value; setPending(p => setPassword(p, id, v)); }}
-                          style={{ width: 110, fontSize: 11, padding: "2px 6px",
-                                   border: "1px solid var(--border)", borderRadius: 4 }} />
-                      )}
-                      <button aria-label={`Remove ${f.name}`} onClick={() => setPending(p => removeFile(p, id))}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {activeTab === "folder" && (
-                <div>
-                  <input className="input" placeholder="C:\Documents\invoices"
-                    value={folderPath} onChange={e => setFolderPath(e.target.value)}/>
-                  <p style={{ fontSize: 11, color: "var(--text4)", marginTop: 6 }}>Local folder — all PDFs and images inside will be uploaded</p>
-                </div>
-              )}
-
-              {activeTab === "drive" && (
-                <DriveTab selectedTemplate={selectedTemplate} clientId={clientId}
-                  onJobStarted={(jobId) => { setActiveJobId(jobId); setIsExtracting(true); }}/>
-              )}
-            </div>
-          )}
-
-          {/* Demo only, and empty for anyone else: renders null unless the
-              server says this account is a demo tenant AND ships samples. */}
-          <SampleDocsPanel
-            enabled={isDemo}
-            busy={isExtracting || isRunning}
-            onUse={startExtractSample}
-          />
-
-          {/* Extract button */}
-          {!isRunning && !hasResults && activeTab !== "drive" && (
-            <button className="btn btn-primary btn-full btn-lg" onClick={handleExtract}
-              disabled={isExtracting || (activeTab === "upload" && !files.length)}>
-              {isExtracting ? (
-                <><svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Starting…</>
+              {templates.length === 0 ? (
+                <div className="tpl-none">No templates — <Link href="/templates/new" style={{ color: "var(--accent)" }}>create one</Link></div>
               ) : (
                 <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                  Extract {files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""}` : "documents"}
-                  {selectedOptions.length > 0 && (
-                    <span style={{ marginLeft: 5, fontSize: 10, padding: "1px 6px", background: "rgba(255,255,255,0.18)", borderRadius: 10 }}>
-                      +{selectedOptions.length}
-                    </span>
-                  )}
+                    <div style={{ position: "relative", marginBottom: 8 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
+                        style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Search templates…" aria-label="Search templates"
+                        value={templateSearch}
+                        onChange={e => setTemplateSearch(e.target.value)}
+                        style={{
+                          width: "100%", boxSizing: "border-box",
+                          padding: "6px 26px 6px 26px",
+                          border: "1px solid var(--border)", borderRadius: 6,
+                          background: "var(--surface2)", color: "var(--text1)",
+                          fontSize: 11.5, outline: "none",
+                        }}
+                      />
+                      {templateSearch && (
+                        <button
+                          aria-label="Clear template search" onClick={() => setTemplateSearch("")}
+                          style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      )}
+                    </div>
+                  <div className="tpl-list">
+                    {filteredTemplates.length === 0 ? (
+                      <div style={{ padding: "12px 0", textAlign: "center", fontSize: 11.5, color: "var(--text4)" }}>
+                        No templates match "{templateSearch}"
+                      </div>
+                    ) : filteredTemplates.map(t => (
+                      <div key={t.id} className={`tpl-row ${selectedTemplate?.id === t.id ? "sel" : ""}`}
+                        role="button" tabIndex={0} aria-pressed={selectedTemplate?.id === t.id}
+                        onClick={() => setSelectedTemplate(selectedTemplate?.id === t.id ? null : t)}
+                        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedTemplate(selectedTemplate?.id === t.id ? null : t); } }}>
+                        <div className="tpl-dot"/>
+                        <span className="tpl-name">{t.name}</span>
+                        <span className="tpl-type">{t.document_type}</span>
+                      </div>
+                    ))}
+                  </div>
                 </>
               )}
-            </button>
+              {selectedTemplate && (
+                <div style={{ marginTop: 10, padding: "7px 10px", background: "var(--surface2)", borderRadius: 6, fontSize: 11, color: "var(--text3)" }}>
+                  {selectedTemplate.columns.length} columns · {selectedTemplate.document_type}
+                  {(selectedTemplate as any).description && (
+                    <span style={{ marginLeft: 6, color: "var(--green)" }}>· layout saved</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <section className="card extract-panel" aria-label="Template layout preview">
+              <h2 className="label">Template layout preview</h2>
+              {previewTemplate ? (
+                <>
+                  <p className="extract-preview-name">{previewTemplate.name}</p>
+                  <div className="extract-preview-body"><TemplatePreview template={previewTemplate} /></div>
+                </>
+              ) : (
+                <p className="extract-preview-empty">Choose a template to preview its spreadsheet layout. You can also extract without one.</p>
+              )}
+            </section>
+          </div>
+        </div>
+      ) : finishedWithResults && jobStatus ? (
+        <JobResultsLayout key={jobStatus.id} job={jobStatus} template={jobTemplate} templateLoading={templateLoading}
+          documentCount={results.length} onNew={reset}>
+          {jobStatus.status === "partial" && jobStatus.error_message && (
+            <p className="extract-partial">{jobErrorText(jobStatus.error_message, isDemo)}</p>
           )}
-
-          {/* Job status card */}
-          {activeJobId && (
+          {hasResults ? (
+            <>
+              <ResultsGrid results={results} jobId={jobStatus.id} template={jobTemplate} />
+              {selectedOptions.length > 0 && <InsightsPanel results={results} options={selectedOptions} jobId={activeJobId} />}
+            </>
+          ) : (
+            <div className="card extract-panel">
+              <p>{resultsQ.isError ? "Results could not be loaded." : resultsQ.isPending ? "Loading results…" : "No documents to review."}</p>
+              {previewTemplate && <div className="extract-preview-body"><TemplatePreview template={previewTemplate} /></div>}
+            </div>
+          )}
+        </JobResultsLayout>
+      ) : (
+        <div className="extract-progress">
+          <div className="extract-progress-status">
+            <section className="card job-result-info">
+              <h2 className="label">Template used</h2>
+              <p>{templateUsedLabel(jobStatus, jobTemplate, templateLoading)}</p>
+            </section>
             <div className="card" style={{ padding: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 {isRunning && <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
@@ -1045,7 +1003,7 @@ export default function ExtractPage() {
                     : isPartial ? `${jobStatus?.failed} of ${jobStatus?.total_docs} documents failed`
                     : isDone ? `Extraction complete · ${plainStatus(jobStatus ?? {})}`
                     : isCancelled ? "Extraction cancelled"
-                    : "Extraction failed"}
+                    : isFailed ? "Extraction failed" : "Loading status…"}
                 </span>
                 {isRunning && jobStatus && mayCancel(user, jobStatus) && (
                   <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }}
@@ -1085,163 +1043,88 @@ export default function ExtractPage() {
                 </p>
               )}
             </div>
-          )}
+          </div>
+          <div className="card">
+            {isRunning ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 380, padding: 40, gap: 12 }}>
+                <svg className="animate-spin" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text1)" }}>Processing documents…</p>
+                <p style={{ fontSize: 12, color: "var(--text3)" }}>AI extraction in progress</p>
+                {selectedOptions.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginTop: 4 }}>
+                    {selectedOptions.map(id => {
+                      const opt = EXTRA_OPTIONS.find(o => o.id === id)!;
+                      return (
+                        <span key={id} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: opt.color + "18", color: opt.color, fontWeight: 500 }}>
+                          {opt.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : isFailed ? (
+              /* ── Job failed — clear error panel ── */
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 380, padding: 40, gap: 16 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: "#ef444418", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--red,#ef4444)" strokeWidth="1.5">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text1)", marginBottom: 6 }}>Extraction failed</p>
+                  <p style={{ fontSize: 12, color: "var(--text3)", maxWidth: 300 }}>
+                    {jobStatus?.failed > 0
+                      ? `${jobStatus.failed} of ${jobStatus.total_docs} document${jobStatus.total_docs !== 1 ? "s" : ""} could not be processed.`
+                      : "The job encountered an error and could not complete."}
+                  </p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 420 }}>
+                  {/* The DOCUMENTS' own reason, when the backend gave one.
+                      It always had one — `_fail` writes it, the job thread
+                      stores it, the API returns it — and nothing rendered
+                      it, so "This template has no slots to fill…" showed up
+                      here as four guesses about password-protected PDFs.
+                      The guesses now appear only when there is no real
+                      message to show. */}
+                  {jobStatus?.error_message ? (
+                    <div style={{ padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--text2)", lineHeight: 1.55, textAlign: "left" }}>
+                      <p style={{ fontWeight: 600, color: "var(--text1)", marginBottom: 4, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>What went wrong</p>
+                      {jobErrorText(jobStatus.error_message, isDemo)}
+                    </div>
+                  ) : (
+                  <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 11, color: "var(--text3)" }}>
+                    <p style={{ fontWeight: 600, color: "var(--text2)", marginBottom: 4 }}>Common causes:</p>
+                    <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 3 }}>
+                      <li>Template not found or corrupted — try re-saving it</li>
+                      <li>PDF is password-protected or image-only (scanned)</li>
+                      <li>File type not supported</li>
+                      <li>AI service temporarily unavailable — retry in a moment</li>
+                    </ul>
+                  </div>
+                  )}
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: "100%" }}
+                    onClick={() => {
+                      setActiveJobId(null);
+                      setResults([]);
+                    }}
+                  >
+                    Try again
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="extract-preview-empty">
+                <p>{isCancelled ? "Extraction cancelled" : jobStatusError ? "The job could not be loaded." : "Loading extraction…"}</p>
+                {(isCancelled || jobStatusError) && <button className="btn btn-secondary" onClick={reset}>Back to Extract</button>}
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* ── Right panel ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          {hasResults ? (
-            <>
-              <ResultsGrid results={results} jobId={activeJobId!} template={jobTemplate}/>
-              {selectedOptions.length > 0 && (
-                <InsightsPanel results={results} options={selectedOptions} jobId={activeJobId}/>
-              )}
-            </>
-          ) : (
-            <div className="card" style={{ minHeight: 380 }}>
-              {isRunning ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 380, padding: 40, gap: 12 }}>
-                  <svg className="animate-spin" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text1)" }}>Processing documents…</p>
-                  <p style={{ fontSize: 12, color: "var(--text3)" }}>AI extraction in progress</p>
-                  {selectedOptions.length > 0 && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginTop: 4 }}>
-                      {selectedOptions.map(id => {
-                        const opt = EXTRA_OPTIONS.find(o => o.id === id)!;
-                        return (
-                          <span key={id} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: opt.color + "18", color: opt.color, fontWeight: 500 }}>
-                            {opt.label}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : isFailed ? (
-                /* ── Job failed — clear error panel ── */
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 380, padding: 40, gap: 16 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: "#ef444418", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--red,#ef4444)" strokeWidth="1.5">
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text1)", marginBottom: 6 }}>Extraction failed</p>
-                    <p style={{ fontSize: 12, color: "var(--text3)", maxWidth: 300 }}>
-                      {jobStatus?.failed > 0
-                        ? `${jobStatus.failed} of ${jobStatus.total_docs} document${jobStatus.total_docs !== 1 ? "s" : ""} could not be processed.`
-                        : "The job encountered an error and could not complete."}
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 420 }}>
-                    {/* The DOCUMENTS' own reason, when the backend gave one.
-                        It always had one — `_fail` writes it, the job thread
-                        stores it, the API returns it — and nothing rendered
-                        it, so "This template has no slots to fill…" showed up
-                        here as four guesses about password-protected PDFs.
-                        The guesses now appear only when there is no real
-                        message to show. */}
-                    {jobStatus?.error_message ? (
-                      <div style={{ padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 12, color: "var(--text2)", lineHeight: 1.55, textAlign: "left" }}>
-                        <p style={{ fontWeight: 600, color: "var(--text1)", marginBottom: 4, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>What went wrong</p>
-                        {jobErrorText(jobStatus.error_message, isDemo)}
-                      </div>
-                    ) : (
-                    <div style={{ padding: "10px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 11, color: "var(--text3)" }}>
-                      <p style={{ fontWeight: 600, color: "var(--text2)", marginBottom: 4 }}>Common causes:</p>
-                      <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 3 }}>
-                        <li>Template not found or corrupted — try re-saving it</li>
-                        <li>PDF is password-protected or image-only (scanned)</li>
-                        <li>File type not supported</li>
-                        <li>AI service temporarily unavailable — retry in a moment</li>
-                      </ul>
-                    </div>
-                    )}
-                    <button
-                      className="btn btn-secondary"
-                      style={{ width: "100%" }}
-                      onClick={() => {
-                        setActiveJobId(null);
-                        setResults([]);
-                      }}
-                    >
-                      Try again
-                    </button>
-                  </div>
-                </div>
-              ) : previewTemplate ? (
-                /* Template selected — show preview */
-                <div style={{ padding: 28 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14, paddingBottom: 20, marginBottom: 20, borderBottom: "1px solid var(--border)" }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 11, background: "var(--accent-dim)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text1)", marginBottom: 3 }}>{previewTemplate.name}</p>
-                      <p style={{ fontSize: 12, color: "var(--text3)" }}>{previewTemplate.document_type} · {previewTemplate.columns.length} columns</p>
-                      {(previewTemplate as any).description && <span style={{ fontSize: 10, color: "var(--green)" }}>Layout saved</span>}
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: selectedOptions.length ? 20 : 12 }}>
-                    <p style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text3)", marginBottom: 8 }}>Template layout</p>
-                    <TemplatePreview template={previewTemplate} />
-                  </div>
-
-                  {selectedOptions.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                      <p style={{ fontSize: 10.5, color: "var(--text3)", marginBottom: 4 }}>Will run after extraction:</p>
-                      {selectedOptions.map(id => {
-                        const opt = EXTRA_OPTIONS.find(o => o.id === id)!;
-                        return (
-                          <div key={id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: opt.color + "0e", border: `1px solid ${opt.color}28` }}>
-                            <div style={{ width: 22, height: 22, borderRadius: 5, background: opt.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                              <span style={{ color: opt.color }}>{opt.icon}</span>
-                            </div>
-                            <div>
-                              <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text1)" }}>{opt.label}</p>
-                              <p style={{ fontSize: 10, color: "var(--text3)" }}>{opt.desc}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {!files.length && (
-                    <p style={{ fontSize: 12, color: "var(--text4)", textAlign: "center", marginTop: 24 }}>Add documents on the left to begin</p>
-                  )}
-                </div>
-              ) : (
-                /* No template selected — welcome + feature preview */
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 380, padding: "48px 40px", textAlign: "center" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                  </div>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--text2)" }}>Select a template to start</p>
-                  <p style={{ fontSize: 12, color: "var(--text4)", marginTop: 4, marginBottom: 28 }}>The template defines which columns appear in results</p>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 320, textAlign: "left" }}>
-                    <p style={{ fontSize: 10.5, color: "var(--text3)", marginBottom: 2 }}>Available after extraction:</p>
-                    {EXTRA_OPTIONS.map(opt => (
-                      <div key={opt.id} style={{ display: "flex", alignItems: "flex-start", gap: 9, opacity: 0.65 }}>
-                        <div style={{ width: 22, height: 22, borderRadius: 6, background: opt.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                          <span style={{ color: opt.color }}>{opt.icon}</span>
-                        </div>
-                        <div>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>{opt.label}</p>
-                          <p style={{ fontSize: 10.5, color: "var(--text3)" }}>{opt.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
       {/* Page selection modal (single PDF with >1 page) */}
       {pageSelectModal && (
         <div style={{

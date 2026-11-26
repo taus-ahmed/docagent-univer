@@ -3,6 +3,7 @@ import type { ChartsResponse } from "./charts";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import type { JobReview, ReasonMap, ReviewSummary, ReviewValue } from "./review";
 import type { HistoryEvent, ValueEntry } from "./reviewActions";
+import { organizedWorkbookAvailable } from "./organizedExport";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -659,6 +660,19 @@ export const exportApi = {
       responseType: "blob",
       params: includeAudit ? { include_audit: true } : undefined,
     });
+    return res.data;
+  },
+  organizedExport: async (jobId: number): Promise<Blob> => {
+    // The same-origin proxy retains Content-Disposition, which the direct
+    // cross-origin API does not expose to browser JavaScript.
+    const res = await api.get<Blob>(`/api/proxy/jobs/${jobId}/export`, {
+      baseURL: "",
+      responseType: "blob",
+      params: { layout: "organized" },
+    });
+    if (!await organizedWorkbookAvailable(res.data, res.headers["content-disposition"])) {
+      throw new Error("Organized layout unavailable");
+    }
     return res.data;
   },
   zipExport: async (jobId: number, includeAudit = false): Promise<Blob> => {

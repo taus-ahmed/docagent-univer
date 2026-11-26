@@ -36,7 +36,7 @@ function Icon({ type }: { type: string }) {
   return null;
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children, fitViewport = false }: { children: React.ReactNode; fitViewport?: boolean }) {
   const router   = useRouter();
   const pathname = usePathname();
   const { user, isAuthenticated, initialized, logout, initializeFromStorage } = useAuthStore();
@@ -152,7 +152,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className="sb-resize-handle"
         />
       </aside>
-      <main className="page-content" style={{ marginLeft: sidebarWidth }}>
+      <main className={`page-content${fitViewport && !changingPassword ? " page-content-fit" : ""}`} style={{ marginLeft: sidebarWidth }}>
         {/* Renders nothing unless this user's tenant is a configured demo. */}
         <DemoBanner />
         {changingPassword

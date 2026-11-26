@@ -345,6 +345,7 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
     : null;
   const expandedRows = expandedDoc?.extracted_data?.table_rows ?? [];
   const s = review.data?.summary;
+  const acceptedLow = acceptedAfterLowText(s?.accepted_after_low);
   const reviewDoc = reviewId != null ? reviewDocs.get(reviewId) : undefined;
 
   return (
@@ -354,35 +355,15 @@ export default function ResultsGrid({ results, jobId, template }: Props) {
         <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text1)" }}>
             {results.length} document{results.length !== 1 ? "s" : ""}
-            {s && (s.documents_needing_attention ?? 0) > 0 && (
-              <span role="alert" style={{ fontSize: 12, marginLeft: 8, fontWeight: 600,
-                                          color: "var(--red,#dc2626)" }}>
-                · {s.documents_needing_attention} document{s.documents_needing_attention === 1 ? "" : "s"} NEED
-                {s.documents_needing_attention === 1 ? "S" : ""} ATTENTION ({s.attention_open} open
-                reason{s.attention_open === 1 ? "" : "s"}: a table, amount or page is missing)
-              </span>
-            )}
-            {s && (
-              <span style={{ fontSize: 12, marginLeft: 8, fontWeight: 400,
-                             color: s.needs_review ? "var(--amber,#b45309)" : "var(--green,#15803d)" }}>
-                · {s.needs_review
-                    ? `${s.needs_review} value${s.needs_review === 1 ? "" : "s"} need review, ${s.low} low`
-                    : (s.documents_needing_attention ?? 0) > 0 ? "no value needs review"
-                    : "nothing needs review"}
-              </span>
-            )}
-            {/* Run Q, Q13: accepted-after-Low is never invisible */}
-            {s && acceptedAfterLowText(s.accepted_after_low) && (
-              <span style={{ fontSize: 12, marginLeft: 8, fontWeight: 600, color: "var(--amber,#b45309)" }}>
-                · {acceptedAfterLowText(s.accepted_after_low)}
-              </span>
-            )}
-            {template && (
-              <span style={{ fontSize: 12, color: "var(--text3)", marginLeft: 8, fontWeight: 400 }}>
-                · {template.name}
-              </span>
-            )}
+            {s && (s.needs_review === 1 ? ", 1 value needs review" : `, ${s.needs_review} values need review`)}
           </div>
+          {s && (s.documents_needing_attention ?? 0) > 0 && (
+            <p role="alert" style={{ fontSize: 12, color: "var(--red)" }}>
+              {s.documents_needing_attention} {s.documents_needing_attention === 1 ? "document needs" : "documents need"} attention
+              {` (${s.attention_open} open ${s.attention_open === 1 ? "reason" : "reasons"})`}. A table, amount, or page is missing.
+            </p>
+          )}
+          {acceptedLow && <p style={{ fontSize: 12, fontWeight: 600, color: "var(--amber)" }}>{acceptedLow}</p>}
           <div style={{ fontSize: 11, color: "var(--text3)" }}>
             Click a cell to select it · double-click a value to edit it · Review opens the page and the review actions
             {results.some(r => (r.extracted_data?.table_rows?.length ?? 0) > 0) && (

@@ -14,7 +14,7 @@ interface Props {
 
 export default function NewExtractionButton({ onNew }: Props) {
   return (
-    <Link className="btn btn-secondary btn-sm" href="/extract" onClick={onNew}
+    <Link className="btn btn-secondary btn-full" href="/extract" onClick={onNew}
           title="Start a new extraction; this job stays in History as it is">
       New extraction
     </Link>

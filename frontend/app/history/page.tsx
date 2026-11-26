@@ -5,10 +5,10 @@ import { failureLine, jobModels, plainStatus } from "@/lib/jobModel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
-import { extractApi, exportApi, templatesApi, type JobStatus, type DocumentResult, type ColumnTemplate } from "@/lib/api";
+import { extractApi, type JobStatus, type DocumentResult } from "@/lib/api";
 import toast from "react-hot-toast";
-import { confirmExport } from "@/lib/confirm-export";
-import NewExtractionButton from "@/components/extract/NewExtractionButton";
+import JobResultsLayout from "@/components/extract/JobResultsLayout";
+import { useJobTemplate } from "@/lib/useJobTemplate";
 import { useAuthStore } from "@/lib/auth-store";
 import { mayCancel, mayDelete } from "@/lib/permissions";
 
@@ -314,7 +314,10 @@ export default function HistoryPage() {
     enabled:  !!selectedJobId,
   });
 
-  const selectedJob    = jobs.find(j => j.id === selectedJobId);
+  const selectedJob = jobs.find(j => j.id === selectedJobId);
+  const { template: jobTemplate, templateLoading } = useJobTemplate(selectedJob);
+  const canDownload = !!selectedJob && !selectedJob.deleted_at &&
+    (selectedJob.status === "completed" || selectedJob.status === "partial") && selectedJob.successful > 0;
   const user = useAuthStore(s => s.user);
   const qc = useQueryClient();
   const running = (s?: string) => s === "pending" || s === "processing";
@@ -331,25 +334,6 @@ export default function HistoryPage() {
     qc.invalidateQueries({ queryKey: ["jobs"] });
     qc.invalidateQueries({ queryKey: ["job-results", jobId] });
   };
-
-  async function handleExport(jobId: number, mode: "template" | "combined" | "perfile" | "zip") {
-    if (!(await confirmExport(jobId))) return;
-    try {
-      let blob: Blob; let filename: string;
-      if (mode === "template" || mode === "combined") {
-        blob = await exportApi.templateExport(jobId);
-        filename = `job_${jobId}_results.xlsx`;
-      } else if (mode === "zip") {
-        blob = await exportApi.zipExport(jobId);
-        filename = `job_${jobId}_documents.zip`;
-      } else {
-        blob = await exportApi.perFile({ job_id: jobId });
-        filename = `job_${jobId}_perfile.xlsx`;
-      }
-      exportApi.downloadBlob(blob, filename);
-      toast.success("Downloaded");
-    } catch { toast.error("Export failed"); }
-  }
 
   function fmt(iso: string | null) {
     if (!iso) return "—";
@@ -390,7 +374,7 @@ export default function HistoryPage() {
       <style>{`
         .hist-layout { 
           display: grid; 
-          grid-template-columns: 340px 1fr; 
+          grid-template-columns: 232px minmax(0, 1fr);
           gap: 18px; 
           align-items: start;
           height: calc(100vh - 140px);
@@ -417,11 +401,12 @@ export default function HistoryPage() {
         .job-card.sel { border-color: var(--accent); background: var(--surface2); }
         .job-card.failed { border-color: var(--red,#ef4444)44; }
         .job-meta { flex: 1; min-width: 0; }
-        .job-id-row { display: flex; align-items: center; gap: 7px; margin-bottom: 2px; }
+        .job-id-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 2px; }
         .job-id { font-size: 13px; font-weight: 600; color: var(--text1); }
         .job-sub { font-size: 11px; color: var(--text3); }
-        .job-counts { display: flex; gap: 8px; margin-top: 3px; }
+        .job-counts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 3px; }
         .job-count { font-size: 11px; }
+        .history-review-link { margin-bottom: 12px; }
         .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
         .detail-title { font-size: 15px; font-weight: 600; color: var(--text1); flex: 1; min-width: 80px; }
         .stat-bar { display: flex; gap: 16px; padding: 10px 14px; background: var(--surface2); border-radius: 8px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -531,23 +516,12 @@ export default function HistoryPage() {
               <>
                 <div className="detail-header">
                   <span className="detail-title">Job #{selectedJob.id}</span>
-                  <StatusBadge job={selectedJob} />
                   <AttentionBadge job={selectedJob} />
                   {jobModels(results) && (
                     <span className="badge badge-gray" title="The model that produced these values, as the API named it">
                       Model {jobModels(results)}
                     </span>
                   )}
-                  {selectedJob.pages_total != null && (
-                    <span className="badge badge-gray">
-                      pages processed {selectedJob.pages_processed} of {selectedJob.pages_total}
-                    </span>
-                  )}
-                  {/* N1: show download buttons for any job with extracted docs —
-                      template or not (no-template jobs export via the flat-table writer).
-                      A "partial" job has real output for the documents that
-                      succeeded, so it downloads too; what it must not do is
-                      claim everything worked. */}
                   {selectedJob.deleted_at && (
                     <span className="badge badge-gray" title="Files and results were deleted; the record is kept for history">
                       Deleted {fmt(selectedJob.deleted_at)}
@@ -575,40 +549,6 @@ export default function HistoryPage() {
                       Delete data
                     </button>
                   )}
-                  {!selectedJob.deleted_at && ["completed", "partial"].includes(selectedJob.status) && (selectedJob.successful ?? 0) > 0 && (
-                    <>
-                      {/* client-side: a full page load re-runs AppLayout's auth gate */}
-                      <Link className="btn btn-secondary btn-sm" href={`/extract?job=${selectedJob.id}`}>
-                        Review
-                      </Link>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleExport(selectedJob.id, "template")}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                          <polyline points="7 10 12 15 17 10"/>
-                          <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        Download Excel
-                      </button>
-                      {results.length > 1 && (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleExport(selectedJob.id, "zip")}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
-                            <line x1="8" y1="11" x2="16" y2="11"/>
-                          </svg>
-                          Download ZIP
-                        </button>
-                      )}
-                      <NewExtractionButton/>
-                    </>
-                  )}
                   {selectedJob.status === "partial" && (
                     <span style={{ fontSize: 12, color: "var(--amber)" }}>
                       {selectedJob.failed} of {(selectedJob.successful ?? 0) + (selectedJob.failed ?? 0)} documents
@@ -622,91 +562,99 @@ export default function HistoryPage() {
                   )}
                 </div>
 
-                {/* Stats bar */}
-                {results.length > 0 && (
-                  <div className="stat-bar">
-                    <div className="stat-item">
-                      <span className="stat-val">{results.length}</span>
-                      <span className="stat-lbl">Documents</span>
+                <JobResultsLayout key={selectedJob.id} job={selectedJob} template={jobTemplate} templateLoading={templateLoading}
+                  documentCount={results.length} canDownload={canDownload}>
+                  {canDownload && (
+                    <Link className="btn btn-secondary btn-sm history-review-link" href={"/extract?job=" + selectedJob.id}>
+                      Review
+                    </Link>
+                  )}
+                  {/* Stats bar */}
+                  {results.length > 0 && (
+                    <div className="stat-bar">
+                      <div className="stat-item">
+                        <span className="stat-val">{results.length}</span>
+                        <span className="stat-lbl">Documents</span>
+                      </div>
+                      <div className="stat-item">
+                        <span className="stat-val" style={{ color: "var(--accent)" }}>{totalFields}</span>
+                        <span className="stat-lbl">Fields extracted</span>
+                      </div>
+                      {totalRows > 0 && (
+                        <div className="stat-item">
+                          <span className="stat-val" style={{ color: "var(--green)" }}>{totalRows}</span>
+                          <span className="stat-lbl">Table rows</span>
+                        </div>
+                      )}
+                      {reviewCount > 0 && (
+                        <div className="stat-item">
+                          <span className="stat-val" style={{ color: "var(--amber,#f59e0b)" }}>{reviewCount}</span>
+                          <span className="stat-lbl">Need review</span>
+                        </div>
+                      )}
+                      {selectedJob.total_time_sec > 0 && (
+                        <div className="stat-item">
+                          <span className="stat-val">{selectedJob.total_time_sec.toFixed(1)}s</span>
+                          <span className="stat-lbl">Total time</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="stat-item">
-                      <span className="stat-val" style={{ color: "var(--accent)" }}>{totalFields}</span>
-                      <span className="stat-lbl">Fields extracted</span>
-                    </div>
-                    {totalRows > 0 && (
-                      <div className="stat-item">
-                        <span className="stat-val" style={{ color: "var(--green)" }}>{totalRows}</span>
-                        <span className="stat-lbl">Table rows</span>
-                      </div>
-                    )}
-                    {reviewCount > 0 && (
-                      <div className="stat-item">
-                        <span className="stat-val" style={{ color: "var(--amber,#f59e0b)" }}>{reviewCount}</span>
-                        <span className="stat-lbl">Need review</span>
-                      </div>
-                    )}
-                    {selectedJob.total_time_sec > 0 && (
-                      <div className="stat-item">
-                        <span className="stat-val">{selectedJob.total_time_sec.toFixed(1)}s</span>
-                        <span className="stat-lbl">Total time</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
 
-                {resultsLoading ? (
-                  <div className="card" style={{ padding: 32, textAlign: "center" }}>
-                    <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2" style={{ margin: "0 auto 10px", display: "block" }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                    <p style={{ fontSize: 13, color: "var(--text3)" }}>Loading results…</p>
-                  </div>
-                ) : results.length === 0 && selectedJob.status !== "processing" ? (
-                  <div className="card" style={{ padding: "32px", textAlign: "center" }}>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" style={{ margin: "0 auto 10px", display: "block" }}>
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <p style={{ fontWeight: 500, color: "var(--text1)" }}>No results found</p>
-                    <p style={{ fontSize: 12, color: "var(--text3)", marginTop: 4 }}>
-                      This job may have failed or been cancelled.
-                      Check the status and try re-running the extraction.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {results.length > 1 && (
-                      <div style={{ position: "relative", marginBottom: 12 }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
-                          style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-                          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                        </svg>
-                        <input
-                          type="text"
-                          placeholder="Search documents…"
-                          value={docSearch}
-                          onChange={e => setDocSearch(e.target.value)}
-                          style={{
-                            width: "100%", boxSizing: "border-box",
-                            padding: "7px 10px 7px 28px",
-                            border: "1px solid var(--border)", borderRadius: 7,
-                            background: "var(--surface)", color: "var(--text1)",
-                            fontSize: 12, outline: "none",
-                          }}
-                        />
-                        {docSearch && (
-                          <button
-                            onClick={() => setDocSearch("")}
-                            style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {filteredResults.length === 0 ? (
-                      <p style={{ fontSize: 12, color: "var(--text3)", textAlign: "center", padding: "24px 0" }}>No documents match "{docSearch}"</p>
-                    ) : filteredResults.map(doc => <DocCard key={doc.id} doc={doc} />)}
-                  </>
-                )}
+                  {resultsLoading ? (
+                    <div className="card" style={{ padding: 32, textAlign: "center" }}>
+                      <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2" style={{ margin: "0 auto 10px", display: "block" }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                      <p style={{ fontSize: 13, color: "var(--text3)" }}>Loading results…</p>
+                    </div>
+                  ) : results.length === 0 && selectedJob.status !== "processing" ? (
+                    <div className="card" style={{ padding: "32px", textAlign: "center" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" style={{ margin: "0 auto 10px", display: "block" }}>
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                      <p style={{ fontWeight: 500, color: "var(--text1)" }}>No results found</p>
+                      <p style={{ fontSize: 12, color: "var(--text3)", marginTop: 4 }}>
+                        This job may have failed or been cancelled.
+                        Check the status and try re-running the extraction.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {results.length > 1 && (
+                        <div style={{ position: "relative", marginBottom: 12 }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2"
+                            style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Search documents…"
+                            value={docSearch}
+                            onChange={e => setDocSearch(e.target.value)}
+                            style={{
+                              width: "100%", boxSizing: "border-box",
+                              padding: "7px 10px 7px 28px",
+                              border: "1px solid var(--border)", borderRadius: 7,
+                              background: "var(--surface)", color: "var(--text1)",
+                              fontSize: 12, outline: "none",
+                            }}
+                          />
+                          {docSearch && (
+                            <button
+                              onClick={() => setDocSearch("")}
+                              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 2 }}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {filteredResults.length === 0 ? (
+                        <p style={{ fontSize: 12, color: "var(--text3)", textAlign: "center", padding: "24px 0" }}>No documents match "{docSearch}"</p>
+                      ) : filteredResults.map(doc => <DocCard key={doc.id} doc={doc} />)}
+                    </>
+                  )}
+                </JobResultsLayout>
               </>
             ) : (
               <div className="card" style={{ padding: "60px 32px", textAlign: "center" }}>

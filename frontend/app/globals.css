@@ -224,7 +224,24 @@ select.input { appearance: none; cursor: pointer; }
 
 /* ── Page shell ── */
 .page-shell { display:flex; min-height:100vh; background:var(--bg); }
-.page-content { flex:1; margin-left:var(--sidebar-w); padding:24px 28px; }
+.page-content { flex:1; min-width:0; margin-left:var(--sidebar-w); padding:24px 28px; }
+.page-content-fit { height:100dvh; display:flex; flex-direction:column; }
+
+.job-results-layout { display:grid; grid-template-columns:minmax(200px, 235px) minmax(0, 1fr); gap:16px; align-items:start; }
+.job-results-sidebar { display:grid; gap:8px; min-width:0; }
+.job-results-content { min-width:0; }
+.job-result-info { padding:14px; overflow-wrap:anywhere; }
+.job-result-info .label { display:block; margin-bottom:5px; }
+.job-result-counts { color:var(--text2); font-size:12px; margin-top:4px; }
+.job-result-action { padding:8px; }
+.job-result-action .btn { justify-content:flex-start; text-align:left; white-space:normal; }
+.job-result-action svg { flex-shrink:0; }
+.job-result-error { color:var(--red); font-size:12px; margin-top:6px; }
+
+@media (max-width: 840px) {
+  .page-content-fit { height:auto; }
+  .job-results-layout { grid-template-columns:minmax(0, 1fr); }
+}
 .page-title { font-size:19px; font-weight:600; color:var(--text1); letter-spacing:-0.02em; margin-bottom:2px; }
 .page-sub { font-size:13px; color:var(--text3); }
 

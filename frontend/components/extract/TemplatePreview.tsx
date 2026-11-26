@@ -57,7 +57,7 @@ function contentBounds(g: GridData): { rows: number; cols: number } {
 }
 
 /* ────────────────────────────────────────────────── */
-function GridPreview({ grid }: { grid: GridData }) {
+function GridPreview({ grid, labelColumns }: { grid: GridData; labelColumns: number[] }) {
   const { rows, cols } = contentBounds(grid);
   if (rows === 0 || cols === 0) {
     return <p style={{ fontSize: 11, color: "var(--text4)", padding: "8px 0" }}>No layout data in this template.</p>;
@@ -87,23 +87,21 @@ function GridPreview({ grid }: { grid: GridData }) {
   }
   const repeatSet = new Set<number>(grid.repeatRows ?? []);
 
-  /* Scale colWidths for the preview viewport */
-  const widths = Array.from({ length: cols }, (_, c) => {
-    const w = (grid.colWidths?.[c] ?? 120) * 0.78;
-    return Math.max(52, Math.min(w, 190));
-  });
+  const widths = Array.from({ length: cols }, (_, c) => Math.max(136, Math.min(grid.colWidths?.[c] ?? 156, 320)));
+  const sheetWidth = widths.reduce((sum, width) => sum + width, 36);
 
   const hasExtract = etKeys.size > 0;
   const hasRepeat = repeatSet.size > 0;
 
   return (
-    <div>
-      <div style={{
-        overflowX: "auto", overflowY: "auto", maxHeight: 340,
+    <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div role="region" aria-label="Spreadsheet preview" tabIndex={0} style={{
+        overflow: "auto", minHeight: 0, maxHeight: 380,
         border: "1px solid var(--border)", borderRadius: 7,
       }}>
-        <table style={{ borderCollapse: "collapse", tableLayout: "fixed", fontSize: 11, whiteSpace: "nowrap" }}>
+        <table style={{ width: sheetWidth, borderCollapse: "collapse", tableLayout: "fixed", fontSize: 12 }}>
           <colgroup>
+            <col style={{ width: 36 }} />
             {widths.map((w, i) => <col key={i} style={{ width: w }} />)}
           </colgroup>
           <tbody>
@@ -111,6 +109,7 @@ function GridPreview({ grid }: { grid: GridData }) {
               const isRepeatRow = repeatSet.has(r);
               return (
                 <tr key={r}>
+                  <th scope="row" style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)" }}>{r + 1}</th>
                   {Array.from({ length: cols }, (_, c) => {
                     const key = ck(r, c);
                     if (skipSet.has(key)) return null;
@@ -126,7 +125,7 @@ function GridPreview({ grid }: { grid: GridData }) {
                       ? st.bgColor
                       : isRepeatRow
                       ? "var(--blue-bg)"
-                      : undefined;
+                      : cell?.value && labelColumns.includes(c) ? "var(--surface2)" : undefined;
 
                     return (
                       <td
@@ -141,13 +140,12 @@ function GridPreview({ grid }: { grid: GridData }) {
                           borderLeft: isET ? "3px solid var(--accent)" : undefined,
                           verticalAlign: "middle",
                           textAlign: st.align ?? "left",
-                          fontWeight: st.bold ? 600 : 400,
+                          fontWeight: st.bold || labelColumns.includes(c) ? 600 : 400,
                           fontStyle: st.italic ? "italic" : undefined,
-                          fontSize: Math.min(st.fontSize ?? 11, 12),
+                          fontSize: Math.max(11, Math.min(st.fontSize ?? 12, 14)),
                           color: st.fontColor ?? "var(--text1)",
-                          maxWidth: widths[c],
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
+                          whiteSpace: "pre-wrap",
+                          overflowWrap: "anywhere",
                         }}
                       >
                         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -156,7 +154,7 @@ function GridPreview({ grid }: { grid: GridData }) {
                               <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
                             </svg>
                           )}
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                          <span style={{ minWidth: 0, flex: 1 }}>
                             {cell?.value ?? ""}
                           </span>
                           {isRepeatRow && c === cols - 1 && (
@@ -217,7 +215,7 @@ function ColumnListFallback({ template }: { template: ColumnTemplate }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0, overflow: "auto" }}>
       {headers.length > 0 && (
         <div>
           <p style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text3)", marginBottom: 6 }}>
@@ -245,5 +243,5 @@ function ColumnListFallback({ template }: { template: ColumnTemplate }) {
 /* ── Public export ── */
 export default function TemplatePreview({ template }: { template: ColumnTemplate }) {
   const grid = parseGrid(template.description);
-  return grid ? <GridPreview grid={grid} /> : <ColumnListFallback template={template} />;
+  return grid ? <GridPreview grid={grid} labelColumns={template.shape?.label_columns ?? []} /> : <ColumnListFallback template={template} />;
 }
