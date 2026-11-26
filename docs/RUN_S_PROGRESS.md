@@ -69,3 +69,10 @@ one commit per item; push after each stage; UI untouched.
   127/95/115/129/131). Run it, fix, commit. Then Stage 1 finish: full suite once, both harness modes,
   scoreboard, corpus_metrics --tag s1 --compare before, KNOWN_FAILING, push.
   (Corpus tag s1a ran on code before the bottom-band rule was removed; rerun as tag s1.)
+- 3e finding (read-only, history of tests/reports/latest-notemplate.md): no-template RAW 70.1% at fd5a142 ->
+  58.4% at 800d540 (I5: inference reads column_text) -> 59.4% at e20e844 (Run A). The whole first drop is
+  EXP-2024-0081 raw 98.1% -> 13.0% (headline 98.1% unchanged: adapter widenings recover the renamed schema);
+  +1.0 from BS-2024-Q1 54.3->58.7 and PAYSLIP-0007 89.2->94.6. CLAUDE.md's 70.1% predates 800d540.
+- 3b finding: jobs 61/65 (utah_paystub_1 under a PO template) get no wrong-template warning: hint scores
+  payslip 1, tax_form 1, purchase_order 0; type_mismatch needs >=2 hits for another type. Plan: template's own
+  labels printed fraction as a second signal.
