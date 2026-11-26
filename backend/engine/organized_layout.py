@@ -99,6 +99,19 @@ def _segments(line, gutter):
     return segs
 
 
+def page_gutter(lines, body):
+    """The gap that separates two cells on this page: 4x the ordinary gap
+    between two words of a phrase. Measured on the SMALL gaps only (under
+    0.6 em): on a page of one-word cells most gaps ARE column gaps, and their
+    median made the gutter swallow the columns (Run S, Stage 2)."""
+    gaps = [b["x0"] - a["x1"] for ln in lines for a, b in zip(ln, ln[1:])
+            if b["x0"] > a["x1"]]
+    small = [g for g in gaps if g < 0.6 * (body or 11.0)]
+    if small:
+        return max(6.0, 4 * statistics.median(small))
+    return max(6.0, 1.2 * (body or 11.0))
+
+
 def _text(ws) -> str:
     out = ""
     for i, w in enumerate(ws):
@@ -131,22 +144,81 @@ def sheet_size(size, body) -> int:
 def _prose(ws) -> bool:
     t = _text(ws).strip()
     n = len(t.split())
+    # a line carrying two or more figures is a row of a table or a form,
+    # however many words it has (rule 17: nothing printed is left out)
+    figs = sum(1 for w in t.split() if _is_figure(w))
+    if figs >= 2:
+        return False
     return n >= 12 or (n >= 8 and t.endswith((".", "?")))
+
+
+def _rules(page):
+    """Horizontal strokes of the page: [(x0, x1, y, thickness)] in page
+    coordinates (y from the top), from line objects and thin rectangles."""
+    out = []
+    for ln in getattr(page, "lines", None) or []:
+        try:
+            if abs(float(ln["top"]) - float(ln["bottom"])) <= 1.0:
+                out.append((float(ln["x0"]), float(ln["x1"]), float(ln["top"]),
+                            float(ln.get("linewidth") or 1.0)))
+        except (KeyError, TypeError, ValueError):
+            continue
+    for r in getattr(page, "rects", None) or []:
+        try:
+            h = float(r["bottom"]) - float(r["top"])
+            if 0 < h <= 6.0 and float(r["x1"]) - float(r["x0"]) > 4 * h:
+                out.append((float(r["x0"]), float(r["x1"]), float(r["top"]), h))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def _underlined(seg, rules) -> bool:
+    """Rule 13: a stroke at most 1.5 pt thick within 3 pt under the segment,
+    covering 80% of its width and not much wider than it."""
+    w = seg["x1"] - seg["x0"]
+    bottom = max(x["bottom"] for x in seg["words"])
+    for x0, x1, y, th in rules:
+        if th > 1.5 or not (bottom - 1.0 <= y <= bottom + 3.0):
+            continue
+        cover = min(x1, seg["x1"]) - max(x0, seg["x0"])
+        if w > 0 and cover >= 0.8 * w and (x1 - x0) <= 1.5 * w + 10:
+            return True
+    return False
+
+
+def _thick(rules, width):
+    """Rule 14: the y of every thick rule (1.5 pt or more, 30% of the page)."""
+    return sorted(y for x0, x1, y, th in rules if th >= 1.5 and (x1 - x0) >= 0.3 * width)
 
 
 # ── values ──────────────────────────────────────────────────────────────────
 
-def typed(text):
+DATE_FORMAT = "mm/dd/yyyy"        # rule 16: ONE date format on the sheet
+
+
+def _as_date(text, order=None):
+    """A real date for any printed notation, or None. Day/month order from
+    `order` (the document's own); an order nothing settles is not guessed."""
+    import dates as D
+    t = str(text or "").strip()
+    if not t or not re.search(r"\d", t) or len(t) > 24:
+        return None
+    d = D.parse_date(t, order)
+    if not d.ok:
+        return None
+    return datetime(d.value.year, d.value.month, d.value.day)
+
+
+def typed(text, order=None):
     """(value, number_format) for a cell: money and integers as numbers,
-    dates as dates, everything else the text as printed."""
+    dates as dates (one format, rule 16), everything else the text as
+    printed."""
     t = str(text or "").strip()
     flat = t.replace(" ", "")
-    m = _DATE.match(flat)
-    if m:
-        try:
-            return datetime(int(m.group(3)), int(m.group(1)), int(m.group(2))), "mm/dd/yyyy"
-        except ValueError:
-            return t, None
+    d = _as_date(t, order)
+    if d is not None:
+        return d, DATE_FORMAT
     if _MONEY.match(flat) and any(ch.isdigit() for ch in flat):
         neg = flat.startswith("(") or flat.startswith("-")
         num = float(re.sub(r"[^\d.]", "", flat))
@@ -162,7 +234,8 @@ def typed(text):
 
 def _is_figure(text) -> bool:
     flat = str(text or "").replace(" ", "")
-    return bool(_DATE.match(flat) or (_MONEY.match(flat) and any(c.isdigit() for c in flat)))
+    return bool(_DATE.match(flat) or (_MONEY.match(flat) and any(c.isdigit() for c in flat))
+                or _as_date(text, "MDY") is not None)
 
 
 # ── the page ────────────────────────────────────────────────────────────────
@@ -205,15 +278,28 @@ def _col_of(x, runs):
     return min(range(len(runs)), key=lambda i: min(abs(x - runs[i][0]), abs(x - runs[i][1])))
 
 
-def page_cells(page):
-    """[Cell] for one pdfplumber page; [] when it has no usable text layer."""
+_PAGE_NO = re.compile(r"^\s*page\s+\d+(\s*(of|/)\s*\d+)?\s*$", re.I)
+
+
+def _row_key(segs):
+    return tuple(re.sub(r"\s+", " ", s["text"]).strip().casefold() for s in segs)
+
+
+def page_cells(page, seen=None, order=None, trace=None):
+    """[Cell] for one pdfplumber page; [] when it has no usable text layer.
+
+    `seen`: row keys written on EARLIER pages; a row carrying no figure that
+    was written before (a title, a table's heading line, a footer) is not
+    written again (rule 11). `order`: the document's day/month order.
+    `trace`, when a list, receives (status, text) for every segment read:
+    "kept", "prose", "tail", "page_no", "seen" - what `audit` checks."""
+    seen = seen if seen is not None else set()
     words = [w for w in _words(page) if not w["markup"]]
     if len(words) < 5:
         return [], "no text layer on this page"
     body = statistics.mode(round(w["size"], 1) for w in words) or 11.0
     lines = _lines(words)
-    gaps = [b["x0"] - a["x1"] for ln in lines for a, b in zip(ln, ln[1:]) if b["x0"] > a["x1"]]
-    gutter = max(6.0, 4 * statistics.median(gaps)) if gaps else 12.0
+    gutter = page_gutter(lines, body)
     rows = []                                    # [(top, [seg])]
     para = None                     # (x0, bottom, height) of the last prose run
     for ln in lines:
@@ -223,13 +309,29 @@ def page_cells(page):
             # a paragraph's wrapped lines are prose too, however short: the
             # line directly under a prose line, starting at its left edge,
             # with no label in it ("then shredded.")
+            figs = sum(1 for x in _text(s).split() if _is_figure(x))
             tail = (para is not None and 0 <= s[0]["top"] - para[1] <= 1.0 * para[2]
-                    and abs(s[0]["x0"] - para[0]) <= 12 and ":" not in _text(s))
+                    and abs(s[0]["x0"] - para[0]) <= 12 and ":" not in _text(s)
+                    and figs < 2)
             if _prose(s) or tail:
                 para = (s[0]["x0"], max(w["bottom"] for w in s), h)
+                if trace is not None:
+                    trace.append(("prose" if _prose(s) else "tail", _text(s)))
                 continue
+            if _PAGE_NO.match(_text(s)) or re.match(r"^\s*page\s+\d+\s*$", _text(s), re.I):
+                if trace is not None:
+                    trace.append(("page_no", _text(s)))
+                continue                          # rule 12: page furniture
             segs.extend(_split_pairs(_seg(s)))
         if segs:
+            key = _row_key(segs)
+            if key in seen and not any(_is_figure(x) for sg in segs
+                                       for x in sg["text"].split()):
+                if trace is not None:
+                    trace += [("seen", sg["text"]) for sg in segs]
+                continue                          # rule 11: written on a page before
+            if trace is not None:
+                trace += [("kept", " ".join(w["text"] for w in sg["words"])) for sg in segs]
             rows.append((ln[0]["top"], segs))
     if not rows:
         return [], "only paragraph text on this page"
@@ -243,6 +345,8 @@ def page_cells(page):
     runs = _columns([s["x0"] for k, (_t, segs) in enumerate(rows) for s in segs
                      if not (k == 0 and len(segs) == 1 and s["size"] >= 1.3 * body)], body)
     width = float(page.width)
+    rules = _rules(page)
+    thick = _thick(rules, width)
     # the title: the first line, one segment, larger than the body, centred
     cells, out_row = [], 0
     # rule 3: spacing is the WHITE space between lines (a line's top less the
@@ -271,12 +375,16 @@ def page_cells(page):
         for s in segs:
             centre = (s["x0"] + s["x1"]) / 2
             centred_on_page = abs(centre - width / 2) <= 0.03 * width
+            # rule 15: a line that is one segment centred on the page is centred
+            centred = centred_on_page and len(segs) == 1
             col = _col_of(centre if title and centred_on_page else s["x0"], runs)
             kind = "title" if title else s["kind"]
             row_cells.append({"row": out_row, "col": col, "text": s["text"], "kind": kind,
                               "bold": s["bold"], "italic": s["italic"],
+                              "underline": _underlined(s, rules),
                               "size": sheet_size(s["size"], body),
-                              "align": "center" if title and centred_on_page else None})
+                              "align": "center" if centred else None,
+                              "_bottom": _bottom([s])})
         # one cell per column: a later segment in an occupied column joins it
         merged = {}
         for c in row_cells:
@@ -288,6 +396,18 @@ def page_cells(page):
         cells.extend(row_cells)
         prev_top, prev_bottom, prev_cells = top, _bottom(segs), row_cells
         out_row += 1
+    # rule 14: a thick rule under a row gives that row a thick bottom border
+    # (the row directly above the rule: the lowest row whose bottom is above it)
+    for y in thick:
+        above = [c for c in cells if c["_bottom"] <= y + 1.0]
+        if not above:
+            continue
+        r = max(c["row"] for c in above)
+        for c in cells:
+            if c["row"] == r:
+                c["border_bottom"] = "thick"
+    for c in cells:
+        c.pop("_bottom", None)
     # header rows (rule 6): label-free text cells, two or more, no figure,
     # directly above a row whose figures sit in the same columns
     by_row = {}
@@ -302,20 +422,70 @@ def page_cells(page):
                     c["kind"], c["bold"], c["align"] = "header", True, "center"
     for c in cells:
         if c["kind"] in ("value", "text"):
-            c["value"], c["number_format"] = typed(c["text"])
+            c["value"], c["number_format"] = typed(c["text"], order)
         else:
             c["value"], c["number_format"] = c["text"], None
+    for _t, segs in rows:
+        seen.add(_row_key(segs))
     return cells, None
+
+
+def _document_order(pdf):
+    """The document's day/month order from its own unambiguous dates."""
+    import dates as D
+    texts = []
+    for page in pdf.pages:
+        try:
+            texts += [w["text"] for w in page.extract_words()
+                      if re.match(r"^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$", w["text"])]
+        except Exception:
+            continue
+    return D.document_order(texts)[0]
 
 
 def layout(pdf_path) -> dict:
     import pdfplumber
     pages, skipped = [], []
+    seen = set()
     with pdfplumber.open(str(pdf_path)) as pdf:
+        order = _document_order(pdf)
         for n, page in enumerate(pdf.pages, 1):
-            cells, why = page_cells(page)
+            cells, why = page_cells(page, seen, order)
             if why:
                 skipped.append(f"page {n}: {why}")
             if cells:
                 pages.append(cells)
     return {"pages": pages, "skipped": skipped, "text_layer": bool(pages)}
+
+
+def audit(pdf_path):
+    """Rule 17 self-check: every figure of a segment the layout KEPT (not
+    prose, not a paragraph's tail, not a page number, not a heading written
+    on an earlier page) reaches a cell of its page. {"lost": [(page, token)],
+    "pages": n, "dropped": {status: n}} or None when no page has a text
+    layer. Uses page_cells' own record, so it can never disagree with the
+    layout about what was meant to be copied."""
+    import pdfplumber
+    lost, dropped, laid = [], {}, 0
+    seen = set()
+    with pdfplumber.open(str(pdf_path)) as pdf:
+        order = _document_order(pdf)
+        for n, page in enumerate(pdf.pages, 1):
+            trace = []
+            cells, _why = page_cells(page, seen, order, trace)
+            if not cells:
+                continue
+            laid += 1
+            flat = " ".join(c["text"] for c in cells).replace(" ", "")
+            for status, text in trace:
+                if status != "kept":
+                    dropped[status] = dropped.get(status, 0) + 1
+                    continue
+                for tok in text.split():
+                    tok = tok.strip(".,;:")
+                    if re.search(r"\d", tok) and len(re.sub(r"\D", "", tok)) >= 2 \
+                            and tok.replace(" ", "") not in flat:
+                        lost.append((n, tok))
+    if not laid:
+        return None
+    return {"lost": lost, "pages": laid, "dropped": dropped}

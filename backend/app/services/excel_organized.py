@@ -14,7 +14,7 @@ import app.services.paths  # noqa: F401  (engine on sys.path)
 def write_layout(ws, lay, filename=None, start_row=1):
     """Writes every page of `lay` from `start_row` (1-based); one blank row
     between pages. Returns the next free row."""
-    from openpyxl.styles import Alignment, Font
+    from openpyxl.styles import Alignment, Border, Font, Side
     r0 = start_row
     max_col = 0
     for cells in lay.get("pages") or []:
@@ -22,7 +22,10 @@ def write_layout(ws, lay, filename=None, start_row=1):
         for c in cells:
             cell = ws.cell(row=r0 + c["row"], column=c["col"] + 1, value=c["value"])
             cell.font = Font(bold=bool(c.get("bold")), italic=bool(c.get("italic")),
+                             underline="single" if c.get("underline") else None,
                              size=c.get("size") or 11)
+            if c.get("border_bottom") == "thick":
+                cell.border = Border(bottom=Side(style="thick"))
             if c.get("number_format"):
                 cell.number_format = c["number_format"]
             if c.get("align"):
