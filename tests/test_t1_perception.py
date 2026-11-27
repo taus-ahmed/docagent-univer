@@ -229,3 +229,10 @@ class TestGroundingBatch4:
         assert S.verify_span("-26.08", line, 1, [line])[0]
         assert S.verify_span("26.08", line, 1, [line])[0]          # unchanged
         assert not S.verify_span("-0.50", line, 1, [line])[0]
+
+
+class TestDoubleStruck:
+    def test_text_drawn_twice_in_place_is_one_word(self, tmp_path):
+        items = [(60, 700, "99812"), (60, 700, "99812"), (160, 700, "Total")]
+        doc = P.read_document(t1_pdf.make(tmp_path / "d.pdf", [items]))
+        assert [ln["text"] for ln in doc["pages"][0]["lines"]] == ["99812 Total"]

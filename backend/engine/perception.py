@@ -186,6 +186,12 @@ def page_words(page, page_no: int) -> list:
     different sizes never merge into one word, I10); text at a NON-
     orthogonal angle is grouped by run, since horizontal grouping cannot
     read it."""
+    # text drawn twice at one position (a simulated bold) is ONE word, not
+    # "99999 99999"
+    try:
+        page = page.dedupe_chars(tolerance=1)
+    except Exception:
+        pass
     chars = list(getattr(page, "chars", None) or [])
     diag = _rotated_runs(chars)
     diag_ids = {id(c) for r in diag for c in r}
