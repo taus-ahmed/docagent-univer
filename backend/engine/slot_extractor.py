@@ -1200,6 +1200,14 @@ def verify_span(value, source, page, page_texts, record=""):
         nc = " ".join(_words_nc(value))
         if nc and len(nc.split()) >= 3 and nc in " ".join(_words_nc(span)):
             return True, ""
+        # Run T, 1: SPACING is not content. A text layer glues two printed
+        # words ("ACHDEBIT") and the model writes them apart ("ACH DEBIT"),
+        # or the other way round; the characters, in order, are the same
+        # run. Matched with every space removed on both sides, at token
+        # boundaries, for 4+ characters so a fragment cannot hit by chance.
+        bare = val.replace(" ", "")
+        if len(bare) >= 4 and _spaced_match(bare, span):
+            return True, ""
     return False, "value not found inside its own source span"
 
 
@@ -3228,12 +3236,26 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         ungrounded += 1
                         unverified_cols.append(h)
                     if lvl not in CONFIDENT_LEVELS:
-                        row_conf = LOW
-                        _add(row_why, GROUNDING_FAILED if not ok
-                             else CONTENT_CHECK_FAILED)
+                        # Run T, 1: a cell that did not ground is Low ON ITS
+                        # OWN (`_ungrounded` names it; the review and the
+                        # export read it per cell). It used to make the whole
+                        # row Low, so a description written "ACH DEBIT" over
+                        # a printed "ACHDEBIT" marked the row's right date,
+                        # amount and balance Low too. A content-check failure
+                        # still marks the row, and so does a row none of
+                        # whose values grounded (below).
+                        if ok:
+                            row_conf = LOW
+                            _add(row_why, CONTENT_CHECK_FAILED)
                         flagged.append(_flag(
                             f'{t["name"]}[{len(rows_out)}].{h}', v,
                             reason or why))
+                filled_cols = [h for h in headers if str(row.get(h, "")).strip()]
+                if filled_cols and set(filled_cols) <= set(unverified_cols):
+                    # nothing in this row is on the page as quoted: the row
+                    # itself is in doubt, not one of its cells
+                    row_conf = LOW
+                    _add(row_why, GROUNDING_FAILED)
                 if bands and t.get("orientation") != "columns":
                     line = (all_lines[line_no] if line_no is not None
                             else find_line(all_lines, source))
