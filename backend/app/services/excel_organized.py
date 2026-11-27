@@ -155,6 +155,14 @@ def structure_result(sources):
             except Exception as e:
                 missed.append((name, UNREADABLE, f"could not be read ({type(e).__name__})"))
                 continue
+        if path is not None and any(p.get("needs_ocr") for p in perc.get("pages") or []):
+            # pages a scan holds, not read by OCR when the job ran: read them
+            # now from the stored file (local Tesseract, no model call)
+            try:
+                import perception as P
+                P.ocr_pages(perc, path)
+            except Exception as e:                # the page is then skipped, with why
+                print(f"[ORGANIZED] OCR not run ({type(e).__name__})", flush=True)
         try:
             lay = S.layout_document(perc, plans=S.stored_plans(perc))
         except Exception as e:                    # one document, never the file

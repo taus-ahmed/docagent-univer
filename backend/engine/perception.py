@@ -332,7 +332,7 @@ def _mark_markup(chars, words) -> None:
 
 # ── 2c lines by baseline ─────────────────────────────────────────────────────
 
-def lines_of(words) -> list:
+def lines_of(words, tol_ratio: float = 1 / 3) -> list:
     """Words grouped into printed lines by BASELINE, with a tolerance of a
     third of the body size, upright text only, left to right. A line made
     only of words much smaller than the line just below it, sitting within
@@ -344,7 +344,7 @@ def lines_of(words) -> list:
     other = [w for w in words if not _upright(w.get("rotation", 0))]
     sizes = [w["size"] for w in up if w.get("size")]
     body = statistics.median(sizes) if sizes else 10.0
-    tol = max(1.0, body / 3)
+    tol = max(1.0, body * tol_ratio)
     up.sort(key=lambda w: (w["baseline"], w["x0"]))
     lines, cur = [], []
     for w in up:
@@ -626,10 +626,16 @@ def widget_words(path, page_no: int, height: float = 0.0) -> list:
 
 # ── the document ─────────────────────────────────────────────────────────────
 
-def read_document(path, pages: Optional[list] = None) -> dict:
+def read_document(path, pages: Optional[list] = None, ocr: bool = False) -> dict:
     """The perception of a PDF: per page its words, lines, quality and the
     words removed as background (with reasons). `pages` are 1-based file
-    page numbers to read (default all)."""
+    page numbers to read (default all).
+
+    A page whose text layer cannot be trusted (`quality.source == "ocr"`: no
+    text, or garbled) is read by OCR when `ocr` is true - its words come back
+    in the SAME format, origin `ocr`, with a per-page `ocr` record (reader,
+    version, pin, trust) - and is marked `needs_ocr` when it is not, so a
+    later reader can OCR it from the file (`ocr_pages`)."""
     import pdfplumber
     doc = {"version": PERCEPTION_VERSION, "pages": []}
     with pdfplumber.open(str(path)) as pdf:
@@ -650,10 +656,16 @@ def read_document(path, pages: Optional[list] = None) -> dict:
                     if w["origin"] == "text":
                         w["bold"] = w["italic"] = False
                         w["style_unknown"] = True
-            doc["pages"].append({"page": n, "width": float(pg.width),
-                                 "height": float(pg.height), "words": words,
-                                 "quality": q, "removed": [],
-                                 "rules": _rules(pg), "edges": _edges(pg)})
+            entry = {"page": n, "width": float(pg.width),
+                     "height": float(pg.height), "words": words,
+                     "quality": q, "removed": [],
+                     "rules": _rules(pg), "edges": _edges(pg)}
+            if q["source"] == "ocr" and not any(w["origin"] == "widget" for w in words):
+                if ocr:
+                    _read_by_ocr(entry, path)
+                else:
+                    entry["needs_ocr"] = True
+            doc["pages"].append(entry)
     for p in doc["pages"]:
         p["side_split"] = side_zone(p["words"], p["width"])
         p["lines"] = _lines_for(p["words"], p["page"], p["side_split"])
@@ -672,14 +684,99 @@ def read_document(path, pages: Optional[list] = None) -> dict:
     return doc
 
 
+def ocr_words(path, page_no: int, width: float, height: float):
+    """(words, record) for one page read by OCR (`ocr_source`): Tesseract's
+    word boxes, rendered at the reader's own dpi, converted to page POINTS,
+    top-left origin - the text layer's own coordinates - so the page goes
+    through the same lines, plan, placement and verification. Raises when
+    the page cannot be rendered or read; the caller records why."""
+    import ocr_source as O
+    image = O.render_pdf_page(path, page_no)
+    if image is None:
+        raise RuntimeError("the page could not be rendered")
+    src = O.OcrPageSource(image, page_number=page_no)
+    raw = src.words()
+    # the reading is in the STRAIGHTENED image's pixels; the page box is the
+    # same paper, so points per pixel = page size / image size on each axis
+    img = getattr(src, "_image", None) or image
+    img_w, img_h = img.size
+    sx, sy = width / float(img_w), height / float(img_h)
+    words, confs = [], []
+    for k, w in enumerate(raw):
+        text = normalise(w["text"]).strip()
+        if not text:
+            continue
+        x0, x1 = w["x0"] * sx, w["x1"] * sx
+        top, bottom = w["top"] * sy, w["bottom"] * sy
+        h = max(1.0, bottom - top)
+        conf = float(w.get("conf", -1))
+        # an OCR box ends at the baseline, or below it by the descender when
+        # the word has a descending glyph (g j p q y , ;): about a fifth of
+        # such a box. A fixed fraction of every box put `Item` and `40.50`
+        # on two lines and split a table into a "side panel".
+        desc = 0.22 * h if any(ch in "gjpqy,;" for ch in text) else 0.0
+        words.append({"text": text, "x0": round(x0, 2), "x1": round(x1, 2),
+                      "top": round(top, 2), "bottom": round(bottom, 2),
+                      "baseline": round(bottom - desc, 2),
+                      "size": round(h - desc, 2),
+                      "font": "", "bold": False, "italic": False, "color": None,
+                      "rotation": 0.0, "page": page_no, "origin": "ocr",
+                      "style_unknown": True, "conf": round(conf, 1)})
+        if conf >= 0:
+            confs.append((conf, len(text)))
+    chars = sum(n for _c, n in confs)
+    trust = round(sum(c * n for c, n in confs) / chars / 100.0, 3) if chars else 0.0
+    rec = dict(O.reader_identity(), **O.pin_status(),
+               trust=trust, words=len(words),
+               low_confidence_words=sum(1 for c, _n in confs if c < 60),
+               applied=dict(getattr(src, "applied", {}) or {}))
+    return words, rec
+
+
+def _read_by_ocr(entry, path) -> None:
+    n = entry["page"]
+    try:
+        words, rec = ocr_words(path, n, entry["width"], entry["height"])
+    except Exception as e:                          # recorded, never fatal
+        entry["needs_ocr"] = True
+        entry["ocr"] = {"error": f"{type(e).__name__}: {e}"[:200]}
+        return
+    for i, w in enumerate(words):
+        w["id"] = f"p{n}o{i}"
+    entry["words"] = [w for w in entry["words"] if w["origin"] != "text"] + words
+    entry["ocr"] = rec
+    entry.pop("needs_ocr", None)
+
+
+def ocr_pages(doc, path) -> int:
+    """OCR, from the file, every page of a stored perception still marked
+    `needs_ocr` (its lines rebuilt); returns how many pages were read."""
+    done = 0
+    for p in doc.get("pages") or []:
+        if not p.get("needs_ocr"):
+            continue
+        _read_by_ocr(p, path)
+        if p.get("needs_ocr"):
+            continue
+        p["side_split"] = side_zone(p["words"], p["width"])
+        p["lines"] = _lines_for(p["words"], p["page"], p["side_split"])
+        p.pop("_by_id", None)
+        done += 1
+    return done
+
+
 def _lines_for(words, page_no, split=None):
     """Lines, formed separately on each side of a side-panel alley so a
     side note never joins the table row it happens to share a baseline
     with."""
+    # OCR boxes jitter by a few points around one printed line (Tesseract
+    # boxes the glyphs it saw, not the font's line): half the body size
+    ocr = sum(1 for w in words if w.get("origin") == "ocr") > len(words) / 2
+    r = 0.5 if ocr else 1 / 3
     if split is None:
-        groups = lines_of(words)
+        groups = lines_of(words, r)
     else:
-        groups = lines_of([w for w in words if w["x1"] <= split]) +             lines_of([w for w in words if w["x1"] > split])
+        groups = lines_of([w for w in words if w["x1"] <= split], r) +             lines_of([w for w in words if w["x1"] > split], r)
         groups.sort(key=lambda ws: (min(w["top"] for w in ws), min(w["x0"] for w in ws)))
     return [line_record(ws, f"p{page_no}l{i}", page_no) for i, ws in enumerate(groups)]
 

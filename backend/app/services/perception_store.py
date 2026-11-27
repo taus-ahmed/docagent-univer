@@ -21,7 +21,9 @@ def read(path, cache: dict):
     if key.lower().endswith(".pdf"):
         try:
             import perception as P
-            doc = P.read_document(path)
+            from app.config import settings
+            doc = P.read_document(path, ocr=bool(getattr(settings,
+                                                         "STRUCTURE_OCR_AT_EXTRACTION", False)))
         except Exception as e:
             print(f"[PERCEPTION] {doc_ref(key)}: not stored ({exc_brief(e)})", flush=True)
     cache[key] = doc

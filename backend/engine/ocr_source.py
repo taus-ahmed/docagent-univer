@@ -124,6 +124,33 @@ def available():
         return False, f"{type(exc).__name__}: {exc}"
 
 
+#: The Tesseract release the Docker image and the pinned CI job install
+#: (Debian bookworm `tesseract-ocr=5.3.0-2`, eng/osd data `1:4.1.0-2`;
+#: Dockerfile.backend, .github/workflows/ci.yml job `ocr-pinned`). OCR read
+#: by any other release may differ word for word: every OCR'd page and the
+#: job log say whether the reader matched the pin.
+TESSERACT_PIN = "5.3.0"
+
+
+def pin_status() -> dict:
+    """{"pinned", "matches_pin"}: whether the Tesseract this process calls
+    is the pinned release (None when it cannot be asked)."""
+    ok, version = available()
+    if not ok:
+        return {"pinned": TESSERACT_PIN, "matches_pin": None}
+    return {"pinned": TESSERACT_PIN, "matches_pin": str(version) == TESSERACT_PIN}
+
+
+def log_line() -> str:
+    """One job-log line naming the OCR reader and whether it is the pinned
+    release - so Railway, CI and a laptop can be told apart."""
+    ident, pin = reader_identity(), pin_status()
+    state = {True: "matches the pin", False: "DIFFERS from the pin - OCR words may differ "
+             "from production", None: "not callable"}[pin["matches_pin"]]
+    return (f"[OCR] reader {ident['reader']} {ident['reader_version']} "
+            f"(pinned {pin['pinned']}): {state}")
+
+
 _IDENTITY = {}
 
 

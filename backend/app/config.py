@@ -122,6 +122,11 @@ class Settings(BaseSettings):
     # export never calls the model either way.
     NO_TEMPLATE_USES_STRUCTURE: bool = False
     STRUCTURE_PLANS_AT_EXTRACTION: bool = False
+    # Run T2, Stage 4: the job OCRs pages whose text layer cannot be trusted
+    # while it stores the document's words (Tesseract, the pinned release),
+    # so the structure layout of a scan needs no file later. Off = such a
+    # page is OCR'd when the Organized export is made, from the stored file.
+    STRUCTURE_OCR_AT_EXTRACTION: bool = False
     PAGE_CALL_MIN_PAGES: int = 6
     PAGE_CALL_CONCURRENCY: int = 3
     # Pages rendered as images for the model (200 DPI, then at most 2048 px on

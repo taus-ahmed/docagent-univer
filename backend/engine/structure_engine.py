@@ -51,6 +51,9 @@ EXCEL_CELL_MAX = 32767
 
 REASON_NO_PERCEPTION = "no_perception"
 REASON_NO_TEXT = "no_text_layer"
+#: an OCR'd page whose character-weighted confidence is under this is flagged
+#: for a person to check (never marked Low: the structure layer judges layout)
+OCR_TRUST_REVIEW = 0.80
 REASON_PLAN_INVALID = "plan_invalid_fallback_used"
 REASON_NO_PLAN = "no_stored_plan_fallback_used"
 
@@ -1015,14 +1018,26 @@ def layout_document(perc, plans=None, order=None) -> dict:
     prev_fb = None
     prev_tables = []
     for page in perc["pages"]:
-        if not page.get("lines"):
+        if not page.get("lines") and not page.get("needs_ocr"):
             out["skipped"].append(f"page {page['page']}: {REASON_NO_TEXT}")
             continue
-        if (page.get("quality") or {}).get("source") == "ocr" and \
-                not any(w.get("origin") == "widget" for w in page["words"]):
+        if page.get("needs_ocr"):
+            why = (page.get("ocr") or {}).get("error")
             out["skipped"].append(f"page {page['page']}: {REASON_NO_TEXT} (the text layer "
-                                  f"is unreadable; OCR is not connected to this layout)")
+                                  f"is unreadable and the page was not read by OCR"
+                                  + (f": {why}" if why else "") + ")")
             continue
+        if page.get("ocr"):
+            rec = page["ocr"]
+            out.setdefault("ocr", {})[page["page"]] = rec
+            if rec.get("trust", 1.0) < OCR_TRUST_REVIEW:
+                out["flags"].append(f"page {page['page']}: read by OCR with trust "
+                                    f"{rec['trust']:.2f} ({rec.get('low_confidence_words', 0)} "
+                                    f"word(s) under 60% confidence) - check every value")
+            if rec.get("matches_pin") is False:
+                out["flags"].append(f"page {page['page']}: OCR by {rec.get('reader')} "
+                                    f"{rec.get('reader_version')}, not the pinned "
+                                    f"{rec.get('pinned')} - words may differ from production")
         fb = G.fallback_plan(page, prev_fb)
         stored = (plans or {}).get(page["page"]) or (plans or {}).get(str(page["page"]))
         plan, source = fb, "fallback"

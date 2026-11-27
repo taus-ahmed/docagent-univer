@@ -958,6 +958,14 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         # Pinned by tests/http/test_batch_end_to_end.py and by the pyflakes
         # gate in tests/test_no_undefined_names.py.
         storage = get_storage()
+        # Run T2, Stage 4: which OCR reader this process calls, and whether it
+        # is the pinned release (Railway, CI and a laptop must agree word for
+        # word). Never fatal: a probe that cannot run says so.
+        try:
+            import ocr_source as _ocr
+            print(f"[THREAD] job {job_id} {_ocr.log_line()}", flush=True)
+        except Exception as e:                    # noqa: BLE001
+            print(f"[THREAD] job {job_id} [OCR] reader not probed ({exc_brief(e)})", flush=True)
 
         successful = failed = needs_review = 0
         total_tokens_used = 0
