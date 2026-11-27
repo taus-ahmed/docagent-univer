@@ -703,6 +703,13 @@ def export_job_excel(
     ws = wb.active
     ws.title = "Results"
 
+    if not sheet_data and getattr(settings, "NO_TEMPLATE_USES_STRUCTURE", False):
+        # Run T1: the owner's switch - a no-template job's default download
+        # is the structure layout; a job nothing can be laid out for falls
+        # through to the ordinary sheet below
+        resp = _organized_export(job, doc_results, storage, current_user, quiet=True)
+        if resp is not None:
+            return resp
     if sheet_data:
         _write_excel(ws, doc_results, sheet_data, template_regions, openpyxl,
                      provenance=provenance, audit=include_audit,
@@ -730,7 +737,7 @@ def export_job_excel(
     })
 
 
-def _organized_export(job, doc_results, storage, current_user):
+def _organized_export(job, doc_results, storage, current_user, quiet=False):
     """Run R, Part 2 (v1): each document's pages laid out as printed
     (docs/ORGANIZED_LAYOUT_SPEC.md). Read from the stored source files; a
     document whose file is gone or has no text layer is listed, not lost.
@@ -740,21 +747,28 @@ def _organized_export(job, doc_results, storage, current_user):
     templated job on staging (job 141). When NOT ONE document can be laid
     out there is no workbook worth downloading, and the answer is a 422
     naming why, per document, as a code the UI turns into words."""
-    from app.services.excel_organized import SOURCE_MISSING, organized_result
+    # Run T1, 3h: laid out by the STRUCTURE engine from each record's
+    # stored page words (the uploaded file only for records stored before
+    # them). The engine never calls the model here.
+    from app.services.excel_organized import SOURCE_MISSING, structure_result
     from app.services.excel_cells import _add_review_legend
     demo = is_demo_user(current_user)
     paths, sources = [], []
     try:
         for i, d in enumerate(doc_results, 1):
             name = f"document {i}.pdf" if demo else (d.original_filename or d.filename or f"document {i}")
-            path = storage.get_local_path(d.s3_key) if d.s3_key else None
+            path = None
+            if not getattr(d, "perception_json", None) and d.s3_key:
+                path = storage.get_local_path(d.s3_key)
             if path is not None:
                 paths.append(path)
-            sources.append((name, path))
-        wb, laid_out, missed = organized_result(sources)
+            sources.append((name, d, path))
+        wb, laid_out, missed = structure_result(sources)
     finally:
         for p in paths:
             storage.release(p)
+    if laid_out == 0 and quiet:
+        return None                       # the caller writes its own sheet
     if laid_out == 0:
         codes = {code for _n, code, _w in missed}
         code = codes.pop() if len(codes) == 1 else ("source_missing" if SOURCE_MISSING in codes

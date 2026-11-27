@@ -54,7 +54,9 @@ def test_organized_export_lays_out_the_page(client, db, users, auth, tmp_path):
     assert "organized" in r.headers["content-disposition"]
     ws = wb["stub"]
     vals = [c.value for row in ws.iter_rows() for c in row if c.value is not None]
-    assert "Employer Name" in vals and "ACME Corp" in vals and 5731.0 in vals
+    # Run T1 owner decision: a label is copied exactly as printed, INCLUDING
+    # its colon (was "Employer Name" while Organized stripped it)
+    assert "Employer Name:" in vals and "ACME Corp" in vals and 5731.0 in vals
 
 
 ROOT = __import__("pathlib").Path(__file__).resolve().parents[2]

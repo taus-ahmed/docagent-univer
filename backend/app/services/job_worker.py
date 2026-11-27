@@ -58,7 +58,7 @@ def doc_cost_of(extracted, result, doc_tokens) -> dict:
     (`llm_contract.cost_breakdown`). `basis` says how it was computed."""
     import llm_contract as C
     diag = (extracted or {}).get("diagnostics") or {}
-    attempts = list(diag.get("attempts") or []) + list(diag.get("option_attempts") or [])
+    attempts = list(diag.get("attempts") or []) + list(diag.get("option_attempts") or [])         + list(diag.get("structure_attempts") or [])
     if not attempts and result is not None and getattr(result, "extraction_response", None):
         attempts = list(getattr(result.extraction_response, "attempts", None) or [])
     if attempts:
@@ -1230,7 +1230,9 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         # Run T1, 2f: the page as words, stored with the record
                         from app.services import perception_store
                         doc.perception_json = perception_store.packed_for(
-                            file_path, extracted, _perception_cache)
+                            file_path, extracted, _perception_cache, orchestrator)
+                        if (extracted.get("diagnostics") or {}).get("structure_attempts"):
+                            doc.extraction_json = json.dumps(extracted, default=str)
                         doc_tokens = (result.extraction_response.tokens_used
                                       if result.extraction_response else 0) or 0
                         if _opt_attempts:

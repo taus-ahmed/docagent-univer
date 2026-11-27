@@ -113,6 +113,15 @@ class Settings(BaseSettings):
     # PAGE at a time (only pages that print the table's headings or continue
     # it), at most PAGE_CALL_CONCURRENCY calls at once; a failed page is
     # retried alone. 0 turns page-at-a-time calls off.
+    # Run T1, Stage 3 (engine/structure_engine.py). NO_TEMPLATE_USES_STRUCTURE:
+    # a no-template job's DEFAULT download is the structure layout (compact
+    # per-region grids) instead of the inferred-template sheet; off until the
+    # owner approves. STRUCTURE_PLANS_AT_EXTRACTION: the job asks the model
+    # for a layout PLAN per page (one call per page, cost) and stores it with
+    # the document's words; off = the deterministic plan from geometry. The
+    # export never calls the model either way.
+    NO_TEMPLATE_USES_STRUCTURE: bool = False
+    STRUCTURE_PLANS_AT_EXTRACTION: bool = False
     PAGE_CALL_MIN_PAGES: int = 6
     PAGE_CALL_CONCURRENCY: int = 3
     # Pages rendered as images for the model (200 DPI, then at most 2048 px on
