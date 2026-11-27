@@ -20,11 +20,11 @@ No live model call. Resume from the first unchecked item.
 
 ## Stage 3 — form values
 - [x] AcroForm widgets (name, rect, value) to the label of the box holding them; split labels merged; several forms = several regions; `$` with its value
-- [ ] stage 3 full suite (gate at 0719954, running) + commit (0719954)
+- [x] stage 3 full suite (gate at 0719954: 5945 passed, 0 failed, 19 xfailed) + commit (0719954)
 
 ## Stage 4 — OCR
 - [x] Tesseract pinned (Docker, CI), version in job log; OCR words in perception format with per-page trust; same plan/placement/verify path; 3 scanned samples
-- [ ] stage 4 full suite (gate at 17e8c1f, running) + commit (17e8c1f)
+- [x] stage 4 full suite (gate at 17e8c1f: 5954 passed, 0 failed, 1 skipped (the pin check, CI-only), 19 xfailed) + commit (17e8c1f)
 
 ## Stage 5 — stacked headers, wrapped tables, charts
 - [x] stacked headers; repeated column groups one table; side-by-side blocks; instruction/bullet text excluded with reason; charts excluded
@@ -39,7 +39,7 @@ No live model call. Resume from the first unchecked item.
 - [ ] stage 7 full suite + commit (29f9a31)
 
 ## Stage 8 — report
-- [ ] docs/RUN_T2_REPORT.md
+- [x] docs/RUN_T2_REPORT.md (written; gates 5-7 and 5b filled in when they finish)
 
 ## Split (Stage 1)
 
@@ -182,6 +182,18 @@ the held-out half is never worked on:
   (ledger), refusing a call before sending when its worst case would pass the cap; per-call
   JSONL log. Sets: vendor (mobile_vendor_list_8pg), expense (harness no-template re-record
   of EXP-2024-0081), compare (20 documents: old Organized vs new engine vs Regular).
+- b6ab13f Stage 5b, found while writing the report: carson's (held-out) CHECKS table
+  continued onto page 3 failed (merged columns, footnote and summary glued). Reproduced on
+  an INVENTED continued repeated-group page and fixed there (a row-like line laid across
+  two heading columns, and a footnote followed by no row, end the table; stacked heading
+  spans merge; section lines placed segment-whole). Motivated by a held-out failure, so
+  carson no longer independently measures this class - stated in the report.
+  Held-out key fix: carson `ACHDEBIT` -> `ACH DEBIT` (printed with a 2.3 pt gap; the key
+  had copied pdfplumber's glued word). Re-scored: carson old 94.3/94.3, new (pre-5b)
+  95.4/93.9, new (5b) 97.5/96.1.
+- Final (b6ab13f, local_docs/corpus_metrics/t2_check_final.*): dev old 72.8% / 96.4% /
+  5 glued / 41 missing, new 99.7% / 99.7% / 1 / 3; held-out old 83.5% / 83.5% / 5 / 78,
+  new 86.8% / 85.8% / 4 / 42.
 - Baseline at f434f0e (first key version): dev old 69.3% header / 94.8% row / 7 glued;
   dev new 73.9% / 84.0% / 35 glued; held-out old 86.4% / 86.4% / 5; held-out new
   83.5% / 85.9% / 2.
