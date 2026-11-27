@@ -24,7 +24,10 @@ KEY FORMAT (UTF-8, one item per line, `|` between cells)
                                                 reprinted on every page is written once)
     row: 08/02/2026 | UTILITY ELECTRIC | 124.82   one row; an empty field is no item;
                                                 the FIRST non-empty field is the row label
-    section: Taxes                              a group line inside a table: its own cell
+    section: Taxes                              a section line inside a table: its own cell
+    group: 300055                               a group identifier or name: its own cell, and
+                                                it MAY repeat on every row of its group (in
+                                                the same sheet column) without counting extra
     exclude: Lorem ipsum                        must appear in no cell
 
 Text is compared with whitespace collapsed and case folded; a trailing `:`
@@ -99,7 +102,7 @@ def parse_key(text: str) -> dict:
             continue
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        m = re.match(r"(text|kv|table|continued|row|section|exclude):\s?(.*)$", line)
+        m = re.match(r"(text|kv|table|continued|row|section|group|exclude):\s?(.*)$", line)
         if not m or page is None:
             raise ValueError(f"bad key line: {line!r}")
         kind, body = m.group(1), m.group(2)
@@ -115,6 +118,8 @@ def parse_key(text: str) -> dict:
             add(text=fields[0], kind="text")
         elif kind == "section":
             add(text=fields[0], kind="section")
+        elif kind == "group":
+            add(text=fields[0], kind="group")
         elif kind == "exclude":
             add(text=fields[0], kind="exclude")
         elif kind == "kv":
@@ -212,8 +217,19 @@ def _headers_above(blocks, header_pos) -> dict:
     carried, out = {}, {}
     for bi, cs in enumerate(blocks):
         stack_row = {}
+        head_rows = {}
+        for c in cs:
+            if _is_header(c) or (bi, c["row"], c["col"]) in header_pos:
+                head_rows.setdefault(c["row"], set()).add(c["col"])
         for c in sorted(cs, key=lambda c: (c["row"], c["col"])):
             pos = (bi, c["row"], c["col"])
+            r = c["row"]
+            if r in head_rows and r - 1 not in head_rows and c["col"] == min(head_rows[r]):
+                # a new header row: a column it leaves blank has NO header
+                # below it (never one carried from an earlier table)
+                for col in list(carried):
+                    if col not in head_rows[r]:
+                        carried[col] = (bi, "", "")
             if _is_header(c) or pos in header_pos:
                 prev = carried.get(c["col"])
                 if prev and stack_row.get(c["col"]) == c["row"] - 1 and prev[0] == bi:
@@ -438,6 +454,11 @@ def score(lay, key) -> dict:
                           "status": "excluded text placed", "cell": _a1(pos),
                           "cell_text": _ctext(c)[:120], "header_found": ""})
             continue
+        if pos not in used and any(
+                it["kind"] == "group" and norm(it["text"]) == t and it["page"] == bp.get(bi)
+                and matched.get(it["n"]) and matched[it["n"]][0] == bi
+                and matched[it["n"]][2] == c["col"] for it in items):
+            continue                       # a group label repeated on its rows
         if pos not in used:
             m["extra"] += 1
             fails.append({"page": bp.get(bi), "item": None, "kind": "extra",
