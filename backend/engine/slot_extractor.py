@@ -1704,6 +1704,71 @@ _TOTAL_LABEL = re.compile(r"^\s*(?:grand\s+|sub[- ]?)?totals?\b[\s:]*(?:amount|d
                           re.I)
 
 
+_ROW_DATE = re.compile(r"^\s*\d{1,2}[/.\-]\d{1,2}([/.\-]\d{2,4})?\s*$|^\s*\d{4}-\d{2}-\d{2}\s*$"
+                       r"|^\s*[A-Za-z]{3,9}\.?\s+\d{1,2}(,?\s+\d{4})?\s*$")
+
+
+def _has_date_or_amount(row, keys) -> bool:
+    """Does a row carry a date or an amount of money? A bare integer is
+    neither ("NBR 131" is a reference)."""
+    for k in keys:
+        v = str(row.get(k, "") or "").strip()
+        if not v:
+            continue
+        if _ROW_DATE.match(v):
+            return True
+        if _number_key(v) is not None and (re.search(r"[.,]\d{1,2}\)?-?\s*$", v)
+                                           or re.search(r"[$£€¥₹]", v)):
+            return True
+    return False
+
+
+def attach_tail_rows(rows, keys, line_of_row, all_lines=None):
+    """(rows, attached) - Run T, 2. A row with no date and no amount, read
+    from the line DIRECTLY BELOW the previous row's line, is that row's
+    continuation ("NBR 131" printed under a transaction), never a row of its
+    own: its values are appended to the row above, column by column. Only in
+    a table whose rows carry dates or amounts (at least 60% of them), and only
+    with geometry (both lines known), so nothing is merged on a guess. The
+    line must START RIGHT OF the row's first word: a section heading or a
+    row whose amount is unreadable ("Social Security TBD") starts at the
+    table's left margin like every other row, and stays a row.
+    `attached`: [(row above, the tail row)]."""
+    def _x(ln_no, edge):
+        try:
+            ln = all_lines[ln_no]
+            return float(ln[0][edge]) if ln else None
+        except (TypeError, IndexError, KeyError, ValueError):
+            return None
+    if len(rows) < 2:
+        return rows, []
+    dated = sum(1 for r in rows if _has_date_or_amount(r, keys))
+    if dated < 0.6 * len(rows):
+        return rows, []
+    out, attached = [], []
+    for r in rows:
+        prev = out[-1] if out else None
+        ln, pl = line_of_row.get(id(r)), line_of_row.get(id(prev)) if prev else None
+        if prev is not None and ln is not None and pl is not None                 and not _has_date_or_amount(r, keys) and _has_date_or_amount(prev, keys)                 and 0 < ln - pl <= 1 + len(prev.get("_tails") or [])                 and _x(ln, "x0") is not None and _x(pl, "x1") is not None                 and _x(ln, "x0") > _x(pl, "x1") + 1.0:
+            for k in keys:
+                v = str(r.get(k, "") or "").strip()
+                if not v:
+                    continue
+                cur = str(prev.get(k, "") or "").strip()
+                prev[k] = f"{cur} {v}" if cur else v
+                if k in (r.get("_ungrounded") or []):
+                    prev.setdefault("_ungrounded", [])
+                    if k not in prev["_ungrounded"]:
+                        prev["_ungrounded"].append(k)
+            prev.setdefault("_tails", []).append(str(r.get("_source", "") or ""))
+            attached.append((prev, r))
+            continue
+        out.append(r)
+    for r in out:
+        r.pop("_tails", None)
+    return out, attached
+
+
 def split_total_rows(rows, keys):
     """(rows, total rows) — a row is the table's OWN TOTAL only when its
     label cell is a total word ("Total", "Subtotal", "Grand Total") AND every
@@ -2335,6 +2400,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     dropped = 0
     empty_rows = 0
     total_rows = 0
+    tail_rows = 0           # Run T, 2: continuation lines joined to their row
     off_schema_keys = 0
     merged_columns = 0
     overprinted = 0
@@ -3306,6 +3372,15 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 if line_no is not None:
                     line_of_row[id(row)] = line_no
                 rows_out.append(row)
+            rows_out, tails = attach_tail_rows(rows_out, table_headers(t), line_of_row,
+                                               all_lines)
+            for above, tail in tails:
+                shown = " | ".join(f"{k}={v}" for k, v in tail.items()
+                                   if not str(k).startswith("_") and str(v).strip())
+                notes.append(f'{t["name"]}: a line with no date and no amount '
+                             f"({shown[:60]!r}) continues the row above it; "
+                             f"joined to that row, not a row of its own")
+            tail_rows += len(tails)
             rows_out, totals = split_total_rows(rows_out, table_headers(t))
             for row in totals:
                 shown = " | ".join(f"{k}={v}" for k, v in row.items()
@@ -4082,6 +4157,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "empty_row_count": empty_rows,
             # Part 3.5 — a table's own total line, left out on arithmetic
             "total_row_count": total_rows,
+            "attached_tail_count": tail_rows,
             "off_schema_key_count": off_schema_keys,
             # One entry per band that more than one region matched:
             # {table, pages, kept_page, kept_rows, left_out}.
