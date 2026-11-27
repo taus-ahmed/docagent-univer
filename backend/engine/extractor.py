@@ -28,6 +28,22 @@ def _log(tag, msg):
     print(f"[{tag}] {msg}", flush=True)
 
 
+def _stacked_of(page_lines):
+    """Run T, 4: the page's stacked headings (text_layer.stacked_headings),
+    each pair once."""
+    if not page_lines:
+        return None
+    from text_layer import stacked_headings
+    seen, out = set(), []
+    for pl in page_lines:
+        for s_ in stacked_headings(pl or []):
+            k = (s_["top"], s_["bottom"])
+            if k not in seen:
+                seen.add(k)
+                out.append(s_)
+    return out or None
+
+
 def _norm(s) -> str:
     """Lowercase, strip non-alphanumerics — for fuzzy heading/section matching."""
     return re.sub(r'[^a-z0-9]+', '', str(s or "").lower())
@@ -276,7 +292,8 @@ def _infer_template_data(orchestrator, file_path, doc_text_pages, page_images,
                               file_path.name,
                               doc_type_hint=_hint_type("\n".join(
                                   str(t or "") for t in (doc_text_pages or []))),
-                              column_pages=column_pages or None)
+                              column_pages=column_pages or None,
+                              stacked=_stacked_of(page_lines))
     if not inferred:
         return None
     # Run R, R1: a grouped table (a vendor line above its invoice rows, a

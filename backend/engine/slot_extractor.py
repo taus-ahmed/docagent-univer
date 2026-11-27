@@ -1868,6 +1868,43 @@ def unasked_amount_columns(bands, rows, line_of_row, all_lines):
     return out
 
 
+def fix_stacked(rows, headers, stacked, line_of_row, all_lines):
+    """Run T, 4 - [(row, top heading, bottom heading)] swapped. Headings
+    printed in two lines over one column ("Tran Date" over "Post Date") are
+    two sub-fields of a record two lines tall: the top one's value is printed
+    on the record's FIRST line, the bottom one's on its SECOND. When the
+    model put each value in the other's sub-field - each found only on the
+    other's line - the two are swapped back. Geometry decides; a value printed
+    on both lines, or on neither, is left as answered."""
+    flat = {_flat(h): h for h in headers}
+    done = []
+    for s_ in stacked or ():
+        top, bot = flat.get(_flat(s_["top"])), flat.get(_flat(s_["bottom"]))
+        if not top or not bot:
+            continue
+        for r in rows:
+            ln = line_of_row.get(id(r))
+            if ln is None or ln + 1 >= len(all_lines):
+                continue
+            l1, l2 = _line_str(all_lines[ln]), _line_str(all_lines[ln + 1])
+            tv, bv = str(r.get(top, "") or "").strip(), str(r.get(bot, "") or "").strip()
+
+            def where(v):
+                if not v:
+                    return None
+                a, b = value_on_line(v, l1), value_on_line(v, l2)
+                return 1 if a and not b else 2 if b and not a else None
+            wt, wb = where(tv), where(bv)
+            # each value on the OTHER's line (or absent), and at least one seen
+            if (wt == 2 or not tv) and (wb == 1 or not bv) and (wt == 2 or wb == 1):
+                r[top], r[bot] = bv, tv
+                ung = r.get("_ungrounded") or []
+                if ung:
+                    r["_ungrounded"] = [bot if k == top else top if k == bot else k for k in ung]
+                done.append((r, top, bot))
+    return done
+
+
 def split_total_rows(rows, keys):
     """(rows, total rows) — a row is the table's OWN TOTAL only when its
     label cell is a total word ("Total", "Subtotal", "Grand Total") AND every
@@ -2501,6 +2538,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     total_rows = 0
     tail_rows = 0           # Run T, 2: continuation lines joined to their row
     unasked_columns = {}    # Run T, 5: printed amount columns the template lacks
+    stacked_swaps = 0       # Run T, 4: stacked sub-field values put back
+    stacked_pairs = None    # Run T, 4: headings printed in two lines (lazy)
     off_schema_keys = 0
     merged_columns = 0
     overprinted = 0
@@ -3165,6 +3204,9 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # placement wrong on a guessed column would demote correct values,
             # which is the failure this is meant to prevent.
             bands = column_bands(all_lines, headers) if all_lines else {}
+            if stacked_pairs is None:
+                from text_layer import stacked_headings
+                stacked_pairs = stacked_headings(all_lines) if all_lines else []
             if bands:
                 # B2 (overnight): each column's own alignment in this table's
                 # rows, so a value is judged by where its column's values sit
@@ -3474,6 +3516,13 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 rows_out.append(row)
             rows_out, tails = attach_tail_rows(rows_out, table_headers(t), line_of_row,
                                                all_lines)
+            if stacked_pairs:
+                for _r, top, bot in fix_stacked(rows_out, table_headers(t), stacked_pairs,
+                                                line_of_row, all_lines):
+                    notes.append(f'{t["name"]}: {top!r} and {bot!r} are printed stacked; '
+                                 f"a row's two values were each on the other's line and "
+                                 f"were put back under their own heading")
+                    stacked_swaps += 1
             if bands and t.get("orientation") != "columns":
                 missing_cols = unasked_amount_columns(bands, rows_out, line_of_row, all_lines)
                 if missing_cols:
@@ -4287,6 +4336,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "total_row_count": total_rows,
             "attached_tail_count": tail_rows,
             "unasked_columns": unasked_columns,
+            "stacked_swaps": stacked_swaps,
             "off_schema_key_count": off_schema_keys,
             # One entry per band that more than one region matched:
             # {table, pages, kept_page, kept_rows, left_out}.

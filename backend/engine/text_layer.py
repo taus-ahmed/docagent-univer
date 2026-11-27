@@ -1878,6 +1878,59 @@ def column_bands(lines, headers):
     return out
 
 
+def _phrases_of(line, gap=8.0):
+    out, cur = [], []
+    for w in line:
+        if cur and float(w["x0"]) - float(cur[-1]["x1"]) > gap:
+            out.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        out.append(cur)
+    return out
+
+
+def stacked_headings(lines):
+    """Run T, 4 - headings printed in TWO LINES over one column ("Tran Date"
+    over "Post Date", "Principal" over "Interest"): [{"top", "bottom", "x0",
+    "x1", "line"}]. A heading line (two or more phrases, no figure) with a
+    figure-free line directly below it whose every phrase sits under one of
+    its phrases, and a line of figures after those two. Each such pair is two
+    sub-fields, and a record of the table is two lines tall: the top
+    sub-field's value on its first line, the bottom one's on its second."""
+    out = []
+
+    def figure_free(ln):
+        return ln and not any(re.search(r"\d", str(w.get("text", ""))) for w in ln)
+    for i in range(len(lines) - 2):
+        a, b, c = lines[i], lines[i + 1], lines[i + 2]
+        if not (figure_free(a) and figure_free(b)) or line_page(a) != line_page(b):
+            continue
+        pa, pb = _phrases_of(a), _phrases_of(b)
+        if len(pa) < 2 or not pb:
+            continue
+        h = max(float(w["bottom"]) - float(w["top"]) for w in a)
+        if float(b[0]["top"]) - float(a[0]["top"]) > 1.8 * h:
+            continue
+        if not any(re.search(r"\d", str(w.get("text", ""))) for w in c):
+            continue
+        pairs = []
+        for q in pb:
+            cx = (float(q[0]["x0"]) + float(q[-1]["x1"])) / 2
+            top = next((p for p in pa if float(p[0]["x0"]) - 3 <= cx <= float(p[-1]["x1"]) + 3),
+                       None)
+            if top is None:
+                pairs = []
+                break
+            pairs.append((top, q))
+        for top, q in pairs:
+            out.append({"top": " ".join(str(w["text"]) for w in top),
+                        "bottom": " ".join(str(w["text"]) for w in q),
+                        "x0": min(float(top[0]["x0"]), float(q[0]["x0"])),
+                        "x1": max(float(top[-1]["x1"]), float(q[-1]["x1"])), "line": i})
+    return out
+
+
 class Bands(dict):
     """{header: (x0, x1)}, plus `printed`: the (x0, x1) of every word on the
     document's heading line the bands were read from; `words`, those words."""

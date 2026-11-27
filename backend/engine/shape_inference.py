@@ -182,8 +182,25 @@ def _sections_block(sections):
     return "\n".join(p)
 
 
+def _stacked_block(stacked):
+    """Run T, 4: headings the page prints in two lines over one column. Added
+    to the prompt only when the page has them, so every other document is
+    asked exactly what it was asked before."""
+    if not stacked:
+        return ""
+    p = ["", "STACKED HEADINGS DETECTED (read from the page's positions): each "
+             "pair below is printed as two lines over ONE column. They are TWO "
+             "columns of the table, named exactly as printed; a row of the "
+             "table is two lines tall, the first heading's value on its first "
+             "line and the second heading's value on its second:"]
+    for s_ in stacked:
+        p.append(f'  - "{s_["top"]}" over "{s_["bottom"]}"')
+    p.append("")
+    return "\n".join(p)
+
+
 def infer_template(orchestrator, doc_text_pages, page_images, filename="",
-                   doc_type_hint="", column_pages=None):
+                   doc_type_hint="", column_pages=None, stacked=None):
     """One LLM call. Returns the inferred template dict, or None on failure.
 
     `doc_type_hint` selects the CANONICAL VOCABULARY offered to the model
@@ -315,6 +332,7 @@ def infer_template(orchestrator, doc_text_pages, page_images, filename="",
         "value listed in two places is written into the sheet twice.\n"
         "- If the document has no repeating rows, return \"tables\": [].\n"
         + _sections_block(detect_amount_sections(doc_text_pages))
+        + _stacked_block(stacked)
         + vocabulary_block(doc_type_hint)
     )
 
