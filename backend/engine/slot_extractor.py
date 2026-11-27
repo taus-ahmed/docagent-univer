@@ -2596,6 +2596,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     total_rows = 0
     tail_rows = 0           # Run T, 2: continuation lines joined to their row
     unasked_columns = {}    # Run T, 5: printed amount columns the template lacks
+    printed_renames = {}    # Run T (owner): inferred column -> the page's heading
     stacked_swaps = 0       # Run T, 4: stacked sub-field values put back
     stacked_pairs = None    # Run T, 4: headings printed in two lines (lazy)
     off_schema_keys = 0
@@ -3697,6 +3698,18 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         flagged.append(_flag(f'{t["name"]}.{ref}', val, why))
                     notes.extend(f'{t["name"]}: {n}' for n in gnotes)
                     subtotals_out[t["name"]] = (gk, subs)
+            if (template_data or {}).get("inferred") and all_lines \
+                    and t.get("orientation") != "columns":
+                # Run T (owner): no-template headers are the page's own
+                import printed_names as PN
+                _ren, _unp = PN.column_renames(headers, bands, rows_out, line_of_row,
+                                               all_lines)
+                if _ren:
+                    printed_renames[t["name"]] = _ren
+                    notes.append(f'{t["name"]}: column(s) named as the page prints them: '
+                                 + ", ".join(f"{a!r} -> {b!r}" for a, b in _ren.items()))
+                for h in _unp:
+                    inferred_headers.setdefault(t["name"], {}).setdefault(h, PN.NO_HEADING)
             tables_out[t["name"]] = rows_out
             row_counts[t["name"]] = len(rows_out)
             if len(rows_out) + len(totals) + len(dup_totals) < len(raw):
@@ -4446,10 +4459,31 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
         ed[f"{name}_rows"] = rows
     if not_captured:
         ed["not_captured"] = not_captured
+    field_renames = {}
+    if (template_data or {}).get("inferred") and all_lines:
+        # Run T (owner): an inferred field label the page does not print is
+        # replaced by the label printed before its value, or marked inferred
+        import printed_names as PN
+        for f in slots["fields"]:
+            ref, label = f["ref"], f["row_label"]
+            if not str(extracted_fields.get(ref) or "").strip() \
+                    or PN.printed_anywhere(label, all_lines):
+                continue
+            new = PN.field_label(extracted_fields[ref],
+                                 (field_prov.get(ref) or {}).get("source"), all_lines)
+            if new and new.casefold() != str(label).casefold() and not any(
+                    g["row_label"].casefold() == new.casefold() for g in slots["fields"]):
+                field_renames[ref] = new
+                notes.append(f"{label!r} named as the page prints it: {new!r}")
+            else:
+                inferred_headers.setdefault("_fields", {}).setdefault(label, PN.NO_LABEL)
     if inferred_headers:
         # Run S, 1b: column names the engine chose (the page prints none);
         # the export marks the header cell, never the values under it
         ed["inferred_headers"] = inferred_headers
+    if printed_renames or field_renames:
+        import printed_names as PN
+        PN.apply(ed, printed_renames, field_renames)
     for name, (gk, subs) in subtotals_out.items():
         ed[f"{name}_group_key"] = gk
         ed[f"{name}_subtotals"] = subs

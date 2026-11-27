@@ -484,6 +484,9 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
         inferred_header_names = {
             str(col): str(why) for cols in (ed.get("inferred_headers") or {}).values()
             if isinstance(cols, dict) for col, why in cols.items()}
+        # Run T: a FIELD label the page does not print (the "_fields" entry)
+        inferred_label_names = {str(k) for k in
+                                ((ed.get("inferred_headers") or {}).get("_fields") or {})}
 
         filename = str(getattr(doc, "filename", "") or "")
         field_prov = ed.get("field_provenance") or {}
@@ -630,7 +633,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                     from openpyxl.styles import PatternFill
                     hcell.fill = PatternFill(fill_type="solid",
                                              fgColor=_review.EXPORT_FILLS["unverified"])
-                    note = f"COLUMN NAME INFERRED — {why}."
+                    note = (f"LABEL INFERRED — {why}." if text in inferred_label_names
+                            else f"COLUMN NAME INFERRED — {why}.")
                     w, h = provenance_note_size(note)
                     hcell.comment = Comment(note, "DocAgent", width=w, height=h)
 
