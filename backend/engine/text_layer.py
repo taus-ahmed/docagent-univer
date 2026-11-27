@@ -1923,6 +1923,13 @@ def stacked_headings(lines):
                 pairs = []
                 break
             pairs.append((top, q))
+        # a heading is short (a wrapped name or title is not one), and the
+        # line after the headings prints a figure under the stacked column
+        pairs = [(top, q) for top, q in pairs if len(top) <= 3 and len(q) <= 3 and any(
+            re.search(r"\d", str(w.get("text", "")))
+            and min(max(float(top[-1]["x1"]), float(q[-1]["x1"])), float(w["x1"]))
+            - max(min(float(top[0]["x0"]), float(q[0]["x0"])), float(w["x0"])) > -4
+            for w in c)]
         for top, q in pairs:
             out.append({"top": " ".join(str(w["text"]) for w in top),
                         "bottom": " ".join(str(w["text"]) for w in q),

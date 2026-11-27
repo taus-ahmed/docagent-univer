@@ -1852,17 +1852,26 @@ def unasked_amount_columns(bands, rows, line_of_row, all_lines):
     if cur:
         phrases.append(cur)
     out = []
-    lines = [all_lines[line_of_row[id(r)]] for r in rows if id(r) in line_of_row]
+    # each row's line, and the figures the row's own values hold: a printed
+    # amount some value of the row carries (the template calls its column
+    # something else) is written, not lost
+    pairs = [(all_lines[line_of_row[id(r)]],
+              {k.lstrip("-") for k in (_number_key(str(v)) for kk, v in r.items()
+                                       if not str(kk).startswith("_")) if k})
+             for r in rows if id(r) in line_of_row]
+    lines = [ln for ln, _held in pairs]
     if not lines:
         return []
     for ph in phrases:
         x0, x1 = float(ph[0]["x0"]), float(ph[-1]["x1"])
         hits = 0
-        for ln in lines:
+        for ln, held in pairs:
             for w in ln:
                 t = str(w.get("text", ""))
                 c = (float(w["x0"]) + float(w["x1"])) / 2
-                if _MONEY_TOKEN.match(t) and x0 - 25 <= c <= x1 + 6 and not taken(w):
+                k = _number_key(t)
+                if _MONEY_TOKEN.match(t) and x0 - 25 <= c <= x1 + 6 and not taken(w) \
+                        and (k is None or k.lstrip("-") not in held):
                     hits += 1
                     break
         if hits:
