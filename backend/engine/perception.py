@@ -608,7 +608,7 @@ def widget_words(path, page_no: int, height: float = 0.0) -> list:
     except Exception:
         return []
     out = []
-    for w, text in [(b, "[X]" if b.get("on") else "[ ]") for b in boxes] +             [(f, str(f.get("value") or "").strip()) for f in fields]:
+    for w, text in [(b, "[X]" if b.get("on") else "[ ]") for b in boxes] +             [(f, " ".join(str(f.get("value") or "").split())) for f in fields]:
         if not text:
             continue
         top, bottom = float(w["top"]), float(w["bottom"])
@@ -653,7 +653,7 @@ def read_document(path, pages: Optional[list] = None) -> dict:
             doc["pages"].append({"page": n, "width": float(pg.width),
                                  "height": float(pg.height), "words": words,
                                  "quality": q, "removed": [],
-                                 "rules": _rules(pg)})
+                                 "rules": _rules(pg), "edges": _edges(pg)})
     for p in doc["pages"]:
         p["side_split"] = side_zone(p["words"], p["width"])
         p["lines"] = _lines_for(p["words"], p["page"], p["side_split"])
@@ -702,6 +702,23 @@ def _mark_fills(page, words) -> None:
         cx, cy = (w["x0"] + w["x1"]) / 2, (w["top"] + w["bottom"]) / 2
         if any(x0 <= cx <= x1 and t <= cy <= b for x0, t, x1, b in fills):
             w["on_dark_fill"] = True
+
+
+def _edges(page) -> dict:
+    """The page's drawn ruling as edges (lines and rectangle sides):
+    {"h": [[x0, x1, y]], "v": [[y0, y1, x]]} - the boxes of a form."""
+    out = {"h": [], "v": []}
+    for e in getattr(page, "edges", None) or []:
+        try:
+            x0, x1 = float(e["x0"]), float(e["x1"])
+            t, b = float(e["top"]), float(e["bottom"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if abs(b - t) <= 1.0 and x1 - x0 >= 3.0:
+            out["h"].append([round(x0, 1), round(x1, 1), round((t + b) / 2, 1)])
+        elif abs(x1 - x0) <= 1.0 and b - t >= 3.0:
+            out["v"].append([round(t, 1), round(b, 1), round((x0 + x1) / 2, 1)])
+    return out
 
 
 def _rules(page) -> list:

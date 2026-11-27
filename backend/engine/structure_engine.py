@@ -38,7 +38,7 @@ import structure_geometry as G
 PLAN_VERSION = 1
 PROMPT_VERSION = "t1-structure-1"
 
-KINDS = ("title", "kv", "table", "note", "side", "furniture", "form_copy")
+KINDS = ("title", "kv", "table", "note", "side", "furniture", "form_copy", "form")
 EXCLUDED_KINDS = {"note": "note text (not copied)",
                   "side": "chart or side panel (not copied)",
                   "furniture": "page header/footer (not copied)",
@@ -382,6 +382,8 @@ def _style(words, body):
 def _cell(row, col, words, body, order, label=None, text=None, **kw):
     import organized_layout as OL
     t = " ".join(w["text"] for w in words) if text is None else text
+    # a currency sign printed apart from its figure is one value: `$ 6` is `$6`
+    t = re.sub(r"(^|\s)([$€£¥₹]) (?=[\d.,(-]*\d)", r"\1\2", t)
     val, fmt = OL.typed(t, order, label)
     val, as_text, cut = safe_text(val)
     c = {"row": row, "col": col, "value": val, "text": t, **_style(words, body),
@@ -426,6 +428,33 @@ def split_pairs(seg) -> list:
     return out
 
 
+_SIGN = {"$", "€", "£", "¥", "₹"}
+
+
+def _signs_to_figures(segs, dropped=None) -> list:
+    """A segment that is only a currency sign (printed at a box's left edge,
+    its figure at the right) joins the next segment on the line that starts
+    with a figure; with no figure after it on the line it is left out with
+    a reason - a sign is never a cell of its own."""
+    out, pending = [], None
+    for seg in segs:
+        if len(seg) == 1 and seg[0]["text"] in _SIGN:
+            if pending is not None and dropped is not None:
+                dropped.append({"words": pending, "reason": "a currency sign with no figure"})
+            pending = seg
+            continue
+        if pending is not None:
+            if G.is_numeric(seg[0]["text"]):
+                seg = pending + seg
+            elif dropped is not None:
+                dropped.append({"words": pending, "reason": "a currency sign with no figure"})
+            pending = None
+        out.append(seg)
+    if pending is not None and dropped is not None:
+        dropped.append({"words": pending, "reason": "a currency sign with no figure"})
+    return out
+
+
 def _kv_rows(page, lines, by_word, gut, dropped=None):
     """A label/value region: each printed line one row, pairs side by side,
     the label exactly as printed WITH its colon, its value in the next
@@ -433,12 +462,13 @@ def _kv_rows(page, lines, by_word, gut, dropped=None):
     printed beside a field) is left out and put in `dropped`."""
     rows = []
     for ln in lines:
-        segs = G.segments(page, ln, gut)
+        segs = _signs_to_figures(G.segments(page, ln, gut), dropped)
         cells = []
         for seg in segs:
             if len(segs) > 1 and G.is_furniture(" ".join(w["text"] for w in seg)):
                 if dropped is not None:
-                    dropped.append(seg)
+                    dropped.append({"words": seg, "reason": "page furniture (a page number "
+                                    "beside a field)"})
                 continue
             cells += split_pairs(seg)
         if cells:
@@ -496,7 +526,44 @@ def place_region(region, page, row0, order, body, gut, prev_tables):
         return cells, r - row0
     if kind == "table":
         return _place_table(region, page, lines, row0, order, body, prev_tables)
+    if kind == "form":
+        return _place_form(region, page, row0, order, body)
     return [], 0
+
+
+def _place_form(region, page, row0, order, body):
+    """A form's fields, boxes sharing a top side by side: the box's label
+    (as printed, pieces joined) then its value (the widget's text, a
+    currency sign printed in the box in front of it)."""
+    import form_boxes as FB
+    by_word = {w["id"]: w for w in page["words"]}
+    cells = []
+    r = row0
+    dropped = region.setdefault("_dropped", [])
+    for f in region.get("fields") or []:
+        ws = [by_word[i] for i in f.get("dropped_ids") or [] if i in by_word]
+        if ws:
+            dropped.append({"words": ws, "reason": "a currency sign printed in a box "
+                            "with no value"})
+    for row in FB.field_rows(page, [f for f in region.get("fields") or []
+                                    if f.get("label_ids") or f.get("value_ids")]):
+        col = 0
+        for f in row:
+            labs = [by_word[i] for i in f["label_ids"] if i in by_word]
+            vals = [by_word[i] for i in f["value_ids"] if i in by_word]
+            if labs:
+                cells.append(_cell(r, col, labs, body, order, text=FB.label_text(labs),
+                                   role="label"))
+            col += 1
+            if vals:
+                lab = FB.label_text(labs) if labs else None
+                text = "".join(w["text"] for w in vals if w["text"] in FB._CURRENCY) + \
+                    " ".join(w["text"] for w in vals if w["text"] not in FB._CURRENCY)
+                cells.append(_cell(r, col, vals, body, order, label=lab, text=text,
+                                   role="value"))
+            col += 1
+        r += 1
+    return cells, r - row0
 
 
 def _same_labels(a, b) -> bool:
@@ -735,10 +802,12 @@ def place_page(page, plan, order=None, prev_tables=None) -> dict:
                                      "reason": EXCLUDED_KINDS[reg["kind"]]})
             continue
         cs, used = place_region(reg, page, row, order, body, gut, prev_tables)
-        for seg in reg.pop("_dropped", None) or []:
+        for d in reg.pop("_dropped", None) or []:
+            seg = d["words"] if isinstance(d, dict) else d
             excluded.append({"word_ids": [w["id"] for w in seg],
                              "text": " ".join(w["text"] for w in seg),
-                             "reason": "page furniture (a page number beside a field)"})
+                             "reason": d.get("reason") if isinstance(d, dict) else
+                             "page furniture (a page number beside a field)"})
         if not cs:
             continue
         reg["anchor"] = _a1(row, 0)

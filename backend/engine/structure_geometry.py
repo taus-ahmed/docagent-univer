@@ -510,6 +510,15 @@ def fallback_plan(page, prev_table=None) -> dict:
         rid += 1
         return f"r{rid}"
 
+    # a fillable form: widget values next to the labels of their boxes,
+    # each form on the page its own region (form_boxes)
+    import form_boxes as FB
+    taken = set()
+    for fr in FB.form_regions(page):
+        regions.append({"id": nid(), "kind": "form", "line_ids": fr["line_ids"],
+                        "fields": fr["fields"]})
+        taken.update(fr["line_ids"])
+    lines = [ln for ln in lines if ln["id"] not in taken]
     in_side = set()
     if side is not None:
         narrow_right = (width - side) < 0.35 * width
