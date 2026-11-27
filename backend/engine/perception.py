@@ -262,7 +262,7 @@ def side_zone(words, width: float) -> Optional[float]:
     content, or None. All of these, because a false side panel would hide
     a real column:
 
-      * no word crosses it, and it is at least 3x the gutter wide;
+      * no word crosses it, and it is at least 2x the gutter wide;
       * the side beyond it is at the margin and narrow (under 35% of the
         page width), holds 3+ words over at least half the content's height;
       * the side has rows of its OWN: under 30% of its words share a
@@ -273,7 +273,7 @@ def side_zone(words, width: float) -> Optional[float]:
         return None
     sizes = [w["size"] for w in ws if w.get("size")]
     body = statistics.median(sizes) if sizes else 10.0
-    min_alley = 3 * max(6.0, 4 * 0.35 * body)
+    min_alley = 2 * max(6.0, 4 * 0.35 * body)
     top = min(w["top"] for w in ws)
     span = max(max(w["bottom"] for w in ws) - top, 1)
     best = None

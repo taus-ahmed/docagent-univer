@@ -384,7 +384,7 @@ def _cell(row, col, words, body, order, label=None, text=None, **kw):
     t = " ".join(w["text"] for w in words) if text is None else text
     val, fmt = OL.typed(t, order, label)
     val, as_text, cut = safe_text(val)
-    c = {"row": row, "col": col, "value": val, **_style(words, body),
+    c = {"row": row, "col": col, "value": val, "text": t, **_style(words, body),
          "word_ids": [w["id"] for w in words]}
     if fmt:
         c["number_format"] = fmt
@@ -393,6 +393,9 @@ def _cell(row, col, words, body, order, label=None, text=None, **kw):
     if cut:
         c["truncated"] = True
     c.update(kw)
+    # the old layout's cell vocabulary, so one instrument measures both
+    c["kind"] = {"header": "header", "label": "label", "group": "value",
+                 "value": "value"}.get(c.get("role"), "text")
     return c
 
 
@@ -658,6 +661,7 @@ def verify(page, plan, placed, fallback=None) -> list:
             count[i] = count.get(i, 0) + 1
     by_word = {w["id"]: w for w in page["words"]}
     lost = [i for i in kept if count.get(i, 0) == 0]
+    placed["unplaced"] = [by_word[i]["text"] for i in sorted(lost) if i in by_word]
     twice = [i for i, n in count.items() if n > 1]
     if lost:
         flags.append(f"page {page['page']}: {len(lost)} printed word(s) not placed: "
@@ -811,6 +815,7 @@ def layout_document(perc, plans=None, order=None) -> dict:
         placed = place_page(page, plan, order, prev_tables)
         out["flags"] += verify(page, plan, placed, fb if source == "model" else None)
         out["excluded"] += [{**e, "page": page["page"]} for e in placed["excluded"]]
+        out.setdefault("unplaced", []).extend(placed.get("unplaced") or [])
         out["plans"][page["page"]] = plan
         out["plan_source"][page["page"]] = source
         out["anchors"][page["page"]] = {r["id"]: r.get("anchor") for r in placed["regions"]}

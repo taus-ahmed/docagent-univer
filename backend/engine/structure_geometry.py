@@ -465,10 +465,20 @@ def _table_region(rid, page, all_lines, head_ids, data_lines, feats, prev=None):
     geo = columns_for(dws, hws, gutter(page), word_gap(page))
     cols = geo["columns"]
     if prev is not None and not heads:
-        # headers printed only on an earlier page: take its columns and
-        # headings; this page's words go to them by right edge / overlap
-        cols = [dict(c) for c in prev["columns"]]
-        labels = list(prev.get("labels") or [""] * len(cols))
+        # headers printed only on an earlier page: its headings, and its
+        # columns placed where THIS page prints them. When this page shows
+        # as many columns as the earlier table they correspond in order
+        # (a page whose columns are shifted); otherwise the earlier columns
+        # are moved by the shift of the first column's left edge.
+        pcols = [dict(c) for c in prev["columns"]]
+        labels = list(prev.get("labels") or [""] * len(pcols))
+        if len(cols) == len(pcols):
+            cols = [dict(c, align=p.get("align", c.get("align"))) for c, p in zip(cols, pcols)]
+        else:
+            first = min((w["x0"] for ws in dws for w in ws), default=pcols[0]["x0"])
+            pfirst = pcols[0]["x0"]
+            shift = first - pfirst - 1 if pcols else 0.0
+            cols = [dict(c, x0=c["x0"] + shift, x1=c["x1"] + shift) for c in pcols]
         cont = True
     else:
         labels = header_labels([_words_of(page, h) for h in heads[:1]], cols)
