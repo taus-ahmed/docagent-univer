@@ -1817,6 +1817,57 @@ def derive_totals(fields, extracted, conf_map, field_prov, tables_out, page_text
     return out
 
 
+_MONEY_TOKEN = re.compile(r"^\(?-?[$£€¥₹]?-?(?:\d{1,3}(?:,\d{3})+|\d+)[.,]\d{2}\)?-?$")
+
+
+def unasked_amount_columns(bands, rows, line_of_row, all_lines):
+    """Run T, 5 - the headings the page prints over AMOUNT columns this
+    template has no column for: [heading]. Read off the document's own
+    heading line (`bands.words`): a run of heading words inside no template
+    column's span, over which some row of the table prints money.
+    Such a column's values are written nowhere, so the caller names it in a
+    visible reason instead of dropping it in silence."""
+    words = list(getattr(bands, "words", ()) or ())
+    if not words or not rows:
+        return []
+    spans = list(bands.values())
+
+    def taken(w):
+        return any(min(b, float(w["x1"])) - max(a, float(w["x0"])) > 0 for a, b in spans)
+    phrases, cur = [], []
+    for w in words:
+        if taken(w) or not re.search(r"[A-Za-z]", str(w.get("text", ""))):
+            if cur:
+                phrases.append(cur)
+            cur = []
+            continue
+        if cur and float(w["x0"]) - float(cur[-1]["x1"]) > 8.0:
+            phrases.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        phrases.append(cur)
+    out = []
+    lines = [all_lines[line_of_row[id(r)]] for r in rows if id(r) in line_of_row]
+    if not lines:
+        return []
+    for ph in phrases:
+        x0, x1 = float(ph[0]["x0"]), float(ph[-1]["x1"])
+        hits = 0
+        for ln in lines:
+            for w in ln:
+                t = str(w.get("text", ""))
+                c = (float(w["x0"]) + float(w["x1"])) / 2
+                if _MONEY_TOKEN.match(t) and x0 - 25 <= c <= x1 + 6 and not taken(w):
+                    hits += 1
+                    break
+        if hits:
+            # one amount under it is already a value written nowhere: a
+            # credits column is often filled on few rows of a statement
+            out.append(" ".join(str(w["text"]) for w in ph))
+    return out
+
+
 def split_total_rows(rows, keys):
     """(rows, total rows) — a row is the table's OWN TOTAL only when its
     label cell is a total word ("Total", "Subtotal", "Grand Total") AND every
@@ -2449,6 +2500,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     empty_rows = 0
     total_rows = 0
     tail_rows = 0           # Run T, 2: continuation lines joined to their row
+    unasked_columns = {}    # Run T, 5: printed amount columns the template lacks
     off_schema_keys = 0
     merged_columns = 0
     overprinted = 0
@@ -3422,6 +3474,17 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 rows_out.append(row)
             rows_out, tails = attach_tail_rows(rows_out, table_headers(t), line_of_row,
                                                all_lines)
+            if bands and t.get("orientation") != "columns":
+                missing_cols = unasked_amount_columns(bands, rows_out, line_of_row, all_lines)
+                if missing_cols:
+                    unasked_columns[t["name"]] = missing_cols
+                    flagged.append(_flag(
+                        f'{t["name"]}[columns not in template]', ", ".join(missing_cols),
+                        f"the page prints amount column(s) {', '.join(missing_cols)} "
+                        f"that this template has no column for; their values were "
+                        f"not written. Add the column(s) to the template to keep them"))
+                    notes.append(f'{t["name"]}: printed amount column(s) not in the '
+                                 f"template: {', '.join(missing_cols)}")
             for above, tail in tails:
                 shown = " | ".join(f"{k}={v}" for k, v in tail.items()
                                    if not str(k).startswith("_") and str(v).strip())
@@ -4223,6 +4286,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             # Part 3.5 — a table's own total line, left out on arithmetic
             "total_row_count": total_rows,
             "attached_tail_count": tail_rows,
+            "unasked_columns": unasked_columns,
             "off_schema_key_count": off_schema_keys,
             # One entry per band that more than one region matched:
             # {table, pages, kept_page, kept_rows, left_out}.

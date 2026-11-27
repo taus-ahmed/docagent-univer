@@ -1874,13 +1874,15 @@ def column_bands(lines, headers):
     # Run Q Phase 2 (job 72): every word the heading line prints, so a column
     # whose neighbour heading is not a template column is still bounded by it.
     out.printed = [(float(w["x0"]), float(w["x1"])) for w in best_line]
+    out.words = list(best_line)
     return out
 
 
 class Bands(dict):
     """{header: (x0, x1)}, plus `printed`: the (x0, x1) of every word on the
-    document's heading line the bands were read from."""
+    document's heading line the bands were read from; `words`, those words."""
     printed = ()
+    words = ()
 
 
 def locate(value, line, after_x=None):
