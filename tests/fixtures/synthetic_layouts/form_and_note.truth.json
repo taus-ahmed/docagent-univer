@@ -1,0 +1,27 @@
+{
+ "name": "form_and_note",
+ "tables": [],
+ "pairs": [
+  [
+   "Payee:",
+   "Northwind Partners"
+  ],
+  [
+   "Reference:",
+   "PA-2291"
+  ],
+  [
+   "Issued:",
+   "08/14/2026"
+  ],
+  [
+   "Total:",
+   "1,204.50"
+  ]
+ ],
+ "absent": [
+  "remittance terms"
+ ],
+ "zeros": [],
+ "dates": {}
+}

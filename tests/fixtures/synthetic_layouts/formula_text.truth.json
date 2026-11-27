@@ -1,0 +1,44 @@
+{
+ "name": "formula_text",
+ "tables": [
+  {
+   "header": [
+    "Ref",
+    "Note",
+    "Amount"
+   ],
+   "rows": [
+    [
+     "=A1+1",
+     "formula looking",
+     "1.00"
+    ],
+    [
+     "+44 20 7946",
+     "phone",
+     "2.00"
+    ],
+    [
+     "@team",
+     "handle",
+     "3.00"
+    ],
+    [
+     "-ref",
+     "dash led",
+     "4.00"
+    ]
+   ]
+  }
+ ],
+ "pairs": [],
+ "absent": [],
+ "zeros": [],
+ "dates": {},
+ "as_text": [
+  "=A1+1",
+  "+44 20 7946",
+  "@team",
+  "-ref"
+ ]
+}

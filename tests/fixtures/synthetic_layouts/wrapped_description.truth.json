@@ -1,0 +1,33 @@
+{
+ "name": "wrapped_description",
+ "tables": [
+  {
+   "header": [
+    "Date",
+    "Libelle",
+    "Montant"
+   ],
+   "rows": [
+    [
+     "07/14/2026",
+     "Virement vers compte epargne",
+     "50.00"
+    ],
+    [
+     "07/15/2026",
+     "Frais",
+     "1.00"
+    ],
+    [
+     "07/16/2026",
+     "Paiement carte magasin central",
+     "12.30"
+    ]
+   ]
+  }
+ ],
+ "pairs": [],
+ "absent": [],
+ "zeros": [],
+ "dates": {}
+}

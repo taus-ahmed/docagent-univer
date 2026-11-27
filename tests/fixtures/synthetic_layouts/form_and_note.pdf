@@ -1,0 +1,40 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [4 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612.00 792.00] /Contents 5 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+5 0 obj
+<< /Length 636 >>
+stream
+BT
+0.000 g /F1 16.0 Tf 1.0000 0.0000 -0.0000 1.0000 200.00 750.00 Tm (Payment Advice) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 44.00 712.00 Tm (Payee: Northwind Partners) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 330.00 712.00 Tm (Reference: PA-2291) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 44.00 698.00 Tm (Issued: 08/14/2026) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 330.00 698.00 Tm (Total: 1,204.50) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 44.00 660.00 Tm (This advice is issued for information only and does not replace the remittance terms agreed between the parties.) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000218 00000 n 
+0000000350 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1037
+%%EOF

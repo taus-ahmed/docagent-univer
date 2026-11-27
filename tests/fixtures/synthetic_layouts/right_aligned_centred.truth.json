@@ -1,0 +1,37 @@
+{
+ "name": "right_aligned_centred",
+ "tables": [
+  {
+   "header": [
+    "Article",
+    "Quantity",
+    "Unit Price",
+    "Line Total"
+   ],
+   "rows": [
+    [
+     "Part 1",
+     "2",
+     "1,250.00",
+     "2,500.00"
+    ],
+    [
+     "Part 2",
+     "15",
+     "9.99",
+     "149.85"
+    ],
+    [
+     "Part 3",
+     "120",
+     "0.75",
+     "90.00"
+    ]
+   ]
+  }
+ ],
+ "pairs": [],
+ "absent": [],
+ "zeros": [],
+ "dates": {}
+}

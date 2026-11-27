@@ -1,0 +1,37 @@
+{
+ "name": "trailing_minus",
+ "tables": [
+  {
+   "header": [
+    "Date",
+    "Description",
+    "Amount"
+   ],
+   "rows": [
+    [
+     "07/04/2026",
+     "Entry 0",
+     "26.08-"
+    ],
+    [
+     "07/05/2026",
+     "Entry 1",
+     "100.00"
+    ],
+    [
+     "07/06/2026",
+     "Entry 2",
+     "3.50-"
+    ]
+   ]
+  }
+ ],
+ "pairs": [],
+ "absent": [],
+ "zeros": [],
+ "dates": {},
+ "trailing": [
+  "26.08-",
+  "3.50-"
+ ]
+}

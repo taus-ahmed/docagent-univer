@@ -1,0 +1,48 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [4 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612.00 792.00] /Contents 5 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+5 0 obj
+<< /Length 1132 >>
+stream
+BT
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 44.00 712.00 Tm (Date) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 110.00 712.00 Tm (Libelle) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 312.50 712.00 Tm (Montant) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 44.00 698.00 Tm (07/14/2026) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 110.00 698.00 Tm (Virement vers) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 322.20 698.00 Tm (50.00) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 110.00 687.00 Tm (compte epargne) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 44.00 673.00 Tm (07/15/2026) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 110.00 673.00 Tm (Frais) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 327.76 673.00 Tm (1.00) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 44.00 659.00 Tm (07/16/2026) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 110.00 659.00 Tm (Paiement carte) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 322.20 659.00 Tm (12.30) Tj
+0.000 g /F1 10.0 Tf 1.0000 0.0000 -0.0000 1.0000 110.00 648.00 Tm (magasin central) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000218 00000 n 
+0000000350 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1534
+%%EOF
