@@ -115,11 +115,18 @@ def template_data_of(tpl):
 def replay_doc(doc: dict, template_data, source: Path):
     """[(extracted_data, missing_calls)] for one stored document."""
     from extractor import run_extraction
+    import call_sizing
     import copy
     ed = doc.get("extraction_json") or {}
     llm = ReplayLLM(doc.get("raw_llm_response") or "", ed.get("inferred_template"))
-    results = run_extraction(SimpleNamespace(llm=llm), source,
-                             copy.deepcopy(template_data) if template_data else None)
+    # the stored answer came from the calls that were RECORDED: replay that
+    # call plan (sizing before a call would ask calls nobody recorded)
+    _tok = call_sizing.RECORDED_PLAN.set(True)
+    try:
+        results = run_extraction(SimpleNamespace(llm=llm), source,
+                                 copy.deepcopy(template_data) if template_data else None)
+    finally:
+        call_sizing.RECORDED_PLAN.reset(_tok)
     return [(r.extracted_data or {}, list(llm.missing), r) for r in results]
 
 

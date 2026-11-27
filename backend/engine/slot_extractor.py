@@ -551,7 +551,7 @@ def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
     if whole:
         est = CS.estimate_tokens(len(slots["fields"]), [_row_budget_cols(whole)],
                                  [CS.page_rows(t) for t in pages])
-        if not CS.fits_whole(est, CS.output_limit()):
+        if CS.presize() and not CS.fits_whole(est, CS.output_limit()):
             strategy.append(f"unselected band(s) estimated at {est} output tokens: "
                             f"asked in sized page groups")
             _log("SIZING", strategy[-1])
@@ -2611,7 +2611,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     est_tokens = CS.estimate_tokens(len(slots["fields"]),
                                     [_row_budget_cols(slots["tables"])] if slots["tables"] else [],
                                     [CS.page_rows(t) for t in pages])
-    oversized = bool(slots["tables"]) and not CS.fits_whole(est_tokens, out_limit)
+    oversized = bool(slots["tables"]) and CS.presize() and         not CS.fits_whole(est_tokens, out_limit)
     # Run Q, Q12: A BLANK FILLABLE FORM NEEDS NO MODEL CALL. An expense template
     # (two 1885 x 1457 pt pages, 268 AcroForm widgets, none filled) failed
     # twice on staging after ~42 s with no reason. Every widget is empty and

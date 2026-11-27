@@ -64,8 +64,15 @@ def _run(pdf, inferred, rows_of):
         r.error = "scripted: no further answer"
         return r
 
-    return extractor.run_extraction(SimpleNamespace(llm=SimpleNamespace(extract=extract)),
-                                    pdf, None)[0].extracted_data
+    # a replay of a STORED answer: the recorded call plan (one whole-document
+    # call), not sizing that would ask calls nobody recorded (Run T1, 1a)
+    import call_sizing
+    tok = call_sizing.RECORDED_PLAN.set(True)
+    try:
+        return extractor.run_extraction(SimpleNamespace(llm=SimpleNamespace(extract=extract)),
+                                        pdf, None)[0].extracted_data
+    finally:
+        call_sizing.RECORDED_PLAN.reset(tok)
 
 
 def _answer_138_shape(name_key):

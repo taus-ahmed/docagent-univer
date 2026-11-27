@@ -29,6 +29,20 @@ from typing import Callable, Optional
 
 #: one call when the estimated answer is under this share of the limit
 WHOLE_RATIO = 0.6
+
+import contextvars
+
+#: Sizing BEFORE a call is skipped while this is set - only by a replay of
+#: STORED answers (tools/replay_raw.py), which can answer only the calls
+#: that were recorded: one whole-document call. Halving after a FAILED call
+#: is never skipped.
+RECORDED_PLAN: contextvars.ContextVar = contextvars.ContextVar(
+    "docagent_recorded_plan", default=False)
+
+
+def presize() -> bool:
+    """Is a call sized before it is made?"""
+    return not RECORDED_PLAN.get()
 #: a row-range piece is never smaller than this many lines
 MIN_PART_LINES = 4
 

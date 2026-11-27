@@ -290,3 +290,20 @@ class TestEndToEnd:
                    if isinstance(a, str)) or any(
             "Page 2" in str(a.get("text", "")) for a in ed.get("attention") or []
             if isinstance(a, dict))
+
+
+class TestRecordedPlan:
+    def test_replay_of_stored_answers_skips_presizing_but_still_halves(self, tmp_path,
+                                                                        monkeypatch):
+        from extractor import run_extraction
+        monkeypatch.setattr(CS, "output_limit", lambda model=None: 30000)
+        pdf = make_pdf(tmp_path / "short.pdf", _pages(4, 55), size=8)
+        tok = CS.RECORDED_PLAN.set(True)
+        try:
+            ed = run_extraction(_scripted(1000), pdf, _tpl())[0].extracted_data
+            assert "whole document in one call" in ed["diagnostics"]["call_strategy"][0]
+            ed2 = run_extraction(_scripted(120), pdf, _tpl())[0].extracted_data
+            assert len(ed2["Items_rows"]) == 220       # halved after the failure
+        finally:
+            CS.RECORDED_PLAN.reset(tok)
+        assert CS.presize()
