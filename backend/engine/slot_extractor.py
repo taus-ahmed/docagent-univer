@@ -495,7 +495,7 @@ def _echoed_header(cells, headers) -> bool:
 
 
 def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
-                   doc_type):
+                   doc_type, strategy=None):
     """(parsed, resp, {file page: why it failed}) for a long document.
 
     Fields: ONE call over the whole document. Tables: one call per PAGE that
@@ -542,6 +542,22 @@ def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
     whole = [t for t in slots["tables"]
              if not any(t in bands for bands in want.values())]
     fields_parsed, fields_resp = {}, None
+    # Run T1, 1a: bands no page was selected for are asked with the fields
+    # in ONE call only while their answer fits; past the budget they are
+    # asked in sized page groups (the 8-page list: 270 rows, MAX_TOKENS).
+    import call_sizing as CS
+    strategy = strategy if strategy is not None else []
+    sized_whole, sized_failed = {}, {}
+    if whole:
+        est = CS.estimate_tokens(len(slots["fields"]), [_row_budget_cols(whole)],
+                                 [CS.page_rows(t) for t in pages])
+        if not CS.fits_whole(est, CS.output_limit()):
+            strategy.append(f"unselected band(s) estimated at {est} output tokens: "
+                            f"asked in sized page groups")
+            _log("SIZING", strategy[-1])
+            sized_whole, sized_failed, _r = sized_tables(
+                ask, whole, pages, nums, page_images, doc_type, strategy=strategy)
+            whole = []
     if slots["fields"] or whole:
         sub = {"fields": slots["fields"], "tables": whole}
         fields_parsed, fields_resp = ask(build_prompt(sub, pages, doc_type), sub,
@@ -570,7 +586,7 @@ def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
                 bad = "the answer left out the table"
         return k, parsed, resp, bad
 
-    results, last_resp = {}, None
+    results, last_resp, resps = {}, None, {}
     order = sorted(want)
     with ThreadPoolExecutor(max_workers=conc) as pool:
         futs = [pool.submit(contextvars.copy_context().run, one, k, "page")
@@ -578,22 +594,47 @@ def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
         for f in futs:
             k, parsed, resp, bad = f.result()
             results[k] = (parsed, bad)
+            resps[k] = resp
             last_resp = resp or last_resp
-    failed = {}
+    failed = dict(sized_failed)
+    split_rows = {}
     for k in order:
         if results[k][1]:
+            if CS.splittable_kind(resps.get(k)):
+                # Run T1, 1a: a page too big for its answer is asked by row
+                # ranges, not again whole (the same request fails the same way)
+                rows_k, f_k, resp = sized_tables(ask, want[k], [pages[k]], [nums[k]],
+                                                 [page_images[k]] if k < len(page_images)
+                                                 else [], doc_type, groups=[[0]],
+                                                 strategy=strategy)
+                last_resp = resp or last_resp
+                if f_k and not any(rows_k.values()):
+                    failed[nums[k]] = next(iter(f_k.values()))
+                    continue
+                if f_k:
+                    failed[nums[k]] = "part of the page: " + next(iter(f_k.values()))
+                split_rows[k] = {n: [{**r, "page": k + 1} for r in rs]
+                                 for n, rs in rows_k.items()}
+                results[k] = ({"tables": {}}, None)
+                continue
             _k, parsed, resp, bad = one(k, "retry:page")
             results[k] = (parsed, bad)
             last_resp = resp or last_resp
             if bad:
                 failed[nums[k]] = bad
     tables = {t["name"]: [] for t in slots["tables"]}
+    for name, rows in sized_whole.items():
+        tables[name] = list(rows)
     for t in whole:
         tables[t["name"]] = list(_table_rows_of(fields_parsed or {}, t,
                                                 {"tables": whole}))
     for k in order:
         parsed, bad = results[k]
         if bad or not isinstance(parsed, dict):
+            continue
+        if k in split_rows:
+            for name, rows in split_rows[k].items():
+                tables[name].extend(rows)
             continue
         for t in want[k]:
             heads = table_headers(t)
@@ -613,6 +654,130 @@ def page_at_a_time(ask, slots, pages, page_lines, page_images, nums, inventory,
     if not fields_ok:
         failed[0] = "the call for the field slots failed"
     return merged, fields_resp or last_resp, failed
+
+
+def _row_budget_cols(tables) -> int:
+    return max([len(table_headers(t)) for t in tables or []] or [0])
+
+
+def sized_tables(ask, bands, pages, nums, page_images, doc_type, groups=None,
+                 strategy=None):
+    """({band name: rows}, {file page: why}, last_resp) for `bands`, asked in
+    page groups sized to the output budget (Run T1, 1a; engine/call_sizing).
+
+    Each group is one call; a group that fails for a size reason is halved,
+    a single page split by row ranges, later pieces carrying the table's
+    heading line and current group header. Rows come back in page order, a
+    row repeated at a seam kept once, a carried line never a row. A piece
+    that fails at the smallest size names its pages; the rest are kept."""
+    import call_sizing as CS
+    import llm_contract as C
+    strategy = strategy if strategy is not None else []
+    cols = _row_budget_cols(bands)
+    rows_pp = [CS.page_rows(t) for t in pages]
+    per_page = [CS.estimate_tokens(0, [cols], rows_pp, [k]) for k in range(len(pages))]
+    budget = CS.WHOLE_RATIO * CS.output_limit()
+    if groups is None:
+        groups = CS.pack_groups(list(range(len(pages))), per_page, budget)
+    heads_of = {t["name"]: table_headers(t) for t in bands}
+
+    def heading_test(s):
+        low = s.casefold()
+        return any(sum(1 for h in hs if str(h).strip() and str(h).casefold() in low) >= 2
+                   for hs in heads_of.values())
+
+    sub = {"fields": [], "tables": bands}
+    last = {"resp": None}
+    carried_lines = set()
+
+    def piece(pg, text=None, carry=None, part=None):
+        texts = [pages[k] for k in pg] if text is None else [text]
+        span = (f"page {nums[pg[0]]}" if len(pg) == 1 else
+                f"pages {nums[pg[0]]}-{nums[pg[-1]]}")
+        if part:
+            span += " (one part of that page's rows; the other part is asked separately)"
+        c = dict(carry or {})
+        if c and len(bands) == 1:
+            c.setdefault("table", bands[0]["name"])
+        for v in (c.get("heading"), c.get("group")):
+            if v:
+                carried_lines.add(re.sub(r"\s+", "", v).casefold())
+        p = build_prompt(sub, texts, doc_type) + (
+            f"\n\nThis is {span} of the document's {len(nums)} pages, sent on "
+            f"its own. Return only the rows printed in THIS text; a table it "
+            f"does not print is [].") + CS.context_block(c)
+        imgs = ([page_images[k] for k in pg if k < len(page_images) and page_images[k]]
+                if text is None else [])
+        n_rows = sum(CS.page_rows(t) for t in texts)
+        exp = {t["name"]: n_rows for t in bands}
+        parsed, resp = ask(p, sub, f"sized {span}", images=imgs,
+                           text="\n".join(texts), expect=exp)
+        last["resp"] = resp or last["resp"]
+        if isinstance(parsed, dict) and any(
+                f["kind"] == C.MISSING_TABLE for f in C.check_answer(parsed, sub, resp)):
+            return None, resp
+        return parsed, resp
+
+    strategy.append(f"sized: {len(groups)} group(s) of pages "
+                    + ", ".join(f"{nums[g[0]]}-{nums[g[-1]]}" for g in groups)
+                    + f" (budget {int(budget)} output tokens)")
+    _log("SIZING", strategy[-1])
+    tables = {t["name"]: [] for t in bands}
+    failed = {}
+    pidx = 0
+    for g in groups:
+        res = CS.ask_adaptive(piece, g, page_text=lambda k: pages[k],
+                              heading_test=heading_test,
+                              log=lambda s: _log("SIZING", s))
+        strategy.extend(res["strategy"])
+        for k, why in res["failed"].items():
+            failed[nums[k]] = f"too large to answer even split ({why})" \
+                if "rows" in str(why) else str(why)
+        for pg, part, parsed in res["pieces"]:
+            pidx += 1
+            for t in bands:
+                for r in _table_rows_of(parsed, t, sub):
+                    cells = r.get("cells") if isinstance(r.get("cells"), dict) else r
+                    if _echoed_header(cells, heads_of[t["name"]]):
+                        continue
+                    if re.sub(r"\s+", "", str(r.get("source") or "")).casefold() \
+                            in carried_lines:
+                        continue
+                    try:
+                        p_in = int(r.get("page") or 1)
+                    except (TypeError, ValueError):
+                        p_in = 1
+                    k = pg[min(max(p_in, 1), len(pg)) - 1]
+                    tables[t["name"]].append({**r, "page": k + 1, "_piece": pidx})
+    for name in tables:
+        tables[name] = [{k: v for k, v in r.items() if k != "_piece"}
+                        for r in CS.dedupe_rows(tables[name])]
+    return tables, failed, last["resp"]
+
+
+def sized_document(ask, slots, pages, nums, page_images, doc_type, strategy):
+    """(parsed, resp, {file page: why}) for a document whose answer does not
+    fit one call: the field slots in one call of their own (small), every
+    table through `sized_tables`."""
+    fields_parsed, fields_resp = {}, None
+    failed = {}
+    if slots["fields"]:
+        fsub = {"fields": slots["fields"], "tables": []}
+        fields_parsed, fields_resp = ask(build_prompt(fsub, pages, doc_type), fsub,
+                                         "sized fields")
+        if not isinstance(fields_parsed, dict):
+            failed[0] = "the call for the field slots failed"
+    tables, tfailed, tresp = sized_tables(ask, slots["tables"], pages, nums,
+                                          page_images, doc_type, strategy=strategy)
+    failed.update(tfailed)
+    any_rows = any(tables.values())
+    pages_ok = len(tfailed) < len(nums)
+    if not isinstance(fields_parsed, dict) and not pages_ok:
+        return None, fields_resp or tresp, failed
+    if not slots["fields"] and not pages_ok and not any_rows:
+        return None, tresp, failed
+    merged = {"fields": (fields_parsed or {}).get("fields") or {}, "tables": tables}
+    return merged, fields_resp or tresp, failed
 
 
 def _row_file_page(r, all_lines, page_lines, nums):
@@ -2397,6 +2562,16 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                    and page_lines)
     page_failed = {}
     fallback_notes = []          # Run R, R4: said once `notes` exists
+    # Run T1, 1a: size the call BEFORE it is made. The estimate counts the
+    # lines that print a date or an amount; under 60% of the model's output
+    # limit the document goes in one call, exactly as before.
+    import call_sizing as CS
+    call_strategy = []
+    out_limit = CS.output_limit()
+    est_tokens = CS.estimate_tokens(len(slots["fields"]),
+                                    [_row_budget_cols(slots["tables"])] if slots["tables"] else [],
+                                    [CS.page_rows(t) for t in pages])
+    oversized = bool(slots["tables"]) and not CS.fits_whole(est_tokens, out_limit)
     # Run Q, Q12: A BLANK FILLABLE FORM NEEDS NO MODEL CALL. An expense template
     # (two 1885 x 1457 pt pages, 268 AcroForm widgets, none filled) failed
     # twice on staging after ~42 s with no reason. Every widget is empty and
@@ -2427,10 +2602,22 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                   "tables": {t["name"]: [] for t in slots["tables"]}}
         resp = None
     elif chunked:
+        call_strategy.append(f"page at a time ({len(pages)} pages)")
         parsed, resp, page_failed = page_at_a_time(
             ask, slots, pages, page_lines, page_images or [], nums, inventory,
-            default_doc_type)
+            default_doc_type, strategy=call_strategy)
+    elif oversized:
+        call_strategy.append(f"estimated answer {est_tokens} output tokens >= "
+                             f"{int(CS.WHOLE_RATIO * 100)}% of the {out_limit} limit: "
+                             f"sized page groups")
+        _log("SIZING", call_strategy[-1])
+        parsed, resp, page_failed = sized_document(
+            ask, slots, pages, nums, page_images or [], default_doc_type, call_strategy)
+        chunked = isinstance(parsed, dict)
     else:
+        call_strategy.append(f"whole document in one call (estimated answer "
+                             f"{est_tokens} of {out_limit} output tokens)")
+        _log("SIZING", call_strategy[-1])
         parsed, resp = ask(prompt, slots, "fields+tables")
         # Run R, R4 (job 133): a whole-document call that failed TRANSIENTLY
         # - a 5-page merchant statement timed out at 120 s, twice, under the 6-page
@@ -2450,6 +2637,24 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 fallback_notes.append("the whole-document call failed (" + (
                     C.failure_story(attempts) or "a transient error")
                     + "); the document was asked a page at a time instead")
+        # Run T1, 1a: a whole-document answer that did not fit (MAX_TOKENS,
+        # unparseable, a request too long, or the page-at-a-time fallback
+        # failing too) is asked again in SIZED pieces - halved down to one
+        # page, a page split by row ranges - never the same request again.
+        if (not isinstance(parsed, dict) and slots["tables"]
+                and CS.splittable_kind(resp)):
+            call_strategy.append("whole-document call failed ("
+                                 f"{getattr(resp, 'error_kind', None)}): sized pieces")
+            _log("SIZING", call_strategy[-1])
+            parsed, resp2, page_failed = sized_document(
+                ask, slots, pages, nums, page_images or [], default_doc_type,
+                call_strategy)
+            resp = resp2 or resp
+            if isinstance(parsed, dict):
+                chunked = True
+                fallback_notes.append("the whole-document answer did not fit one "
+                                      "call; the document was asked in smaller "
+                                      "pieces instead")
     if not isinstance(parsed, dict):
         _log("SLOT", "no parseable response — failing the document")
         from app.api.routes.extract import _fail
@@ -2464,6 +2669,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             "failure_reason": C.failure_story(attempts) or why,
             "diagnostics": {"attempts": attempts,
                             "usage": C.summarise(attempts),
+                            "call_strategy": call_strategy,
                             "inventory": inventory["totals"],
                             "pages": {str(n): "failed" for n in nums}}}
         failed_r.extraction_response = resp
@@ -4541,6 +4747,7 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
     ed["diagnostics"] = {
         "attempts": attempts,
         "usage": usage,
+        "call_strategy": call_strategy,
         "contract": {"first": contract_first, "after": contract_after,
                      "retried_slots": retry_ids, "retried_tables": retry_tables},
         "inventory": inventory["totals"],
