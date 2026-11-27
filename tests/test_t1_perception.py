@@ -207,3 +207,25 @@ class TestStorage:
         assert s.startswith("pz1:") and len(s) < len(json.dumps(doc)) / 2
         assert P.unpack(s) == json.loads(json.dumps(doc))
         assert P.unpack(None) is None and P.unpack("pz1:garbage") is None
+
+
+class TestGroundingBatch4:
+    """Run T1, re-measured on the owner's Batch 4 carson exports (jobs 142,
+    144): the two shapes left Low after Run T, with invented text."""
+
+    def test_description_wrapped_past_its_rows_figures(self):
+        import slot_extractor as S
+        rec = "07/01/2026 RIVER GOODS WIREOUT SETTLEMENT STORE $21.70 $1,308.47\nNBR 4471"
+        quote = rec.splitlines()[0]
+        assert S.verify_span("RIVER GOODS WIRE OUT SETTLEMENT STORE NBR 4471", quote, 1,
+                             [rec], record=rec)[0]
+        # a WORD is never skipped: only the row's own figures
+        assert not S.verify_span("RIVER GOODS SETTLEMENT NBR 4471", quote, 1, [rec],
+                                 record=rec)[0]
+
+    def test_trailing_minus_printed_as_its_own_token(self):
+        import slot_extractor as S
+        line = "07/22/2026 26.08 - 13.17 - 0.00 0.00"
+        assert S.verify_span("-26.08", line, 1, [line])[0]
+        assert S.verify_span("26.08", line, 1, [line])[0]          # unchanged
+        assert not S.verify_span("-0.50", line, 1, [line])[0]

@@ -1364,6 +1364,11 @@ def verify_span(value, source, page, page_texts, record=""):
         if key is not None:
             if any(_number_key(tok) == key for tok in printed_numbers(span)):
                 return True, ""
+            # Run T1, 2b: a trailing minus printed as its own token
+            # ("26.08 -"): a NEGATIVE value grounds on that figure. Only in
+            # this check - the figure is not counted twice anywhere else.
+            if key.startswith("-") and key[1:] in _split_sign_figures(span):
+                return True, ""
             continue
         val = _flat(value)
         if val and val in _flat(span):
@@ -1385,7 +1390,30 @@ def verify_span(value, source, page, page_texts, record=""):
         from perception import loose_find
         if loose_find(value, span, 4):
             return True, ""
+        # Run T1, 2b: a description WRAPPED past its row's own figures - the
+        # first line prints "... STORE 21.70 1,308.47", the next "NBR 131" -
+        # is its words in order once the row's FIGURES (amounts, dates, the
+        # other cells of the same row) are skipped. Only figures are
+        # skipped, never a word, and only inside this span/record.
+        words = [t for t in str(span).split() if not _FIGURE_TOKEN.match(t)]
+        if len(words) < len(str(span).split()) and loose_find(value, " ".join(words), 8):
+            return True, ""
     return False, "value not found inside its own source span"
+
+
+def _split_sign_figures(span) -> set:
+    """Keys of figures printed with a SEPARATE trailing hyphen ("26.08 -")."""
+    out = set()
+    t = _unify(str(span or ""))
+    for m in re.finditer(r"(?<![\w.,])\(?[$€£]?(\d[\d,]*\.\d{1,2})\)?\s+-(?=\s|$)", t):
+        k = _number_key(m.group(1))
+        if k:
+            out.add(k)
+    return out
+
+
+_FIGURE_TOKEN = re.compile(
+    r"^[(\-]?[$€£¥₹]?\d[\d,]*\.\d{1,2}\)?-?$|^\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?$")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
