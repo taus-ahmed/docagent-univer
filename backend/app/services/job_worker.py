@@ -46,6 +46,44 @@ _FAILURE_KIND_TEXT = {      # llm_contract's failure kinds, in plain words
 }
 
 
+#: the old blended rate, used ONLY when a result carries no per-call counters
+#: (a legacy path), and said so in the log as "blended estimate"
+_BLENDED_USD_PER_M = 0.15
+
+
+def doc_cost_of(extracted, result, doc_tokens) -> dict:
+    """A document's real cost (Run T1, 1b): every attempt it made -
+    inference, extraction, retries, sized pieces, the options' calls -
+    priced per model, input and output separately, thinking as output
+    (`llm_contract.cost_breakdown`). `basis` says how it was computed."""
+    import llm_contract as C
+    diag = (extracted or {}).get("diagnostics") or {}
+    attempts = list(diag.get("attempts") or []) + list(diag.get("option_attempts") or [])
+    if not attempts and result is not None and getattr(result, "extraction_response", None):
+        attempts = list(getattr(result.extraction_response, "attempts", None) or [])
+    if attempts:
+        b = C.cost_breakdown(attempts)
+        b["basis"] = "per-model rates"
+        return b
+    usd = round((doc_tokens or 0) / 1_000_000 * _BLENDED_USD_PER_M, 6)
+    return {"usd": usd, "calls": 0, "priced_calls": 0, "unpriced_calls": 0,
+            "input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0,
+            "by_model": {}, "basis": "blended estimate: no per-call counters"}
+
+
+def _merge_cost(total: dict, b: dict) -> None:
+    for k in ("usd", "calls", "priced_calls", "unpriced_calls", "input_tokens",
+              "output_tokens", "thinking_tokens"):
+        total[k] = round(total.get(k, 0) + (b.get(k) or 0), 6) if k == "usd" \
+            else total.get(k, 0) + (b.get(k) or 0)
+    for m, v in (b.get("by_model") or {}).items():
+        t = total.setdefault("by_model", {}).setdefault(
+            m, {"calls": 0, "input_tokens": 0, "output_tokens": 0,
+                "thinking_tokens": 0, "usd": 0.0})
+        for k in t:
+            t[k] = round(t[k] + v.get(k, 0), 6) if k == "usd" else t[k] + v.get(k, 0)
+
+
 def failure_reason_text(result) -> str:
     """Run Q, Q12: why a document failed, from the engine's own failure kind
     and state - never from document content. Always non-empty."""
@@ -618,7 +656,7 @@ def _cancel_probe(session_factory, job_id):
 
 def _commit_file(session, staged) -> None:
     """Store every record of one file in ONE transaction, or none of them."""
-    for doc, _ok, _tokens in staged:
+    for doc, *_rest in staged:
         session.add(doc)
     session.commit()
 
@@ -924,6 +962,9 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         successful = failed = needs_review = 0
         total_tokens_used = 0
         total_cost_usd = 0.0
+        job_cost = {"usd": 0.0, "calls": 0, "priced_calls": 0, "unpriced_calls": 0,
+                    "input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0,
+                    "by_model": {}}
         start_time = time.time()
 
         # One schema cache per JOB, for documents extracted without a template.
@@ -1111,41 +1152,44 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         # ── Post-extraction processing based on selected options ──
                         extracted = result.extracted_data or {}
 
+                        _opt_attempts = []
                         if result.success and options:
-                            # which options this result was produced with (the
-                            # export's Charts sheet asks for "graphs")
-                            extracted["options_requested"] = sorted(set(options))
-                            # --- CATEGORIZATION ---
-                            # Category is already embedded by the AI in table_rows
-                            # via the extraction prompt (bank_statement taxonomy,
-                            # expense_report Category column etc.)
-                            # If categorize option is on and Category is missing from
-                            # table rows, inject it via a second Gemini call
-                            if "categorize" in options:
-                                extracted = _post_categorize(
-                                    extracted, orchestrator, result.document_type or "",
-                                    template_rules=((template_data or {}).get("layout") or {}).get("categories"),
-                                    firm_rules=firm_categories,
-                                )
+                            import llm_contract as _C
+                            with _C.collect_attempts(fresh=True) as _opt_attempts:
+                                # which options this result was produced with (the
+                                # export's Charts sheet asks for "graphs")
+                                extracted["options_requested"] = sorted(set(options))
+                                # --- CATEGORIZATION ---
+                                # Category is already embedded by the AI in table_rows
+                                # via the extraction prompt (bank_statement taxonomy,
+                                # expense_report Category column etc.)
+                                # If categorize option is on and Category is missing from
+                                # table rows, inject it via a second Gemini call
+                                if "categorize" in options:
+                                    extracted = _post_categorize(
+                                        extracted, orchestrator, result.document_type or "",
+                                        template_rules=((template_data or {}).get("layout") or {}).get("categories"),
+                                        firm_rules=firm_categories,
+                                    )
 
-                            # --- AI SUMMARY ---
-                            # Gemini generates a 2-3 sentence plain English summary
-                            # stored in extraction_json.summary
-                            if "summary" in options and not extracted.get("summary"):
-                                extracted = _post_summarize(
-                                    extracted, orchestrator, result.document_type or "",
-                                    narrative="narrative" in options,
-                                    allow_call=lambda: _grant_option_call(session, job),
-                                )
+                                # --- AI SUMMARY ---
+                                # Gemini generates a 2-3 sentence plain English summary
+                                # stored in extraction_json.summary
+                                if "summary" in options and not extracted.get("summary"):
+                                    extracted = _post_summarize(
+                                        extracted, orchestrator, result.document_type or "",
+                                        narrative="narrative" in options,
+                                        allow_call=lambda: _grant_option_call(session, job),
+                                    )
 
-                            # --- ANOMALY DETECTION ---
-                            # Gemini flags unusual values, stored in extraction_json.anomalies
-                            if "anomaly" in options and not extracted.get("anomalies"):
-                                extracted = _post_anomaly(
-                                    extracted, orchestrator, result.document_type or ""
-                                )
+                                # --- ANOMALY DETECTION ---
+                                # Gemini flags unusual values, stored in extraction_json.anomalies
+                                if "anomaly" in options and not extracted.get("anomalies"):
+                                    extracted = _post_anomaly(
+                                        extracted, orchestrator, result.document_type or ""
+                                    )
 
-                            result.extracted_data = extracted
+                                result.extracted_data = extracted
 
                         # FIX 5: capture the raw LLM response (empty for pdfplumber-only docs)
                         _raw_llm = ""
@@ -1183,7 +1227,11 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                         )
                         doc_tokens = (result.extraction_response.tokens_used
                                       if result.extraction_response else 0) or 0
-                        staged.append((doc, bool(result.success), doc_tokens))
+                        if _opt_attempts:
+                            extracted.setdefault("diagnostics", {})[
+                                "option_attempts"] = list(_opt_attempts)
+                        doc_cost = doc_cost_of(extracted, result, doc_tokens)
+                        staged.append((doc, bool(result.success), doc_tokens, doc_cost))
 
                     except Exception as save_err:
                         print(f"[THREAD] SAVE ERROR for {doc_ref(result.filename)}: {exc_brief(save_err)}", flush=True)
@@ -1203,12 +1251,14 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                     print_safe_traceback()
                     staged = []
                     file_failures.append((display_filename, commit_err))
-                for doc, ok, doc_tokens in staged:
+                for doc, ok, doc_tokens, cost in staged:
                     total_tokens_used += doc_tokens
-                    doc_cost = (doc_tokens / 1_000_000) * 0.15
+                    doc_cost = cost["usd"]
                     total_cost_usd += doc_cost
+                    _merge_cost(job_cost, cost)
                     print(f"[THREAD] saved: {doc_ref(doc.filename)} "
                           f"tokens={doc_tokens} cost=${doc_cost:.5f} "
+                          f"({cost.get('basis')}) "
                           f"| job_total={total_tokens_used} tokens "
                           f"${total_cost_usd:.4f}", flush=True)
                     if ok:
@@ -1305,6 +1355,11 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
               f"TOKENS: {total_tokens_used:,} total | "
               f"COST: ${total_cost_usd:.4f} | "
               f"TIME: {job.total_time_sec:.1f}s", flush=True)
+        import llm_contract as _C
+        print(f"[THREAD] JOB COST: {_C.cost_line(job_cost)}", flush=True)
+        if hasattr(job, "total_cost"):
+            job.total_cost = round(total_cost_usd, 6)
+            session.commit()
 
     except Exception as e:
         print(f"[THREAD] FAILED: {exc_brief(e)}", flush=True)

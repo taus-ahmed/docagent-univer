@@ -238,6 +238,63 @@ def cost_estimate(prompt_tokens, output_tokens, thinking_tokens,
     return round(inp / 1e6 * p["input"] + out / 1e6 * p["output"], 6)
 
 
+def cost_breakdown(attempts) -> dict:
+    """What a set of model attempts COST, priced per model and per direction
+    (Run T1, 1b). Every attempt counts - retries, sized pieces, inference,
+    the options' calls - and thinking tokens are billed as output.
+
+    The job summary used to multiply ALL tokens by one blended $0.15 per 1M,
+    so a call priced at $0.0569 on its own log line showed as $0.0083: the
+    output side of a flash call is ~8x its input side. An attempt whose model
+    is not in the price table is counted in `unpriced_calls` (its tokens are
+    still summed) rather than guessed."""
+    out = {"usd": 0.0, "calls": 0, "priced_calls": 0, "unpriced_calls": 0,
+           "input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0,
+           "by_model": {}}
+    for a in attempts or []:
+        if not isinstance(a, dict):
+            continue
+        out["calls"] += 1
+        inp = int(a.get("prompt_tokens") or 0)
+        o = int(a.get("output_tokens") or 0)
+        th = int(a.get("thinking_tokens") or 0)
+        model = str(a.get("model_version") or a.get("model_requested") or "unknown")
+        m = out["by_model"].setdefault(model, {"calls": 0, "input_tokens": 0,
+                                               "output_tokens": 0,
+                                               "thinking_tokens": 0, "usd": 0.0})
+        m["calls"] += 1
+        m["input_tokens"] += inp
+        m["output_tokens"] += o
+        m["thinking_tokens"] += th
+        out["input_tokens"] += inp
+        out["output_tokens"] += o
+        out["thinking_tokens"] += th
+        if not (inp or o or th):
+            continue                       # a refused call bills nothing
+        p = price_for(model)
+        if p is None:
+            out["unpriced_calls"] += 1
+            continue
+        usd = inp / 1e6 * p["input"] + (o + th) / 1e6 * p["output"]
+        m["usd"] = round(m["usd"] + usd, 6)
+        out["usd"] += usd
+        out["priced_calls"] += 1
+    out["usd"] = round(out["usd"], 6)
+    return out
+
+
+def cost_line(b: dict) -> str:
+    """One log line for a cost breakdown."""
+    per = "; ".join(
+        f"{m}: {v['calls']} call(s), in {v['input_tokens']:,} / out "
+        f"{v['output_tokens']:,} / thinking {v['thinking_tokens']:,} = ${v['usd']:.4f}"
+        for m, v in sorted((b.get("by_model") or {}).items()))
+    tail = (f" ({b['unpriced_calls']} call(s) of an unpriced model not counted)"
+            if b.get("unpriced_calls") else "")
+    return f"${b.get('usd', 0.0):.4f} over {b.get('calls', 0)} call(s)" + \
+        (f" [{per}]" if per else "") + tail
+
+
 def total_tokens(prompt_tokens, output_tokens, thinking_tokens) -> Optional[int]:
     """Tokens billed for one attempt, INCLUDING thinking. None when the API
     reported no counter at all."""
