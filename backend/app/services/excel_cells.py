@@ -159,7 +159,9 @@ _ID_LABEL = re.compile(
     # digits (W-2 Locality Name 700102) is text, never a quantity
     r"|name|locality|control|dept|corp)\b"
     # `#` is not a word character, so `\b#\b` never matched "Check #"
-    r"|#", re.I)
+    r"|#"
+    # Run T, 8: "P.O." is the PO heading as printed; `\bpo\b` cannot see it
+    r"|\bp\.\s?o\.?(?!\w)", re.I)
 
 #: "Last 4", "Last four", "Account Last 4 Digits": exactly four digits, held
 #: as text — 0042 must not become 42, and 1234 is a suffix, not a quantity.
@@ -584,7 +586,33 @@ def cell_format(value, label="", decimal_hint=None):
         base = f'"{sym}"{base}'
     if accounting:
         return f"{base}_);({base})"
+    if trailing_minus(txt):
+        # Run T, 7: a TRAILING minus is shown trailing, as printed. The cell
+        # still holds the negative number (sums work); the second section of
+        # the format draws a negative as "26.08-", never "-26.08".
+        return f"{base};{base}-"
     return base
+
+
+def trailing_minus(text) -> bool:
+    """Is this a number printed with its minus AFTER it ("26.08-",
+    "$1,204.00 -")?"""
+    t = str(text or "").strip()
+    return bool(re.fullmatch(r"[^\d\-]{0,3}\d[\d,.\s]*\s?-", t))
+
+
+def zero_padded(text) -> bool:
+    """A digit run that starts with 0 and is longer than one digit: an
+    identifier by shape ("0025")."""
+    return bool(re.fullmatch(r"0\d+", str(text or "").strip()))
+
+
+def column_keeps_text(values) -> bool:
+    """Run T, 8: a column whose digit runs include a zero-padded one ("0025"
+    beside "2937") is a column of identifiers, so EVERY digit run in it stays
+    text - otherwise one column holds the text "0025" and the number 2937,
+    and its sorting and its alignment both lie."""
+    return any(zero_padded(v) for v in values)
 
 
 #: Excel's own limit on the text of a cell comment.

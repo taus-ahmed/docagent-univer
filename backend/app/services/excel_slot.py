@@ -14,7 +14,7 @@ from app.services.excel_legacy import _write_layout_excel
 from app.services.excel_legacy import _write_mixed_excel
 from app.services.excel_legacy import _write_table_excel
 from app.services.excel_cells import cell_format
-from app.services.excel_cells import coerce_cell_value
+from app.services.excel_cells import coerce_cell_value, column_keeps_text
 from app.services.excel_cells import keep_precision_note
 from app.services.excel_cells import money_hint
 from app.services.excel_cells import precision_flag
@@ -433,10 +433,13 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
     doc_us = [False]          # Run E, E14: the document writes money the US way
     doc_order = [None]        # Run G, G6: the day/month order the record fixes
 
-    def put(r, c, value, label=""):
+    def put(r, c, value, label="", as_text=False):
         cell = ws.cell(row=r + 1, column=c + 1)
         if isinstance(cell, MergedCell):
             return None
+        if as_text and re.fullmatch(r"\d+", str(value or "").strip()):
+            cell.value = str(value).strip()        # Run T, 8: an identifier column
+            return cell
         # G6: a date slot holding one unambiguous date is a real date
         d, note = excel_date(value, label, doc_order[0])
         if d is not None:
@@ -782,6 +785,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                     hc.value = "Source"
             at = {v: j for j, (kind, v) in enumerate(layouts.get(t["name"]) or [])
                   if kind == "rec"}
+            text_keys = {k for k in ((c.get("key") or c["header"]) for c in t["columns"])
+                         if column_keeps_text(r.get(k, "") for r in rows)}
             for i, row in enumerate(rows):
                 # placed from the row ABOVE the band: a band reserving no rows (D12)
                 # has start_row past end_row, and must not move by its own growth;
@@ -789,7 +794,8 @@ def _write_slot_excel(ws, doc_results, sheet_data, cells_tpl, openpyxl_mod,
                 r = doc_offset + out_row(t["start_row"] - 1) + 1 + at.get(i, i)
                 for col in t["columns"]:
                     key = col.get("key") or col["header"]
-                    cell = put(r, col["col"], row.get(key, ""), col.get("header", ""))
+                    cell = put(r, col["col"], row.get(key, ""), col.get("header", ""),
+                               as_text=key in text_keys)
                     if "_source" in row:
                         attach(cell, row.get("_source"), row.get("_page"),
                                key not in (row.get("_ungrounded") or []),
