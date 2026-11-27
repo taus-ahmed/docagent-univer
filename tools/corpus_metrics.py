@@ -269,7 +269,7 @@ def doc_metrics(ed, source, key=None):
             m["silent_blanks"] += 1
     if key is not None:
         import replay_key as K
-        s = K.score_doc(key, ed)
+        s = K.score_doc(key, _as_keyed(ed))
         m["key_right"], m["key_wrong"] = s["right"], s["wrong"]
         wrong_vals = {K.norm(h) for _l, _w, h in s["wrong_items"]}
         right_vals = set()
@@ -285,6 +285,29 @@ def doc_metrics(ed, source, key=None):
             if v.get("level") in ("high", "grounded") and nv in wrong_vals:
                 m["wrong_high"] += 1
     return m, examples
+
+
+def _as_keyed(ed):
+    """Run T: the answer key names columns and fields as the result did when
+    a person accepted it. A no-template result now carries the page's own
+    printed names (`printed_renames`); for SCORING only, the key's names are
+    put back, so a rename is not counted as a lost or a new value."""
+    import copy
+    ren = (ed or {}).get("printed_renames") or {}
+    if not ren:
+        return ed
+    out = copy.deepcopy(ed)
+    for tname, m in (ren.get("tables") or {}).items():
+        back = {new: old for old, new in m.items()}
+        for r in out.get(f"{tname}_rows") or []:
+            for new, old in back.items():
+                if new in r:
+                    r[old] = r.pop(new)
+    kv = out.get("extracted_data") or {}
+    for _ref, fr in (ren.get("fields") or {}).items():
+        if isinstance(fr, dict) and fr.get("to") in kv:
+            kv[fr["from"]] = kv.pop(fr["to"])
+    return out
 
 
 def run(tag, jobs=None):

@@ -35,20 +35,34 @@ def _flat(s) -> str:
     return re.sub(r"\s+", " ", str(s or "")).strip().casefold()
 
 
-def column_renames(headers, bands, rows, line_of_row, all_lines):
+def column_renames(headers, bands, rows, line_of_row, all_lines, skip=()):
     """({old header: printed heading}, [headers the page prints no heading
-    over]). Read off the document's heading line (`bands.words`, the line
-    `text_layer.column_bands` matched): the heading words over a column's
-    values, not inside another matched heading. Nothing is renamed to a name
-    another column of the table already has."""
+    over]). CONSERVATIVE on purpose - a wrong rename is worse than a kept
+    name:
+
+      * only on the heading line `text_layer.column_bands` CONFIRMED (two or
+        more of the table's headings printed on it); no other line is ever
+        taken for a heading (a row label or a section title is not one);
+      * never a column in `skip` (group columns: their values are printed
+        on a group line, not under the heading line);
+      * the column's values (two or more located on their own lines) must
+        sit under exactly ONE heading phrase - words separated by no more
+        than word spacing - lying inside no other matched heading, and that
+        phrase must not end in ':' (a title, not a heading);
+      * nothing is renamed to a name another column already has.
+    """
     from text_layer import line_page, locate
     words = list(getattr(bands, "words", ()) or ())
     if not rows:
         return {}, []
+    taken = list(bands.values()) if bands else []
+    fallback = False
     if not words:
         # none of the model's names is printed, so no heading line was
-        # matched: the heading line is the figure-free line of two or more
-        # words directly above the table's first row (within three lines)
+        # confirmed. The line directly above the table's first row (same
+        # page, within three lines, no digit) is taken for it only when at
+        # least TWO of its phrases each sit over a different column's values
+        # (checked below): a row label or a section title is one phrase.
         first = min((line_of_row[id(r)] for r in rows if id(r) in line_of_row), default=None)
         if first is None:
             return {}, []
@@ -57,16 +71,44 @@ def column_renames(headers, bands, rows, line_of_row, all_lines):
             if line_page(ln) != line_page(all_lines[first]):
                 break
             if len(ln) >= 2 and not any(re.search(r"\d", str(w.get("text", ""))) for w in ln):
-                words = list(ln)
+                words, fallback = list(ln), True
                 break
         if not words:
             return {}, []
-    taken = list(bands.values()) if bands else []
+
+    def inside_taken(w):
+        return any(min(b, float(w["x1"])) - max(a, float(w["x0"])) > 0 for a, b in taken)
+    phrases, cur = [], []
+    for w in words:
+        if inside_taken(w) or not re.search(r"[A-Za-z]", str(w.get("text", ""))):
+            if cur:
+                phrases.append(cur)
+            cur = []
+            continue
+        if cur and float(w["x0"]) - float(cur[-1]["x1"]) > 6.0:
+            phrases.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        phrases.append(cur)
+    # the heading line's neighbours: a heading WRAPPED over two lines ("Average"
+    # over "Ticket") is not renamed to one of its halves
+    hl = next((i for i, ln in enumerate(all_lines) if ln is words or (
+        ln and words and ln[0] is words[0])), None)
+    near = []
+    if hl is not None:
+        h_ln = max(1.0, max(float(w["bottom"]) - float(w["top"]) for w in all_lines[hl]))
+        for j in (hl - 1, hl + 1):
+            if 0 <= j < len(all_lines) and line_page(all_lines[j]) == line_page(all_lines[hl]) \
+                    and abs(float(all_lines[j][0]["top"]) - float(all_lines[hl][0]["top"])) \
+                    <= 1.5 * h_ln \
+                    and not any(re.search(r"\d", str(w.get("text", ""))) for w in all_lines[j]):
+                near += [w for w in all_lines[j] if re.search(r"[A-Za-z]", str(w.get("text", "")))]
     renames, unprinted = {}, []
     names = {_flat(h) for h in headers}
+    # every column's values' x span, from the lines its rows were read from
+    span_of = {}
     for h in headers:
-        if h in bands:
-            continue
         spans = []
         for r in rows:
             v = str(r.get(h, "") or "").strip()
@@ -76,23 +118,39 @@ def column_renames(headers, bands, rows, line_of_row, all_lines):
             got = locate(v, all_lines[ln_no])
             if got:
                 spans.append(got)
-        if not spans:
+        if len(spans) >= 2:
+            span_of[h] = (min(a for a, _b in spans), max(b for _a, b in spans))
+
+    def _over(ph, sp):
+        return min(sp[1], float(ph[-1]["x1"])) - max(sp[0], float(ph[0]["x0"])) > 0
+    texts = [_flat(" ".join(str(w["text"]) for w in ph)) for ph in phrases]
+    for h in headers:
+        if h in bands or h in skip or h not in span_of:
             continue
-        x0, x1 = min(a for a, _b in spans), max(b for _a, b in spans)
-        over = [w for w in words
-                if min(x1, float(w["x1"])) - max(x0, float(w["x0"])) > 0
-                and not any(min(b, float(w["x1"])) - max(a, float(w["x0"])) > 0
-                            for a, b in taken)
-                and re.search(r"[A-Za-z]", str(w.get("text", "")))]
+        over = [k for k, ph in enumerate(phrases) if _over(ph, span_of[h])]
         if not over:
             unprinted.append(h)
             continue
-        new = " ".join(str(w["text"]) for w in over).strip()
-        if _flat(new) == _flat(h) or _flat(new) in names:
+        if len(over) != 1:
+            continue
+        ph = phrases[over[0]]
+        # a phrase over SEVERAL columns is a group heading, and one printed
+        # more than once on the line ("Items | Amount" under each group) is a
+        # sub-heading: neither is this column's own name
+        if sum(1 for g, sp in span_of.items() if g != h and g not in skip and _over(ph, sp)) \
+                or texts.count(texts[over[0]]) > 1:
+            continue
+        p0, p1 = float(ph[0]["x0"]), float(ph[-1]["x1"])
+        if any(min(p1, float(w["x1"])) - max(p0, float(w["x0"])) > 0 for w in near):
+            continue                   # a wrapped heading: keep the model's whole name
+        new = " ".join(str(w["text"]) for w in ph).strip()
+        if new.endswith(":") or _flat(new) == _flat(h) or _flat(new) in names:
             continue
         renames[h] = new
         names.add(_flat(new))
-    return renames, unprinted
+    if fallback and len(renames) + sum(1 for h in headers if h in bands) < 2:
+        return {}, []                  # the line above is not a heading line
+    return renames, (unprinted if not fallback or renames else [])
 
 
 def field_label(value, source, all_lines):
@@ -152,6 +210,7 @@ def apply(ed, table_renames, field_renames):
                     r[new] = r.pop(old)
             if isinstance(r.get("_ungrounded"), list):
                 r["_ungrounded"] = [ren.get(k, k) for k in r["_ungrounded"]]
+    renamed_fields = {}
     for f in smap.get("fields") or []:
         new = field_renames.get(f.get("ref"))
         if not new:
@@ -162,11 +221,12 @@ def apply(ed, table_renames, field_renames):
                 cell["value"] = new
                 break
         f["row_label"] = new
+        renamed_fields[f.get("ref")] = {"from": old, "to": new}
         kv = ed.get("extracted_data") or {}
         if old in kv and new not in kv:
             kv[new] = kv.pop(old)
     if ed.get("inferred_grid") is not None:
         ed["inferred_grid"] = grid
     ed["slot_map"] = smap
-    ed["printed_renames"] = {"tables": table_renames, "fields": field_renames}
+    ed["printed_renames"] = {"tables": table_renames, "fields": renamed_fields}
     return ed

@@ -3706,8 +3706,12 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                     and t.get("orientation") != "columns":
                 # Run T (owner): no-template headers are the page's own
                 import printed_names as PN
+                _skip = set((inferred_headers.get(t["name"]) or {}))
+                if row_groups_found is not None:
+                    _skip |= {c["name"] for c in (group_cols.get("ident"), group_cols.get("name"))
+                              if c}
                 _ren, _unp = PN.column_renames(headers, bands, rows_out, line_of_row,
-                                               all_lines)
+                                               all_lines, skip=_skip)
                 if _ren:
                     printed_renames[t["name"]] = _ren
                     notes.append(f'{t["name"]}: column(s) named as the page prints them: '
@@ -4476,7 +4480,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
             new = PN.field_label(extracted_fields[ref],
                                  (field_prov.get(ref) or {}).get("source"), all_lines)
             if new and new.casefold() != str(label).casefold() and not any(
-                    g["row_label"].casefold() == new.casefold() for g in slots["fields"]):
+                    g["row_label"].casefold() == new.casefold() for g in slots["fields"]) \
+                    and new.casefold() not in {x.casefold() for x in field_renames.values()}:
                 field_renames[ref] = new
                 notes.append(f"{label!r} named as the page prints it: {new!r}")
             else:
