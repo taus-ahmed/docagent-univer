@@ -638,6 +638,9 @@ def provenance_note(source, page, filename, grounded=True, confidence=""):
     if confidence == UNVERIFIED:
         lines.append("Not checked: this document has no text layer, so the "
                      "quoted words could not be verified.")
+    elif confidence == "derived":
+        lines.append("Derived: not printed on the page. Computed as the sum of "
+                     "the rows it totals, and the arithmetic checks.")
     elif grounded is False:
         lines.append("Not verified: these words were not found in the document.")
     if quote:

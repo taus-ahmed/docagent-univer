@@ -1038,7 +1038,7 @@ def prose_in_a_scalar(value, label):
 #
 # Read that module's docstring before changing any of this.
 from app.core.confidence import (  # noqa: E402
-    CONFIDENT_LEVELS, GROUNDED, HIGH, LOW, MEDIUM, UNVERIFIED,
+    CONFIDENT_LEVELS, DERIVED, GROUNDED, HIGH, LOW, MEDIUM, UNVERIFIED,
 )
 
 
@@ -1767,6 +1767,54 @@ def attach_tail_rows(rows, keys, line_of_row, all_lines=None):
     for r in out:
         r.pop("_tails", None)
     return out, attached
+
+
+_TOTAL_WORD = re.compile(r"\b(totals?|subtotal|sum|net|gross|balance due|amount due)\b", re.I)
+
+
+def derive_totals(fields, extracted, conf_map, field_prov, tables_out, page_texts):
+    """{ref: {"rule": "sum", "table", "column", "rows"}} - Run T, 6. A total
+    field the model answered with a figure the page does NOT print (grounding
+    failed, and no printed number anywhere equals it) is DERIVED, not Low,
+    when it equals the sum of one column of a table's rows to the cent (two
+    or more rows). The arithmetic is the check; one column must match, and a
+    figure two columns could produce is still derived from the first."""
+    from decimal import Decimal, InvalidOperation
+    printed = set()
+    for t in page_texts or []:
+        for tok in printed_numbers(t):
+            k = _number_key(tok)
+            if k is not None:
+                printed.add(k.lstrip("-"))
+    out = {}
+    for f in fields:
+        ref, label = f.get("ref"), str(f.get("row_label") or "")
+        v = extracted.get(ref)
+        if not v or conf_map.get(ref) != LOW or not _TOTAL_WORD.search(label):
+            continue
+        key = _number_key(v)
+        if key is None or key.lstrip("-") in printed:
+            continue
+        try:
+            target = Decimal(key)
+        except InvalidOperation:
+            continue
+        for tname, rows in (tables_out or {}).items():
+            cols = [k for k in dict.fromkeys(k for r in rows for k in r)
+                    if not str(k).startswith("_")]
+            for col in cols:
+                vals = [str(r.get(col, "") or "").strip() for r in rows]
+                vals = [x for x in vals if x]
+                keys = [_number_key(x) for x in vals]
+                if len(keys) < 2 or any(k is None for k in keys):
+                    continue
+                if sum(Decimal(k) for k in keys) == target:
+                    out[ref] = {"rule": "sum", "table": tname, "column": col,
+                                "rows": len(keys)}
+                    break
+            if ref in out:
+                break
+    return out
 
 
 def split_total_rows(rows, keys):
@@ -3921,6 +3969,23 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 notes.append(f"page {', '.join(map(str, sorted(_pages)))}: {_note} - "
                              f"{_moved} value(s) could not be checked against a "
                              f"text layer and are unverified, not low")
+
+    # ── DERIVED TOTALS (Run T, 6) ──
+    # A total the page does not print, which the model computed, is checked
+    # by arithmetic: equal to the sum of a column of the rows it totals, it
+    # is DERIVED - not Low, and not presented as read from the page.
+    for ref, d in derive_totals(slots["fields"], extracted_fields, conf_map, field_prov,
+                                tables_out, pages).items():
+        label = next((f["row_label"] for f in slots["fields"] if f["ref"] == ref), ref)
+        conf_map[ref] = DERIVED
+        field_prov.setdefault(ref, {})["derived"] = d
+        field_fail[ref] = [x for x in field_fail.get(ref, []) if x != GROUNDING_FAILED]
+        # every reason it was Low says where on the page it was (not) read;
+        # it is printed nowhere, and the arithmetic is the check
+        flagged[:] = [fl for fl in flagged if fl.get("ref") not in (ref, label)]
+        notes.append(f"{label}: not printed on the page; {extracted_fields[ref]!r} is the sum "
+                     f"of {d['column']!r} over {d['rows']} rows of {d['table']!r} "
+                     f"(checked), marked derived")
 
     # PER-VALUE ORIGIN AND REVIEW (Gate 2). On EVERY value, native or not, so
     # a reader never has to guess what an absent key means. The only reasons

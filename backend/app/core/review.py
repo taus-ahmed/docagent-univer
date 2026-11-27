@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Optional
 
-from app.core.confidence import EDITED, GROUNDED, HIGH, LOW, UNVERIFIED
+from app.core.confidence import DERIVED, EDITED, GROUNDED, HIGH, LOW, UNVERIFIED
 
 #: code -> (label, tooltip). The label fits a badge; the tooltip says what
 #: happened and what to check. Keep in step with §12 of
@@ -261,7 +261,7 @@ STATUSES: dict[str, tuple[str, str]] = {
 PAGE_CHECK_REASON = "outlined_text"
 
 _LEVEL_STATUS = {HIGH: "verified", GROUNDED: "grounded", UNVERIFIED: "unverified",
-                 LOW: "low", EDITED: "edited"}
+                 LOW: "low", EDITED: "edited", DERIVED: "derived"}
 _NEEDS_PERSON = {"unverified", "low", "empty_flagged", "unknown"}
 
 

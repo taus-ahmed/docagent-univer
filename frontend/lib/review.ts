@@ -10,7 +10,9 @@ export type ReviewStatus =
   | "verified" | "grounded" | "unverified" | "low" | "edited"
   | "empty_flagged" | "empty" | "unknown"
   // Run Q Phase 3: on a page with no text layer; one page-level item carries the look
-  | "page_check";
+  | "page_check"
+  // Run T, 6: a total not printed on the page, the sum of its rows, checked
+  | "derived";
 
 export interface ReviewValue {
   kind: "field" | "cell";
@@ -116,6 +118,7 @@ export const BADGES: Record<ReviewStatus, { text: string; fg: string; bg: string
   empty:         { text: "Empty",          fg: "#4b5563", bg: "#f3f4f6" },
   unknown:       { text: "Unknown",        fg: "#78350f", bg: "#fef3c7" },
   page_check:    { text: "Verify page",    fg: "#374151", bg: "#ffffff" },
+  derived:       { text: "Derived (sum)",  fg: "#134e4a", bg: "#ccfbf1" },
 };
 
 /** The badge for a value: a confident level that still owes a look says so. */

@@ -53,6 +53,11 @@ UNVERIFIED = "unverified"
 MEDIUM = "medium"
 LOW = "low"
 EDITED = "edited"
+#: Run T, 6: a total the page does not print, computed by the model and
+#: CHECKED by arithmetic: it equals the sum of a column of the rows it
+#: totals, to the cent. Not "low" (nothing failed) and not "grounded"
+#: (it is not printed): its own word.
+DERIVED = "derived"
 
 #: Levels meaning "we can stand behind this cell". Test membership in this
 #: rather than `== "high"`, which silently excluded every inferred cell.
@@ -67,6 +72,7 @@ DISPLAY = {
     MEDIUM:     "Medium",
     LOW:        "Low",
     EDITED:     "Edited by hand",
+    DERIVED:    "Derived — not printed; the sum of its rows, checked",
 }
 
 #: Short form, for a narrow column.
@@ -77,6 +83,7 @@ DISPLAY_SHORT = {
     MEDIUM:     "Medium",
     LOW:        "Low",
     EDITED:     "Edited",
+    DERIVED:    "Derived",
 }
 
 
