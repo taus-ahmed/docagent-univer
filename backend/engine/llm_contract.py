@@ -107,11 +107,63 @@ class LLMCallError(Exception):
     constants above; `retry_after` is seconds when the server said so."""
 
     def __init__(self, kind: str, message: str = "", status: Optional[int] = None,
-                 retry_after: Optional[float] = None):
+                 retry_after: Optional[float] = None, api_status: Optional[str] = None,
+                 api_reason: Optional[str] = None, cause: Optional[str] = None):
         super().__init__(message or kind)
         self.kind = kind
         self.status = status
         self.retry_after = retry_after
+        # Run T, 11: what the provider SAID, without its words. `api_status`
+        # is its status name (INVALID_ARGUMENT), `api_reason` an ErrorInfo
+        # reason code, `cause` one word from CAUSES. The message itself can
+        # quote the request (a template's labels), so it is never kept.
+        self.api_status = api_status
+        self.api_reason = api_reason
+        self.cause = cause
+
+
+#: Run T, 11 — the cause of a refused request, read from the provider's
+#: message by pattern and kept as ONE WORD. Order matters: the first match
+#: wins.
+CAUSES = (
+    ("schema", r"response_?schema|responseSchema|too many states|schema"),
+    ("input_too_long", r"token count|too many tokens|exceeds the maximum|input.*too long|request payload size"),
+    ("image", r"inline_?data|mime|image|base64"),
+    ("generation_config", r"generation_?config|thinking|temperature|max_?output_?tokens"),
+    ("api_key", r"api[ _]?key"),
+    ("model", r"model"),
+)
+
+#: words for a cause in a sentence a person reads (failure_story)
+CAUSE_WORDS = {
+    "schema": "the answer format was too large or not accepted",
+    "input_too_long": "the request was too long",
+    "image": "a page image was not accepted",
+    "generation_config": "a request setting was not accepted",
+    "api_key": "the API key was not accepted",
+    "model": "the model was not accepted",
+}
+
+
+def classify_cause(message: str) -> Optional[str]:
+    m = str(message or "")
+    for name, pat in CAUSES:
+        if re.search(pat, m, re.IGNORECASE):
+            return name
+    return None
+
+
+def schema_size(schema) -> dict:
+    """{fields, tables, columns} of a response schema built by
+    `response_schema`; zeros for none."""
+    props = (schema or {}).get("properties") or {}
+    fields = len(((props.get("fields") or {}).get("properties")) or {})
+    tprops = ((props.get("tables") or {}).get("properties")) or {}
+    cols = 0
+    for t in tprops.values():
+        cells = (((t.get("items") or {}).get("properties") or {}).get("cells") or {})
+        cols += len(cells.get("properties") or {})
+    return {"fields": fields, "tables": len(tprops), "columns": cols}
 
 
 # ── settings (read lazily; the engine may run without app settings) ──────────
@@ -220,6 +272,8 @@ def new_attempt(model_requested: str, retry: int = 0, reason: str = "",
         "retry": retry,
         "retry_reason": reason or None,
         "structured_output": None,
+        "schema_fields": None, "schema_columns": None,
+        "api_status": None, "api_reason": None, "cause": None,
         "slots_requested": None, "slots_returned": None,
         "tables_requested": None, "tables_returned": None,
     }
@@ -247,8 +301,9 @@ def log_attempt(rec: dict) -> None:
     keys = ("section", "model_requested", "model_version", "finish_reason",
             "candidate_count", "response_chars", "prompt_tokens",
             "output_tokens", "thinking_tokens", "cost_estimate", "latency_ms",
-            "images", "http_status", "parse", "error_kind", "retry",
-            "retry_reason", "slots_requested", "slots_returned",
+            "images", "http_status", "api_status", "api_reason", "cause",
+            "parse", "error_kind", "retry", "retry_reason", "structured_output",
+            "schema_fields", "schema_columns", "slots_requested", "slots_returned",
             "tables_requested", "tables_returned")
     body = " ".join(f"{k}={rec.get(k)}" for k in keys)
     print(f"[LLM-ATTEMPT] job={ctx.get('job_id')} doc={ctx.get('document')} "
@@ -284,10 +339,12 @@ def failure_story(attempts, timeout_s=None) -> str:
             continue
         kind, st = a.get("error_kind"), a.get("http_status")
         lat = (a.get("latency_ms") or 0) / 1000.0
+        why = CAUSE_WORDS.get(a.get("cause") or "")
         if kind == INVALID_REQUEST and a.get("structured_output"):
             s = f"the model service refused this template's answer format (HTTP {st or 400})"
         elif kind == INVALID_REQUEST:
-            s = f"the model service refused the request (HTTP {st or 400})"
+            s = (f"the model service refused the request (HTTP {st or 400}: {why})"
+                 if why else f"the model service refused the request (HTTP {st or 400})")
         elif kind == TRANSIENT and st is None and timeout_s and lat >= 0.9 * timeout_s:
             s = f"the call timed out after {int(round(timeout_s))} s"
         elif kind == TRANSIENT:

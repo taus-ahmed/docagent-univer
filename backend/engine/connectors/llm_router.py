@@ -53,6 +53,36 @@ def provider_order() -> list[str]:
     return order
 
 
+def failure_summary(result, name, providers=()) -> str:
+    """Run T, 11: one log line saying WHY a provider failed — from its attempt
+    records only (status, the provider's error code, a one-word cause, the
+    request's shape), never the request's or the answer's text."""
+    attempts = [a for a in (getattr(result, "attempts", None) or []) if isinstance(a, dict)]
+    bad = [a for a in attempts if a.get("error_kind")]
+    a = bad[-1] if bad else (attempts[-1] if attempts else {})
+    first = bad[0] if bad else a
+    names = [n for n, _p in providers]
+    later = names[names.index(name) + 1:] if name in names else []
+    parts = [
+        f"http={a.get('http_status')}",
+        f"api_status={a.get('api_status')}",
+        f"api_reason={a.get('api_reason')}",
+        f"cause={first.get('cause') or a.get('cause')}",
+        f"kind={getattr(result, 'error_kind', None) or a.get('error_kind')}",
+        f"model={a.get('model_requested') or getattr(result, 'model_used', '')}",
+        f"pages={a.get('images')}",
+        f"schema_fields={first.get('schema_fields')}",
+        f"schema_sent={bool(first.get('structured_output'))}",
+        f"attempts={len(attempts)}",
+        f"retried={'yes' if len(attempts) > 1 else 'no'}"
+        + (f" ({','.join(sorted({str(x.get('retry_reason')) for x in attempts if x.get('retry_reason')}))})"
+           if any(x.get('retry_reason') for x in attempts) else ""),
+        f"fallback={'+'.join(later) if later else 'none'}",
+        "recovered=no",
+    ]
+    return " ".join(parts)
+
+
 class LLMRouter:
     """Routing between configured LLM providers with fallback in order."""
 
@@ -150,9 +180,12 @@ class LLMRouter:
 
                 if result.success:
                     self._track(name)
+                    if last is not None:
+                        logger.warning(f"Extraction recovered: fallback provider "
+                                       f"{name} answered after an earlier provider failed")
                     return result
 
-                logger.warning(f"Extraction {name} failed (provider error, {len(result.error or '')} chars, not logged)")
+                logger.warning(f"Extraction {name} failed: {failure_summary(result, name, self.providers)}")
                 last = result
 
             except Exception as e:

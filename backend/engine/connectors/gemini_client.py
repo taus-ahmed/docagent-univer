@@ -108,6 +108,35 @@ def classify_http(code: int, body: bytes) -> str:
     return C.TRANSIENT if code >= 500 else C.INVALID_REQUEST
 
 
+def api_error(body: bytes):
+    """(status name, ErrorInfo reason, cause word) from a Gemini error body.
+    Run T, 11: the log said "provider error, 30 chars, not logged" and so
+    said nothing. The MESSAGE is read only to name its cause in one word
+    (llm_contract.CAUSES) and is never kept: a schema error quotes the
+    request's property names."""
+    try:
+        err = (json.loads((body or b"").decode("utf-8", "replace")) or {}).get("error") or {}
+    except (ValueError, AttributeError):
+        return None, None, None
+    if not isinstance(err, dict):
+        return None, None, None
+    status = err.get("status") if isinstance(err.get("status"), str) else None
+    reason = None
+    for d in err.get("details") or []:
+        if isinstance(d, dict) and isinstance(d.get("reason"), str):
+            reason = d["reason"]
+            break
+    safe = lambda x: re.sub(r"[^A-Za-z0-9_.]", "", x)[:64] if x else None  # noqa: E731
+    return safe(status), safe(reason), C.classify_cause(err.get("message"))
+
+
+#: Run T, 11. Every refused response schema in the stored jobs (11 of 11,
+#: jobs 60-134) carried 31-50 field slots; every accepted one carried at most
+#: 26. A schema this large is not sent: the call goes out without it at once
+#: (the answer is validated either way) instead of spending a refused call.
+SCHEMA_MAX_FIELDS = 28
+
+
 # ── per-model request settings (overnight M3, docs/MODEL_MIGRATION.md) ───────
 #
 # gemini-2.5-* keeps today's behaviour exactly: temperature sent,
@@ -223,8 +252,11 @@ class GeminiClient:
             except Exception:
                 pass
             kind = classify_http(e.code, raw)
+            api_status, api_reason, cause = api_error(raw)
             raise C.LLMCallError(kind, f"HTTP {e.code} {e.reason}", status=e.code,
-                                 retry_after=_retry_after(e, raw)) from None
+                                 retry_after=_retry_after(e, raw),
+                                 api_status=api_status, api_reason=api_reason,
+                                 cause=cause) from None
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             raise C.LLMCallError(C.TRANSIENT, f"{type(e).__name__}") from None
         except json.JSONDecodeError:
@@ -296,9 +328,17 @@ class GeminiClient:
         attempts: list = []
         deadline = time.monotonic() + budget
         schema = response_schema
+        size = C.schema_size(schema)
+        first_reason = ""
+        limit = int(C.setting("GEMINI_SCHEMA_MAX_FIELDS", SCHEMA_MAX_FIELDS))
+        if schema and size["fields"] > limit:
+            print(f"[GEMINI] response schema not sent: {size['fields']} field "
+                  f"slots > {limit} (requests of this size are refused, HTTP 400)",
+                  flush=True)
+            schema, first_reason = None, "schema_too_large"
         last: Optional[C.LLMCallError] = None
         for m in ordered:
-            tries, reason = 0, ""
+            tries, reason = 0, first_reason
             while True:
                 body = {"contents": [{"parts": parts}],
                         "generationConfig": self._gen_config(
@@ -309,6 +349,8 @@ class GeminiClient:
                 rec = C.new_attempt(m, retry=len(attempts), reason=reason,
                                     images=n_images)
                 rec["structured_output"] = bool(schema)
+                rec["schema_fields"] = size["fields"] if response_schema else None
+                rec["schema_columns"] = size["columns"] if response_schema else None
                 rec["temperature"] = temperature
                 t0 = time.monotonic()
                 try:
@@ -317,6 +359,9 @@ class GeminiClient:
                     rec["latency_ms"] = round((time.monotonic() - t0) * 1000)
                     rec["http_status"] = e.status
                     rec["error_kind"] = e.kind
+                    rec["api_status"] = getattr(e, "api_status", None)
+                    rec["api_reason"] = getattr(e, "api_reason", None)
+                    rec["cause"] = getattr(e, "cause", None)
                     rec["parse"] = "not_attempted"
                     attempts.append(C.finish_attempt(rec))
                     last = e
@@ -351,6 +396,13 @@ class GeminiClient:
                 rec["response_chars"] = len(text or "")
                 attempts.append(C.finish_attempt(rec, log=False))
                 self._good_model = m
+                refused = [a for a in attempts if a.get("error_kind")]
+                if refused:
+                    print(f"[GEMINI] recovered: model={m} after "
+                          f"{len(refused)} failed attempt(s) "
+                          f"(last http={refused[-1].get('http_status')} "
+                          f"cause={refused[-1].get('cause')}); "
+                          f"retry_reason={reason or None}", flush=True)
                 tok = C.total_tokens(info.get("prompt_tokens"),
                                      info.get("output_tokens"),
                                      info.get("thinking_tokens"))
