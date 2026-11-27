@@ -1201,7 +1201,7 @@ def verify_span(value, source, page, page_texts, record=""):
         if nc and len(nc.split()) >= 3 and nc in " ".join(_words_nc(span)):
             return True, ""
         # Run T, 1: SPACING is not content. A text layer glues two printed
-        # words ("ACHDEBIT") and the model writes them apart ("ACH DEBIT"),
+        # words ("WIREXFER") and the model writes them apart ("WIRE XFER"),
         # or the other way round; the characters, in order, are the same
         # run. Matched with every space removed on both sides, at token
         # boundaries, for 4+ characters so a fragment cannot hit by chance.
@@ -3239,8 +3239,8 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                         # Run T, 1: a cell that did not ground is Low ON ITS
                         # OWN (`_ungrounded` names it; the review and the
                         # export read it per cell). It used to make the whole
-                        # row Low, so a description written "ACH DEBIT" over
-                        # a printed "ACHDEBIT" marked the row's right date,
+                        # row Low, so a description written "WIRE XFER" over
+                        # a printed "WIREXFER" marked the row's right date,
                         # amount and balance Low too. A content-check failure
                         # still marks the row, and so does a row none of
                         # whose values grounded (below).
