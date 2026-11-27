@@ -96,12 +96,18 @@ def features(page, line, gut=None) -> dict:
     text = line["text"]
     amounts = [w for w in ws if is_amount(w["text"])]
     nwords = len(ws)
-    prose = (nwords >= 8 and text.rstrip().endswith((".", "?", "!"))) or nwords >= 12
+    # a paragraph is ONE run of words: a line the gutter splits into
+    # side-by-side pieces, or one carrying a date or a form widget, is
+    # content laid out on the page, not prose
+    widget = any(w.get("origin") == "widget" for w in ws)
     seg_texts = [" ".join(w["text"] for w in s) for s in segs]
     pair = any(re.search(r"\S:(\s|$)", t) for t in seg_texts)
+    # and a `Label: value` line is a field however long its value: when in
+    # doubt a line is KEPT, since a lost value is invisible
+    prose = ((nwords >= 8 and text.rstrip().endswith((".", "?", "!"))) or nwords >= 12)         and len(segs) == 1 and not has_date(text) and not widget and not pair
     return {"segs": segs, "seg_texts": seg_texts, "n_amounts": len(amounts),
             "date": has_date(text), "digits": bool(re.search(r"\d", text)),
-            "prose": prose and not amounts, "pair": pair,
+            "prose": prose and not amounts, "pair": pair, "widget": widget,
             "furniture": bool(_PAGE_NO.match(text)), "continued": bool(_CONT.search(text)),
             "nwords": nwords}
 
@@ -411,7 +417,7 @@ def fallback_plan(page, prev_table=None) -> dict:
                 j = i
                 while j < len(blk) and (fs[j]["prose"] or (
                         j > i and not fs[j]["digits"] and not fs[j]["pair"]
-                        and len(fs[j]["segs"]) == 1)):
+                        and not fs[j]["widget"] and len(fs[j]["segs"]) == 1)):
                     j += 1
                 regions.append(_region(nid(), "note", blk[i:j]))
                 i = j

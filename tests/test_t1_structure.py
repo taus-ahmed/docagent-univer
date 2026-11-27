@@ -417,3 +417,21 @@ class TestDeterminism:
         S.make_plans(perc, ask_page, "abc", "m2", cache)      # another model: asked
         assert n["calls"] == 2
         assert S.plan_key("abc", "m1", 1) != S.plan_key("abc", "m2", 1)
+
+
+class TestNotNote:
+    """Lines that LOOK long but are content (found on the oregon invoice,
+    Batch 4 job 150): never excluded as note text."""
+
+    def test_side_by_side_blocks_and_label_lines_are_kept(self, tmp_path):
+        items = [(44, 712, "5219 Northwind Way Suite 12 Building C Eastside"),
+                 (330, 712, "Period From Date: 03/01/2026"),
+                 (44, 698, "Remit Payment To: Lakeside Partners, PO Box 4410, Rivertown, "
+                           "State 12345-6789 and copy the office of grants"),
+                 (44, 660, "By signing this report I certify that the information above is "
+                           "true and complete to the best of my knowledge.")]
+        lay = S.layout_document(_doc(tmp_path, [items]))
+        vals = " ".join(str(v) for v in _vals(lay["pages"][0]))
+        assert "Period From Date:" in vals and "Remit Payment To:" in vals
+        assert "Northwind Way" in vals
+        assert "best of my knowledge" not in vals
