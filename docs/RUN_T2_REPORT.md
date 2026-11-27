@@ -179,9 +179,14 @@ machine's Tesseract 5.4.0 - off-pin, not production numbers**):
   charts are not detected.
 * **Real client documents**: none beyond the corpus.
 * **Gates**: every stage's full suite ran in its own worktree at its own
-  commit (see the progress log); the first two gates' environment failures
-  (a missing `local_docs` link, then a missing sibling corpus folder) were
-  re-run and passed.
+  commit. Stage 1 (1eff903) and 2 (5599ca7): 11 environment failures each (a
+  sibling corpus folder missing from the worktree), re-run and passed;
+  Stage 3 5945 / 0 failed; Stage 4 5954 / 0; **Stage 5 (2e2273a) 1 real
+  failure** - the pyflakes gate flagged a variable in `_stack_columns`, fixed
+  in the Stage 6 commit; Stage 6 5983 / 0; Stage 7 5988 / 0; final (b6ab13f)
+  5989 passed / 0 failed / 19 xfailed. The accuracy harness was not re-run
+  (templated mode unaffected by the Organized layout; no-template replay
+  still blocked by the EXP-2024-0081 CacheMiss).
 
 ## Approval checklist for `NO_TEMPLATE_USES_STRUCTURE` (the flag stays OFF)
 

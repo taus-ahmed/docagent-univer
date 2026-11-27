@@ -28,18 +28,23 @@ No live model call. Resume from the first unchecked item.
 
 ## Stage 5 — stacked headers, wrapped tables, charts
 - [x] stacked headers; repeated column groups one table; side-by-side blocks; instruction/bullet text excluded with reason; charts excluded
-- [ ] stage 5 full suite + commit (2e2273a)
+- [x] stage 5 full suite (gate at 2e2273a: 5961 passed, **1 failed**, 1 skipped, 19 xfailed) + commit (2e2273a)
+      The failure is real: the pyflakes gate (test_no_undefined_names) flagged `prev` in
+      `_stack_columns`, read before assignment as pyflakes sees it (safe at run time: a
+      value-after-label cell is never first in its row). Fixed in the Stage 6 commit
+      8c2413b, whose gate re-checks it.
 
 ## Stage 6 — reviewer structure edits (backend)
 - [x] endpoints, stored plan edits (who/when), export applies them, deterministic; docs/REVIEWER_STRUCTURE_API.md
-- [ ] stage 6 full suite + commit (8c2413b)
+- [x] stage 6 full suite (gate at 8c2413b: 5983 passed, 0 failed, 1 skipped, 19 xfailed - the Stage 5 lint failure is fixed) + commit (8c2413b)
 
 ## Stage 7 — live run tool (not run)
 - [x] tools/live_structure_check.py ($1 cap, per-call log), PowerShell commands, vendor list + expense report, 20-doc comparison set
-- [ ] stage 7 full suite + commit (29f9a31)
+- [x] stage 7 full suite (gate at 29f9a31: 5988 passed, 0 failed, 1 skipped, 19 xfailed) + commit (29f9a31)
 
 ## Stage 8 — report
-- [x] docs/RUN_T2_REPORT.md (written; gates 5-7 and 5b filled in when they finish)
+- [x] docs/RUN_T2_REPORT.md (96ad0d1)
+- [x] final gate at b6ab13f (Stage 5b + spec): 5989 passed, 0 failed, 1 skipped, 19 xfailed
 
 ## Split (Stage 1)
 
@@ -197,3 +202,4 @@ the held-out half is never worked on:
 - Baseline at f434f0e (first key version): dev old 69.3% header / 94.8% row / 7 glued;
   dev new 73.9% / 84.0% / 35 glued; held-out old 86.4% / 86.4% / 5; held-out new
   83.5% / 85.9% / 2.
+RUN T2 DONE
