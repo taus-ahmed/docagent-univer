@@ -157,6 +157,10 @@ def _run_migrations():
             """ALTER TABLE document_results
                ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500)""",
 
+            # Run T1, 2f: the stored perception (words + lines) per document
+            """ALTER TABLE document_results
+               ADD COLUMN IF NOT EXISTS perception_json TEXT""",
+
             # column_templates.description holds the full spreadsheet grid as
             # JSON and can run to tens of thousands of characters. An older
             # create_all() made it VARCHAR(500); the ORM has said Text for a

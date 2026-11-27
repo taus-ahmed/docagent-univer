@@ -166,6 +166,12 @@ class DocumentResult(Base):
 
     # File storage
     s3_key = Column(String(500), nullable=True)  # original file in S3
+    # Run T1, 2f: the document's PERCEPTION (words with boxes, lines,
+    # quality, removed background), packed by engine/perception.pack. An
+    # export or a regeneration reads the page from here, never from the
+    # uploaded file - staging wipes files at every deploy. Raw input, not
+    # derived template structure (see the comment on ColumnTemplate).
+    perception_json = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

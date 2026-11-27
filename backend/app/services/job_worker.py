@@ -962,6 +962,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
         successful = failed = needs_review = 0
         total_tokens_used = 0
         total_cost_usd = 0.0
+        _perception_cache = {}
         job_cost = {"usd": 0.0, "calls": 0, "priced_calls": 0, "unpriced_calls": 0,
                     "input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0,
                     "by_model": {}}
@@ -1014,6 +1015,7 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
 
             file_path = None
             extra_copies = []
+            _perception_cache.clear()        # one file's words at a time
             try:
                 # `fp` is a storage KEY. Resolving it is what makes the worker
                 # independent of which machine received the upload: local
@@ -1225,6 +1227,10 @@ def _run_extraction_job(job_id, file_keys, schema_path, db_url, template_data,
                                          if result.extraction_response else 0),
                             latency_ms=result.processing_time_ms,
                         )
+                        # Run T1, 2f: the page as words, stored with the record
+                        from app.services import perception_store
+                        doc.perception_json = perception_store.packed_for(
+                            file_path, extracted, _perception_cache)
                         doc_tokens = (result.extraction_response.tokens_used
                                       if result.extraction_response else 0) or 0
                         if _opt_attempts:
