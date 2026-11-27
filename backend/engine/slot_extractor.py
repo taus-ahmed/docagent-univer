@@ -1336,7 +1336,7 @@ def verify_span(value, source, page, page_texts, record=""):
         m = next((m for m in (_spaced_match(bare, t) for t in page_texts) if m), None)             if len(bare) >= 8 else None
         if not m:
             # Run T1, 2b: punctuation between printed words is notation too
-            # ("ACH-DEBIT" printed, "ACH DEBIT" quoted); 8+ letters/digits,
+            # ("WIRE-OUT" printed, "WIRE OUT" quoted); 8+ letters/digits,
             # at token boundaries
             from perception import loose_find
             m = next((m for m in (loose_find(source, t, 8) for t in page_texts)

@@ -26,7 +26,6 @@ import json
 import math
 import re
 import statistics
-import unicodedata
 import zlib
 from typing import Optional
 
@@ -54,8 +53,8 @@ def normalise(s) -> str:
 
 def loose_key(s) -> str:
     """`s` with whitespace AND punctuation removed, case folded: the key two
-    renderings of one printed run share ("ACHDEBIT" / "ACH DEBIT" /
-    "ACH-DEBIT")."""
+    renderings of one printed run share ("WIREOUT" / "WIRE OUT" /
+    "WIRE-OUT")."""
     return "".join(ch for ch in normalise(s).casefold() if ch.isalnum())
 
 
@@ -256,6 +255,55 @@ def lines_of(words) -> list:
         out.append([w])
     out.sort(key=lambda ws: (min(w["top"] for w in ws), min(w["x0"] for w in ws)))
     return out
+
+
+def side_zone(words, width: float) -> Optional[float]:
+    """The x of a vertical alley that separates a SIDE PANEL from the main
+    content, or None. All of these, because a false side panel would hide
+    a real column:
+
+      * no word crosses it, and it is at least 3x the gutter wide;
+      * the side beyond it is at the margin and narrow (under 35% of the
+        page width), holds 3+ words over at least half the content's height;
+      * the side has rows of its OWN: under 30% of its words share a
+        baseline with a word of the main content (a table's last column
+        shares every row's baseline, and so is never a side panel)."""
+    ws = [w for w in words if _upright(w.get("rotation", 0))]
+    if len(ws) < 10 or not width:
+        return None
+    sizes = [w["size"] for w in ws if w.get("size")]
+    body = statistics.median(sizes) if sizes else 10.0
+    min_alley = 3 * max(6.0, 4 * 0.35 * body)
+    top = min(w["top"] for w in ws)
+    span = max(max(w["bottom"] for w in ws) - top, 1)
+    best = None
+    for side in ("right", "left"):
+        # candidate alleys: gaps in the x coverage
+        spans = sorted((w["x0"], w["x1"]) for w in ws)
+        cur, gaps = spans[0][1], []
+        for a, b in spans[1:]:
+            if a - cur >= min_alley:
+                gaps.append((cur, a))
+            cur = max(cur, b)
+        for a, b in gaps:
+            x = (a + b) / 2
+            narrow = [w for w in ws if (w["x0"] >= x if side == "right" else w["x1"] <= x)]
+            main = [w for w in ws if w not in narrow]
+            zone_w = (width - b) if side == "right" else a
+            if not main or len(narrow) < 3 or zone_w > 0.35 * width:
+                continue
+            nspan = max(w["bottom"] for w in narrow) - min(w["top"] for w in narrow)
+            if nspan < 0.5 * span:
+                continue
+            base = [w["baseline"] for w in main]
+            shared = sum(1 for w in narrow if any(abs(w["baseline"] - y) <= 1.5 for y in base))
+            if shared >= 0.3 * len(narrow):
+                continue
+            best = x
+            break
+        if best is not None:
+            break
+    return best
 
 
 def line_record(ws, lid, page_no) -> dict:
@@ -470,7 +518,8 @@ def read_document(path, pages: Optional[list] = None) -> dict:
                                  "quality": q, "removed": [],
                                  "rules": _rules(pg)})
     for p in doc["pages"]:
-        p["lines"] = _lines_for(p["words"], p["page"])
+        p["side_split"] = side_zone(p["words"], p["width"])
+        p["lines"] = _lines_for(p["words"], p["page"], p["side_split"])
     bg = background(doc["pages"])
     for pi, hits in bg.items():
         p = doc["pages"][pi]
@@ -481,13 +530,21 @@ def read_document(path, pages: Optional[list] = None) -> dict:
                                  by_id[wid]["x1"], by_id[wid]["bottom"]]}
                         for wid, s in hits]
         p["words"] = [w for w in p["words"] if w["id"] not in gone]
-        p["lines"] = _lines_for(p["words"], p["page"])
+        p["side_split"] = side_zone(p["words"], p["width"])
+        p["lines"] = _lines_for(p["words"], p["page"], p["side_split"])
     return doc
 
 
-def _lines_for(words, page_no):
-    return [line_record(ws, f"p{page_no}l{i}", page_no)
-            for i, ws in enumerate(lines_of(words))]
+def _lines_for(words, page_no, split=None):
+    """Lines, formed separately on each side of a side-panel alley so a
+    side note never joins the table row it happens to share a baseline
+    with."""
+    if split is None:
+        groups = lines_of(words)
+    else:
+        groups = lines_of([w for w in words if w["x1"] <= split]) +             lines_of([w for w in words if w["x1"] > split])
+        groups.sort(key=lambda ws: (min(w["top"] for w in ws), min(w["x0"] for w in ws)))
+    return [line_record(ws, f"p{page_no}l{i}", page_no) for i, ws in enumerate(groups)]
 
 
 def _mark_fills(page, words) -> None:
