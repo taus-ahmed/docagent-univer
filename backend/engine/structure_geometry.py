@@ -292,6 +292,8 @@ def header_labels(header_lines_words, cols) -> list:
     """Each column's heading, the words over it joined in reading order (a
     heading printed on two lines reads top then bottom)."""
     labels = [[] for _ in cols]
+    if not cols:
+        return []
     for ws in header_lines_words:
         for w in ws:
             labels[column_of(dict(w, x1=w["x1"]), [dict(c, align="left") for c in cols])
@@ -470,6 +472,16 @@ def _table_region(rid, page, all_lines, head_ids, data_lines, feats, prev=None):
     hws = [w for h in heads for w in _words_of(page, h)]
     geo = columns_for(dws, hws, gutter(page), word_gap(page))
     cols = geo["columns"]
+    if not cols and heads:
+        # no row line gave a column (the rows carry no date/amount the
+        # detector counts): the heading's own segments are the columns
+        segs = segments(page, heads[0])
+        cols = [{"x0": round(min(w["x0"] for w in sg) - 1, 1),
+                 "x1": round(max(w["x1"] for w in sg) + 1, 1),
+                 "align": "left", "numeric": False} for sg in segs]
+        for a, b in zip(cols, cols[1:]):
+            mid = round((a["x1"] + b["x0"]) / 2, 1)
+            a["x1"], b["x0"] = mid, mid
     if prev is not None and not heads:
         # headers printed only on an earlier page: its headings, and its
         # columns placed where THIS page prints them. When this page shows

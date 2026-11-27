@@ -435,3 +435,13 @@ class TestNotNote:
         assert "Period From Date:" in vals and "Remit Payment To:" in vals
         assert "Northwind Way" in vals
         assert "best of my knowledge" not in vals
+
+
+class TestNoDataColumns:
+    def test_a_table_whose_rows_give_no_columns_takes_its_headings(self, tmp_path):
+        # found on two corpus documents: an IndexError on an empty column list
+        page = _doc(tmp_path, [[(44, 712, "Code"), (200, 712, "Name"), (330, 712, "Note")]])["pages"][0]
+        feats = {ln["id"]: G.features(page, ln) for ln in page["lines"]}
+        reg = G._table_region("r1", page, page["lines"], [page["lines"][0]["id"]], [], feats)
+        assert len(reg["columns"]) == 3 and reg["labels"] == ["Code", "Name", "Note"]
+        assert G.header_labels([], []) == []
