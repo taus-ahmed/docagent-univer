@@ -1905,6 +1905,64 @@ def fix_stacked(rows, headers, stacked, line_of_row, all_lines):
     return done
 
 
+def order_grouped_rows(rows, headers, all_lines, line_of_row):
+    """(rows, moved) - Run T, 3. Records printed in side-by-side column
+    groups (`Number Date Amount` x3) are read EACH GROUP TOP TO BOTTOM, THEN
+    LEFT TO RIGHT, which is the page's order; the model answers them line by
+    line, interleaving the groups. A row's group is where its own values sit
+    on its line. When every group is printed sorted by its first column
+    (a number or a date), the rows are sorted by it. Rows outside a grouped
+    block keep their places. `moved`: how many rows changed position."""
+    import column_groups as CG
+    if not rows or not all_lines:
+        return rows, 0
+    groups = CG.find_groups(all_lines)
+    if not groups:
+        return rows, 0
+    from dates import parse_date
+    out = list(rows)
+    moved = 0
+    for g in groups:
+        body = set(g.get("body") or [])
+        head = all_lines[g["line"]]
+        p = len(head) // g["k"]
+        starts = [float(head[j * p]["x0"]) for j in range(g["k"])]
+        idx = [i for i, r in enumerate(out) if line_of_row.get(id(r)) in body]
+        if len(idx) < 2:
+            continue
+
+        def band_of(r):
+            ln = all_lines[line_of_row[id(r)]]
+            vals = {_flat(str(r.get(h, "") or "")) for h in headers if str(r.get(h, "") or "").strip()}
+            xs = [float(w["x0"]) for w in ln if _flat(str(w.get("text", ""))) in vals]
+            if not xs:
+                return 0
+            x = min(xs)
+            return max((j for j in range(len(starts)) if x >= starts[j] - 4.0), default=0)
+        recs = [out[i] for i in idx]
+        keyed = sorted(recs, key=lambda r: (band_of(r), line_of_row[id(r)]))
+
+        def sort_key(r):
+            v = str(r.get(headers[0], "") or "").strip() if headers else ""
+            d = parse_date(v) if re.search(r"\d[/.\-]\d", v) else None
+            if d is not None and getattr(d, "ok", False):
+                return (0, d.value.toordinal())
+            m = re.match(r"^\d+(?:\.\d+)?", v.replace(",", ""))
+            return (1, float(m.group(0))) if m else None
+        ks = [sort_key(r) for r in keyed]
+        if all(k is not None for k in ks):
+            per_band = {}
+            for r, k in zip(keyed, ks):
+                per_band.setdefault(band_of(r), []).append(k)
+            if all(v == sorted(v) for v in per_band.values()):
+                keyed = [r for _k, r in sorted(zip(ks, keyed), key=lambda t: t[0])]
+        for i, r in zip(idx, keyed):
+            if out[i] is not r:
+                moved += 1
+            out[i] = r
+    return out, moved
+
+
 def split_total_rows(rows, keys):
     """(rows, total rows) — a row is the table's OWN TOTAL only when its
     label cell is a total word ("Total", "Subtotal", "Grand Total") AND every
@@ -3516,6 +3574,12 @@ def run_slot_extraction(orchestrator, file_path, template_data, binding_map,
                 rows_out.append(row)
             rows_out, tails = attach_tail_rows(rows_out, table_headers(t), line_of_row,
                                                all_lines)
+            rows_out, _moved = order_grouped_rows(rows_out, table_headers(t), all_lines,
+                                                  line_of_row)
+            if _moved:
+                notes.append(f'{t["name"]}: {_moved} row(s) of side-by-side column '
+                             f"groups put in the page's order (each group top to "
+                             f"bottom, then left to right)")
             if stacked_pairs:
                 for _r, top, bot in fix_stacked(rows_out, table_headers(t), stacked_pairs,
                                                 line_of_row, all_lines):
