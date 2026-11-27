@@ -1335,6 +1335,13 @@ def verify_span(value, source, page, page_texts, record=""):
         bare = src.replace(" ", "")
         m = next((m for m in (_spaced_match(bare, t) for t in page_texts) if m), None)             if len(bare) >= 8 else None
         if not m:
+            # Run T1, 2b: punctuation between printed words is notation too
+            # ("ACH-DEBIT" printed, "ACH DEBIT" quoted); 8+ letters/digits,
+            # at token boundaries
+            from perception import loose_find
+            m = next((m for m in (loose_find(source, t, 8) for t in page_texts)
+                      if m), None)
+        if not m:
             return False, "source span not found in document"
         source = m
 
@@ -1372,6 +1379,11 @@ def verify_span(value, source, page, page_texts, record=""):
         # boundaries, for 4+ characters so a fragment cannot hit by chance.
         bare = val.replace(" ", "")
         if len(bare) >= 4 and _spaced_match(bare, span):
+            return True, ""
+        # Run T1, 2b: and so is PUNCTUATION between printed words - the same
+        # letters and digits in the same order, at token boundaries, 4+
+        from perception import loose_find
+        if loose_find(value, span, 4):
             return True, ""
     return False, "value not found inside its own source span"
 
