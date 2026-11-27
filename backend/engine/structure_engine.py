@@ -399,23 +399,50 @@ def _cell(row, col, words, body, order, label=None, text=None, **kw):
     return c
 
 
-def _kv_rows(page, lines, by_word, gut):
+def split_pairs(seg) -> list:
+    """[(words, role)] for one segment: EVERY `Label:` in it starts a pair,
+    not only the first (`Ref: AB-12 Date: 01/02/2030 - 01/03/2030`
+    is two pairs). A later label runs back from its colon word to just after
+    the last word of the value before it that carries a digit; with no digit
+    to stop at, the label is the colon word alone (`Blue Ltd Phone:`
+    keeps `Blue Ltd` as the value)."""
+    colons = [i for i, w in enumerate(seg) if w["text"].endswith(":") and len(w["text"]) > 1]
+    if not colons:
+        return [(seg, "text")]
+    out = []
+    start = 0
+    for n, k in enumerate(colons):
+        lab0 = start
+        if n:
+            prev = colons[n - 1]
+            digits = [i for i in range(prev + 1, k) if any(ch.isdigit() for ch in seg[i]["text"])]
+            lab0 = digits[-1] + 1 if digits else k
+            if lab0 > prev + 1:
+                out.append((seg[prev + 1:lab0], "value"))
+        out.append((seg[lab0:k + 1], "label"))
+        start = k + 1
+    if start < len(seg):
+        out.append((seg[start:], "value"))
+    return out
+
+
+def _kv_rows(page, lines, by_word, gut, dropped=None):
     """A label/value region: each printed line one row, pairs side by side,
     the label exactly as printed WITH its colon, its value in the next
-    cell."""
+    cell. A segment that is page furniture on its own (`Page 2 of 5`
+    printed beside a field) is left out and put in `dropped`."""
     rows = []
     for ln in lines:
         segs = G.segments(page, ln, gut)
         cells = []
         for seg in segs:
-            # `Label: value` inside one segment: split after the colon word
-            k = next((i for i, w in enumerate(seg) if w["text"].endswith(":")), None)
-            if k is not None and k < len(seg) - 1:
-                cells.append((seg[:k + 1], "label"))
-                cells.append((seg[k + 1:], "value"))
-            else:
-                cells.append((seg, "label" if seg[-1]["text"].endswith(":") else "text"))
-        rows.append((ln, cells))
+            if len(segs) > 1 and G.is_furniture(" ".join(w["text"] for w in seg)):
+                if dropped is not None:
+                    dropped.append(seg)
+                continue
+            cells += split_pairs(seg)
+        if cells:
+            rows.append((ln, cells))
     return rows
 
 
@@ -433,20 +460,99 @@ def place_region(region, page, row0, order, body, gut, prev_tables):
         return cells, 1
     if kind == "kv":
         r = row0
-        for ln, segcells in _kv_rows(page, lines, by_word, gut):
-            for col, (ws, role) in enumerate(segcells):
-                cells.append(_cell(r, col, ws, body, order,
-                                   label=None if role != "value" else
-                                   " ".join(w["text"] for w in segcells[col - 1][0])
-                                   if col else None, role=role))
+        open_vals = []          # [(x0, words list, label)] values the next line may continue
+        prev_ln = None
+        dropped = region.setdefault("_dropped", [])
+        for ln, segcells in _kv_rows(page, lines, by_word, gut, dropped):
+            # rule 5: a label-free piece directly under a value, starting at
+            # that value's left edge, is the value wrapped onto the next line
+            size = ln.get("size") or body
+            near = prev_ln is not None and ln["baseline"] - prev_ln["baseline"] <= 1.6 * size                 and not any(role == "label" for _ws, role in segcells)
+            rest, cont = [], []
+            for ws, role in segcells:
+                hit = next((ov for ov in open_vals if near
+                            and abs(ws[0]["x0"] - ov[0]) <= 3.0), None)
+                if hit is not None:
+                    hit[1].extend(ws)
+                    cont.append(hit)
+                else:
+                    rest.append((ws, role))
+            prev_ln = ln
+            if not rest:
+                open_vals = cont
+                continue
+            new_open = list(cont)
+            for col, (ws, role) in enumerate(rest):
+                lab = " ".join(w["text"] for w in rest[col - 1][0]) if col and role == "value" \
+                    else None
+                vws = list(ws)
+                cells.append({"_ws": vws, "_r": r, "_col": col, "_label": lab, "_role": role})
+                if role == "value":
+                    new_open.append((ws[0]["x0"], vws, lab))
+            open_vals = new_open
             r += 1
+        cells = [_cell(c["_r"], c["_col"], c["_ws"], body, order, label=c["_label"],
+                       role=c["_role"]) for c in cells]
         return cells, r - row0
     if kind == "table":
         return _place_table(region, page, lines, row0, order, body, prev_tables)
     return [], 0
 
 
+def _same_labels(a, b) -> bool:
+    import perception as P
+    ka = [P.loose_key(x) for x in a or []]
+    kb = [P.loose_key(x) for x in b or []]
+    return bool(ka) and any(ka) and ka == kb
+
+
+def _is_tail(ln, prev_line, parts, n, groups_rows, pitch) -> bool:
+    """A line with no date and no amount continues the row above it only
+    when it sits closer to that row than rows sit to each other (under
+    0.85 of the table's row pitch, and under 1.5x its own text size), and
+    only in columns where that row already has text: `REF 77` under a
+    description is its tail; `Fees` one blank line lower is a section, and
+    a footnote under the amount columns is neither."""
+    size = ln.get("size") or 10.0
+    gap = ln["baseline"] - prev_line["baseline"]
+    for ci in parts:
+        g = ci // n
+        if not groups_rows[g] or not groups_rows[g][-1].get(ci % n):
+            return False
+    limit = 1.5 * size if pitch is None else min(1.5 * size, 0.85 * pitch)
+    if gap <= limit:
+        return True
+    # printed at the row pitch itself (a statement setting every line on one
+    # grid): still a tail when it starts RIGHT of the table's first column
+    # (it holds no date or amount, or it would be a row) - a section title
+    # starts at the left margin
+    return pitch is not None and gap <= 1.1 * pitch and 0 not in parts
+
+
+_RANGE_END = re.compile(r"(?:^|\s)(?:-|\u2013|\u2014|to|through|thru)$", re.I)
+
+
+def _range_continues(parts, n, groups_rows, ln, prev_line) -> bool:
+    """The line's words sit in ONE column, directly under a row whose cell
+    in that column ends with a range connector (`-`, `to`): the rest of
+    that value, wrapped (a pay period printed over two lines)."""
+    if len(parts) != 1:
+        return False
+    ci = next(iter(parts))
+    g = ci // n
+    if not groups_rows[g]:
+        return False
+    prev = groups_rows[g][-1].get(ci % n)
+    if not prev:
+        return False
+    size = ln.get("size") or 10.0
+    if ln["baseline"] - prev_line["baseline"] > 1.5 * size:
+        return False
+    return bool(_RANGE_END.search(" ".join(w["text"] for w in prev)))
+
+
 def _place_table(region, page, lines, row0, order, body, prev_tables):
+    line_of = {wid: li for li, ln in enumerate(page["lines"]) for wid in ln["word_ids"]}
     cols = sorted([dict(c) for c in region.get("columns") or []], key=lambda c: c["x0"])
     if region.get("continued") and prev_tables and not region.get("labels"):
         prev = prev_tables[-1]
@@ -465,9 +571,8 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
     if not labels and head_ids:
         labels = G.header_labels([G._words_of(page, ln) for ln in lines
                                   if ln["id"] in head_ids][:1], cols)
-        heads2 = [ln for ln in lines if ln["id"] in head_ids][1:2]
-        if heads2:
-            sub = G.header_labels([G._words_of(page, heads2[0])], cols)
+        for h2 in [ln for ln in lines if ln["id"] in head_ids][1:]:
+            sub = G.header_labels([G._words_of(page, h2)], cols)
             labels = [f"{a} {b}".strip() if b else a for a, b in zip(labels, sub)]
     labels = (labels + [""] * len(cols))[:len(cols)]
     groups_rows = [[] for _ in range(k)]          # per column group: [row cells]
@@ -475,6 +580,10 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
     has_groups = bool(group_ids)
     prev_line = None
     feats = {}
+    body_lines = [ln for ln in lines if ln["id"] not in head_ids and ln["id"] not in group_ids]
+    row_bases = [ln["baseline"] for ln in body_lines if G.is_row_line(G.features(page, ln))]
+    pitches = [b - a for a, b in zip(row_bases, row_bases[1:]) if b - a > 0.5]
+    pitch = statistics.median(pitches) if pitches else None
     for ln in lines:
         if ln["id"] in head_ids:
             continue
@@ -486,19 +595,45 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
             prev_line = None
             continue
         parts = {}
-        for w in ws:
-            ci = G.column_of(w, cols)
-            parts.setdefault(ci, []).append(w)
+        if f["pair"]:
+            # a `Label: value` line inside a table is placed by PAIRS: a label
+            # stays whole in the column of its first word, its value goes to
+            # the column of the value's first word (the next free column when
+            # that is the label's own)
+            for chunk, _role in split_pairs(ws):
+                ci = G.column_of(chunk[0], cols)
+                while ci in parts and ci + 1 < len(cols):
+                    ci += 1
+                parts.setdefault(ci, []).extend(chunk)
+        else:
+            for w in ws:
+                ci = G.column_of(w, cols)
+                parts.setdefault(ci, []).append(w)
         row_line = G.is_row_line(f)
-        if not row_line and prev_line is not None and \
-                ln["top"] - prev_line["bottom"] < 1.2 * (ln["bottom"] - ln["top"]) + 2:
-            # a wrapped line: no date, no amount, directly under a row ->
-            # joins that row, cell by cell
+        if prev_line is not None and _range_continues(parts, n, groups_rows, ln, prev_line):
+            # `01/02/30 -` over `01/03/30`: the second half of a range
+            for ci, cws in parts.items():
+                groups_rows[ci // n][-1].setdefault(ci % n, []).extend(cws)
+            prev_line = ln
+            continue
+        if not row_line and prev_line is not None and _is_tail(ln, prev_line, parts, n,
+                                                               groups_rows, pitch):
+            # a wrapped line: no date, no amount, directly under a row (closer
+            # than rows are to each other) and only in columns that row has
+            # text in -> joins that row, cell by cell
             for ci, cws in parts.items():
                 g = ci // n
                 if groups_rows[g]:
                     groups_rows[g][-1].setdefault(ci % n, []).extend(cws)
             prev_line = ln
+            continue
+        if not row_line and not f["pair"]:
+            # a section line inside the table (`Fees`, `Other Items`): its
+            # own row, never glued onto the row above
+            row = {ci: cws for ci, cws in parts.items()}
+            row["_section"] = True
+            groups_rows[0].append(row)
+            prev_line = None
             continue
         for g in range(k):
             sub = {ci % n: cws for ci, cws in parts.items() if ci // n == g}
@@ -512,7 +647,17 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
     lead = 2 if has_groups else 0
     cells = []
     r = row0
-    if not region.get("continued") or not prev_tables:
+    prev = prev_tables[-1] if prev_tables else None
+    # a heading reprinted over a CONTINUATION: the same headings, this the
+    # first table of its page, and the earlier table the last thing placed
+    # on the page before (an explainer page showing the same table is not
+    # continued by the statement after it)
+    reprinted = bool(prev) and _same_labels(labels, prev.get("labels")) and         prev.get("page") == page["page"] - 1 and bool(prev.get("last_on_page"))
+    if reprinted:
+        # the same heading printed again over a continuation (every page of
+        # a statement reprints it): written once, above the first rows
+        region["reprinted_header"] = True
+    if (not region.get("continued") or not prev_tables) and not reprinted:
         hw = {}
         for ln in lines:
             if ln["id"] in head_ids:
@@ -546,7 +691,7 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
             ws = row.get(ci)
             if not ws:
                 continue
-            ws = sorted(ws, key=lambda w: (w["top"], w["x0"]))
+            ws = sorted(ws, key=lambda w: (line_of.get(w["id"], 0), w["x0"]))
             align = "right" if cols[ci].get("align") == "right" else None
             c = _cell(r, lead + ci, ws, body, order, label=labels[ci], role="value")
             if align:
@@ -590,6 +735,10 @@ def place_page(page, plan, order=None, prev_tables=None) -> dict:
                                      "reason": EXCLUDED_KINDS[reg["kind"]]})
             continue
         cs, used = place_region(reg, page, row, order, body, gut, prev_tables)
+        for seg in reg.pop("_dropped", None) or []:
+            excluded.append({"word_ids": [w["id"] for w in seg],
+                             "text": " ".join(w["text"] for w in seg),
+                             "reason": "page furniture (a page number beside a field)"})
         if not cs:
             continue
         reg["anchor"] = _a1(row, 0)
@@ -598,8 +747,13 @@ def place_page(page, plan, order=None, prev_tables=None) -> dict:
         if reg.get("kind") == "table":
             prev_tables.append({"columns": reg.get("_placed_columns") or reg.get("columns"),
                                 "labels": reg.get("_labels"),
-                                "column_groups": reg.get("column_groups", 1)})
+                                "column_groups": reg.get("column_groups", 1),
+                                "page": page["page"]})
         row += used + 1
+    if prev_tables and prev_tables[-1].get("page") == page["page"]:
+        # whether this page ENDS with its last table (nothing placed after
+        # it): only then can the next page's first table continue it
+        prev_tables[-1]["last_on_page"] = bool(placed) and placed[-1].get("kind") == "table"
     for it in plan.get("ignored") or []:
         lid = it.get("line_id")
         if lid in by_line:
@@ -652,9 +806,10 @@ def verify(page, plan, placed, fallback=None) -> list:
     flags = []
     kept = set()
     excl_lines = {e["line_id"] for e in placed["excluded"] if e.get("line_id")}
+    excl_words = {i for e in placed["excluded"] for i in e.get("word_ids") or []}
     for ln in page["lines"]:
         if ln["id"] not in excl_lines:
-            kept.update(ln["word_ids"])
+            kept.update(i for i in ln["word_ids"] if i not in excl_words)
     count = {}
     for c in placed["cells"]:
         for i in c.get("counted_ids", c.get("word_ids") or []):

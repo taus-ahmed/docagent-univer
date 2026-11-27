@@ -29,7 +29,15 @@ _DATE = re.compile(r"(?<![\d/.-])(\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?|\d{4}-\d{
 _AMOUNT = re.compile(r"^[-(]?[$€£¥₹]?\d{1,3}(?:[,.\s]?\d{3})*(?:[.,]\d{1,2})\)?-?$|^[-(]?[$€£¥₹]\d+\)?-?$")
 _NUMERIC = re.compile(r"^[-(]?[$€£¥₹]?[\d,.]+\)?-?$")
 _PAGE_NO = re.compile(r"^\s*(page\s*)?\d+\s*(of|/)\s*\d+\s*$|^\s*page\s+\d+\s*$", re.I)
+MARKUP = "markup (a coloured annotation over the page, not the page's own text)"
 _CONT = re.compile(r"\(?\bcontinued\b\)?\s*$|\bcont'?d\b", re.I)
+
+
+def is_furniture(text) -> bool:
+    """A SEGMENT that is a page count (`Page 2 of 5`, `2 of 5`). A bare
+    `Page 3` beside other text may be a value (`Details on: Page 3`), and a
+    bare `1/2` may be a quantity: neither is furniture inside a line."""
+    return bool(re.match(r"^\s*(page\s*)?\d+\s*of\s*\d+\s*$", str(text or ""), re.I))
 
 
 def is_amount(tok: str) -> bool:
@@ -109,7 +117,12 @@ def features(page, line, gut=None) -> dict:
             "date": has_date(text), "digits": bool(re.search(r"\d", text)),
             "prose": prose and not amounts, "pair": pair, "widget": widget,
             "furniture": bool(_PAGE_NO.match(text)), "continued": bool(_CONT.search(text)),
-            "nwords": nwords}
+            "nwords": nwords,
+            # a reviewer's coloured annotation: every word markup, and the
+            # line is no row and no label/value pair (a red amount on a
+            # statement row is data, never markup)
+            "markup": bool(ws) and all(w.get("markup") for w in ws)
+            and not amounts and not has_date(text) and not pair and not widget}
 
 
 def is_header_line(f) -> bool:
@@ -118,6 +131,61 @@ def is_header_line(f) -> bool:
 
 def is_row_line(f) -> bool:
     return f["date"] or f["n_amounts"] >= 1
+
+
+def starts_table(page, blk, fs, i, gut=None) -> bool:
+    """Line i of a block is a table's heading line: a header-like line
+    (2+ segments, no figure, no label) DIRECTLY above its rows - the next
+    line (after a stacked second heading line, and at most one group or
+    section line) is a row. Two header-like lines in a row: only the LOWER
+    one heads the table, so an address block printed above a table
+    (`Elm Row | Harbour Quay`) is never taken for its heading.
+    One row is enough when its figures sit under the heading's segments
+    (`Opening | Paid In` over one line of amounts)."""
+    if not is_header_line(fs[i]):
+        return False
+    j = i + 1 + len(stacked_heads(blk, fs, i))     # stacked heading lines
+    if j < len(blk) and not is_row_line(fs[j]) and not is_header_line(fs[j]) \
+            and not fs[j]["prose"] and len(fs[j]["segs"]) <= 2:
+        j += 1                                     # one group or section line
+    if j >= len(blk) or not is_row_line(fs[j]):
+        return False
+    rows = sum(1 for g in fs[j:j + 5] if is_row_line(g))
+    if rows >= 2:
+        return True
+    # one row: every figure on it sits under a heading segment
+    gut = gutter(page) if gut is None else gut
+    spans = [(min(w["x0"] for w in sg) - gut, max(w["x1"] for w in sg) + gut)
+             for sg in fs[i]["segs"]]
+    figs = [w for sg in fs[j]["segs"] for w in sg
+            if is_numeric(w["text"]) or has_date(w["text"])]
+    return bool(figs) and all(any(a <= (w["x0"] + w["x1"]) / 2 <= b for a, b in spans)
+                              for w in figs)
+
+
+MAX_HEAD_LINES = 3
+
+
+def stacked_heads(blk, fs, i) -> list:
+    """Indices of the heading lines stacked directly under heading line i
+    (each header-like and closer to the one above than its own text
+    size: less than a line of white): `Posted | Returned/` over `Date Posted | Fees`
+    over `Amount | Items` is ONE heading three lines tall."""
+    out, k = [], i
+    while len(out) < MAX_HEAD_LINES - 1 and k + 1 < len(blk) and is_header_line(fs[k + 1]) \
+            and blk[k + 1]["top"] - blk[k]["bottom"] < 1.0 * (blk[k].get("size") or 10):
+        k += 1
+        out.append(k)
+    return out
+
+
+def aligned_with(words, edges, tol=4.0) -> bool:
+    """A `Label: figure` line whose figures end on the right edges of a
+    table's figures above it is a row of that table (`Total Fees:`
+    with its total under its column), not a free label/value pair."""
+    nums = [w for w in words if is_numeric(w["text"])]
+    return bool(nums) and bool(edges) and all(
+        any(abs(w["x1"] - e) <= tol for e in edges) for w in nums)
 
 
 # ── blocks and candidate rows ────────────────────────────────────────────────
@@ -203,10 +271,21 @@ def columns_for(data_words, header_words=(), gut: float = 8.0, wgap: float = 2.5
     # heading word starts just after it (`CHECK RUN | CHECK #` printed
     # with word spacing). Gaps between the words of a description are
     # neither, and never cut a column.
+    # breaks in the heading's own ink (`Member` ... `Ref No`)
+    head_breaks = [(x, y) for x, y in _coverage_alleys([hw], x_lo, x_hi, 2 * wgap)] if hw else []
+
     def real(a, b):
         if b - a >= gut:
             return True
-        return b - a >= 1.5 * wgap and any(a - 2 <= w["x0"] <= b + 2 for w in hw)
+        if b - a < 1.5 * wgap:
+            return False
+        # narrower than the gutter, but wider than word spacing: a boundary
+        # when a heading word starts at it, or - at least half a gutter wide,
+        # so the gap between two pieces of one word the text layer printed
+        # apart (`ABC DEF`) never counts - when the heading itself breaks
+        # over it (`Jane Roe 0001234` under `Member | Ref No`)
+        return any(a - 2 <= w["x0"] <= b + 2 for w in hw) or (b - a >= 0.5 * gut and any(
+            min(b, y) - max(a, x) > 0 for x, y in head_breaks))
     inner = [(a, b) for a, b in alleys if a > x_lo + 0.5 and b < x_hi - 0.5 and real(a, b)]
     bounds = [{"x": round((a + b) / 2, 1), "kind": "gap", "width": round(b - a, 1)}
               for a, b in inner]
@@ -225,6 +304,11 @@ def columns_for(data_words, header_words=(), gut: float = 8.0, wgap: float = 2.5
             for a, b in zip(inside, inside[1:]):
                 lefts = [w["x0"] for w in allw if a < w["x1"] <= b + 2.5 and w["x0"] > a]
                 cut = (a + min(lefts)) / 2 if lefts else (a + b) / 2
+                if any(w["x0"] + 1 < cut < w["x1"] - 1 for w in allw):
+                    # a data word's ink crosses it: two right edges a few
+                    # points apart in ONE column (an OCR layer's jitter),
+                    # not two columns
+                    continue
                 bounds.append({"x": round(cut, 1), "kind": "right_edge", "width": 0.0})
                 pieces.append([start, cut])
                 start = cut
@@ -234,6 +318,7 @@ def columns_for(data_words, header_words=(), gut: float = 8.0, wgap: float = 2.5
             out.append([c0, c1])
     # a heading over NO data keeps its own column (an empty Credits column
     # is a column; its cells are blank, not merged into Debits)
+    claims = []
     if hw:
         segs, cur = [], []
         for w in sorted(hw, key=lambda w: w["x0"]):
@@ -243,10 +328,35 @@ def columns_for(data_words, header_words=(), gut: float = 8.0, wgap: float = 2.5
             cur.append(w)
         if cur:
             segs.append(cur)
+        ink = []                             # each column's data ink span
+        for c0, c1 in out:
+            ws = [w for w in allw if c0 <= (w["x0"] + w["x1"]) / 2 <= c1]
+            ink.append((min(w["x0"] for w in ws), max(w["x1"] for w in ws)) if ws else None)
+        spans = [(min(w["x0"] for w in sg), max(w["x1"] for w in sg)) for sg in segs]
+        headed = {i for i, sp in enumerate(ink) if sp and any(
+            a < sp[1] + 2 and sp[0] - 2 < b for a, b in spans)}
         for sg in segs:
             a, b = min(w["x0"] for w in sg), max(w["x1"] for w in sg)
             if any(w["x0"] < b + 2 and a - 2 < w["x1"] for w in allw):
                 continue                     # data is printed under it
+            # a heading printed OFFSET from its column (centred over a wide
+            # box, `Item Kind` far right of `Spare Parts`): it claims the
+            # nearest data column that has no heading of its own, when no
+            # headed column lies between them
+            cand = []
+            for i, sp in enumerate(ink):
+                if not sp or i in headed:
+                    continue
+                lo_i, hi_i = sorted((i, next((k for k, c in enumerate(out)
+                                              if c[0] <= (a + b) / 2 <= c[1]), i)))
+                if any(k in headed for k in range(lo_i + 1, hi_i)):
+                    continue
+                cand.append((max(sp[0] - b, a - sp[1], 0.0), i))
+            if cand:
+                _d, i = min(cand)
+                headed.add(i)
+                claims.append({"col": i, "x0": a - 1, "x1": b + 1})
+                continue
             # split the empty span it sits in around the heading
             for i, (c0, c1) in enumerate(out):
                 if c0 <= (a + b) / 2 <= c1:
@@ -262,14 +372,32 @@ def columns_for(data_words, header_words=(), gut: float = 8.0, wgap: float = 2.5
                                {"x": round(hi, 1), "kind": "heading", "width": 0.0}]
                     break
     result = []
-    for c0, c1 in out:
+    for ci, (c0, c1) in enumerate(out):
         ws = [w for w in allw if c0 <= (w["x0"] + w["x1"]) / 2 <= c1]
-        num = [w for w in ws if is_numeric(w["text"])]
-        right = bool(num) and len(num) * 2 >= len(ws) and (
-            statistics.pstdev([w["x1"] for w in num]) if len(num) > 1 else 0) <= 3.0
-        result.append({"x0": round(c0, 1), "x1": round(c1, 1),
-                       "align": "right" if right else "left",
-                       "numeric": bool(num) and len(num) * 2 >= len(ws)})
+        # numeric by CELL, not by word: a description column whose entries
+        # end in a number (`Item 4`) is text; a cell is numeric when every
+        # word in it is
+        cells_, cur = [], []
+        for w in sorted(ws, key=lambda w: w.get("baseline", w["bottom"])):
+            if cur and w.get("baseline", w["bottom"]) - cur[-1].get("baseline", cur[-1]["bottom"]) > 2.0:
+                cells_.append(cur)
+                cur = []
+            cur.append(w)
+        if cur:
+            cells_.append(cur)
+        nums = [max(cw, key=lambda w: w["x1"]) for cw in cells_
+                if all(is_numeric(w["text"]) for w in cw)]
+        numeric = bool(nums) and len(nums) * 2 >= len(cells_)
+        right = numeric and (statistics.pstdev([w["x1"] for w in nums])
+                             if len(nums) > 1 else 0) <= 3.0
+        col = {"x0": round(c0, 1), "x1": round(c1, 1),
+               "align": "right" if right else "left", "numeric": numeric}
+        for cl in claims:
+            # out[] may have been re-split after a claim was made: a claim
+            # names the column holding the claimed data
+            if cl["col"] == ci:
+                col["heading_span"] = [round(cl["x0"], 1), round(cl["x1"], 1)]
+        result.append(col)
     bounds.sort(key=lambda b: b["x"])
     return {"boundaries": bounds, "columns": result}
 
@@ -296,8 +424,12 @@ def header_labels(header_lines_words, cols) -> list:
         return []
     for ws in header_lines_words:
         for w in ws:
-            labels[column_of(dict(w, x1=w["x1"]), [dict(c, align="left") for c in cols])
-                   ].append(w["text"])
+            cx = (w["x0"] + w["x1"]) / 2
+            hit = next((i for i, c in enumerate(cols) if c.get("heading_span")
+                        and c["heading_span"][0] <= cx <= c["heading_span"][1]), None)
+            if hit is None:
+                hit = column_of(dict(w, x1=w["x1"]), [dict(c, align="left") for c in cols])
+            labels[hit].append(w["text"])
     return [" ".join(x) for x in labels]
 
 
@@ -414,6 +546,11 @@ def fallback_plan(page, prev_table=None) -> dict:
                 ignored.append({"line_id": ln["id"], "reason": "page furniture"})
                 i += 1
                 continue
+            if f["markup"]:
+                flush()
+                ignored.append({"line_id": ln["id"], "reason": MARKUP})
+                i += 1
+                continue
             if f["prose"]:
                 flush()
                 j = i
@@ -424,26 +561,47 @@ def fallback_plan(page, prev_table=None) -> dict:
                 regions.append(_region(nid(), "note", blk[i:j]))
                 i = j
                 continue
-            starts_table = is_header_line(f) and sum(
-                1 for g in fs[i + 1:i + 6] if is_row_line(g)) >= 2
+            starts = starts_table(sub, blk, fs, i, gut)
             headless = (prev_table is not None and not regions_has_table(regions)
                         and is_row_line(f) and len(f["segs"]) >= 2 and sum(
                             1 for g in fs[i:i + 4] if is_row_line(g)) >= 2)
-            if starts_table or headless:
+            if starts or headless:
                 flush()
-                j = i + 1 if starts_table else i
-                # stacked second heading line directly under the first
-                head_ids = [ln["id"]] if starts_table else []
-                if starts_table and j < len(blk) and is_header_line(fs[j]) \
-                        and blk[j]["top"] - ln["bottom"] < 0.6 * (ln.get("size") or body):
-                    head_ids.append(blk[j]["id"])
-                    j += 1
+                j = i + 1 if starts else i
+                # stacked heading lines directly under the first
+                head_ids = [ln["id"]] if starts else []
+                if starts:
+                    more = stacked_heads(blk, fs, i)
+                    head_ids += [blk[m]["id"] for m in more]
+                    j += len(more)
                 k = j
-                while k < len(blk) and not fs[k]["prose"] and not fs[k]["furniture"] \
-                        and not (fs[k]["pair"] and not is_row_line(fs[k])):
+                edges, skipped = [], []
+                while k < len(blk):
+                    g = fs[k]
+                    if g["prose"] or g["furniture"]:
+                        break
+                    if g["markup"]:
+                        skipped.append(blk[k]["id"])
+                        k += 1
+                        continue
+                    if k > j and starts_table(sub, blk, fs, k, gut):
+                        break                      # the next table's heading
+                    nxt = next((m for m in range(k + 1, min(k + 3, len(blk)))
+                                if not fs[m]["markup"]), None)
+                    close = k > j and blk[k]["baseline"] - blk[k - 1]["baseline"] <= \
+                        1.5 * (blk[k].get("size") or body)
+                    if k > j and not is_row_line(g) and not close and nxt is not None \
+                            and starts_table(sub, blk, fs, nxt, gut):
+                        break                      # the next table's title
+                    ws_k = _words_of(page, blk[k])
+                    if g["pair"] and not is_row_line(g) and not aligned_with(ws_k, edges):
+                        break
+                    edges += [w["x1"] for w in ws_k if is_numeric(w["text"])]
                     k += 1
-                tlines = blk[j:k]
-                regions.append(_table_region(nid(), page, blk[i:k], head_ids, tlines,
+                ignored += [{"line_id": lid, "reason": MARKUP} for lid in skipped]
+                keep = [x for x in blk[i:k] if x["id"] not in skipped]
+                tlines = [x for x in blk[j:k] if x["id"] not in skipped]
+                regions.append(_table_region(nid(), page, keep, head_ids, tlines,
                                              feats, prev_table if headless else None))
                 prev_table = regions[-1]
                 i = k
@@ -467,7 +625,10 @@ def regions_has_table(regions) -> bool:
 def _table_region(rid, page, all_lines, head_ids, data_lines, feats, prev=None):
     by = {ln["id"]: ln for ln in page["lines"]}
     heads = [by[i] for i in head_ids]
-    row_lines = [ln for ln in data_lines if is_row_line(feats[ln["id"]])]
+    # a `Label: value` line inside a table (a group's `Date: ...` line) is no
+    # row of its columns: it never cuts or shapes them
+    row_lines = [ln for ln in data_lines if is_row_line(feats[ln["id"]])
+                 and not feats[ln["id"]]["pair"]] or         [ln for ln in data_lines if is_row_line(feats[ln["id"]])]
     dws = [_words_of(page, ln) for ln in row_lines]
     hws = [w for h in heads for w in _words_of(page, h)]
     geo = columns_for(dws, hws, gutter(page), word_gap(page))
@@ -500,8 +661,8 @@ def _table_region(rid, page, all_lines, head_ids, data_lines, feats, prev=None):
         cont = True
     else:
         labels = header_labels([_words_of(page, h) for h in heads[:1]], cols)
-        if len(heads) > 1:
-            sub = header_labels([_words_of(page, heads[1])], cols)
+        for h in heads[1:]:
+            sub = header_labels([_words_of(page, h)], cols)
             labels = [a if not b else (f"{a} {b}".strip()) for a, b in zip(labels, sub)]
         cont = False
     groups = repeated_groups(labels) if labels else 1

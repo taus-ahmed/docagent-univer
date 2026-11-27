@@ -31,7 +31,9 @@ def ops(items, rules=()):
         a = math.radians(float(it.get("angle", 0)))
         c, s = math.cos(a), math.sin(a)
         size = float(it.get("size", 10))
-        out.append(f"{float(it.get('gray', 0)):.3f} g /F1 {size} Tf "
+        fill = (f"{it['rgb'][0]:.3f} {it['rgb'][1]:.3f} {it['rgb'][2]:.3f} rg"
+                if it.get("rgb") else f"{float(it.get('gray', 0)):.3f} g")
+        out.append(f"{fill} /F1 {size} Tf "
                    f"{c:.4f} {s:.4f} {-s:.4f} {c:.4f} {it['x']:.2f} {it['y']:.2f} Tm (".encode()
                    + gen._esc(it["text"]) + b") Tj")
     out.append(b"ET")

@@ -29,7 +29,7 @@ import statistics
 import zlib
 from typing import Optional
 
-PERCEPTION_VERSION = 1
+PERCEPTION_VERSION = 2   # 2: gap splits, touching joins, unglue, markup, overlay (Run T2)
 
 # ── 2b normalisation ─────────────────────────────────────────────────────────
 
@@ -203,15 +203,131 @@ def page_words(page, page_no: int) -> list:
     except TypeError:
         ws = upright_page.extract_words(return_chars=True)
     for w in ws:
-        ch = [c for c in (w.get("chars") or []) if str(c.get("text", "")).strip()]
+        ch = [c for c in (w.get("chars") or []) if str(c.get("text", "")).strip()
+              and str(c.get("text")) != "�"]
         if not ch:
-            continue
-        word = _word_from_chars(ch, page_no)
-        word["text"] = w.get("text") or word["text"]
-        out.append(word)
+            continue                      # an unmapped glyph: nothing printed
+        for piece in _split_at_gaps(ch):
+            word = _word_from_chars(piece, page_no)
+            if len(piece) == len(ch) and "�" not in str(w.get("text") or ""):
+                word["text"] = w.get("text") or word["text"]
+            out.extend(_unglue(word))
+    out = join_touching(out)
     for r in diag:
         out.append(_word_from_chars(r, page_no))
+    _mark_markup(chars, out)
     return out
+
+
+def _split_at_gaps(chars, ratio: float = 0.15) -> list:
+    """A word cut where the PRINTED gap between two of its characters is a
+    space though the text layer drew no space character: `ABC` + `DEF`
+    printed 2.3 pt apart at 8 pt came back as `ABCDEF`. A space is at least
+    0.15 of the text size and 1 pt, and at least three times the word's
+    OTHER gaps - so letter-spaced text, whose every gap is wide, and
+    ordinary kerning (a few hundredths of the size) never cut a word."""
+    gaps = [float(b["x0"]) - float(a["x1"]) for a, b in zip(chars, chars[1:])]
+    out, cur = [], [chars[0]]
+    for i, (a, b) in enumerate(zip(chars, chars[1:])):
+        size = float(a.get("size") or b.get("size") or 0) or 10.0
+        others = sorted(max(0.0, g) for k, g in enumerate(gaps) if k != i)
+        usual = others[len(others) // 2] if others else 0.0
+        g = gaps[i]
+        if g >= max(ratio * size, 1.0) and g >= 3 * usual:
+            out.append(cur)
+            cur = []
+        cur.append(b)
+    out.append(cur)
+    return out
+
+
+_GLUED = re.compile(r"^([A-Za-z][a-z]+\.?)(\$?\d[\d,]*(?:\.\d{1,2})?)$")
+
+
+def _unglue(w) -> list:
+    """A word the text layer printed with no gap between a word and a figure
+    (`Checks$1,783.32`, `of6`): two words, the split placed by character
+    share. An identifier (`INV2024`, `ID7`) has no lowercase run and is
+    left whole."""
+    m = _GLUED.match(w["text"])
+    if not m:
+        return [w]
+    a, b = m.group(1), m.group(2)
+    x = w["x0"] + (w["x1"] - w["x0"]) * len(a) / len(w["text"])
+    return [dict(w, text=a, x1=round(x - 0.5, 2)), dict(w, text=b, x0=round(x + 0.5, 2))]
+
+
+def join_touching(words, max_gap: float = 0.6) -> list:
+    """Words the text layer split only because their glyphs carry different
+    fonts or sizes, printed TOUCHING on one baseline (`o`+`f`, `$`+`4`+`7`
+    in an OCR layer, `Gran`+`ville,`): one word. Sizes must agree within
+    25%, so texts printed at different scales over one band (I10) are
+    never joined."""
+    # rough lines by baseline GAP (never by rounding: `$` at 400.41 and `7`
+    # at 400.65 must land on one line), each read left to right
+    ws = sorted(words, key=lambda w: w["baseline"])
+    bands, cur = [], []
+    for w in ws:
+        if cur and w["baseline"] - cur[-1]["baseline"] > 0.2 * (w.get("size") or 10.0):
+            bands.append(cur)
+            cur = []
+        cur.append(w)
+    if cur:
+        bands.append(cur)
+    ws = [w for b in bands for w in sorted(b, key=lambda w: w["x0"])]
+    out = []
+    for w in ws:
+        p = out[-1] if out else None
+        if p is not None and _upright(p.get("rotation", 0)) and _upright(w.get("rotation", 0)):
+            size = max(p.get("size") or 0, w.get("size") or 0) or 10.0
+            small = min(p.get("size") or size, w.get("size") or size)
+            if (-0.5 <= w["x0"] - p["x1"] <= max_gap and small >= 0.75 * size
+                    and abs(w["baseline"] - p["baseline"]) <= 0.2 * size
+                    and p.get("origin") == w.get("origin")):
+                out[-1] = dict(p, text=p["text"] + w["text"], x1=max(p["x1"], w["x1"]),
+                               top=min(p["top"], w["top"]), bottom=max(p["bottom"], w["bottom"]),
+                               bold=p.get("bold") and w.get("bold"),
+                               italic=p.get("italic") and w.get("italic"))
+                continue
+        out.append(w)
+    return out
+
+
+def _rgb(color):
+    if not color:
+        return None
+    vals = [float(v) for v in color]
+    if len(vals) == 1:
+        return (vals[0],) * 3
+    if len(vals) == 3:
+        return tuple(vals)
+    if len(vals) == 4:
+        c, m, y, k = vals
+        return ((1 - c) * (1 - k), (1 - m) * (1 - k), (1 - y) * (1 - k))
+    return None
+
+
+def saturated(color) -> bool:
+    """A strongly coloured fill (red, blue, green): channels at least 0.5
+    apart. Grey and black never are."""
+    rgb = _rgb(color)
+    return bool(rgb) and max(rgb) - min(rgb) >= 0.5
+
+
+def _mark_markup(chars, words) -> None:
+    """`markup` on every word printed mostly in a saturated colour, on a
+    page where saturated text is under 40% of the characters: a reviewer's
+    annotation over a form (the Organized v1 rule, which the structure
+    layout had lost). Whether a markup LINE is left out is decided by the
+    plan, never for a line carrying a date or an amount."""
+    if not chars:
+        return
+    sat = sum(1 for c in chars if saturated(_color(c)))
+    if sat == 0 or sat >= 0.4 * len(chars):
+        return
+    for w in words:
+        if w.get("origin", "text") == "text" and saturated(w.get("color")):
+            w["markup"] = True
 
 
 # ── 2c lines by baseline ─────────────────────────────────────────────────────
@@ -374,6 +490,14 @@ def quality(page, words) -> dict:
             regions.append({"x0": box[0], "top": box[1], "x1": box[2],
                             "bottom": box[3]})
     outlined = curves >= 300 and n < 20
+    # the text sits ON page images: an OCR layer laid over a scan (most
+    # words inside image boxes) - readable, but its fonts are not the page's
+    imgs = [(float(im["x0"]), float(im["top"]), float(im["x1"]), float(im["bottom"]))
+            for im in getattr(page, "images", None) or []]
+    on_image = sum(1 for w in words if any(
+        a <= (w["x0"] + w["x1"]) / 2 <= c and b <= (w["top"] + w["bottom"]) / 2 <= d
+        for a, b, c, d in imgs)) if imgs else 0
+    overlay = n >= 10 and on_image >= 0.8 * n
     bad = (garbled / n if n else 1.0)
     bad = max(bad, (novowel / len(alpha)) if len(alpha) >= 5 else 0.0)
     image_share = sum((r["x1"] - r["x0"]) * (r["bottom"] - r["top"]) for r in regions) / area
@@ -381,7 +505,7 @@ def quality(page, words) -> dict:
     if n == 0:
         score = 0.0
     return {"score": round(score, 3), "words": n, "garbled": garbled,
-            "no_vowel_runs": novowel, "outlined": outlined,
+            "no_vowel_runs": novowel, "outlined": outlined, "overlay": overlay,
             "image_share": round(image_share, 3),
             "source": "text" if (n and score >= 0.7) else "ocr",
             "ocr_regions": regions}
@@ -519,6 +643,13 @@ def read_document(path, pages: Optional[list] = None) -> dict:
             for i, w in enumerate(words):
                 w["id"] = f"p{n}w{i}"
             q = quality(pg, [w for w in words if w["origin"] == "text"])
+            if q.get("overlay"):
+                # an invisible OCR layer over a page image: its font names
+                # ("*Arial-Bold-4259") say nothing about how the page looks
+                for w in words:
+                    if w["origin"] == "text":
+                        w["bold"] = w["italic"] = False
+                        w["style_unknown"] = True
             doc["pages"].append({"page": n, "width": float(pg.width),
                                  "height": float(pg.height), "words": words,
                                  "quality": q, "removed": [],
