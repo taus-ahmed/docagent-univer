@@ -769,8 +769,14 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
             continue
         if not row_line and not f["pair"]:
             # a section line inside the table (`Fees`, `Other Items`): its
-            # own row, never glued onto the row above
-            row = {ci: cws for ci, cws in parts.items()}
+            # own row, never glued onto the row above, each printed segment
+            # whole in the column of its first word
+            row = {}
+            for sg in G.segments(page, ln):
+                ci = G.column_of(sg[0], cols)
+                while ci in row and ci + 1 < len(cols):
+                    ci += 1
+                row.setdefault(ci, []).extend(sg)
             row["_section"] = True
             groups_rows[0].append(row)
             prev_line = None

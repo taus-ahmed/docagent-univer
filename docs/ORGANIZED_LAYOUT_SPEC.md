@@ -203,3 +203,60 @@ did not do, and v3 does:
     Money keeps its printed decimals.
 27. **Fillable forms**: widget values are placed where the form shows them,
     beside their labels.
+
+# v4 — the structure engine, Run T2
+
+Still behind `?layout=organized`; `NO_TEMPLATE_USES_STRUCTURE` stays off.
+Every rule below is general (no vocabulary, no per-document literal) and
+was found by the positional checker (`tools/position_check.py`, answer
+keys in `tests/fixtures/answer_keys/`).
+
+28. **Words.** A printed gap a space wide (0.15 em, 1 pt, 3x the word's
+    other gaps) with no space character cuts a word; glyphs printed
+    touching on one baseline at one size are one word; a word glued to a
+    figure is two; unmapped glyphs are dropped. An invisible OCR layer over
+    page images carries no bold or italic (its font names are not the
+    page's look).
+29. **Markup** (Organized v1 rule 10, restored): a line printed wholly in a
+    saturated colour, on a page where such text is under 40% of the
+    characters, is left out with the reason `markup` - never a line with a
+    date, an amount or a label pair.
+30. **A table starts** at the heading line directly above its rows (up to
+    three stacked heading lines; one row is enough under its heading's
+    segments) and **ends** at the next table's heading or title. Section
+    lines are their own rows; a line continues the row above only when it
+    is close (under 0.85 of the row pitch) or at the pitch but right of the
+    first column, and only in columns that row has text in. A `Label:` line
+    whose figures align with the table's is its row; inside a table, label
+    lines are placed by pairs. A range ending in a connector continues on
+    the next line.
+31. **Columns.** A narrow alley under a break in the heading is a column; a
+    heading printed offset from its data claims the nearest headless data
+    column; a right-edge cut never crosses a word; a column is numeric by
+    cell, not by word. A heading reaching over two or more bottom headings
+    with a word over none of them is a **group heading**: its own header
+    row spanning those columns.
+32. **Label/value.** Every `Label:` in a segment starts a pair; a label-free
+    line under a value, at its left edge, continues it (rule 5); cells take
+    the column of their left-edge stack, so side-by-side blocks keep their
+    own columns; a currency sign alone in a segment joins the next figure
+    on its line, or is left out with a reason.
+33. **Furniture.** `n of m` inside a line is a page number, left out with a
+    reason; a heading reprinted over a continuation is written once.
+34. **Paragraphs and bullets** (2+ plain lines at one left edge, 8+ words,
+    a sentence; or a bulleted item) are left out with their reason, never a
+    line with a date, an amount, a label pair or under half its words
+    lowercase.
+35. **Charts.** Four or more touching filled curves, roughly square, no
+    text inside, figure-bearing labels beside: a chart; its labels are left
+    out with the reason `chart`.
+36. **Forms.** On a page with widget values, every box (from the page's
+    drawn edges) is a field: its printed words the label (stacked pieces
+    joined), its widget words the value; each form on the page its own
+    region. Pages without widgets keep the normal path.
+37. **OCR.** A page whose text layer cannot be trusted is read by OCR
+    (Tesseract, pinned 5.3.0) into the same word format and laid out by the
+    same rules, with its trust score; low trust and an off-pin reader are
+    flagged.
+38. **Reviewer edits** (docs/REVIEWER_STRUCTURE_API.md) are applied in
+    order on top of the plan; one that no longer applies is reported.

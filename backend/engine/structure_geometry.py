@@ -179,6 +179,31 @@ def stacked_heads(blk, fs, i) -> list:
     return out
 
 
+def across(f, head_spans) -> bool:
+    """A line with a figure that is no row of the table under it: one of its
+    segments, holding no date and no amount, overlaps two or more of the
+    heading's segments (`Count of items 8` laid across Ref | Day). A row's
+    text sits under ONE heading."""
+    # heading lines stacked over one column are ONE column: overlapping
+    # spans merge
+    spans = []
+    for x0, x1 in sorted(head_spans):
+        if spans and x0 < spans[-1][1]:
+            spans[-1][1] = max(spans[-1][1], x1)
+        else:
+            spans.append([x0, x1])
+    head_spans = spans
+    if len(head_spans) < 2:
+        return False
+    for sg in f["segs"]:
+        if any(is_amount(w["text"]) or has_date(w["text"]) for w in sg):
+            continue
+        a, b = min(w["x0"] for w in sg), max(w["x1"] for w in sg)
+        if sum(1 for x0, x1 in head_spans if a < x1 and x0 < b) >= 2:
+            return True
+    return False
+
+
 def aligned_with(words, edges, tol=4.0) -> bool:
     """A `Label: figure` line whose figures end on the right edges of a
     table's figures above it is a row of that table (`Total Fees:`
@@ -593,6 +618,11 @@ def fallback_plan(page, prev_table=None) -> dict:
                     j += len(more)
                 k = j
                 edges, skipped = [], []
+                # the heading's own columns, to tell a row from a line laid
+                # across the table
+                hcent = [(min(w["x0"] for w in sg), max(w["x1"] for w in sg))
+                         for h in head_ids for sg in segments(sub, next(
+                             x for x in blk if x["id"] == h), gut)]
                 while k < len(blk):
                     g = fs[k]
                     if g["prose"] or g["furniture"]:
@@ -610,6 +640,10 @@ def fallback_plan(page, prev_table=None) -> dict:
                     if k > j and not is_row_line(g) and not close and nxt is not None \
                             and starts_table(sub, blk, fs, nxt, gut):
                         break                      # the next table's title
+                    if k > j and is_row_line(g) and across(g, hcent):
+                        break                      # a summary laid across the table
+                    if k > j and not is_row_line(g) and not close and                             (nxt is None or not is_row_line(fs[nxt]) or across(fs[nxt], hcent)):
+                        break                      # a footnote after the rows
                     ws_k = _words_of(page, blk[k])
                     if g["pair"] and not is_row_line(g) and not aligned_with(ws_k, edges):
                         break

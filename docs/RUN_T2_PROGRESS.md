@@ -19,24 +19,24 @@ No live model call. Resume from the first unchecked item.
 - [x] stage 2 full suite (gate at 5599ca7: green, see log) + commit (5599ca7)
 
 ## Stage 3 — form values
-- [ ] AcroForm widgets (name, rect, value) to the label of the box holding them; split labels merged; several forms = several regions; `$` with its value
-- [ ] stage 3 full suite + commit
+- [x] AcroForm widgets (name, rect, value) to the label of the box holding them; split labels merged; several forms = several regions; `$` with its value
+- [ ] stage 3 full suite (gate at 0719954, running) + commit (0719954)
 
 ## Stage 4 — OCR
-- [ ] Tesseract pinned (Docker, CI), version in job log; OCR words in perception format with per-page trust; same plan/placement/verify path; 3 scanned samples
-- [ ] stage 4 full suite + commit
+- [x] Tesseract pinned (Docker, CI), version in job log; OCR words in perception format with per-page trust; same plan/placement/verify path; 3 scanned samples
+- [ ] stage 4 full suite (gate at 17e8c1f, running) + commit (17e8c1f)
 
 ## Stage 5 — stacked headers, wrapped tables, charts
-- [ ] stacked headers; repeated column groups one table; side-by-side blocks; instruction/bullet text excluded with reason; charts excluded
-- [ ] stage 5 full suite + commit
+- [x] stacked headers; repeated column groups one table; side-by-side blocks; instruction/bullet text excluded with reason; charts excluded
+- [ ] stage 5 full suite + commit (2e2273a)
 
 ## Stage 6 — reviewer structure edits (backend)
-- [ ] endpoints, stored plan edits (who/when), export applies them, deterministic; docs/REVIEWER_STRUCTURE_API.md
-- [ ] stage 6 full suite + commit
+- [x] endpoints, stored plan edits (who/when), export applies them, deterministic; docs/REVIEWER_STRUCTURE_API.md
+- [ ] stage 6 full suite + commit (8c2413b)
 
 ## Stage 7 — live run tool (not run)
-- [ ] tools/live_structure_check.py ($1 cap, per-call log), PowerShell commands, vendor list + expense report, 20-doc comparison set
-- [ ] stage 7 full suite + commit
+- [x] tools/live_structure_check.py ($1 cap, per-call log), PowerShell commands, vendor list + expense report, 20-doc comparison set
+- [ ] stage 7 full suite + commit (29f9a31)
 
 ## Stage 8 — report
 - [ ] docs/RUN_T2_REPORT.md
@@ -103,6 +103,85 @@ the held-out half is never worked on:
 - Stage 2 gate at 5599ca7: 5926 passed, 11 failed, 19 xfailed (48 min); the same 11
   sibling-folder failures as Stage 1 (the gate started before the folder was linked).
   Re-run at 5599ca7 with it linked: 18 passed. Stage 2 gate: 0 real failures.
+- 0719954 Stage 3 (engine/form_boxes.py, tests/test_t2_form_boxes.py, 8 tests). Developed on
+  irs_1099nec_ellis and the other five widget forms in the corpus (none keyed); the two
+  held-out IRS6744 files were measured only.
+  * Widget values beside a label: 48/48 on the six widget forms (old Organized 0/48; own
+    cell 26/48 -> 48/48). Causes fixed: widget words sharing a y with other text were read
+    into that text line; multi-line widget values lost their line breaks ("CORNERMAIN");
+    two boxes drawn with edges 0.1 pt apart counted as two; a widget rect overrunning its
+    frame by 3 pt landed in a wider box (boxes now located by the word's centre).
+  * Split labels: stacked one-letter pieces read back whole ("12a" + C/o/d/e = "12a Code").
+  * Two forms on one page: boxes that touch are one form; each form its own region/anchor.
+  * `$`: joins the box's value; with no value it is left out WITH a reason. Normal path: a
+    lone currency segment joins the next figure on its line (1099 held-out extras 66 -> 50).
+  * NOT done, by the brief: the held-out irs6744 W-2 / 1099-NEC+K have NO widgets (values
+    flattened into the text layer), so they keep the normal path, where a box's label is
+    written above its value - their checker kv pairing stays 0%. Reading flattened forms by
+    their drawn boxes is the same code; turning it on for no-widget pages is an owner call.
+  * Left: W-2 box 13 checkbox captions (two-line text in three sub-columns of one box) read
+    in a scrambled order; a checkbox widget without its own label box is a value with no
+    label.
+  Dev unchanged (95.0% / 99.7%); held-out unchanged except 1099 extras 66 -> 50.
+- 17e8c1f Stage 4 (tests/test_t2_ocr.py, 11 tests; tools/ocr_sample_check.py).
+  * Pin: Debian bookworm tesseract-ocr=5.3.0-2, libtesseract5=5.3.0-2, tesseract-ocr-eng and
+    -osd=1:4.1.0-2 (versions read from packages.debian.org) in Dockerfile.backend; new CI job
+    `ocr-pinned` runs in the SAME base image digest with the same pins and fails on any other
+    release; ocr_source.TESSERACT_PIN = 5.3.0; a test checks the three agree. The other CI jobs
+    still use Ubuntu's Tesseract (another release) - only `ocr-pinned` is the reference.
+    Every job logs `[OCR] reader tesseract X (pinned 5.3.0): matches the pin | DIFFERS ...`.
+    This machine has 5.4.0.20240606 - every OCR number below is OFF-PIN.
+  * Perception: a page whose quality says OCR is read through ocr_source when asked (job time
+    behind STRUCTURE_OCR_AT_EXTRACTION, default off; otherwise at the Organized export from the
+    stored file); words in page points, origin `ocr`; per-page record {reader, version, pin,
+    trust, low_confidence_words}; same plan/placement/verify; trust < 0.80 or off-pin flagged.
+    Two OCR-geometry causes found and fixed: a fixed baseline fraction ignored descenders
+    (`Item` and `40.50` on two lines, a table split into a "side panel"); Tesseract box jitter
+    of ~3.6 pt exceeds the text-layer line tolerance (OCR pages: half the body size).
+  * 3 scanned samples vs their digital originals (off-pin 5.4.0): ccsu invoice recall 82.5% /
+    precision 72.3% / trust 0.83 / cells kept 12/19; utep pay stub 46.9% / 71.3% / 0.82 /
+    24/93 (its original's own text layer is a garbled OCR layer, so "expected" is itself
+    noisy); IRS W-2 2021 72.0% / 63.8% / 0.69 (flagged) / 17/59. No page skipped.
+  * Cost note: OCR at job time would read scanned pages a second time (the extraction
+    preprocessor already OCRs them); reusing those words is not done.
+- 2e2273a Stage 5 (tests/test_t2_stage5.py, 8 tests).
+  * Stacked headings: same-column stacks join into one label (Tran Date / Post Date ->
+    `Tran Date`, `Post Date`); a heading reaching over 2+ bottom headings with a word over
+    none of them is a GROUP heading row spanning its columns (long_digital card-type table:
+    right header 89.1% -> 100%). A first version keyed on data alleys mis-grouped unm's
+    `Employee Employee Employer Employer` (unm 100% -> 36.9%) and was replaced.
+  * Repeated column groups (Date/Amount x3) one table, one header, records in order: tested
+    on a synthetic page; carson's daily balances are held-out and measured only.
+  * Side-by-side blocks: label/value regions place cells by left-edge stack, so a line
+    printing only the right block stays in its columns. NOTE: plan regions are line-based,
+    so two blocks sharing printed lines are one region with separate column stacks, not two
+    plan regions with two anchors.
+  * Paragraphs and bullets left out with reasons. Corpus audit found two wrong exclusions in a
+    first version (a capitalised PO line item starting "(5)", a row of W-2 box labels); fixed
+    by requiring the shape of a sentence (half the words lowercase). After: 171 paragraph +
+    90 bullet lines left out across the small corpus docs, all terms/instructions on review.
+  * Charts: three detections in the whole corpus, all pie charts (renders checked): fidelity
+    p2 and carson/long_digital p1. Rounded frames, logos, callouts rejected by rule.
+  * HELD-OUT KEY CORRECTED: carson's activity summary `Debits $14,365.21 / Credits
+    $18,041.50` are a pie chart's labels (render checked); the first key had them as table
+    columns. The carson row is re-scored with the corrected key (315 items, was 319).
+  Dev: 99.7% right header / 99.7% right row / 1 glued / 3 missing.
+  Held-out: 82.4% / 81.4% / 8 glued / 54 missing (carson 91.4% / 90.0%).
+- 8c2413b Stage 6 (engine/structure_edits.py, routes/structure.py, tests/http/
+  test_t2_structure_edits.py 8 tests, docs/REVIEWER_STRUCTURE_API.md). GET/POST/DELETE
+  .../docs/{doc}/structure[/edits[/{id}]]; plan edits (ignore/unignore line, reassign
+  column) and cell edits (move, merge, split) stored with id/by/when beside the words;
+  cell edits keep the word ids they were made on and are REPORTED, never re-aimed, when
+  those words moved; 422 and nothing stored for an edit that cannot apply; the Organized
+  export applies the edits; same words + plan + edits -> same sheet (tested). All three
+  routes are in the tenant-isolation suite (positive control included). A timestamp field
+  named `at` collided with split_cell's `at` and was renamed `when` before commit.
+  Also: the Organized export now reads the stored file for stored pages still needing OCR.
+- 29f9a31 Stage 7 (tools/live_structure_check.py, tests/test_t2_live_tool.py 5 tests). NOT RUN
+  LIVE. Offline by default; prints the PowerShell commands. Hard $1 cap shared across runs
+  (ledger), refusing a call before sending when its worst case would pass the cap; per-call
+  JSONL log. Sets: vendor (mobile_vendor_list_8pg), expense (harness no-template re-record
+  of EXP-2024-0081), compare (20 documents: old Organized vs new engine vs Regular).
 - Baseline at f434f0e (first key version): dev old 69.3% header / 94.8% row / 7 glued;
   dev new 73.9% / 84.0% / 35 glued; held-out old 86.4% / 86.4% / 5; held-out new
   83.5% / 85.9% / 2.

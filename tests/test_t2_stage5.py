@@ -147,3 +147,31 @@ def test_a_rounded_frame_a_logo_and_a_callout_are_not_charts():
     assert P.figures(_Pg(logo), [_w("Acme", 250, 290, 0)]) == []          # no figures beside
     callout = [_w("Note", 320, 320, 0), _w("1.5", 250, 290, 1), _w("2.5", 250, 300, 2)]
     assert P.figures(_Pg(logo), callout) == []                            # text inside it
+
+
+def test_a_continued_repeated_group_table_ends_before_its_footnote_and_summary(tmp_path):
+    head = [(40, 700, "Ref"), (110, 700, "Day"), (170, 700, "Sum"), (220, 700, "Ref"),
+            (290, 700, "Day"), (350, 700, "Sum"), (400, 700, "Ref"), (470, 700, "Day"),
+            (530, 700, "Sum")]
+    p1 = [(40, 730, "PAYMENTS")] + head + [
+        (40, 686, "5001"), (100, 686, "02/01/30"), _right(200, 686, "$10.00"),
+        (220, 686, "5002"), (280, 686, "02/01/30"), _right(380, 686, "$20.00"),
+        (400, 686, "5003"), (460, 686, "02/01/30"), _right(560, 686, "$30.00")]
+    p2 = [(40, 730, "PAYMENTS (continued)")] + head + [
+        (40, 686, "5004"), (100, 686, "02/02/30"), _right(200, 686, "$1.50"),
+        (220, 686, "5006"), (280, 686, "02/03/30"), _right(380, 686, "$3.00"),
+        (400, 686, "5008"), (460, 686, "02/04/30"), _right(560, 686, "$5.00"),
+        (40, 674, "5005"), (100, 674, "02/02/30"), _right(200, 674, "$2.50"),
+        (220, 674, "5007"), (280, 674, "02/03/30"), _right(380, 674, "$4.00"),
+        (40, 655, "* Shows a gap in the order"),
+        (40, 640, "Count of items 8"), (400, 640, "Total of items $76.00")]
+    lay = _lay(tmp_path, [p1, p2])
+    page2 = lay["pages"][1]
+    # one table, one header (written on page 1), every record its own row
+    assert not _heads(page2)
+    recs = {c["text"]: c["row"] for c in page2 if c["text"].startswith("50")}
+    assert sorted(recs) == ["5004", "5005", "5006", "5007", "5008"] and len(set(recs.values())) == 5
+    texts = [c["text"] for c in page2]
+    assert "Total of items $76.00" in texts or "$76.00" in texts
+    assert not any("Count of items" in t and "50" in t for t in texts)
+    assert any("Shows a gap" in e["text"] for e in lay["excluded"])
