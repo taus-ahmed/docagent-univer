@@ -737,6 +737,12 @@ def export_job_excel(
     })
 
 
+def _needs_ocr(doc_result) -> bool:
+    from app.services import perception_store as PS
+    perc = PS.stored(doc_result) or {}
+    return any(p.get("needs_ocr") for p in perc.get("pages") or [])
+
+
 def _organized_export(job, doc_results, storage, current_user, quiet=False):
     """Run R, Part 2 (v1): each document's pages laid out as printed
     (docs/ORGANIZED_LAYOUT_SPEC.md). Read from the stored source files; a
@@ -758,7 +764,9 @@ def _organized_export(job, doc_results, storage, current_user, quiet=False):
         for i, d in enumerate(doc_results, 1):
             name = f"document {i}.pdf" if demo else (d.original_filename or d.filename or f"document {i}")
             path = None
-            if not getattr(d, "perception_json", None) and d.s3_key:
+            if d.s3_key and (not getattr(d, "perception_json", None) or _needs_ocr(d)):
+                # no stored words, or stored pages a scan holds that were not
+                # read by OCR at job time (Run T2, 4): the file is read again
                 path = storage.get_local_path(d.s3_key)
             if path is not None:
                 paths.append(path)

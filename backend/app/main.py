@@ -572,6 +572,7 @@ def create_app() -> FastAPI:
     from app.api.routes.admin import router as admin_router
     from app.api.routes.demo import router as demo_router
     from app.api.routes.review import router as review_router
+    from app.api.routes.structure import router as structure_router
 
     app.include_router(auth_router)
     app.include_router(extract_router)
@@ -582,6 +583,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(demo_router)
     app.include_router(review_router)
+    app.include_router(structure_router)
 
     # Health Check
     @app.get("/health")

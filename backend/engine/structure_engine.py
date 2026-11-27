@@ -574,8 +574,9 @@ def _stack_columns(cells, gut) -> None:
     new = {}
     for row in by_row.values():
         used = set()
+        prev = None
         for c in row:
-            if id(c) in follows:
+            if id(c) in follows and prev is not None:
                 col = new[id(prev)] + 1
             else:
                 col = start[k_of(c["_ws"][0]["x0"])]
@@ -733,6 +734,21 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
             for w in ws:
                 ci = G.column_of(w, cols)
                 parts.setdefault(ci, []).append(w)
+        ov = region.get("column_overrides") or {}
+        if ov:
+            # a reviewer put these words in another column of this table
+            moved = {}
+            for ci in list(parts):
+                keep = [w for w in parts[ci] if w["id"] not in ov]
+                for w in parts[ci]:
+                    if w["id"] in ov:
+                        moved.setdefault(int(ov[w["id"]]), []).append(w)
+                if keep:
+                    parts[ci] = keep
+                else:
+                    del parts[ci]
+            for ci, ws_ in moved.items():
+                parts.setdefault(ci, []).extend(ws_)
         row_line = G.is_row_line(f)
         if prev_line is not None and _range_continues(parts, n, groups_rows, ln, prev_line):
             # `01/02/30 -` over `01/03/30`: the second half of a range
@@ -1067,7 +1083,7 @@ def arithmetic(page, region) -> list:
 # 3g/3h — the document
 # ══════════════════════════════════════════════════════════════════════════
 
-def layout_document(perc, plans=None, order=None) -> dict:
+def layout_document(perc, plans=None, order=None, edits=None) -> dict:
     """The structure layout of a perception (`perception.read_document` or a
     stored one): {"pages": [cells], "skipped", "flags", "excluded",
     "plans": {page: plan}, "plan_source": {page: source}, "anchors"} - the
@@ -1118,7 +1134,34 @@ def layout_document(perc, plans=None, order=None) -> dict:
                 for msg in geometry_contradictions(stored, page)["named"]:
                     out["flags"].append(f"page {page['page']}: the plan departs from the "
                                         f"geometry and says why - {msg}")
+        # reviewer edits (structure_edits): plan edits before placement, cell
+        # edits after it; in order; reported, never guessed
+        import structure_edits as SE
+        pedits = SE.for_page(edits if edits is not None else (perc or {}).get(
+            "structure_edits"), page["page"])
+        if pedits:
+            plan, res = SE.apply_plan_edits(plan, page, pedits)
+            out.setdefault("edit_results", []).extend(res)
         placed = place_page(page, plan, order, prev_tables)
+        if pedits:
+            sizes = [ln["size"] for ln in page["lines"] if ln.get("size")]
+            body_ = statistics.median(sizes) if sizes else 10.0
+
+            def rebuild(r, c, ws, like):
+                cell = _cell(r, c, ws, body_, order, role=like.get("role"))
+                for k in ("header", "align", "bold"):
+                    if like.get(k) is not None:
+                        cell[k] = like[k]
+                cell["kind"] = like.get("kind", cell["kind"])
+                cell["edited"] = True
+                return cell
+            out.setdefault("edit_results", []).extend(
+                SE.apply_cell_edits(placed["cells"], page, pedits, rebuild))
+            for r in out["edit_results"]:
+                if not r["applied"] and r.get("page_flagged") is None:
+                    r["page_flagged"] = True
+                    out["flags"].append(f"page {page['page']}: reviewer edit {r['id']} "
+                                        f"({r['op']}) not applied - {r['why']}")
         out["flags"] += verify(page, plan, placed, fb if source == "model" else None)
         out["excluded"] += [{**e, "page": page["page"]} for e in placed["excluded"]]
         out.setdefault("unplaced", []).extend(placed.get("unplaced") or [])

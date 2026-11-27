@@ -115,6 +115,9 @@ ROUTES = {
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}"): "id",
     ("GET", "/api/jobs/{job_id}/docs/{doc_id}/pages/{page}/image"): "id",
+    ("GET", "/api/jobs/{job_id}/docs/{doc_id}/structure"): "id",
+    ("POST", "/api/jobs/{job_id}/docs/{doc_id}/structure/edits"): "id",
+    ("DELETE", "/api/jobs/{job_id}/docs/{doc_id}/structure/edits/{edit_id}"): "id",
 }
 
 #: JSON bodies for id routes that need one (valid, so validation never
@@ -130,6 +133,8 @@ BODIES = {
     ("POST", "/api/jobs/{job_id}/rerun"): {"template_id": None},
     ("POST", "/api/jobs/{job_id}/docs/{doc_id}/rows/{table}"):
         {"values": {"Amount": "1.00"}},
+    ("POST", "/api/jobs/{job_id}/docs/{doc_id}/structure/edits"):
+        {"op": "ignore_line", "page": 1, "line_id": "p1l0", "reason": "x"},
 }
 
 
@@ -267,19 +272,19 @@ def _a_ids(firms):
     return {"job_id": a.job, "doc_id": a.doc, "ref": "B2", "table": "table", "row": 0,
             "template_id": a.tpl,
             "client_id": A, "folder_id": a.folder, "watch_id": a.watch,
-            "user_id": a.users["user"].id, "page": 1}
+            "user_id": a.users["user"].id, "page": 1, "edit_id": 424242}
 
 
 MISSING_IDS = {"job_id": MISSING, "doc_id": MISSING, "ref": "B2",
                "table": "table", "row": 0,
                "template_id": MISSING, "client_id": "noSuchFirm",
                "folder_id": "noSuchFolder", "watch_id": MISSING,
-               "user_id": MISSING, "page": 1}
+               "user_id": MISSING, "page": 1, "edit_id": 424242}
 
 
 def _norm(text, ids):
     for k, v in ids.items():
-        if k not in ("ref", "page"):
+        if k not in ("ref", "page", "edit_id"):
             text = text.replace(str(v), "<ID>")
     return text
 
