@@ -17,7 +17,7 @@ import re
 import statistics
 from datetime import datetime
 
-_MONEY = re.compile(r"^\(?-?\$?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?\)?$")
+_MONEY = re.compile(r"^\(?[-+]?[$£€¥]?[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?\)?$")
 _INT = re.compile(r"^\d{1,9}$")
 _DATE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
 _JOIN_PT = 1.5          # words closer than this are one token (OCR shards)
@@ -260,7 +260,7 @@ def typed(text, order=None, label=None):
     (`label`: INVOICE, P.O., CHECK #, ZIP) - is text, every printed
     character kept. Money keeps the decimals it printed (75.00, not 75)."""
     t = str(text or "").strip()
-    flat = t.replace(" ", "")
+    flat = _signs(t.replace(" ", ""))
     d = _as_date(t, order)
     if d is not None:
         return d, DATE_FORMAT
@@ -268,7 +268,7 @@ def typed(text, order=None, label=None):
             (flat[0] == "0" and len(flat) > 1) or len(flat) >= 9
             or (label and _identifier_label(label))):
         return t, None
-    trailing = bool(re.fullmatch(r"\$?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?-", flat))
+    trailing = bool(re.fullmatch(r"[$£€¥]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?-", flat))
     body = flat[:-1] if trailing else flat
     if _MONEY.match(body) and any(ch.isdigit() for ch in body):
         neg = trailing or body.startswith("(") or body.startswith("-")
@@ -276,8 +276,9 @@ def typed(text, order=None, label=None):
         num = -num if neg else num
         dec = len(body.rstrip(")").split(".")[1]) if "." in body else 0
         base = ("#,##0." + "0" * dec) if dec else "#,##0"
-        if "$" in body:
-            base = '"$"' + (base if dec else "#,##0.00")
+        sym = next((ch for ch in "$£€¥" if ch in body), "")
+        if sym:
+            base = f'"{sym}"' + (base if dec else "#,##0.00")
         elif not ("." in body or "," in body):
             if not _INT.match(body.lstrip("-")):
                 return t, None
@@ -291,8 +292,24 @@ def typed(text, order=None, label=None):
     return t, None
 
 
+_MINUS = {"\u2212": "-", "\u2013": "-"}
+
+
+def _signs(t) -> str:
+    """The typographic minus (U+2212) and an en dash before a figure are a
+    minus."""
+    for a, b in _MINUS.items():
+        t = t.replace(a, b)
+    return t
+
+
+_DASHES = {"-", "\u2010", "\u2011", "\u2012", "\u2013", "\u2014", "\u2212"}
+
+
 def _is_figure(text) -> bool:
-    flat = str(text or "").replace(" ", "")
+    if str(text or "").strip() in _DASHES:
+        return True                    # a printed dash: an amount column's "none"
+    flat = _signs(str(text or "").replace(" ", ""))
     return bool(_DATE.match(flat) or (_MONEY.match(flat) and any(c.isdigit() for c in flat))
                 or _as_date(text, "MDY") is not None)
 
@@ -400,13 +417,13 @@ def _row_key(segs):
 # what a column holds is guessed.
 
 _STRONG_DATE = re.compile(r"^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$")
-_STRONG_MONEY = re.compile(r"^\(?-?\$?(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}\)?-?$|^\(?-?\$\d")
+_STRONG_MONEY = re.compile(r"^\(?[-+]?[$£€¥]?[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}\)?-?$|^\(?[-+]?[$£€¥]\d")
 
 
 def _strong(tok) -> bool:
     """A date or an amount of money: what makes a line a ROW of a table.
     A bare integer is not ("NBR 131" is a reference, not a row)."""
-    t = str(tok or "").strip().strip(",;")
+    t = _signs(str(tok or "").strip().strip(",;"))
     return bool(_STRONG_DATE.match(t) or _STRONG_MONEY.match(t))
 
 
@@ -425,6 +442,8 @@ def _header_like(li) -> bool:
     no label. A title is one segment and is never a heading line."""
     return (li["figs"] == 0 and not li["label"] and 2 <= len(li["words"]) <= 24
             and len(li["segs"]) >= 2
+            and not any(re.search(r"\d", w["text"]) and not re.fullmatch(r"(19|20)\d\d", w["text"])
+                        for w in li["words"])
             and not li["text"].rstrip().endswith((".", ":")))
 
 
@@ -436,6 +455,8 @@ def _group_parts(li):
     from row_groups import split_group_label
     p = split_group_label(li["text"])
     if p.get("ident") and p.get("name") and re.search(r"\d", p["ident"]) \
+            and li["text"].split()[0] == p["ident"].split()[0] \
+            and not re.search(r"\d", p["name"]) \
             and re.search(r"[A-Za-z]{2}", p["name"]) and not p.get("label"):
         return p["ident"], p["name"]
     return None
@@ -527,7 +548,9 @@ def _find_tables(infos):
         k = j
         while k < n and k <= j + 1 and _group_parts(infos[k]):
             k += 1
-        if k >= n or infos[k]["strong"] == 0 or infos[k]["figs"] < 2 or infos[k]["label"]:
+        line_h = max(1.0, infos[heads[-1]]["bottom"] - infos[heads[-1]]["top"])
+        if k >= n or infos[k]["strong"] == 0 or infos[k]["figs"] < 2 or infos[k]["label"] \
+                or infos[k]["top"] - infos[k - 1]["top"] > 3.0 * line_h:
             i += 1
             continue
         hx0 = min(w["x0"] for h in heads for w in infos[h]["words"])
@@ -660,6 +683,22 @@ def _emit_table(tbl, infos, run_of, trace, seen, gutter=6.0):
     if stacked:
         for w in infos[stacked[0]]["words"]:
             bot_ph.setdefault(_col_for(w, allc), []).append(w)
+    head_lines = [hi, *stacked]
+    if stacked:
+        # STACKED sub-fields or ONE heading WRAPPED over two lines ("Budget"
+        # over "Amount")? A stacked table's record has a second line holding
+        # values only under the stacked headings; when EVERY data line fills a
+        # column that is not stacked, each line is a whole record and the two
+        # heading lines are one heading per column, read top then bottom.
+        both = {k for k in top_ph if k in bot_ph}
+        others = set(range(len(allc))) - both
+
+        def _fills_other(li):
+            return any(_col_for(w, allc) in others for w in li["words"])
+        if not both or all(_fills_other(li) for li in data):
+            for k, ws in bot_ph.items():
+                top_ph.setdefault(k, []).extend(ws)
+            bot_ph, stacked = {}, []
     keys = list(range(len(allc)))
     names = [_text(top_ph[k]).casefold() if k in top_ph else "" for k in keys]
     per = _period(names) if len(keys) >= 4 else None
@@ -687,7 +726,7 @@ def _emit_table(tbl, infos, run_of, trace, seen, gutter=6.0):
         row += 1
     seen.add(hdr_key)
     if trace is not None:
-        for h in [hi, *stacked]:
+        for h in head_lines:
             trace.append(("kept", infos[h]["text"]))
     # records: a data line and the lines continuing it (a tail; a stacked
     # table's second line)

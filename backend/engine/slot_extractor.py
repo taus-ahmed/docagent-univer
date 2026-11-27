@@ -1749,7 +1749,11 @@ def attach_tail_rows(rows, keys, line_of_row, all_lines=None):
     for r in rows:
         prev = out[-1] if out else None
         ln, pl = line_of_row.get(id(r)), line_of_row.get(id(prev)) if prev else None
-        if prev is not None and ln is not None and pl is not None                 and not _has_date_or_amount(r, keys) and _has_date_or_amount(prev, keys)                 and 0 < ln - pl <= 1 + len(prev.get("_tails") or [])                 and _x(ln, "x0") is not None and _x(pl, "x1") is not None                 and _x(ln, "x0") > _x(pl, "x1") + 1.0:
+        if (prev is not None and ln is not None and pl is not None
+                and not _has_date_or_amount(r, keys) and _has_date_or_amount(prev, keys)
+                and 0 < ln - pl <= 1 + len(prev.get("_tails") or [])
+                and _x(ln, "x0") is not None and _x(pl, "x1") is not None
+                and _x(ln, "x0") > _x(pl, "x1") + 1.0):
             for k in keys:
                 v = str(r.get(k, "") or "").strip()
                 if not v:

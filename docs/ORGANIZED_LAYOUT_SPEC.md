@@ -158,3 +158,48 @@ field, a statement written column by column). Placement reads positions
 only, so the same page drawn in a shuffled order lays out identically
 (tested). Still not handled: rotated text, columns that drift more than
 the column cut, and two values stacked in one box (two rows).
+
+# v3 — tables split at the page's own columns (Run T)
+
+Still placement by x and y only, still behind `?layout=organized`. What v2
+did not do, and v3 does:
+
+18. **Table columns are the page's alleys.** A heading line (two or more
+    segments, no figure, no label) with a row of dates or amounts under it
+    starts a table. Its columns are the x ranges the data rows' ink covers;
+    every word goes to the column it sits in and every heading word to the
+    column it sits over. So `CHECK RUN CHECK #` is two headings and `75.00
+    07/22/2026 INV PD` is four cells, though both are printed with ordinary
+    word spacing. A headless column separated from its left neighbour by no
+    more than word spacing is that neighbour's continuation (a description).
+19. **Tails.** A line with no date and no amount directly under a row
+    (closer than rows are to each other) and starting right of the table's
+    first column continues that row, joined with a space - never a row.
+20. **Side-by-side bands** (`Number Date Amount` x3): one header row; each
+    band read top to bottom, then left to right; sorted by the first column
+    when every band is printed sorted.
+21. **Stacked headings** (`Tran Date` over `Post Date`): two sub-field
+    columns side by side, top first; a record is two lines tall, the first
+    line's values under the top heading, the second's under the bottom one.
+22. **Group lines** (`300055 ANDERSON DULANEY`): identifier and name in two
+    cells in the two columns LEFT of the table, bold - never in a column of
+    the table. `CHECK DATE: 06/24/2026` lines inside the table stay
+    label/value pairs (beside the group cells in a grouped table).
+23. **A continued table keeps its first page's columns**: each later cell
+    moves to the earlier column whose x span it overlaps most.
+24. **Furniture** adds: report generated/printed/run lines with a date,
+    user / operator / program / report id lines, `Page n` printed as two
+    segments, and printed form instructions (see instructions, privacy act,
+    OMB No., Cat. No., keep for your records).
+25. **Every `Label:` pair** in a segment is split, not only the first; two
+    printed items sharing a page column run are two cells. A word glued to a
+    figure by the text layer (`Checks$1,783.32`, `of6`) is two tokens; an
+    identifier with no lowercase run (`INV2024`) is not split.
+26. **Values.** Identifiers keep every character: a zero-padded digit run,
+    9+ digits, or a digit run under an identifier heading (INVOICE, P.O.,
+    CHECK #, ZIP, ...) is text, and a column holding one zero-padded value is
+    text throughout. A trailing minus stays trailing: `26.08-` is -26.08
+    shown with `#,##0.00;#,##0.00-`; a leading minus and brackets as printed.
+    Money keeps its printed decimals.
+27. **Fillable forms**: widget values are placed where the form shows them,
+    beside their labels.

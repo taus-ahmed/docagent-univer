@@ -413,8 +413,10 @@ supplier's email for the customer's, a `Fed. I.D.` for a customer tax ID),
 grounds perfectly and is written at `high`, unflagged. That this rarely happens
 is the model declining to do it, not a check — see "Measured limits".
 
-**The confidence vocabulary is five words, defined once in
-`app/core/confidence.py`** — read that docstring before touching any of them:
+**The confidence vocabulary is six words, defined once in
+`app/core/confidence.py`** — read that docstring before touching any of them
+(`derived` was added in Run T: a total the page does not print, equal to the
+sum of a column of the rows it totals, `field_provenance.derived`):
 
 | level | claim |
 |---|---|
@@ -423,6 +425,7 @@ is the model declining to do it, not a check — see "Measured limits".
 | `unverified` | no text layer existed to check any span against (image upload, scanned PDF). Not a middling measurement — no measurement. |
 | `low` | checked and failed. |
 | `edited` | a human typed it in the results grid. |
+| `derived` | not printed; the model's total equals the sum of a column of its rows, checked by arithmetic. Not low, not confident. |
 
 `high` and `grounded` are both "confident" (`CONFIDENT_LEVELS`) for the review
 gate and the admin stat — **test membership in that tuple, never `== "high"`** —
