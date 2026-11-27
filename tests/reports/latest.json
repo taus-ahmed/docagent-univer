@@ -1,6 +1,6 @@
 {
- "run_id": "2026-11-20 17:37:08",
- "git_commit": "4f67f46",
+ "run_id": "2026-11-26 19:57:43",
+ "git_commit": "5f8b837",
  "config": {
   "mode": "replay",
   "repeat": 1,
@@ -9104,7 +9104,7 @@
      "Gross Profit": {
       "outcome": "correct",
       "expected": 695400,
-      "actual": "$695,400",
+      "actual": 695400.0,
       "type": "money",
       "in_gold_schema": true
      },
@@ -17518,5 +17518,5 @@
  },
  "unstable_total": 0,
  "diff": [],
- "diff_against": "2026-11-20 17:30:12"
+ "diff_against": "2026-11-26 18:49:27"
 }
