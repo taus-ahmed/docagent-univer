@@ -560,6 +560,14 @@ def fallback_plan(page, prev_table=None) -> dict:
                 ignored.append({"line_id": ln["id"], "reason": MARKUP})
                 i += 1
                 continue
+            pj = paragraph_run(blk, fs, i)
+            if pj > i:
+                flush()
+                kind = "bullet text" if _BULLET.match(fs[i]["seg_texts"][0]) else \
+                    "paragraph (instruction or explanation text)"
+                regions.append(_region(nid(), "note", blk[i:pj], reason=kind))
+                i = pj
+                continue
             if f["prose"]:
                 flush()
                 j = i
@@ -627,6 +635,56 @@ def fallback_plan(page, prev_table=None) -> dict:
             "regions": regions, "ignored": ignored, "contradictions": []}
 
 
+_BULLET = re.compile(r"^\s*(?:[\u2022\u25aa\u25cf\u25e6\u2023\u2043*]|\(?\d{1,2}[.)])\s+\S")
+
+
+def _plain(f) -> bool:
+    """A line of running text: one segment, no date, no amount, no label
+    pair, no widget, and at least half its words (after a bullet or list
+    marker) starting lowercase - the shape of a sentence. A capitalised
+    line item (`(5) ROTARY PUMP SPEC 20240G`) or a row of form box labels
+    (`15 State Employer ID no. 16 State wages`) is not running text."""
+    if not (len(f["segs"]) == 1 and not f["date"] and not f["n_amounts"] and not f["pair"]
+            and not f["widget"]):
+        return False
+    toks = f["seg_texts"][0].split()
+    if toks and _BULLET.match(f["seg_texts"][0]):
+        toks = toks[1:]
+    words = [t for t in toks if t[:1].isalpha()]
+    return bool(words) and sum(1 for t in words if t[0].islower()) * 2 >= len(toks)
+
+
+def paragraph_run(blk, fs, i) -> int:
+    """End index of a paragraph or bullet item starting at line i, or i.
+
+    A paragraph: two or more plain lines, starting at one left edge (the
+    first may be indented), set one line under another, 8+ words in all,
+    ending a sentence. A bullet item: a plain line opening with a bullet
+    or `1.` / `(2)`, 4+ words, with its plain continuation lines. Text
+    carrying a date or an amount is never here: a figure in a sentence may
+    belong to a table, and a lost figure is invisible."""
+    if not _plain(fs[i]):
+        return i
+    bullet = bool(_BULLET.match(fs[i]["seg_texts"][0]))
+    j, x0 = i + 1, None
+    while j < len(blk) and _plain(fs[j]) and not _BULLET.match(fs[j]["seg_texts"][0]):
+        size = blk[j].get("size") or 10
+        if blk[j]["baseline"] - blk[j - 1]["baseline"] > 1.8 * size:
+            break
+        x0 = blk[j]["x0"] if x0 is None else x0
+        if abs(blk[j]["x0"] - x0) > 4.0:
+            break
+        j += 1
+    words = sum(fs[k]["nwords"] for k in range(i, j))
+    text = " ".join(blk[k]["text"] for k in range(i, j)).rstrip()
+    if bullet and words >= 4:
+        return j
+    if j - i >= 2 and words >= 8 and text.endswith((".", "?", "!")) and \
+            sum(1 for ch in text if ch.islower()) > sum(1 for ch in text if ch.isupper()):
+        return j
+    return i
+
+
 def regions_has_table(regions) -> bool:
     return any(r["kind"] == "table" for r in regions)
 
@@ -652,6 +710,7 @@ def _table_region(rid, page, all_lines, head_ids, data_lines, feats, prev=None):
         for a, b in zip(cols, cols[1:]):
             mid = round((a["x1"] + b["x0"]) / 2, 1)
             a["x1"], b["x0"] = mid, mid
+    spans = []
     if prev is not None and not heads:
         # headers printed only on an earlier page: its headings, and its
         # columns placed where THIS page prints them. When this page shows
@@ -669,17 +728,56 @@ def _table_region(rid, page, all_lines, head_ids, data_lines, feats, prev=None):
             cols = [dict(c, x0=c["x0"] + shift, x1=c["x1"] + shift) for c in pcols]
         cont = True
     else:
-        labels = header_labels([_words_of(page, h) for h in heads[:1]], cols)
-        for h in heads[1:]:
-            sub = header_labels([_words_of(page, h)], cols)
+        spans, span_ids = spanning_heads(page, heads, cols, dws)
+        hwords = [[w for w in _words_of(page, h) if w["id"] not in span_ids] for h in heads]
+        labels = header_labels(hwords[:1], cols)
+        for hw_ in hwords[1:]:
+            sub = header_labels([hw_], cols)
             labels = [a if not b else (f"{a} {b}".strip()) for a, b in zip(labels, sub)]
         cont = False
     groups = repeated_groups(labels) if labels else 1
     group_ids = [ln["id"] for ln in data_lines
                  if _group_header(feats[ln["id"]], _words_of(page, ln))]
-    return {"id": rid, "kind": "table",
-            "line_ids": [ln["id"] for ln in all_lines],
-            "header_line_ids": head_ids,
+    out = {"id": rid, "kind": "table",
+           "line_ids": [ln["id"] for ln in all_lines],
+           "header_line_ids": head_ids,
             "columns": cols, "labels": labels, "boundaries": geo["boundaries"],
-            "column_groups": groups, "stacked_header": len(heads) > 1,
-            "group_header_line_ids": group_ids, "continued": cont}
+           "column_groups": groups, "stacked_header": len(heads) > 1,
+           "group_header_line_ids": group_ids, "continued": cont}
+    if not cont and spans:
+        out["spanning_heads"] = spans
+    return out
+
+
+def spanning_heads(page, heads, cols, data_words=()):
+    """([{"text", "word_ids", "cols": [first, last]}], word ids) for heading
+    segments that sit over TWO OR MORE of the bottom heading line's headings
+    (`Refunds` over `Items | Amount`, `Total Gross Sales` over `Items |
+    Amount`): a group heading, written as its own header row over the
+    columns it spans - never cut into pieces and glued to each column's
+    label. It must reach over 2+ bottom headings AND have a word over none
+    of them; a run of headings each over its own bottom heading
+    (`Employee Employee Employer` over `Current YTD Current`) is per-column."""
+    out, ids = [], set()
+    if len(heads) < 2 or len(cols) < 3:
+        return out, ids
+    g = gutter(page) / 2
+    bottom = [(min(w["x0"] for w in sg), max(w["x1"] for w in sg))
+              for sg in segments(page, heads[-1])]
+    for h in heads[:-1]:
+        for sg in segments(page, h):
+            a, b = min(w["x0"] for w in sg), max(w["x1"] for w in sg)
+            under = [k for k, (x0, x1) in enumerate(bottom) if x0 < b + g and a - g < x1]
+            loose = any(not any(x0 - 1 <= (w["x0"] + w["x1"]) / 2 <= x1 + 1 for x0, x1 in bottom)
+                        for w in sg)
+            if len(under) < 2 or not loose or len(sg) > 6:
+                continue
+            lo, hi = bottom[under[0]][0], bottom[under[-1]][1]
+            span = [i for i, c in enumerate(cols) if c["x0"] < hi and lo < c["x1"]]
+            if len(span) >= 2:
+                out.append({"text": " ".join(w["text"] for w in sg),
+                            "word_ids": [w["id"] for w in sg], "cols": [span[0], span[-1]]})
+                ids.update(w["id"] for w in sg)
+    if len(out) and len(ids) >= sum(len(_words_of(page, h)) for h in heads):
+        return [], set()                 # every heading would be a group: none is
+    return out, ids

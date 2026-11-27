@@ -660,6 +660,17 @@ def read_document(path, pages: Optional[list] = None, ocr: bool = False) -> dict
                      "height": float(pg.height), "words": words,
                      "quality": q, "removed": [],
                      "rules": _rules(pg), "edges": _edges(pg)}
+            figs = figures(pg, [w for w in words if w["origin"] == "text"])
+            if figs:
+                gone = set()
+                for fg in figs:
+                    gone.update(chart_labels(fg, [w for w in words if w["origin"] == "text"]))
+                entry["figures"] = figs
+                entry["removed"] = [{"id": w["id"], "text": w["text"],
+                                     "reasons": ["chart: a figure's label"],
+                                     "box": [w["x0"], w["top"], w["x1"], w["bottom"]]}
+                                    for w in words if w["id"] in gone]
+                entry["words"] = words = [w for w in words if w["id"] not in gone]
             if q["source"] == "ocr" and not any(w["origin"] == "widget" for w in words):
                 if ocr:
                     _read_by_ocr(entry, path)
@@ -674,7 +685,7 @@ def read_document(path, pages: Optional[list] = None, ocr: bool = False) -> dict
         p = doc["pages"][pi]
         gone = {wid for wid, _s in hits}
         by_id = {w["id"]: w for w in p["words"]}
-        p["removed"] = [{"id": wid, "text": by_id[wid]["text"], "reasons": s,
+        p["removed"] = (p.get("removed") or []) + [{"id": wid, "text": by_id[wid]["text"], "reasons": s,
                          "box": [by_id[wid]["x0"], by_id[wid]["top"],
                                  by_id[wid]["x1"], by_id[wid]["bottom"]]}
                         for wid, s in hits]
@@ -815,6 +826,86 @@ def _edges(page) -> dict:
             out["h"].append([round(x0, 1), round(x1, 1), round((t + b) / 2, 1)])
         elif abs(x1 - x0) <= 1.0 and b - t >= 3.0:
             out["v"].append([round(t, 1), round(b, 1), round((x0 + x1) / 2, 1)])
+    return out
+
+
+def figures(page, words) -> list:
+    """Boxes of CHARTS on a page: [x0, top, x1, bottom]. All of these,
+    because a false chart would take real text out of the export:
+
+      * 4+ FILLED curves, touching one another (pie wedges, plotted areas;
+        a rounded frame or a highlight is ONE stroked curve, never four
+        filled ones), their cluster roughly square (sides within 1:2) and
+        0.3%-15% of the page;
+      * NO word inside the cluster (a callout bubble holds its text; a chart
+        holds none of its labels);
+      * at least two short label lines beside it (within the cluster's own
+        size) carrying a percent or a figure - a logo drawn in filled curves
+        has none."""
+    area = float(page.width or 1) * float(page.height or 1)
+    cs = [(float(c["x0"]), float(c["top"]), float(c["x1"]), float(c["bottom"]))
+          for c in getattr(page, "curves", None) or [] if c.get("fill")]
+    cs = [c for c in cs if c[2] - c[0] > 2 and c[3] - c[1] > 2]
+    if len(cs) < 4 or len(cs) > 400:
+        return []
+    parent = list(range(len(cs)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    for i in range(len(cs)):
+        for j in range(i + 1, len(cs)):
+            a, b = cs[i], cs[j]
+            if a[0] <= b[2] + 0.5 and b[0] <= a[2] + 0.5 and a[1] <= b[3] + 0.5 and b[1] <= a[3] + 0.5:
+                parent[find(i)] = find(j)
+    groups = {}
+    for i, c in enumerate(cs):
+        groups.setdefault(find(i), []).append(c)
+    out = []
+    for g in groups.values():
+        if len(g) < 4:
+            continue
+        x0, t = min(c[0] for c in g), min(c[1] for c in g)
+        x1, b = max(c[2] for c in g), max(c[3] for c in g)
+        w, h = x1 - x0, b - t
+        if not (0.003 * area <= w * h <= 0.15 * area) or not (0.5 <= w / max(h, 1) <= 2.0):
+            continue
+        if any(x0 < (wd["x0"] + wd["x1"]) / 2 < x1 and t < (wd["top"] + wd["bottom"]) / 2 < b
+               for wd in words):
+            continue
+        near = [wd for wd in words if x0 - w <= wd["x0"] and wd["x1"] <= x1 + w
+                and t - h <= wd["top"] and wd["bottom"] <= b + h]
+        labelled = {round(wd["baseline"]) for wd in near if re.search(r"\d%|%|\d", wd["text"])}
+        if len(labelled) >= 2:
+            out.append([round(x0, 1), round(t, 1), round(x1, 1), round(b, 1)])
+    return out
+
+
+def chart_labels(fig, words) -> list:
+    """Word ids of a chart's labels: each run of words on one baseline (gaps
+    under twice the text size) lying wholly within the chart's neighbourhood
+    (its own size around it), at most six words. A run reaching outside is
+    page content sharing the line, and stays."""
+    x0, t, x1, b = fig
+    w, h = x1 - x0, b - t
+    box = (x0 - w, t - h, x1 + w, b + h)
+    ws = sorted(words, key=lambda d: (d["baseline"], d["x0"]))
+    runs, cur = [], []
+    for d in ws:
+        if cur and (abs(d["baseline"] - cur[-1]["baseline"]) > 1.5
+                    or d["x0"] - cur[-1]["x1"] > 2 * (d.get("size") or 8)):
+            runs.append(cur)
+            cur = []
+        cur.append(d)
+    if cur:
+        runs.append(cur)
+    out = []
+    for r in runs:
+        if len(r) <= 6 and all(box[0] <= d["x0"] and d["x1"] <= box[2] and box[1] <= d["top"]
+                               and d["bottom"] <= box[3] for d in r):
+            out += [d["id"] for d in r]
     return out
 
 

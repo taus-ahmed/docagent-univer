@@ -524,6 +524,7 @@ def place_region(region, page, row0, order, body, gut, prev_tables):
                     new_open.append((ws[0]["x0"], vws, lab))
             open_vals = new_open
             r += 1
+        _stack_columns(cells, gut)
         cells = [_cell(c["_r"], c["_col"], c["_ws"], body, order, label=c["_label"],
                        role=c["_role"]) for c in cells]
         return cells, r - row0
@@ -532,6 +533,59 @@ def place_region(region, page, row0, order, body, gut, prev_tables):
     if kind == "form":
         return _place_form(region, page, row0, order, body)
     return [], 0
+
+
+def _stack_columns(cells, gut) -> None:
+    """Side-by-side blocks keep their own columns: a label/value region's
+    cells are put in columns by the STACK their left edge belongs to (left
+    edges clustered over the whole region), not by their order on the line -
+    so a line printing only the right-hand block's text stays in that block's
+    columns instead of sliding into column A. A label's value goes in the
+    column after it. When two cells of one line would share a column, the
+    region keeps the order-on-the-line placement (nothing is overwritten)."""
+    if not cells:
+        return
+    follows = set()
+    by_row = {}
+    for c in cells:
+        by_row.setdefault(c["_r"], []).append(c)
+    for row in by_row.values():
+        row.sort(key=lambda c: c["_col"])
+        for a, b in zip(row, row[1:]):
+            if a["_role"] == "label" and b["_role"] == "value":
+                follows.add(id(b))
+    anchors = sorted({c["_ws"][0]["x0"] for c in cells if id(c) not in follows})
+    clusters = []
+    for x in anchors:
+        if clusters and x - clusters[-1][-1] <= gut:
+            clusters[-1].append(x)
+        else:
+            clusters.append([x])
+    if len(clusters) < 2:
+        return
+    def k_of(x):
+        return next(i for i, cl in enumerate(clusters) if cl[0] <= x <= cl[-1])
+    width = [1] * len(clusters)
+    for row in by_row.values():
+        for a, b in zip(row, row[1:]):
+            if id(b) in follows:
+                width[k_of(a["_ws"][0]["x0"])] = 2
+    start = [sum(width[:i]) for i in range(len(clusters))]
+    new = {}
+    for row in by_row.values():
+        used = set()
+        for c in row:
+            if id(c) in follows:
+                col = new[id(prev)] + 1
+            else:
+                col = start[k_of(c["_ws"][0]["x0"])]
+            if col in used:
+                return                      # a collision: keep line order
+            used.add(col)
+            new[id(c)] = col
+            prev = c
+    for c in cells:
+        c["_col"] = new[id(c)]
 
 
 def _place_form(region, page, row0, order, body):
@@ -728,10 +782,23 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
         # a statement reprints it): written once, above the first rows
         region["reprinted_header"] = True
     if (not region.get("continued") or not prev_tables) and not reprinted:
+        span_ids = set()
+        if region.get("spanning_heads"):
+            # group headings over two or more columns: their own header row
+            for sp in region["spanning_heads"]:
+                ws = [w for w in page["words"] if w["id"] in set(sp["word_ids"])]
+                c = _cell(r, lead + sp["cols"][0], ws, body, order, text=sp["text"], bold=True,
+                          align="center", role="header", header=True,
+                          span=sp["cols"][1] - sp["cols"][0] + 1)
+                cells.append(c)
+                span_ids.update(sp["word_ids"])
+            r += 1
         hw = {}
         for ln in lines:
             if ln["id"] in head_ids:
                 for w in G._words_of(page, ln):
+                    if w["id"] in span_ids:
+                        continue
                     ci = G.column_of(w, [dict(c, align="left") for c in cols])
                     hw.setdefault(ci % n, []).append(w)
         for ci in range(n):
@@ -802,7 +869,7 @@ def place_page(page, plan, order=None, prev_tables=None) -> dict:
             for lid in reg.get("line_ids") or []:
                 if lid in by_line:
                     excluded.append({"line_id": lid, "text": by_line[lid]["text"],
-                                     "reason": EXCLUDED_KINDS[reg["kind"]]})
+                                     "reason": reg.get("reason") or EXCLUDED_KINDS[reg["kind"]]})
             continue
         cs, used = place_region(reg, page, row, order, body, gut, prev_tables)
         for d in reg.pop("_dropped", None) or []:
