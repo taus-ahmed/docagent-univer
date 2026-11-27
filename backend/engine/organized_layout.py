@@ -553,8 +553,22 @@ def _find_tables(infos):
                 or infos[k]["top"] - infos[k - 1]["top"] > 3.0 * line_h:
             i += 1
             continue
-        hx0 = min(w["x0"] for h in heads for w in infos[h]["words"])
-        hx1 = max(w["x1"] for h in heads for w in infos[h]["words"])
+        # heading lines printed ABOVE the heading line, directly against
+        # it (a heading over three lines: "Average" / "Ticket", a group
+        # heading over its sub-columns): part of the table's header
+        ups, u = [], i - 1
+        taken_lines = {m for t_ in tables for m in (t_[0], *t_[1], *t_[3],
+                                                    *(x for _k, x in t_[2]))}
+        while u >= 0 and len(ups) < 2 and u not in taken_lines:
+            lu, nxt = infos[u], infos[ups[0] if ups else i]
+            h_u = max(1.0, lu["bottom"] - lu["top"])
+            if lu["figs"] or lu["label"] or len(lu["words"]) > 24 or len(lu["segs"]) < 2 \
+                    or nxt["top"] - lu["bottom"] > 1.0 * h_u:
+                break
+            ups.insert(0, u)
+            u -= 1
+        hx0 = min(w["x0"] for h in [*ups, *heads] for w in infos[h]["words"])
+        hx1 = max(w["x1"] for h in [*ups, *heads] for w in infos[h]["words"])
         if not (infos[k]["words"][0]["x0"] >= hx0 - 40 and infos[k]["words"][-1]["x1"] <= hx1 + 60):
             i += 1
             continue
@@ -616,7 +630,7 @@ def _find_tables(infos):
                 break
             body.pop()
         if any(kind == "data" for kind, _ in body):
-            tables.append((i, heads[1:], body))
+            tables.append((i, heads[1:], body, ups))
             i = body[-1][1] + 1
         else:
             i += 1
@@ -650,7 +664,7 @@ def _emit_table(tbl, infos, run_of, trace, seen, gutter=6.0):
     """The cells of one table, keyed (page run, sub) so that columns closer
     than the page's column cut still get a sheet column each; group cells
     take the two keys left of the table's first column."""
-    hi, stacked, body = tbl
+    hi, stacked, body, ups = tbl
     data = [infos[m] for kind, m in body if kind == "data"]
     n_min = int(0.1 * len(data)) if len(data) >= 10 else 0
     cols = _alleys(data, n_min)
@@ -664,7 +678,8 @@ def _emit_table(tbl, infos, run_of, trace, seen, gutter=6.0):
         if _col_for(w, cols) is None:
             extra.append((w["x0"], w["x1"]))
     allc = sorted(cols + extra)
-    heads = head["words"] + (infos[stacked[0]]["words"] if stacked else [])
+    heads = head["words"] + (infos[stacked[0]]["words"] if stacked else []) \
+        + [w for u in ups for w in infos[u]["words"]]
     # a column no heading sits over, separated from its left neighbour by no
     # more than word spacing, is that neighbour's continuation: the alleys
     # inside a description that only one kind of row fills ("HARBOR TOOLS
@@ -683,7 +698,7 @@ def _emit_table(tbl, infos, run_of, trace, seen, gutter=6.0):
     if stacked:
         for w in infos[stacked[0]]["words"]:
             bot_ph.setdefault(_col_for(w, allc), []).append(w)
-    head_lines = [hi, *stacked]
+    head_lines = [*ups, hi, *stacked]
     if stacked:
         # STACKED sub-fields or ONE heading WRAPPED over two lines ("Budget"
         # over "Amount")? A stacked table's record has a second line holding
@@ -716,7 +731,18 @@ def _emit_table(tbl, infos, run_of, trace, seen, gutter=6.0):
     hdr_key = _row_key([{"text": head["text"]}])
     if hdr_key not in seen:
         # the header row exactly as printed (rule 7); a heading reprinted on a
-        # later page is not written again (rule 11)
+        # later page is not written again (rule 11). Heading lines above it
+        # are header rows of their own, each word over its column
+        for u in ups:
+            per = {}
+            for w in infos[u]["words"]:
+                k = _col_for(w, allc)
+                if k in band0:
+                    per.setdefault(k, []).append(w)
+            for k, ws in per.items():
+                cells.append(_cell(row, sheet[k], ws, "header"))
+            if per:
+                row += 1
         for k in band0:
             if k in top_ph:
                 cells.append(_cell(row, sheet[k], top_ph[k], "header"))
@@ -931,7 +957,7 @@ def page_cells(page, seen=None, order=None, trace=None, widgets=(), runs=None,
     tables = _find_tables(infos)
     in_table = {}
     for t in tables:
-        for m in [t[0], *t[1], *(m for _k, m in t[2])]:
+        for m in [t[0], *t[1], *t[3], *(m for _k, m in t[2])]:
             in_table[m] = t
     # the page's column runs: free segments' left edges and the tables'
     # columns, so a table's columns line up with what is printed above them
