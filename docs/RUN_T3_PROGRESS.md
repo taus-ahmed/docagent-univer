@@ -5,14 +5,14 @@ Worktree: fix/review-fixes. Flags stay OFF. No live calls.
 | stage | commit | status |
 |---|---|---|
 | create progress log | — | ✅ |
-| 1 thinking | pending | ✅ impl done, tests green |
-| 2 cost | pending | ✅ impl done, tests green |
-| 3 plan validation | pending | ✅ impl done |
-| 4 geometry | pending | ✅ S4a trailing group header + S4b stacked rows; tests green |
-| 5 row count | pending | ✅ measured: 90 text-layer rows = 90 engine rows (page 3: 12) |
-| 6 reading order | pending | ✅ order_pairs/order_violations metric added to position_check.py |
-| 7 flat forms | pending | ✅ STRUCTURE_READ_FLAT_FORMS flag; has_flat_form_boxes + form_regions(flat_form=True); tests green |
-| 8 report | pending | pending |
+| 1 thinking | 43434ba | ✅ impl done, tests green |
+| 2 cost | 43434ba | ✅ impl done, tests green |
+| 3 plan validation | 43434ba | ✅ impl done |
+| 4 geometry | 43434ba | ✅ S4a trailing group header + S4b stacked rows; tests green |
+| 5 row count | 43434ba | ✅ measured: 90 text-layer rows = 90 engine rows (page 3: 12) |
+| 6 reading order | 43434ba | ✅ order_pairs/order_violations metric added to position_check.py |
+| 7 flat forms | 43434ba | ✅ STRUCTURE_READ_FLAT_FORMS flag; has_flat_form_boxes + form_regions(flat_form=True); tests green |
+| 8 report | 43434ba | ✅ docs/RUN_T3_REPORT.md |
 
 ## Notes
 
