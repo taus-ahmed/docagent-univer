@@ -255,7 +255,14 @@ def score(lay, key) -> dict:
     by_pos = {(bi, c["row"], c["col"]): c for bi, c in cells}
     m = {"items": 0, "values": 0, "right_header": 0, "right_row": 0, "glued": 0,
          "glued_items": 0, "split": 0, "missing": 0, "extra": 0, "excluded_placed": 0,
-         "cells": len(cells)}
+         "cells": len(cells),
+         # T3 S6: reading-order metric — how many placed items appear in a
+         # different top-to-bottom order in the sheet vs in the key.  An
+         # "order pair" is an ordered pair (a, b) where a comes before b in
+         # the key (same page, same section-type) and a is placed strictly
+         # below b in the sheet.  `order_pairs` is the total possible pairs;
+         # `order_violations` is the count that are inverted.
+         "order_pairs": 0, "order_violations": 0}
     fails = []
     used = set()                       # (bi,row,col) consumed
     matched = {}                       # item n -> (bi,row,col)
@@ -399,6 +406,30 @@ def score(lay, key) -> dict:
             split_n.add(it["n"])
             used.update(hit)
     m["split"] = len(split_n)
+    # T3 S6 — reading-order metric: items that are placed in the sheet,
+    # ordered pairs within the same page, check that sheet order matches key order.
+    # Only "value" items (row values + kv values) with a placement are checked;
+    # headers and section labels move around legitimately (reprints, grouping).
+    placed_values = [(it, matched[it["n"]]) for it in items
+                     if it["n"] in matched and it["kind"] in ("value", "kv_value", "row_label")]
+    # group by page; within each page iterate all pairs in key order
+    by_pg: dict = {}
+    for it, pos in placed_values:
+        by_pg.setdefault(it["page"], []).append((it, pos))
+    for pg, pg_its in by_pg.items():
+        # already in key order (items_all is sorted by page, then insertion order)
+        for i in range(len(pg_its)):
+            for j in range(i + 1, len(pg_its)):
+                ita, posa = pg_its[i]
+                itb, posb = pg_its[j]
+                # compare sheet position: (block, row) is enough — column does not matter
+                block_row_a = (posa[0], posa[1])
+                block_row_b = (posb[0], posb[1])
+                if block_row_a == block_row_b:
+                    continue    # same sheet row: no order signal
+                m["order_pairs"] += 1
+                if block_row_a > block_row_b:
+                    m["order_violations"] += 1
     # 4) the measures
     for it in items:
         n = it["n"]
@@ -547,7 +578,8 @@ def context(pdf, f, cache):
 
 
 SUMS = ("items", "values", "right_header", "right_row", "glued", "glued_items", "split",
-        "missing", "extra", "excluded_placed", "cells")
+        "missing", "extra", "excluded_placed", "cells",
+        "order_pairs", "order_violations")
 
 
 def run(half="all", engines=("old", "new"), n_fails=10, doc="") -> dict:
@@ -594,24 +626,29 @@ def main():
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     engines = ("old", "new") if a.engine == "both" else (a.engine,)
     res = run(a.half, engines, doc=a.doc)
-    print(f"{'engine':6} {'doc':34} {'half':8} items  hdr%  row%  glued split miss extra")
+    print(f"{'engine':6} {'doc':34} {'half':8} items  hdr%  row%  glued split miss extra order%")
     for eng, docs in res.items():
         for name, m in sorted(docs.items(), key=lambda kv: (kv[1].get("half", ""), kv[0])):
             if "error" in m:
                 print(f"{eng:6} {name:34} {m['error']}")
                 continue
             v = m["values"] or 1
+            op = m.get("order_pairs") or 1
+            ov = m.get("order_violations", 0)
             print(f"{eng:6} {name:34} {m['half']:8} {m['items']:5d} {100*m['right_header']/v:5.1f} "
                   f"{100*m['right_row']/v:5.1f} {m['glued']:5d} {m['split']:5d} {m['missing']:4d} "
-                  f"{m['extra']:5d}")
+                  f"{m['extra']:5d} {100*(1 - ov/op):5.1f}")
     print()
     for eng, halves in summarise(res).items():
         for h, t in sorted(halves.items()):
             v = t["values"] or 1
+            op = t.get("order_pairs") or 1
+            ov = t.get("order_violations", 0)
             print(f"TOTAL {eng:4} {h:8} items={t['items']} values={t['values']} "
                   f"right_header={t['right_header']} ({100*t['right_header']/v:.1f}%) "
                   f"right_row={t['right_row']} ({100*t['right_row']/v:.1f}%) glued={t['glued']} "
-                  f"split={t['split']} missing={t['missing']} extra={t['extra']}")
+                  f"split={t['split']} missing={t['missing']} extra={t['extra']} "
+                  f"order={100*(1-ov/op):.1f}% (viol={ov}/{op})")
     if a.fails:
         cache = {}
         for eng, docs in res.items():

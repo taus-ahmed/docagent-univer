@@ -104,6 +104,11 @@ class Settings(BaseSettings):
     # model allows it).
     GEMINI_MAX_OUTPUT_TOKENS: int = 8192
     GEMINI_THINKING_BUDGET: Optional[int] = None
+    # Thinking budget for structure-plan calls ONLY (default 0: turns thinking
+    # off for gemini-2.5 models, where thinking tokens consume the output cap
+    # and push a ~300-token plan past MAX_TOKENS). Separate from extraction.
+    # 0 = off, None = model default.
+    GEMINI_THINKING_BUDGET_PLAN: int = 0
     # USD per 1M tokens keyed by model-name prefix, as JSON, overriding the
     # built-in table: {"gemini-2.5-flash": {"input": 0.30, "output": 2.50}}.
     # Thinking tokens are billed as output.
@@ -127,6 +132,12 @@ class Settings(BaseSettings):
     # so the structure layout of a scan needs no file later. Off = such a
     # page is OCR'd when the Organized export is made, from the stored file.
     STRUCTURE_OCR_AT_EXTRACTION: bool = False
+    # T3 S7: read flat (non-fillable) forms by their drawn boxes.  A flat
+    # form is a flattened PDF where every word is a text word (no AcroForm
+    # widgets); the box reading assigns each word to the box enclosing it,
+    # then splits label (small top-left text) from value (larger body text).
+    # Off by default until validated on more form types.
+    STRUCTURE_READ_FLAT_FORMS: bool = False
     PAGE_CALL_MIN_PAGES: int = 6
     PAGE_CALL_CONCURRENCY: int = 3
     # Pages rendered as images for the model (200 DPI, then at most 2048 px on

@@ -345,6 +345,11 @@ def finish_attempt(rec: dict, log: bool = True) -> dict:
     rec["cost_estimate"] = cost_estimate(
         rec["prompt_tokens"], rec["output_tokens"], rec["thinking_tokens"],
         rec["model_version"] or rec["model_requested"])
+    # T3 S2: a failed call with no token data costs zero (not None/unknown).
+    # The blended-rate fallback in job_worker must not apply the per-token
+    # rate to a call that may never have been processed by the model.
+    if rec.get("error_kind") and rec["total_tokens"] is None:
+        rec["cost_estimate"] = 0.0
     sink = ATTEMPTS.get()
     if sink is not None:
         sink.append(rec)

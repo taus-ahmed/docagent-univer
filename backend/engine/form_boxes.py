@@ -35,6 +35,27 @@ def has_widget_values(page) -> bool:
     return any(w.get("origin") == "widget" and not w.get("checkbox") for w in page["words"])
 
 
+def has_flat_form_boxes(page) -> bool:
+    """T3 S7: True when the page has drawn edges that enclose text words but
+    no AcroForm widget values — a flattened (non-fillable) form whose filled
+    values are embedded as ordinary text.  Requires at least 4 boxes each
+    covering less than 20% of the page area (to exclude outer borders)."""
+    if has_widget_values(page):
+        return False
+    if not page.get("edges") or not page["words"]:
+        return False
+    edges = page["edges"]
+    area = float(page.get("width") or 612) * float(page.get("height") or 792)
+    n = 0
+    for w in page["words"][:60]:            # sample up to 60 words
+        b = box_of(w, edges)
+        if b is None:
+            continue
+        if (b[2] - b[0]) * (b[3] - b[1]) < 0.20 * area:
+            n += 1
+    return n >= 4
+
+
 def box_of(word, edges, tol: float = TOL):
     """(x0, top, x1, bottom) of the drawn box around a word, or None when
     the page draws no edge on some side of it."""
@@ -106,11 +127,57 @@ def label_text(words) -> str:
     return " ".join(p for p in parts if p)
 
 
-def form_regions(page) -> list:
+def _infer_flat_origins(ws, box) -> None:
+    """T3 S7: for a flat-form box (no widget words), assign synthetic
+    ``origin`` values: words at the TOP of the box or in a significantly
+    smaller font get ``"label"``; the rest get ``"value"``.
+
+    Heuristic (conservative — a false value is worse than a missed split):
+    1. If two distinct font-size clusters exist and the smaller cluster is at
+       or near the top of the box, the smaller cluster is the label.
+    2. Otherwise if two distinct baseline clusters exist with a gap > 1×size,
+       the top cluster is the label and the rest are the value.
+    3. Otherwise the whole box is the label (no value inferred)."""
+    if not ws:
+        return
+    sizes = sorted({round(w.get("size") or 8, 1) for w in ws})
+    if len(sizes) >= 2:
+        small, large = sizes[0], sizes[-1]
+        if large >= 1.3 * small:
+            small_ws = [w for w in ws if (w.get("size") or 8) <= small * 1.1]
+            large_ws = [w for w in ws if (w.get("size") or 8) >= large * 0.9]
+            # small group at or near box top?
+            box_mid_y = (box[1] + box[3]) / 2
+            if small_ws and all(w["top"] <= box_mid_y for w in small_ws):
+                for w in small_ws:
+                    w["origin"] = "label"
+                for w in large_ws:
+                    w["origin"] = "value"
+                return
+    # fallback: top baseline cluster = label
+    bases = sorted({round(w["baseline"], 0) for w in ws})
+    if len(bases) >= 2:
+        size = statistics.median([w.get("size") or 8 for w in ws])
+        gap = bases[1] - bases[0]
+        if gap >= size:
+            top_b = bases[0]
+            for w in ws:
+                if round(w["baseline"], 0) == top_b:
+                    w["origin"] = "label"
+                else:
+                    w["origin"] = "value"
+
+
+def form_regions(page, flat_form: bool = False) -> list:
     """[{"line_ids", "fields": [{"box", "label_ids", "value_ids"}]}] for a
     page with widget values, one per form; [] otherwise. A line belongs to
     a form when every word on it sits in one of that form's boxes."""
-    if not has_widget_values(page) or not page.get("edges"):
+    if flat_form:
+        if not has_flat_form_boxes(page):
+            return []
+    elif not has_widget_values(page):
+        return []
+    if not page.get("edges"):
         return []
     edges = page["edges"]
     by_box = {}
@@ -127,7 +194,20 @@ def form_regions(page) -> list:
             seen.append(b)
         word_box[w["id"]] = b
         by_box.setdefault(b, []).append(w)
-    if not any(w.get("origin") == "widget" for ws in by_box.values() for w in ws):
+    if flat_form:
+        # T3 S7: assign synthetic label/value origins for flat-form words
+        # (mutating a copy of each word so the page's own words are unchanged)
+        import copy
+        new_words = {w["id"]: copy.copy(w) for w in page["words"]}
+        page = dict(page, words=list(new_words.values()))
+        for b, ws in by_box.items():
+            box_words = [new_words[w["id"]] for w in ws if w["id"] in new_words]
+            _infer_flat_origins(box_words, b)
+            by_box[b] = box_words
+        word_box = {wid: b for wid, b in word_box.items()}   # unchanged keys
+        if not any(w.get("origin") == "value" for ws in by_box.values() for w in ws):
+            return []   # nothing was classified as a value: not a flat form
+    elif not any(w.get("origin") == "widget" for ws in by_box.values() for w in ws):
         return []
     # a box is a FIELD box only when it is small against the page: the
     # page's outer frame encloses everything and is no field
@@ -206,8 +286,8 @@ def _box_fields(b, ws) -> list:
     then a street line, in one frame) gives each widget to the label line
     directly above it. A lone currency sign joins the value beside it, or,
     with no value in the box, is left out (`dropped_ids`)."""
-    vals = [w for w in ws if w.get("origin") == "widget"]
-    labs = [w for w in ws if w.get("origin") != "widget"]
+    vals = [w for w in ws if w.get("origin") in ("widget", "value")]
+    labs = [w for w in ws if w.get("origin") not in ("widget", "value")]
     signs = [w for w in labs if w["text"] in _CURRENCY]
     labs = [w for w in labs if w not in signs]
     tvals = [w for w in vals if not w.get("checkbox")]

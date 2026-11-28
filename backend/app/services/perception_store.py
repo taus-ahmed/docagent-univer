@@ -77,10 +77,13 @@ def plan_pages(perc, orchestrator, file_path, model=None, log=print):
         img = images.get(page["page"])
 
         def ask(prompt, line_ids):
+            from app.config import settings
+            budget = int(getattr(settings, "GEMINI_THINKING_BUDGET_PLAN", 0))
             with C.section(f"structure plan p{page['page']}"):
                 return _llm_json(orchestrator, prompt, S.SYSTEM,
                                  images=[img] if img else None,
-                                 text="" if img else prompt, temperature=0.0)
+                                 text="" if img else prompt, temperature=0.0,
+                                 thinking_budget=budget)
         return ask
     with C.collect_attempts(fresh=True) as attempts:
         try:

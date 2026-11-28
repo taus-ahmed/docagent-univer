@@ -281,6 +281,29 @@ def plan_key(file_hash, model, page_no) -> str:
                           .encode()).hexdigest()
 
 
+def _normalize_plan(plan: dict) -> None:
+    """Auto-repair a model plan in place before validation.
+
+    T3 S3: on a vendor-list page with many group headers the model often
+    puts lines into ``group_header_line_ids`` but forgets to also list them
+    in ``line_ids``.  The validator correctly requires a region's
+    header/group/carried lines to be in ``line_ids`` too; 19-20 such
+    omissions on one page trigger 19-20 problems and cause an unnecessary
+    second call + fallback.  Since a group-header line IS part of its
+    region, adding it to ``line_ids`` is correct, not permissive.
+    """
+    for r in (plan.get("regions") or []):
+        if not isinstance(r, dict):
+            continue
+        lids = r.setdefault("line_ids", [])
+        lid_set = set(lids)
+        for key in ("header_line_ids", "group_header_line_ids", "carried_line_ids"):
+            for lid in (r.get(key) or []):
+                if lid not in lid_set:
+                    lids.append(lid)
+                    lid_set.add(lid)
+
+
 def ask_plan(ask: Callable, page, prop=None, log=lambda s: None) -> dict:
     """{"plan", "source", "errors", "attempts"} for one page.
 
@@ -335,21 +358,35 @@ def ask_plan(ask: Callable, page, prop=None, log=lambda s: None) -> dict:
         return merged, None
 
     plan, why = plan_of()
+    if plan is not None:
+        _normalize_plan(plan)
     errors = validate(plan, page, prop) if plan is not None else [why or "no plan"]
     if errors:
-        log(f"page {page['page']}: plan invalid ({len(errors)} problem(s)); asked once more")
+        # T3 S3: log the first 10 specific problems, not just the count,
+        # so the owner can see which validator rule fires most.
+        first10 = errors[:10]
+        log(f"page {page['page']}: plan invalid ({len(errors)} problem(s)); "
+            f"first {min(10, len(errors))}: {'; '.join(first10)[:300]}; "
+            f"asked once more")
         extra = ("\n\nYOUR PREVIOUS PLAN WAS INVALID:\n- " + "\n- ".join(errors[:30]) +
                  "\nFix every problem and answer the whole plan again.")
         plan, why = plan_of(extra)
+        if plan is not None:
+            _normalize_plan(plan)
         errors2 = validate(plan, page, prop) if plan is not None else [why or "no plan"]
         if errors2:
             log(f"page {page['page']}: plan still invalid; deterministic fallback used")
             return {"plan": G.fallback_plan(page), "source": "fallback",
-                    "errors": errors2, "first_errors": errors, "calls": calls["n"]}
+                    "errors": errors2, "first_errors": errors, "calls": calls["n"],
+                    "plan_source": "fallback"}
         errors = []
     plan = {"version": PLAN_VERSION, "page": page["page"], "source": "model", **plan}
-    return {"plan": plan, "source": "model", "errors": [], "calls": calls["n"],
-            "named": geometry_contradictions(plan, page, prop)["named"]}
+    out = {"plan": plan, "source": "model", "errors": [], "calls": calls["n"],
+           "named": geometry_contradictions(plan, page, prop)["named"],
+           "plan_source": "model"}
+    if errors:    # first attempt had errors but second succeeded
+        out["first_plan_errors"] = errors
+    return out
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -657,6 +694,55 @@ def _is_tail(ln, prev_line, parts, n, groups_rows, pitch) -> bool:
 _RANGE_END = re.compile(r"(?:^|\s)(?:-|\u2013|\u2014|to|through|thru)$", re.I)
 
 
+def _split_stacked_words(ws, pitch) -> list:
+    """T3 S4b: words that span two distinct baselines (a gap > 0.4 * size)
+    represent two separate record rows that the PDF printed at nearly the
+    same y, which pdfplumber then merged into one line.  Split them into
+    sub-groups by baseline cluster so ``_place_table`` can emit two rows.
+
+    Returns a list of word-lists: one element when no split is needed.
+    Only splits when there are >= 2 clear baseline clusters with a gap of
+    at least min(0.4 * size, 0.6 * pitch) between them, and each cluster
+    is itself a row-line (has a date or an amount).  Conservative: a false
+    split is worse than a false glue because it manufactures a row."""
+    if not ws:
+        return [ws]
+    sizes = [w.get("size") or 10.0 for w in ws]
+    size = statistics.median(sizes)
+    # cluster words onto their own baselines (within 2pt = same line)
+    tol = 2.0
+    bases: list = []           # list of (baseline, [word, ...])
+    for w in sorted(ws, key=lambda w: w["baseline"]):
+        b = w["baseline"]
+        hit = next((bg for bg, _ in bases if abs(b - bg) <= tol), None)
+        if hit is not None:
+            next(bws for bg, bws in bases if bg == hit).append(w)
+        else:
+            bases.append((b, [w]))
+    if len(bases) < 2:
+        return [ws]
+    # check for a real gap between consecutive clusters
+    gap_min = min(0.4 * size, 0.6 * pitch) if pitch else 0.4 * size
+    splits: list = [[]]
+    for i, (b, bws) in enumerate(bases):
+        splits[-1].extend(bws)
+        if i + 1 < len(bases):
+            nxt = bases[i + 1][0]
+            if nxt - b >= gap_min:
+                # each sub-row must look like a table row (date or amount)
+                words_before = splits[-1]
+                words_after  = [w for _, bws2 in bases[i + 1:] for w in bws2]
+                both_rows = (G.is_row_line({"date": G.has_date(" ".join(w["text"] for w in words_before)),
+                                            "n_amounts": sum(1 for w in words_before if G.is_amount(w["text"]))})
+                             and G.is_row_line({"date": G.has_date(" ".join(w["text"] for w in words_after)),
+                                               "n_amounts": sum(1 for w in words_after if G.is_amount(w["text"]))}))
+                if both_rows:
+                    splits.append([])
+    if len(splits) < 2:
+        return [ws]
+    return splits
+
+
 def _range_continues(parts, n, groups_rows, ln, prev_line) -> bool:
     """The line's words sit in ONE column, directly under a row whose cell
     in that column ends with a range connector (`-`, `to`): the rest of
@@ -750,6 +836,26 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
             for ci, ws_ in moved.items():
                 parts.setdefault(ci, []).extend(ws_)
         row_line = G.is_row_line(f)
+        # T3 S4b: detect two record rows glued into one line by pdfplumber.
+        # Only attempt a split when both sub-clusters look like row lines;
+        # _split_stacked_words is conservative to avoid manufacturing rows.
+        stacked = _split_stacked_words(ws, pitch) if row_line else [ws]
+        if len(stacked) > 1:
+            for sub_ws in stacked:
+                sub_parts: dict = {}
+                for w in sub_ws:
+                    ci = G.column_of(w, cols)
+                    sub_parts.setdefault(ci, []).append(w)
+                for g in range(k):
+                    sub = {ci % n: cws for ci, cws in sub_parts.items() if ci // n == g}
+                    if sub:
+                        row = dict(sub)
+                        if group_cur is not None:
+                            row["_group"] = group_cur
+                        groups_rows[g].append(row)
+            group_cur = None          # group consumed by first stacked row
+            prev_line = ln
+            continue
         if prev_line is not None and _range_continues(parts, n, groups_rows, ln, prev_line):
             # `01/02/30 -` over `01/03/30`: the second half of a range
             for ci, cws in parts.items():
@@ -789,6 +895,17 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
                     row["_group"] = group_cur
                 groups_rows[g].append(row)
         prev_line = ln
+    # T3 S4a: a group header with no data rows following it on this page
+    # (the last vendor in a list, or any vendor whose rows continue onto
+    # the next page) was silently lost: group_cur was set but never attached.
+    # Emit it as a standalone section row so it appears in the sheet.
+    if has_groups and group_cur is not None:
+        gid, gname = group_cur
+        empty: dict = {}           # a row with no data cells
+        empty["_group"] = group_cur
+        empty["_section"] = True   # no data columns → no "value" cells
+        groups_rows[0].append(empty)
+        group_cur = None
     rows = [r for g in groups_rows for r in g]     # group-major reading order
     lead = 2 if has_groups else 0
     cells = []

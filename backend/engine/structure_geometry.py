@@ -536,10 +536,18 @@ def fallback_plan(page, prev_table=None) -> dict:
         return f"r{rid}"
 
     # a fillable form: widget values next to the labels of their boxes,
-    # each form on the page its own region (form_boxes)
+    # each form on the page its own region (form_boxes).
+    # T3 S7: also try the flat-form path when STRUCTURE_READ_FLAT_FORMS is on.
     import form_boxes as FB
+    try:
+        from app.config import settings as _s
+        _flat = bool(getattr(_s, "STRUCTURE_READ_FLAT_FORMS", False))
+    except Exception:
+        _flat = False
     taken = set()
-    for fr in FB.form_regions(page):
+    for fr in (FB.form_regions(page, flat_form=True)
+               if _flat and not FB.has_widget_values(page)
+               else FB.form_regions(page)):
         regions.append({"id": nid(), "kind": "form", "line_ids": fr["line_ids"],
                         "fields": fr["fields"]})
         taken.update(fr["line_ids"])
