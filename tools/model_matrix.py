@@ -115,6 +115,13 @@ def _paths() -> None:
     for p in (str(ROOT), str(ROOT / "backend" / "engine"), str(ROOT / "backend")):
         if p not in sys.path:
             sys.path.insert(0, p)
+    # The harness bootstrap is reached through tests.contract.run_a_driver.
+    # Run it HERE first with production parity OFF: parity force-sets
+    # GEMINI_MODEL=gemini-2.5-flash-lite, so settings (built on first import)
+    # named a different model from the one pinned on the client. bootstrap()
+    # is idempotent, so the driver's own later call is then a no-op.
+    from tests.harness import bootstrap as bs
+    bs.bootstrap(production_parity=False)
 
 
 def _schema_path(client_id: str = "demo_001") -> str:
@@ -163,6 +170,8 @@ def _orchestrator(model: str, schema_path: str):
     os.environ["GEMINI_MODEL_FALLBACKS"] = ""        # never a silent switch
     with contextlib.redirect_stdout(io.StringIO()):
         orch = Orchestrator(client_schema_path=schema_path)
+    from app.config import settings
+    settings.GEMINI_MODEL = model        # call sizing and pricing read settings
     pinned = 0
     for _name, p in getattr(orch.llm, "providers", []) or []:
         if isinstance(p, G.GeminiClient):
@@ -170,7 +179,27 @@ def _orchestrator(model: str, schema_path: str):
             pinned += 1
     if not pinned:
         raise JobError("no Gemini provider to pin the model on")
+    why = model_mismatch(model, orch.llm)
+    if why:
+        raise JobError(why)
     return orch
+
+
+def model_mismatch(model: str, router):
+    """None when settings, the environment and every Gemini client in `router`
+    all name `model`; otherwise what disagrees."""
+    from app.config import settings
+    import connectors.gemini_client as G
+    import llm_contract as LC
+    seen = {"settings.GEMINI_MODEL": getattr(settings, "GEMINI_MODEL", None),
+            "env GEMINI_MODEL": os.environ.get("GEMINI_MODEL"),
+            "llm_contract.setting": LC.setting("GEMINI_MODEL", "")}
+    seen.update({f"client {n}": p._preferred for n, p in getattr(router, "providers", []) or []
+                 if isinstance(p, G.GeminiClient)})
+    bad = {k: v for k, v in seen.items() if v != model}
+    if bad:
+        return "model is not " + repr(model) + ": " + ", ".join(f"{k}={v!r}" for k, v in bad.items())
+    return None
 
 
 def _estimate(source: Path, model: str) -> tuple:
@@ -202,6 +231,7 @@ def dry_run(docs, models) -> int:
 
     saved_env = {k: os.environ.get(k) for k in ("GEMINI_MODEL", "GEMINI_MODEL_FALLBACKS")}
     saved_key, saved_post = settings.GEMINI_API_KEY, G.GeminiClient._post
+    saved_model = settings.GEMINI_MODEL
     settings.GEMINI_API_KEY = "model-matrix-dry-run-placeholder"   # never a real key
     G.GeminiClient._post = _offline_post
     failures, jobs, est, worst = [], 0, 0.0, 0.0
@@ -226,6 +256,7 @@ def dry_run(docs, models) -> int:
                 worst += w1
     finally:
         settings.GEMINI_API_KEY, G.GeminiClient._post = saved_key, saved_post
+        settings.GEMINI_MODEL = saved_model
         for k, v in saved_env.items():
             if v is None:
                 os.environ.pop(k, None)

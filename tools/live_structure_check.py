@@ -91,7 +91,7 @@ $s = Read-Host "Gemini API key" -AsSecureString
 $env:GEMINI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR(
     [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 $env:DOCAGENT_TEST_NO_DOTENV = "1"
-$env:GEMINI_MODEL = "gemini-2.5-flash-lite"   # what production runs
+$env:GEMINI_MODEL = "gemini-2.5-flash"   # what production runs (the default)
 $env:PYTHONIOENCODING = "utf-8"
 
 # 1. the 8-page vendor list: sized extraction + structure plans
@@ -145,6 +145,36 @@ def worst_case_usd(kw, model) -> tuple:
 
 CONTEXT = {"set": "", "doc": ""}
 
+#: The model this tool uses when GEMINI_MODEL is unset: app.config's default,
+#: which is what production runs.
+DEFAULT_MODEL = "gemini-2.5-flash"
+
+
+def wanted_model() -> str:
+    """GEMINI_MODEL from this shell, else the app's default. Read BEFORE the
+    harness bootstrap, which would otherwise overwrite it (see main)."""
+    m = (os.environ.get("GEMINI_MODEL") or "").replace("models/", "").strip()
+    return m or DEFAULT_MODEL
+
+
+def model_mismatch(expected: str, router=None):
+    """None when the settings AND every Gemini client the router holds will ask
+    for `expected`; otherwise a sentence saying what would be called instead."""
+    from app.config import settings
+    import connectors.gemini_client as G
+    got = str(getattr(settings, "GEMINI_MODEL", "") or "").replace("models/", "").strip()
+    if got != expected:
+        return f"settings.GEMINI_MODEL is {got!r}, not GEMINI_MODEL={expected!r}"
+    router = router if router is not None else _router()
+    prefs = [p._preferred for _n, p in getattr(router, "providers", []) or []
+             if isinstance(p, G.GeminiClient)]
+    if not prefs:
+        return "the router holds no Gemini client"
+    bad = [m for m in prefs if m != expected]
+    if bad:
+        return f"the Gemini client prefers {bad[0]!r}, not GEMINI_MODEL={expected!r}"
+    return None
+
 
 def install_cap(ledger: Ledger, log_path: Path):
     """Wrap LLMRouter.extract (and classify) with the cap and the call log."""
@@ -163,7 +193,7 @@ def install_cap(ledger: Ledger, log_path: Path):
 
     def capped(fn, kind):
         def run(self, *a, **kw):
-            model = kw.get("model") or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+            model = kw.get("model") or wanted_model()
             worst, inp, chars, n_img = worst_case_usd(kw, model)
             if ledger.spent + worst > ledger.cap:
                 return refuse(f"${ledger.spent:.4f} spent; this call could cost up to "
@@ -357,6 +387,9 @@ def main(argv=None) -> int:
     print(f"vendor list: {VENDOR} ({'present' if (DOCS / VENDOR).exists() else 'MISSING'})")
     print(f"expense report: tests/test_pdfs/{EXPENSE_DOC}.pdf (harness no-template re-record)")
     print(f"compare set: {len(COMPARE)} documents, {len(present)} present")
+    model = wanted_model()
+    print(f"model: {model} (GEMINI_MODEL"
+          f"{'' if os.environ.get('GEMINI_MODEL') else ' unset; the app default'})")
     ledger = Ledger(OUT / "ledger.json", CAP_USD)
     print(f"ledger: ${ledger.spent:.4f} of ${CAP_USD:.2f} spent over {ledger.calls} call(s)")
     if not a.live:
@@ -368,11 +401,21 @@ def main(argv=None) -> int:
               file=sys.stderr)
         return 2
     os.environ["DOCAGENT_TEST_NO_DOTENV"] = "1"
+    # Pin the model BEFORE anything builds settings. The harness bootstrap's
+    # production-parity mode force-sets GEMINI_MODEL=gemini-2.5-flash-lite,
+    # which is what silently swapped the model here; this tool opts out, and
+    # no 404 fallback may switch it either.
+    os.environ["GEMINI_MODEL"] = model
+    os.environ["GEMINI_MODEL_FALLBACKS"] = ""
     for p in (ROOT / "backend" / "engine", ROOT / "backend", ROOT):
         sys.path.insert(0, str(p))
     from tests.harness.bootstrap import bootstrap, chdir_backend
-    bootstrap()
+    bootstrap(production_parity=False)
     chdir_backend()
+    why = model_mismatch(model)
+    if why:
+        print(f"refusing to run: {why}. Nothing was called.", file=sys.stderr)
+        return 4
     if a.reset_ledger and (OUT / "ledger.json").exists():
         old = OUT / f"ledger_{time.strftime('%Y%m%d_%H%M%S')}.json"
         (OUT / "ledger.json").rename(old)
@@ -382,7 +425,6 @@ def main(argv=None) -> int:
         print(f"the ${CAP_USD:.2f} budget is spent (${ledger.spent:.4f}); nothing run.")
         return 3
     install_cap(ledger, OUT / "calls.jsonl")
-    model = os.environ.get("GEMINI_MODEL") or None
     if a.set in ("vendor", "all"):
         run_vendor(model)
     if a.set in ("expense", "all"):

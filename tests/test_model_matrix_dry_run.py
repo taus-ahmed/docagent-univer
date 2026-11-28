@@ -85,3 +85,21 @@ def test_unknown_docs_are_refused(M):
     with pytest.raises(SystemExit) as e:
         M.main(["--dry-run", "--docs", "not_a_document"])
     assert "unknown --docs" in str(e.value)
+
+
+def test_a_client_left_on_another_model_is_refused(M, monkeypatch):
+    """settings, the environment and every Gemini client must name the model
+    being measured; the harness bootstrap's parity mode used to leave settings
+    on gemini-2.5-flash-lite while the client was pinned to something else."""
+    M._paths()
+    from app.config import settings
+    import connectors.gemini_client as G
+    c = G.GeminiClient.__new__(G.GeminiClient)
+    c._preferred = "gemini-2.5-flash"
+    router = type("R", (), {"providers": [("gemini", c)]})()
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-2.5-flash")
+    assert M.model_mismatch("gemini-2.5-flash", router) is None
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-2.5-flash-lite")
+    why = M.model_mismatch("gemini-2.5-flash", router)
+    assert why and "settings.GEMINI_MODEL='gemini-2.5-flash-lite'" in why

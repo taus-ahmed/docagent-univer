@@ -4,6 +4,7 @@ is logged. No real model is called here: the router is replaced."""
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -94,3 +95,63 @@ def test_every_call_is_logged_with_tokens_cost_retries_and_chunk_size(tmp_path, 
     assert rec["chunk"]["prompt_chars"] == 300 and rec["chunk"]["images"] == 2
     assert rec["chunk"]["max_output_tokens"] == 2048
     assert "GEMINI_API_KEY" not in json.dumps(rec)
+
+
+# ── the model: GEMINI_MODEL, never swapped (dry; nothing is called) ─────────
+
+def _gemini_router(preferred):
+    import connectors.gemini_client as G
+    c = G.GeminiClient.__new__(G.GeminiClient)
+    c._preferred = preferred
+    return type("R", (), {"providers": [("gemini", c)]})()
+
+
+def test_the_commands_name_the_production_model():
+    text = L.commands()
+    assert '$env:GEMINI_MODEL = "gemini-2.5-flash"' in text
+    assert "flash-lite" not in text
+
+
+def test_the_model_is_gemini_model_else_the_app_default(monkeypatch):
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    assert L.wanted_model() == "gemini-2.5-flash"
+    monkeypatch.setenv("GEMINI_MODEL", "models/gemini-3.6-flash")
+    assert L.wanted_model() == "gemini-3.6-flash"
+
+
+def test_a_client_preferring_another_model_is_a_mismatch(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+    assert L.model_mismatch("gemini-2.5-flash", _gemini_router("gemini-2.5-flash")) is None
+    why = L.model_mismatch("gemini-2.5-flash", _gemini_router("gemini-2.5-flash-lite"))
+    assert why and "gemini-2.5-flash-lite" in why
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-2.5-flash-lite")
+    why = L.model_mismatch("gemini-2.5-flash", _gemini_router("gemini-2.5-flash"))
+    assert why and "settings.GEMINI_MODEL" in why
+
+
+def test_live_refuses_before_any_call_when_the_model_was_swapped(monkeypatch, capsys):
+    from app.config import settings
+    from connectors.llm_router import LLMRouter
+
+    def boom(*a, **k):
+        raise AssertionError("a refused run must not call the model")
+    monkeypatch.setattr(LLMRouter, "extract", boom)
+    monkeypatch.setattr(LLMRouter, "classify", boom)
+    for k in ("DOCAGENT_TEST_NO_DOTENV", "GEMINI_MODEL_FALLBACKS"):
+        monkeypatch.setenv(k, os.environ.get(k, ""))
+    monkeypatch.setenv("GEMINI_API_KEY", "dry-test-placeholder")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-2.5-flash")
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-2.5-flash-lite")   # the swap
+    monkeypatch.chdir(Path.cwd())
+    assert L.main(["--live", "--set", "vendor"]) == 4
+    cap = capsys.readouterr()
+    assert "model: gemini-2.5-flash" in cap.out
+    assert "refusing to run" in cap.err and "gemini-2.5-flash-lite" in cap.err
+
+
+def test_offline_prints_the_model_it_would_use(monkeypatch, capsys):
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    assert L.main([]) == 0
+    assert "model: gemini-2.5-flash (GEMINI_MODEL unset; the app default)" in capsys.readouterr().out
