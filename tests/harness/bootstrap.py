@@ -8,10 +8,18 @@ BEFORE importing any ``app.*`` or engine module, because:
   CWD-relative ``.env`` file. Legacy runs may pre-load ``backend/.env``;
   acceptance and CI runs set ``DOCAGENT_TEST_NO_DOTENV=1`` and use explicit
   local test settings only.
-- Production runs ``PRIMARY_LLM=gemini`` and
-  ``GEMINI_MODEL=gemini-2.5-flash-lite`` (audit 2026-08-17 §4). Local
-  ``backend/.env`` does not set the model, so without this bootstrap the
-  harness would measure a different Gemini tier than production runs.
+- Production runs ``PRIMARY_LLM=gemini`` and ``GEMINI_MODEL=gemini-2.5-flash``
+  — the ``app/config.py`` default; Railway sets no override. (The 2026-08-17
+  audit §4 recorded ``gemini-2.5-flash-lite``; that is no longer the case.)
+  Pinning it here keeps a local ``.env`` from making the harness measure a
+  different Gemini tier than production runs.
+
+  ⚠ The model is NOT part of the replay key (``llm_cache.request_key`` keys
+  only a per-call model override), and both 2.5 models share one request
+  profile, so replay is unaffected by this value. The committed cache was
+  nonetheless RECORDED on ``gemini-2.5-flash-lite`` (432 of 440 entries;
+  each entry's ``meta.model_used`` says which), so replay scores are
+  flash-lite measurements until the cache is re-recorded.
 """
 from __future__ import annotations
 
@@ -30,13 +38,14 @@ PDF_DIR = TESTS_DIR / "test_pdfs"
 CACHE_DIR = TESTS_DIR / "llm_cache"
 REPORTS_DIR = TESTS_DIR / "reports"
 
-# Production extraction config, per the 2026-08-17 audit of the Railway env.
+# Production extraction config: the Railway env sets neither, so these are
+# the app/config.py defaults.
 # USE_NEW_EXTRACTOR was removed in Phase 2d — there is one pipeline now, so
 # there is no longer a flag that could make local runs exercise different code
 # than production.
 PRODUCTION_PARITY_ENV = {
     "PRIMARY_LLM": "gemini",
-    "GEMINI_MODEL": "gemini-2.5-flash-lite",
+    "GEMINI_MODEL": "gemini-2.5-flash",
 }
 
 _bootstrapped = False

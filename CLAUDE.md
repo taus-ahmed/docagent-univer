@@ -1272,7 +1272,7 @@ Pydantic `BaseSettings` reading from `.env`. Key settings:
 | `GEMINI_API_KEY` | required | The extraction model |
 | `PRIMARY_LLM` | **`gemini`** | the provider tried first; a key of `llm_router.PROVIDERS` |
 | `LLM_FALLBACKS` | empty | providers tried after it, comma-separated; none is implemented |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Railway production runs `gemini-2.5-flash-lite`; the harness mirrors that |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Railway production runs this default (no override); the harness mirrors that. The committed replay cache was recorded on `gemini-2.5-flash-lite` |
 | `BATCH_SIZE` | 5 | docs per batch |
 | `RATE_LIMIT_DELAY` | 2.0s | delay between LLM calls |
 | `MAX_RETRIES` | 3 | per LLM call |
