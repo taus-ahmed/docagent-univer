@@ -788,7 +788,17 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
     labels = (labels + [""] * len(cols))[:len(cols)]
     groups_rows = [[] for _ in range(k)]          # per column group: [row cells]
     group_cur = None
+    group_had_rows = False   # True once a row is emitted under the current group_cur
     has_groups = bool(group_ids)
+    # Cross-page group continuation: restore the last active group from the
+    # previous page when this is a continued region with no group-header lines
+    # of its own (the header was already written on the page above).
+    if region.get("continued") and prev_tables and not has_groups:
+        inherited = prev_tables[-1].get("last_group")
+        if inherited is not None:
+            group_cur = inherited
+            has_groups = True
+            group_had_rows = True  # the group header was shown on the previous page
     prev_line = None
     feats = {}
     body_lines = [ln for ln in lines if ln["id"] not in head_ids and ln["id"] not in group_ids]
@@ -803,6 +813,7 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
         feats[ln["id"]] = f
         if ln["id"] in group_ids:
             group_cur = (ws[:1], ws[1:])
+            group_had_rows = False   # reset: this group has not yet had data rows
             prev_line = None
             continue
         parts = {}
@@ -852,6 +863,7 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
                         row = dict(sub)
                         if group_cur is not None:
                             row["_group"] = group_cur
+                            group_had_rows = True
                         groups_rows[g].append(row)
             group_cur = None          # group consumed by first stacked row
             prev_line = ln
@@ -893,19 +905,24 @@ def _place_table(region, page, lines, row0, order, body, prev_tables):
                 row = dict(sub)
                 if group_cur is not None:
                     row["_group"] = group_cur
+                    group_had_rows = True
                 groups_rows[g].append(row)
         prev_line = ln
-    # T3 S4a: a group header with no data rows following it on this page
-    # (the last vendor in a list, or any vendor whose rows continue onto
-    # the next page) was silently lost: group_cur was set but never attached.
-    # Emit it as a standalone section row so it appears in the sheet.
-    if has_groups and group_cur is not None:
+    # T3 S4a (amended): a group header with NO data rows following it on
+    # this page was silently lost.  Emit a standalone section row so it
+    # appears in the sheet.  group_had_rows guards against falsely firing
+    # for a group that did have rows (the last row still leaves group_cur
+    # set, but the section row would then be a duplicate).
+    # Also save the last active group for cross-page continuation (Item 4).
+    last_group_to_pass = group_cur      # preserved before S4a may clear it
+    if has_groups and group_cur is not None and not group_had_rows:
         gid, gname = group_cur
         empty: dict = {}           # a row with no data cells
         empty["_group"] = group_cur
         empty["_section"] = True   # no data columns → no "value" cells
         groups_rows[0].append(empty)
         group_cur = None
+    region["_last_group"] = last_group_to_pass   # for cross-page group continuation
     rows = [r for g in groups_rows for r in g]     # group-major reading order
     lead = 2 if has_groups else 0
     cells = []
@@ -1026,7 +1043,8 @@ def place_page(page, plan, order=None, prev_tables=None) -> dict:
             prev_tables.append({"columns": reg.get("_placed_columns") or reg.get("columns"),
                                 "labels": reg.get("_labels"),
                                 "column_groups": reg.get("column_groups", 1),
-                                "page": page["page"]})
+                                "page": page["page"],
+                                "last_group": reg.get("_last_group")})
         row += used + 1
     if prev_tables and prev_tables[-1].get("page") == page["page"]:
         # whether this page ENDS with its last table (nothing placed after

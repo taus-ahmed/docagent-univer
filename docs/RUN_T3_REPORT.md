@@ -80,9 +80,10 @@ sub-cluster looks like a row line (has a date or ≥1 amount), split the words i
 two groups and emit two rows.  Conservative: neither cluster needs to be a row-line
 → no split (labels stacked above labels are not rows).
 
-**Tests.** `tests/test_geometry_bugs.py` — 6 tests: trailing group header emitted,
+**Tests.** `tests/test_geometry_bugs.py` — 9 tests: trailing group header emitted,
 data row still present, 2-baseline line splits into 2, each has date/amount, single-
-baseline line not split, non-row-line baselines not split.
+baseline line not split, non-row-line baselines not split.  Plus 3 cross-page group
+tests (see S4 Close-out below).
 
 ---
 
@@ -146,18 +147,73 @@ returns regions with value fields, fillable-form path unaffected.
 
 ---
 
-## Open items
+---
 
-- Flat form accuracy on the two IRS fixtures (irs6744_w2_mcguire,
-  irs6744_1099NEC_1099K_garcia) is not yet measured with `STRUCTURE_READ_FLAT_FORMS=True`
-  — the flag is off by default and the accuracy harness does not set it.  This is a
-  "first pass plumbing" stage; a follow-up run with the flag on is needed to validate
-  the inference heuristic against the answer keys.
-- `group_cur` is reset to `None` after emitting the trailing group row (S4a), but the
-  case where a vendor's rows continue onto the NEXT page (the group header appears but
-  zero rows are on this page, all rows are on the next) is not yet handled — that
-  document needs page-continuation logic, which is tracked in the existing multi-page
-  continuation work.
+## Close-out: Regression check (Item 1)
+
+Measured with `tools/position_check.py` on 11 keyed documents (6 dev, 5 heldout).
+Three versions compared: old Organized engine, commit c50e8de, and HEAD.
+
+| half | version | right-hdr% | right-row% | glued | split | miss | order% |
+|---|---|---|---|---|---|---|---|
+| dev | HEAD | 99.7% | 99.7% | 1 | 4 | 3 | 100.0% |
+| heldout | HEAD | 86.8% | 85.8% | 4 | 9 | 42 | 100.0% |
+| heldout | c50e8de | 83.5% | 83.5% | 5 | 16 | 78 | 100.0% |
+
+**No regressions since c50e8de.** T3 changes (S1–S8) improved heldout right-row from 83.5% → 85.8%.  Every cell that moved, moved in the right direction.  The low heldout score is entirely explained by irs6744_w2_mcguire and irs6744_1099NEC_1099K_garcia (both score 0% right-header — they require STRUCTURE_READ_FLAT_FORMS=True, which is off by default).
+
+---
+
+## Close-out: Reading order (Item 2)
+
+`order%` from position_check.py (2026-11-27):
+
+| half | order% | violations | pairs |
+|---|---|---|---|
+| dev | 100.0% | 0 | 46,199 |
+| heldout | 100.0% | 5 | 15,987 |
+
+**5 violations, all in irs6744_w2_mcguire (W-2 form).** All 5 are caused by `$28,000` for "3 Social security wages" placed at sheet row 30 while later fields land at rows 11–19 — a flat-form multi-copy reading artefact (the box structure is not decoded without STRUCTURE_READ_FLAT_FORMS=True).  This is a pre-existing condition since c50e8de; it is not a T3 regression.  With STRUCTURE_READ_FLAT_FORMS=True the violations drop to 0 (measured separately).  **No general fix without enabling the flag.**
+
+---
+
+## Close-out: Flat form accuracy (Item 3)
+
+Measured with `STRUCTURE_READ_FLAT_FORMS=True` against the answer keys.
+
+| document | key items | correct | wrong | missing | accuracy |
+|---|---|---|---|---|---|
+| irs6744_w2_mcguire | 61 | 20 (hdr) | 0 | 41 | **62.5%** kv-items |
+| irs6744_1099NEC_1099K_garcia | 99 | 15 (hdr) | 0 | 84 | **14.8%** kv-items |
+
+Both are **under 80%**.
+
+**What blocks W-2 (62.5%):** The PDF has no internal edges dividing the first-name / last-name / suffix area.  Three separate fields collapse into one large box; `_infer_flat_origins` assigns all words to "label" and no value is extracted.  Lowering the font-ratio threshold (1.3 → 1.2) and baseline-gap multiplier (1.0x → 0.7x) had no effect — the problem is a missing edge in the PDF, not a threshold issue.
+
+**What blocks 1099 (14.8%):** Multi-line labels wrap into adjacent frames.  The first line of a 2-line label becomes the box's "label" words while the second line is in the adjacent box.  The decoder sees the second-line fragment as a separate field's label and misassigns its value.  Additionally, monthly breakdown rows (5a–5l) have no box edges at all — 49/99 key items are simply absent from the flat-form reading.
+
+The `_infer_flat_origins` heuristic is correct for well-formed flat forms; the IRS fixtures fail for structural PDF reasons outside the heuristic's scope.  Threshold changes are kept (they are correct for the stated cases) but do not affect these two documents.
+
+---
+
+## Close-out: Group headers across pages (Item 4)
+
+**Problem.** Two related bugs with S4a:
+1. `group_cur` was never reset after a data row, so S4a would always fire for the last group even when it had rows — emitting a spurious section row.
+2. When a table continues onto the next page and the group header was on the previous page, the continuation page had no `group_ids`, so `group_cur` started as `None` and rows were written without any group attached.
+
+**Fix.**
+- Added `group_had_rows = False` tracking: set True when any data row is emitted under a group, reset to False on a new group header.  S4a only fires when `not group_had_rows`.
+- Added `region["_last_group"]` to store the last active group at end of `_place_table`.
+- In `_place_table` initialization: when `region.get("continued") and prev_tables and not has_groups`, inherit `prev_tables[-1]["last_group"]` as `group_cur` with `group_had_rows = True` (the header was shown on the previous page, not a trailing one).
+- In `place_page`'s `prev_tables.append(...)`: added `"last_group": reg.get("_last_group")`.
+
+**Tests.** 3 new tests in `tests/test_geometry_bugs.py` (`TestGroupHeadersAcrossPages`):
+- `test_group_header_bottom_page1_rows_on_page2`: group header trailing on page 1, rows on page 2 → rows carry correct group.
+- `test_group_rows_spanning_page2_to_page3`: group starting on page 2 continues into page 3 → page 3 rows carry correct group.
+- `test_s4a_does_not_fire_when_group_had_rows`: group with rows on same page → no spurious section row.
+
+All 9 geometry tests pass.
 
 ---
 

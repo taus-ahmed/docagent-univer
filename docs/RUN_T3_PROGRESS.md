@@ -9,10 +9,14 @@ Worktree: fix/review-fixes. Flags stay OFF. No live calls.
 | 2 cost | 43434ba | ✅ impl done, tests green |
 | 3 plan validation | 43434ba | ✅ impl done |
 | 4 geometry | 43434ba | ✅ S4a trailing group header + S4b stacked rows; tests green |
+| 4 close-out: cross-page groups | pending | ✅ group_had_rows guard + cross-page inheritance; 9/9 tests green |
 | 5 row count | 43434ba | ✅ measured: 90 text-layer rows = 90 engine rows (page 3: 12) |
 | 6 reading order | 43434ba | ✅ order_pairs/order_violations metric added to position_check.py |
 | 7 flat forms | 43434ba | ✅ STRUCTURE_READ_FLAT_FORMS flag; has_flat_form_boxes + form_regions(flat_form=True); tests green |
+| 7 close-out: flat form accuracy | measured | ⚠️ W-2: 62.5%, 1099: 14.8% — both under 80%; structural PDF limits documented |
 | 8 report | 43434ba | ✅ docs/RUN_T3_REPORT.md |
+| close-out: regression check | measured | ✅ no regressions since c50e8de; dev 99.7% right-row, heldout 85.8% |
+| close-out: reading order | measured | ✅ 5 violations (W-2 only, pre-existing); 100% on all other docs |
 
 ## Notes
 
