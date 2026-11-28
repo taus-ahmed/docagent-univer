@@ -135,7 +135,9 @@ def _infer_flat_origins(ws, box) -> None:
     Heuristic (conservative — a false value is worse than a missed split):
     1. If two distinct font-size clusters exist and the smaller cluster is at
        or near the top of the box, the smaller cluster is the label.
-    2. Otherwise if two distinct baseline clusters exist with a gap > 1×size,
+       Threshold: large >= 1.2 × small (IRS forms use ~7pt labels, ~9pt values;
+       ratio = 1.29 which was below the old 1.3 threshold and missed the split).
+    2. Otherwise if two distinct baseline clusters exist with a gap > 0.7×size,
        the top cluster is the label and the rest are the value.
     3. Otherwise the whole box is the label (no value inferred)."""
     if not ws:
@@ -143,7 +145,7 @@ def _infer_flat_origins(ws, box) -> None:
     sizes = sorted({round(w.get("size") or 8, 1) for w in ws})
     if len(sizes) >= 2:
         small, large = sizes[0], sizes[-1]
-        if large >= 1.3 * small:
+        if large >= 1.2 * small:
             small_ws = [w for w in ws if (w.get("size") or 8) <= small * 1.1]
             large_ws = [w for w in ws if (w.get("size") or 8) >= large * 0.9]
             # small group at or near box top?
@@ -159,7 +161,7 @@ def _infer_flat_origins(ws, box) -> None:
     if len(bases) >= 2:
         size = statistics.median([w.get("size") or 8 for w in ws])
         gap = bases[1] - bases[0]
-        if gap >= size:
+        if gap >= 0.7 * size:
             top_b = bases[0]
             for w in ws:
                 if round(w["baseline"], 0) == top_b:
